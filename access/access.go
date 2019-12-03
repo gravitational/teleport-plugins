@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/tls"
 	"sync"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -34,16 +35,32 @@ import (
 // State represents the state of an access request.
 type State = services.RequestState
 
+// StatePending is the state of a pending request.
+const StatePending State = services.RequestState_PENDING
+
+// StateApproved is the state of an approved request.
+const StateApproved State = services.RequestState_APPROVED
+
+// StateDenied is the state of a denied request.
+const StateDenied State = services.RequestState_DENIED
+
+// Filter encodes request filtering parameters.
+type Filter = services.AccessRequestFilter
+
 // Request describes a pending access request.
 type Request struct {
-	ID    string
-	User  string
+	// ID is the unique identifier of the request.
+	ID string
+	// User is the user to whom the request applies.
+	User string
+	// Roles are the roles that the user will be granted
+	// if the request is approved.
 	Roles []string
+	// State is the current state of the request.
 	State State
 }
 
-// Watcher is used to stream pending access requests as they are
-// created by users.
+// Watcher is used to monitor access requests.
 type Watcher interface {
 	Requests() <-chan Request
 	Done() <-chan struct{}
@@ -54,11 +71,11 @@ type Watcher interface {
 // Client is an access request management client.
 type Client interface {
 	// WatchRequests registers a new watcher for pending access requests.
-	WatchRequests(ctx context.Context) (Watcher, error)
-	// GetRequest loads an access request.
-	GetRequest(ctx context.Context, reqID string) (Request, error)
-	ApproveRequest(ctx context.Context, reqID string) error
-	DenyRequest(ctx context.Context, reqID string) error
+	WatchRequests(ctx context.Context, fltr Filter) (Watcher, error)
+	// GetRequests loads all requests which match provided filter.
+	GetRequests(ctx context.Context, fltr Filter) ([]Request, error)
+	// SetRequestState updates the state of a request.
+	SetRequestState(ctx context.Context, reqID string, state State) error
 }
 
 // clt is a thin wrapper around the raw GRPC types that implements the
@@ -81,42 +98,54 @@ func NewClient(ctx context.Context, addr string, tc *tls.Config) (Client, error)
 	}, nil
 }
 
-func (c *clt) WatchRequests(ctx context.Context) (Watcher, error) {
-	watcher, err := newWatcher(ctx, c.clt)
+func (c *clt) WatchRequests(ctx context.Context, fltr Filter) (Watcher, error) {
+	watcher, err := newWatcher(ctx, c.clt, fltr)
 	return watcher, trace.Wrap(err)
 }
 
-func (c *clt) GetRequest(ctx context.Context, reqID string) (Request, error) {
-	rsp, err := c.clt.GetAccessRequests(ctx, &services.AccessRequestFilter{
-		ID: reqID,
-	})
+func (c *clt) GetRequests(ctx context.Context, fltr Filter) ([]Request, error) {
+	rsp, err := c.clt.GetAccessRequests(ctx, &fltr)
 	if err != nil {
-		return Request{}, trail.FromGRPC(err)
+		return nil, trail.FromGRPC(err)
 	}
-	if len(rsp.AccessRequests) < 1 {
-		return Request{}, trace.NotFound("no request matching %q", reqID)
+	var reqs []Request
+	for _, req := range rsp.AccessRequests {
+		r := Request{
+			ID:    req.GetName(),
+			User:  req.GetUser(),
+			Roles: req.GetRoles(),
+			State: req.GetState(),
+		}
+		reqs = append(reqs, r)
 	}
-	req := rsp.AccessRequests[0]
-	return Request{
-		ID:    req.GetName(),
-		User:  req.GetUser(),
-		Roles: req.GetRoles(),
-		State: req.GetState(),
-	}, nil
+	return reqs, nil
 }
 
-func (c *clt) ApproveRequest(ctx context.Context, reqID string) error {
-	_, err := c.clt.SetAccessRequestState(ctx, &proto.RequestStateSetter{
-		ID:    reqID,
-		State: services.RequestState_APPROVED,
-	})
-	return trail.FromGRPC(err)
+func (c *clt) SetRequestState(ctx context.Context, reqID string, state State) error {
+	// this function attempts a small number of retries if updating request state
+	// fails due to concurrent updates.  Since the auth server ensures that a
+	// denied request cannot be subsequently approved, retries are safe.
+	const maxAttempts = 3
+	const baseSleep = time.Millisecond * 199
+	var err error
+	for i := 1; i <= maxAttempts; i++ {
+		err = c.setRequestState(ctx, reqID, state)
+		if !trace.IsCompareFailed(err) {
+			return trace.Wrap(err)
+		}
+		select {
+		case <-time.After(baseSleep * time.Duration(i)):
+		case <-ctx.Done():
+			return trace.Wrap(err)
+		}
+	}
+	return trace.Wrap(err)
 }
 
-func (c *clt) DenyRequest(ctx context.Context, reqID string) error {
+func (c *clt) setRequestState(ctx context.Context, reqID string, state State) error {
 	_, err := c.clt.SetAccessRequestState(ctx, &proto.RequestStateSetter{
 		ID:    reqID,
-		State: services.RequestState_DENIED,
+		State: state,
 	})
 	return trail.FromGRPC(err)
 }
@@ -126,7 +155,7 @@ func (c *clt) Close() {
 }
 
 type watcher struct {
-	stream proto.AuthService_WatchAccessRequestsClient
+	stream proto.AuthService_WatchEventsClient
 	reqC   chan Request
 	ctx    context.Context
 	emux   sync.Mutex
@@ -134,10 +163,15 @@ type watcher struct {
 	cancel context.CancelFunc
 }
 
-func newWatcher(ctx context.Context, clt proto.AuthServiceClient) (*watcher, error) {
+func newWatcher(ctx context.Context, clt proto.AuthServiceClient, fltr Filter) (*watcher, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	stream, err := clt.WatchAccessRequests(ctx, &services.AccessRequestFilter{
-		State: services.RequestState_PENDING,
+	stream, err := clt.WatchEvents(ctx, &proto.Watch{
+		Kinds: []proto.WatchKind{
+			proto.WatchKind{
+				Kind:   services.KindAccessRequest,
+				Filter: fltr.IntoMap(),
+			},
+		},
 	})
 	if err != nil {
 		cancel()
@@ -156,10 +190,17 @@ func newWatcher(ctx context.Context, clt proto.AuthServiceClient) (*watcher, err
 func (w *watcher) run() {
 	defer w.cancel()
 	for {
-		req, err := w.stream.Recv()
+		event, err := w.stream.Recv()
 		if err != nil {
 			w.setError(trail.FromGRPC(err))
 			return
+		}
+		if event.Type != proto.Operation_PUT {
+			continue
+		}
+		req := event.GetAccessRequest()
+		if req != nil {
+			w.setError(trace.Errorf("unexpected resource type %T", event.Resource))
 		}
 		w.reqC <- Request{
 			ID:    req.GetName(),

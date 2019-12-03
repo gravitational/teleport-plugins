@@ -30,7 +30,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gravitational/teleport/api/access"
+	"github.com/gravitational/teleport-plugins/access"
 	"github.com/gravitational/trace"
 	"github.com/nlopes/slack"
 	"github.com/pelletier/go-toml"
@@ -169,7 +169,9 @@ func (a *App) Start() {
 }
 
 func (a *App) watchRequests() error {
-	watcher, err := a.accessClient.WatchRequests(a.ctx)
+	watcher, err := a.accessClient.WatchRequests(a.ctx, access.Filter{
+		State: access.StatePending,
+	})
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -194,8 +196,16 @@ func (a *App) loadRequest(reqID string) (access.Request, error) {
 		return req, nil
 	}
 	log.Warnf("Cache-miss for request %s", reqID)
-	req, err := a.accessClient.GetRequest(a.ctx, reqID)
-	return req, trace.Wrap(err)
+	reqs, err := a.accessClient.GetRequests(a.ctx, access.Filter{
+		ID: reqID,
+	})
+	if err != nil {
+		return access.Request{}, trace.Wrap(err)
+	}
+	if len(reqs) < 1 {
+		return access.Request{}, trace.NotFound("no request matching %q", reqID)
+	}
+	return reqs[0], nil
 }
 
 func (a *App) OnCallback(cb slack.InteractionCallback) error {
@@ -213,7 +223,7 @@ func (a *App) OnCallback(cb slack.InteractionCallback) error {
 			return trace.Wrap(err)
 		}
 		log.Infof("Approving request %+v", req)
-		if err := a.accessClient.ApproveRequest(a.ctx, req.ID); err != nil {
+		if err := a.accessClient.SetRequestState(a.ctx, req.ID, access.StateApproved); err != nil {
 			return trace.Wrap(err)
 		}
 		status = "APPROVED"
@@ -223,7 +233,7 @@ func (a *App) OnCallback(cb slack.InteractionCallback) error {
 			return trace.Wrap(err)
 		}
 		log.Infof("Denying request %+v", req)
-		if err := a.accessClient.DenyRequest(a.ctx, req.ID); err != nil {
+		if err := a.accessClient.SetRequestState(a.ctx, req.ID, access.StateDenied); err != nil {
 			return trace.Wrap(err)
 		}
 		status = "DENIED"

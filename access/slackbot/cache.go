@@ -21,7 +21,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gravitational/teleport/api/access"
+	"github.com/gravitational/teleport-plugins/access"
 	log "github.com/sirupsen/logrus"
 )
 
