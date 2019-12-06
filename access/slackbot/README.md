@@ -6,7 +6,9 @@ via interactive slack messages.
 
 ## Setup
 
-Run `go build && ./slackbot configure` to print out an example config file:
+Run `make slackbot && ./build/slackbot configure` from the repository root.
+The `configure` command should produce an example configuration file that
+looks something like this:
 
 ```toml
 # example slackbot configuration file

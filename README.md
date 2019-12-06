@@ -12,3 +12,8 @@ which can be used for writing plugins.  More info can be found in
 A basic slack plugin (WIP) can be found in [`access/slackbot`](./access/slackbot).
 The plugin can be built with `make slackbot` and instructions for configuring the
 plugin can be found in the plugin's [README](./access/slackbot/README.md).
+
+## notes
+
+This repository's `vendor` folder is just `gravitaional/teleport`'s `vendor`
+folder "flattened" to include `gravitational/teleport` as a member.
