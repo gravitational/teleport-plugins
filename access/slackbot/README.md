@@ -6,9 +6,9 @@ via interactive slack messages.
 
 ## Setup
 
-Run `make slackbot && ./build/slackbot configure` from the repository root.
-The `configure` command should produce an example configuration file that
-looks something like this:
+Run `make access-slackbot && ./build/access-slackbot configure` from the
+repository root.  The `configure` command should produce an example
+configuration file that looks something like this:
 
 ```toml
 # example slackbot configuration file

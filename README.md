@@ -16,7 +16,7 @@ The [access/example](./access/example) plugin automatically approves access requ
 on a user whitelist.  This is a good place to start if you are trying to understand
 how to use the [`access`](./access) API.
 
-Use `make access-example` to build the plugin and `./build/example configure` to print out
+Use `make access-example` to build the plugin and `./build/access-example configure` to print out
 a sample configuration file.
 
 ### Slackbot
