@@ -176,11 +176,33 @@ func (a *App) watchRequests() error {
 		return trace.Wrap(err)
 	}
 	defer watcher.Close()
+Watch:
 	for {
 		select {
-		case req := <-watcher.Requests():
-			if err := a.OnRequest(req); err != nil {
-				return trace.Wrap(err)
+		case event := <-watcher.Events():
+			req, op := event.Request, event.Type
+			switch op {
+			case access.OpInit:
+				log.Infof("watcher initialized...")
+			case access.OpPut:
+				if !req.State.IsPending() {
+					log.Warnf("non-pending request event %+v", event)
+					continue Watch
+				}
+				if err := a.OnPendingRequest(req); err != nil {
+					return trace.Wrap(err)
+				}
+			case access.OpDelete:
+				entry, ok := a.cache.Pop(req.ID)
+				if !ok {
+					log.Warnf("cannot expire unknown request %q", req.ID)
+					continue Watch
+				}
+				if err := a.expireEntry(entry); err != nil {
+					return trace.Wrap(err)
+				}
+			default:
+				return trace.BadParameter("unexpected event operation %s", op)
 			}
 		case <-watcher.Done():
 			return watcher.Error()
@@ -191,9 +213,9 @@ func (a *App) watchRequests() error {
 // loadRequest loads the specified request in order to correctly format
 // a response.
 func (a *App) loadRequest(reqID string) (access.Request, error) {
-	req, ok := a.cache.Pop(reqID)
+	entry, ok := a.cache.Pop(reqID)
 	if ok {
-		return req, nil
+		return entry.Request, nil
 	}
 	log.Warnf("Cache-miss for request %s", reqID)
 	reqs, err := a.accessClient.GetRequests(a.ctx, access.Filter{
@@ -314,7 +336,7 @@ func (a *App) ActionsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *App) OnRequest(req access.Request) error {
+func (a *App) OnPendingRequest(req access.Request) error {
 	msg := msgText(
 		req.ID,
 		req.User,
@@ -329,7 +351,26 @@ func (a *App) OnRequest(req access.Request) error {
 		return trace.Wrap(err)
 	}
 	log.Debugf("Posted to channel %s at time %s\n", channelID, timestamp)
-	a.cache.Put(req)
+	a.cache.Put(Entry{
+		Request:   req,
+		ChannelID: channelID,
+		Timestamp: timestamp,
+	})
+	return nil
+}
+
+func (a *App) expireEntry(entry Entry) error {
+	msg := msgText(
+		entry.Request.ID,
+		entry.Request.User,
+		entry.Request.Roles,
+		"EXPIRED",
+	)
+	_, _, _, err := a.slackClient.UpdateMessage(entry.ChannelID, entry.Timestamp, slack.MsgOptionBlocks(msgSection(msg)))
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	log.Debugf("Successfully marked request %s as expired", entry.Request.ID)
 	return nil
 }
 

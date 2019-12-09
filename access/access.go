@@ -44,8 +44,30 @@ const StateApproved State = services.RequestState_APPROVED
 // StateDenied is the state of a denied request.
 const StateDenied State = services.RequestState_DENIED
 
+// Op describes the operation type of an event.
+type Op = proto.Operation
+
+// OpInit is sent as the first sentinel value on the watch channel.
+const OpInit = proto.Operation_INIT
+
+// OpPut inicates creation or update.
+const OpPut = proto.Operation_PUT
+
+// OpDelete indicates deletion or expiry.
+const OpDelete = proto.Operation_DELETE
+
 // Filter encodes request filtering parameters.
 type Filter = services.AccessRequestFilter
+
+// Event is a request event.
+type Event struct {
+	// Type is the operation type of the event.
+	Type Op
+	// Request is the payload of the event.
+	// NOTE: If Type is OpDelete, only the ID field
+	// will be filled.
+	Request Request
+}
 
 // Request describes a pending access request.
 type Request struct {
@@ -62,7 +84,7 @@ type Request struct {
 
 // Watcher is used to monitor access requests.
 type Watcher interface {
-	Requests() <-chan Request
+	Events() <-chan Event
 	Done() <-chan struct{}
 	Error() error
 	Close()
@@ -156,7 +178,7 @@ func (c *clt) Close() {
 
 type watcher struct {
 	stream proto.AuthService_WatchEventsClient
-	reqC   chan Request
+	eventC chan Event
 	ctx    context.Context
 	emux   sync.Mutex
 	err    error
@@ -179,7 +201,7 @@ func newWatcher(ctx context.Context, clt proto.AuthServiceClient, fltr Filter) (
 	}
 	w := &watcher{
 		stream: stream,
-		reqC:   make(chan Request),
+		eventC: make(chan Event),
 		ctx:    ctx,
 		cancel: cancel,
 	}
@@ -195,24 +217,44 @@ func (w *watcher) run() {
 			w.setError(trail.FromGRPC(err))
 			return
 		}
-		if event.Type != proto.Operation_PUT {
-			continue
+		var req Request
+		switch event.Type {
+		case OpInit:
+			// req remains empty; nothing to do here.
+		case OpPut:
+			r := event.GetAccessRequest()
+			if r == nil {
+				w.setError(trace.Errorf("unexpected resource type %T", event.Resource))
+				return
+			}
+			req = Request{
+				ID:    r.GetName(),
+				User:  r.GetUser(),
+				Roles: r.GetRoles(),
+				State: r.GetState(),
+			}
+		case OpDelete:
+			h := event.GetResourceHeader()
+			if h == nil {
+				w.setError(trace.Errorf("expected resource header, got %T", event.Resource))
+				return
+			}
+			req = Request{
+				ID: h.Metadata.Name,
+			}
+		default:
+			w.setError(trace.Errorf("unexpected event op type %s", event.Type))
+			return
 		}
-		req := event.GetAccessRequest()
-		if req != nil {
-			w.setError(trace.Errorf("unexpected resource type %T", event.Resource))
-		}
-		w.reqC <- Request{
-			ID:    req.GetName(),
-			User:  req.GetUser(),
-			Roles: req.GetRoles(),
-			State: req.GetState(),
+		w.eventC <- Event{
+			Type:    event.Type,
+			Request: req,
 		}
 	}
 }
 
-func (w *watcher) Requests() <-chan Request {
-	return w.reqC
+func (w *watcher) Events() <-chan Event {
+	return w.eventC
 }
 
 func (w *watcher) Done() <-chan struct{} {

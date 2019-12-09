@@ -3,8 +3,8 @@ slackbot:
 	go build -o build/slackbot ./access/slackbot
 
 .PHONY:
-example-cli:
-	go build -o build/example-cli ./access/example-cli
+example:
+	go build -o build/example ./access/example
 
 .PHONY:
 clean:

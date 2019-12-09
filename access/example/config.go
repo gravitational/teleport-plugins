@@ -12,17 +12,24 @@ import (
 )
 
 type Config struct {
-	AuthServer string `toml:"auth-server"`
-	ClientKey  string `toml:"client-key"`
-	ClientCrt  string `toml:"client-crt"`
-	RootCAs    string `toml:"root-cas"`
+	AuthServer string   `toml:"auth-server"`
+	ClientKey  string   `toml:"client-key"`
+	ClientCrt  string   `toml:"client-crt"`
+	RootCAs    string   `toml:"root-cas"`
+	Whitelist  []string `toml:"whitelist"`
 }
 
 const exampleConfig = `# example configuration file
 auth-server = "example.com:3025"  # Auth GRPC API address
-client-key = "path/to/client.key" #  GRPC client secret key
-client-crt = "path/to/client.crt" #  GRPC client certificate 
-root-cas = "path/to/root.cas"     #  cluster CA certs
+client-key = "path/to/client.key" # GRPC client secret key
+client-crt = "path/to/client.crt" # GRPC client certificate 
+root-cas = "path/to/root.cas"     # cluster CA certs
+# whitelist determines which users' requests will
+# be approved.
+whitelist = [
+    "alice",
+    "bob",
+]
 `
 
 func LoadConfig(filepath string) (*Config, error) {

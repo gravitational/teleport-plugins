@@ -25,15 +25,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type entry struct {
-	req access.Request
-	exp uint
+type Entry struct {
+	Request   access.Request
+	ChannelID string
+	Timestamp string
+	exp       uint
 }
 
 // RequestCache holds pending request data.
 type RequestCache struct {
 	sync.Mutex
-	entries map[string]entry
+	entries map[string]Entry
 	tainted bool
 	index   uint
 	next    uint
@@ -41,7 +43,7 @@ type RequestCache struct {
 
 func NewRequestCache(ctx context.Context) *RequestCache {
 	cache := &RequestCache{
-		entries: make(map[string]entry),
+		entries: make(map[string]Entry),
 	}
 	go func() {
 		ticker := time.NewTicker(time.Second)
@@ -59,37 +61,34 @@ func NewRequestCache(ctx context.Context) *RequestCache {
 	return cache
 }
 
-func (c *RequestCache) Get(reqID string) (req access.Request, ok bool) {
+func (c *RequestCache) Get(reqID string) (entry Entry, ok bool) {
 	c.Lock()
 	defer c.Unlock()
 	if c.tainted {
 		panic("use of tainted cache")
 	}
-	entry, ok := c.entries[reqID]
+	e, ok := c.entries[reqID]
 	if !ok {
 		return
 	}
-	return entry.req, true
+	return e, true
 }
 
-func (c *RequestCache) Put(req access.Request) {
+func (c *RequestCache) Put(entry Entry) {
 	const TTL = 60 * 60
 	c.Lock()
 	defer c.Unlock()
 	if c.tainted {
 		panic("use of tainted cache")
 	}
-	exp := c.index + TTL
-	c.entries[req.ID] = entry{
-		req: req,
-		exp: exp,
+	entry.exp = c.index + TTL
+	if c.next == 0 || c.next > entry.exp {
+		c.next = entry.exp
 	}
-	if c.next == 0 || c.next > exp {
-		c.next = exp
-	}
+	c.entries[entry.Request.ID] = entry
 }
 
-func (c *RequestCache) Pop(reqID string) (req access.Request, ok bool) {
+func (c *RequestCache) Pop(reqID string) (entry Entry, ok bool) {
 	c.Lock()
 	defer c.Unlock()
 	if c.tainted {
@@ -100,7 +99,7 @@ func (c *RequestCache) Pop(reqID string) (req access.Request, ok bool) {
 		return
 	}
 	delete(c.entries, reqID)
-	return e.req, true
+	return e, true
 }
 
 func (c *RequestCache) tick() int {
