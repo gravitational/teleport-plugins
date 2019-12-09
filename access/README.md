@@ -74,6 +74,6 @@ around the GRPC API that abstracts over some implementation details.
 If you are writing an integration in golang, this is probably what you
 want.
 
-See the [slackbot](./slackbot) directory for an example plugin implemented
+See the [example](./example) directory for an example plugin implemented
 upon the `access` package.
 
