@@ -49,6 +49,7 @@ func NewTestServer(custom ...binder) *Server {
 	s.Handle("/rtm.start", rtmStartHandler)
 	s.Handle("/rtm.connect", RTMConnectHandler)
 	s.Handle("/chat.postMessage", s.postMessageHandler)
+	s.Handle("/chat.update", s.updateHandler)
 	s.Handle("/channels.list", listChannelsHandler)
 	s.Handle("/groups.list", listGroupsHandler)
 	s.Handle("/users.info", usersInfoHandler)
