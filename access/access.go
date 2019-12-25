@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 
 	"github.com/gravitational/trace"
@@ -214,7 +215,10 @@ func (w *watcher) run() {
 	for {
 		event, err := w.stream.Recv()
 		if err != nil {
-			w.setError(trail.FromGRPC(err))
+			if grpc.Code(err) != codes.Canceled {
+				err = trail.FromGRPC(err)
+				w.setError(err)
+			}
 			return
 		}
 		var req Request
@@ -264,10 +268,7 @@ func (w *watcher) Done() <-chan struct{} {
 func (w *watcher) Error() error {
 	w.emux.Lock()
 	defer w.emux.Unlock()
-	if w.err != nil {
-		return w.err
-	}
-	return w.ctx.Err()
+	return w.err
 }
 
 func (w *watcher) setError(err error) {

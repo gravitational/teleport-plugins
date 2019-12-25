@@ -30,6 +30,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gravitational/kingpin"
 	"github.com/gravitational/teleport-plugins/access"
 	"github.com/gravitational/trace"
 	"github.com/nlopes/slack"
@@ -57,17 +58,30 @@ func bail(msg string, a ...interface{}) {
 }
 
 func main() {
-	pgrm := os.Args[0]
-	args := os.Args[1:]
-	if len(args) < 1 {
-		bail("USAGE: %s (configure | <config-path>)", pgrm)
+	app := kingpin.New("slackbot", "Teleport plugin for access requests approval via Slack.")
+	app.Command("configure", "Prints an example configuration file")
+	startCmd := app.Command("start", "Starts a bot daemon")
+	path := startCmd.Arg("path", "Configuration file path").
+		Required().
+		String()
+	debug := startCmd.Flag("debug", "Enable verbose logging to stderr").
+		Short('d').
+		Bool()
+	selectedCmd, err := app.Parse(os.Args[1:])
+	if err != nil {
+		bail("error: %s", err)
 	}
-	if args[0] == "configure" {
+	switch selectedCmd {
+	case "configure":
 		fmt.Print(exampleConfig)
-		return
-	}
-	if err := run(args[0]); err != nil {
-		bail("ERROR: %s", err)
+	case "start":
+		if *debug {
+			log.SetLevel(log.DebugLevel)
+			log.Debugf("DEBUG logging enabled")
+		}
+		if err := run(*path); err != nil {
+			bail("error: %s", err)
+		}
 	}
 }
 
@@ -104,42 +118,44 @@ func NewApp(ctx context.Context, conf Config) (*App, error) {
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
+	return NewAppWithTLSConfig(ctx, tc, conf)
+}
+
+func NewAppWithTLSConfig(ctx context.Context, tlsConf *tls.Config, conf Config) (*App, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	accessClient, err := access.NewClient(ctx, conf.Teleport.AuthServer, tc)
-	if err != nil {
+	app := &App{conf: conf, ctx: ctx}
+
+	if client, err := access.NewClient(ctx, conf.Teleport.AuthServer, tlsConf); err == nil {
+		app.accessClient = client
+	} else {
 		cancel()
 		return nil, trace.Wrap(err)
 	}
-	slackClient := slack.New(conf.Slack.Token)
-	if err != nil {
-		cancel()
-		return nil, trace.Wrap(err)
+
+	slackOptions := []slack.Option{}
+	if conf.Slack.APIURL != "" {
+		slackOptions = append(slackOptions, slack.OptionAPIURL(conf.Slack.APIURL))
 	}
-	httpServer := &http.Server{
-		Addr: conf.Slack.Listen,
+	app.slackClient = slack.New(conf.Slack.Token, slackOptions...)
+
+	serverMux := http.NewServeMux()
+	serverMux.HandleFunc("/", app.ActionsHandler)
+	app.httpServer = &http.Server{
+		Addr:    conf.Slack.Listen,
+		Handler: serverMux,
 	}
 	var once sync.Once
-	stop := func() {
+	app.stop = func() {
 		once.Do(func() {
 			log.Infof("Attempting graceful shutdown...")
 			cancel()
 			sctx, _ := context.WithTimeout(context.TODO(), time.Second*20)
-			if err := httpServer.Shutdown(sctx); err != nil {
+			if err := app.httpServer.Shutdown(sctx); err != nil {
 				log.Errorf("Server shutdown failed: %s", err)
 			}
 		})
 	}
-	cache := NewRequestCache(ctx)
-	app := &App{
-		accessClient: accessClient,
-		slackClient:  slackClient,
-		httpServer:   httpServer,
-		cache:        cache,
-		conf:         conf,
-		ctx:          ctx,
-		stop:         stop,
-	}
-	http.HandleFunc("/", app.ActionsHandler)
+	app.cache = NewRequestCache(ctx)
 	return app, nil
 }
 
@@ -193,10 +209,14 @@ Watch:
 					return trace.Wrap(err)
 				}
 			case access.OpDelete:
-				entry, ok := a.cache.Pop(req.ID)
-				if !ok {
-					log.Warnf("cannot expire unknown request %q", req.ID)
-					continue Watch
+				entry, err := a.cache.Pop(req.ID)
+				if err != nil {
+					if trace.IsNotFound(err) {
+						log.Warnf("cannot expire unknown request: %s", err)
+						continue Watch
+					} else {
+						return trace.Wrap(err)
+					}
 				}
 				if err := a.expireEntry(entry); err != nil {
 					return trace.Wrap(err)
@@ -205,7 +225,7 @@ Watch:
 				return trace.BadParameter("unexpected event operation %s", op)
 			}
 		case <-watcher.Done():
-			return watcher.Error()
+			return trace.Wrap(watcher.Error())
 		}
 	}
 }
@@ -213,11 +233,15 @@ Watch:
 // loadRequest loads the specified request in order to correctly format
 // a response.
 func (a *App) loadRequest(reqID string) (access.Request, error) {
-	entry, ok := a.cache.Pop(reqID)
-	if ok {
+	if entry, err := a.cache.Pop(reqID); err == nil {
 		return entry.Request, nil
+	} else {
+		if trace.IsNotFound(err) {
+			log.Warnf("Cache-miss: %s", err)
+		} else {
+			return access.Request{}, trace.Wrap(err)
+		}
 	}
-	log.Warnf("Cache-miss for request %s", reqID)
 	reqs, err := a.accessClient.GetRequests(a.ctx, access.Filter{
 		ID: reqID,
 	})
@@ -242,7 +266,11 @@ func (a *App) OnCallback(cb slack.InteractionCallback) error {
 	case ActionApprove:
 		req, err = a.loadRequest(action.Value)
 		if err != nil {
-			return trace.Wrap(err)
+			if trace.IsNotFound(err) {
+				return nil
+			} else {
+				return trace.Wrap(err)
+			}
 		}
 		log.Infof("Approving request %+v", req)
 		if err := a.accessClient.SetRequestState(a.ctx, req.ID, access.StateApproved); err != nil {
@@ -252,7 +280,11 @@ func (a *App) OnCallback(cb slack.InteractionCallback) error {
 	case ActionDeny:
 		req, err = a.loadRequest(action.Value)
 		if err != nil {
-			return trace.Wrap(err)
+			if trace.IsNotFound(err) {
+				return nil
+			} else {
+				return trace.Wrap(err)
+			}
 		}
 		log.Infof("Denying request %+v", req)
 		if err := a.accessClient.SetRequestState(a.ctx, req.ID, access.StateDenied); err != nil {
@@ -261,6 +293,9 @@ func (a *App) OnCallback(cb slack.InteractionCallback) error {
 		status = "DENIED"
 	default:
 		return trace.BadParameter("Unknown ActionID: %s", action.ActionID)
+	}
+	if cb.ResponseURL == "" {
+		return nil
 	}
 	go func() {
 		msg := msgText(
@@ -300,7 +335,7 @@ func (a *App) OnCallback(cb slack.InteractionCallback) error {
 			log.Errorf("Failed to update msg for %+v", req)
 			return
 		}
-		log.Debug("Successfully updated msg for %+v", req)
+		log.Debugf("Successfully updated msg for %+v", req)
 	}()
 	return nil
 }
@@ -350,7 +385,7 @@ func (a *App) OnPendingRequest(req access.Request) error {
 	if err != nil {
 		return trace.Wrap(err)
 	}
-	log.Debugf("Posted to channel %s at time %s\n", channelID, timestamp)
+	log.Debugf("Posted to channel %s at time %s", channelID, timestamp)
 	a.cache.Put(Entry{
 		Request:   req,
 		ChannelID: channelID,
@@ -429,6 +464,7 @@ type Config struct {
 		Secret  string `toml:"secret"`
 		Channel string `toml:"channel"`
 		Listen  string `toml:"listen"`
+		APIURL  string
 	} `toml:"slack"`
 }
 
