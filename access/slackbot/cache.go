@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
+	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -36,9 +37,9 @@ type Entry struct {
 type RequestCache struct {
 	sync.Mutex
 	entries map[string]Entry
-	tainted bool
 	index   uint
 	next    uint
+	err     error
 }
 
 func NewRequestCache(ctx context.Context) *RequestCache {
@@ -53,7 +54,7 @@ func NewRequestCache(ctx context.Context) *RequestCache {
 			case <-ticker.C:
 				cache.tick()
 			case <-ctx.Done():
-				cache.taint()
+				cache.taint(ctx.Err())
 				return
 			}
 		}
@@ -61,45 +62,46 @@ func NewRequestCache(ctx context.Context) *RequestCache {
 	return cache
 }
 
-func (c *RequestCache) Get(reqID string) (entry Entry, ok bool) {
+func (c *RequestCache) Get(reqID string) (Entry, error) {
 	c.Lock()
 	defer c.Unlock()
-	if c.tainted {
-		panic("use of tainted cache")
+	if c.err != nil {
+		return Entry{}, trace.Wrap(c.err)
 	}
-	e, ok := c.entries[reqID]
-	if !ok {
-		return
+	if e, ok := c.entries[reqID]; ok {
+		return e, nil
+	} else {
+		return Entry{}, trace.NotFound("no request matching %q", reqID)
 	}
-	return e, true
 }
 
-func (c *RequestCache) Put(entry Entry) {
+func (c *RequestCache) Put(entry Entry) error {
 	const TTL = 60 * 60
 	c.Lock()
 	defer c.Unlock()
-	if c.tainted {
-		panic("use of tainted cache")
+	if c.err != nil {
+		return trace.Wrap(c.err)
 	}
 	entry.exp = c.index + TTL
 	if c.next == 0 || c.next > entry.exp {
 		c.next = entry.exp
 	}
 	c.entries[entry.Request.ID] = entry
+	return nil
 }
 
-func (c *RequestCache) Pop(reqID string) (entry Entry, ok bool) {
+func (c *RequestCache) Pop(reqID string) (Entry, error) {
 	c.Lock()
 	defer c.Unlock()
-	if c.tainted {
-		panic("use of tainted cache")
+	if c.err != nil {
+		return Entry{}, trace.Wrap(c.err)
 	}
-	e, ok := c.entries[reqID]
-	if !ok {
-		return
+	if e, ok := c.entries[reqID]; ok {
+		delete(c.entries, reqID)
+		return e, nil
+	} else {
+		return Entry{}, trace.NotFound("no request matching %q", reqID)
 	}
-	delete(c.entries, reqID)
-	return e, true
 }
 
 func (c *RequestCache) tick() int {
@@ -122,9 +124,9 @@ func (c *RequestCache) tick() int {
 	return len(c.entries)
 }
 
-func (c *RequestCache) taint() {
+func (c *RequestCache) taint(err error) {
 	c.Lock()
 	defer c.Unlock()
 	c.entries = nil
-	c.tainted = true
+	c.err = err
 }
