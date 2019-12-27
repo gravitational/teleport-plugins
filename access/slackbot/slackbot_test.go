@@ -96,6 +96,7 @@ func (s *SlackbotSuite) SetUpTest(c *C) {
 
 func (s *SlackbotSuite) TearDownTest(c *C) {
 	s.app.Stop()
+	s.app.Wait()
 	s.slackServer.Stop()
 }
 
@@ -126,9 +127,10 @@ func (s *SlackbotSuite) startApp(c *C) {
 	conf.Slack.APIURL = "http://" + s.slackServer.ServerAddr + "/"
 	conf.Slack.Listen = ":" + s.appPort
 
-	s.app, err = NewAppWithTLSConfig(context.TODO(), &tc, conf)
+	s.app, err = NewAppWithTLSConfig(conf, &tc)
 	c.Assert(err, IsNil)
-	s.app.Start()
+	err = s.app.Start(context.TODO())
+	c.Assert(err, IsNil)
 }
 
 func (s *SlackbotSuite) createAccessRequest(c *C) services.AccessRequest {

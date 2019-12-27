@@ -26,8 +26,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/gravitational/kingpin"
@@ -91,101 +93,213 @@ func run(configPath string) error {
 		return trace.Wrap(err)
 	}
 	ctx := context.Background()
-	app, err := NewApp(ctx, *conf)
+	app, err := NewApp(*conf)
 	if err != nil {
 		return trace.Wrap(err)
 	}
-	app.Start()
+	serveSignals(app)
+	err = app.Start(ctx)
+	if err != nil {
+		return trace.Wrap(err)
+	}
 	app.Wait()
-	return nil
+	return app.Error()
+}
+
+func serveSignals(app *App) {
+	sigC := make(chan os.Signal)
+	signal.Notify(sigC,
+		syscall.SIGQUIT, // graceful shutdown
+		syscall.SIGTERM, // fast shutdown
+		syscall.SIGKILL, // fast shutdown
+		syscall.SIGINT,  // graceful-then-fast shutdown
+	)
+	var alreadyInterrupted bool
+	go func() {
+		for {
+			signal := <-sigC
+			switch signal {
+			case syscall.SIGQUIT:
+				app.Stop()
+			case syscall.SIGTERM, syscall.SIGKILL:
+				app.Close()
+			case syscall.SIGINT:
+				if alreadyInterrupted {
+					app.Close()
+				} else {
+					app.Stop()
+					alreadyInterrupted = true
+				}
+			}
+		}
+	}()
 }
 
 type killSwitch func()
 
 // App contains global application state.
 type App struct {
+	sync.Mutex
+	waitCond     *sync.Cond
 	accessClient access.Client
 	slackClient  *slack.Client
 	httpServer   *http.Server
 	cache        *RequestCache
 	conf         Config
-	ctx          context.Context
+	tlsConf      *tls.Config
 	stop         killSwitch
+	cancel       context.CancelFunc
+	err          error
 }
 
-func NewApp(ctx context.Context, conf Config) (*App, error) {
+func NewApp(conf Config) (*App, error) {
 	tc, err := conf.LoadTLSConfig()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	return NewAppWithTLSConfig(ctx, tc, conf)
+	return NewAppWithTLSConfig(conf, tc)
 }
 
-func NewAppWithTLSConfig(ctx context.Context, tlsConf *tls.Config, conf Config) (*App, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	app := &App{conf: conf, ctx: ctx}
-
-	if client, err := access.NewClient(ctx, conf.Teleport.AuthServer, tlsConf); err == nil {
-		app.accessClient = client
-	} else {
-		cancel()
-		return nil, trace.Wrap(err)
-	}
+func NewAppWithTLSConfig(conf Config, tlsConf *tls.Config) (*App, error) {
+	app := &App{conf: conf, tlsConf: tlsConf}
 
 	slackOptions := []slack.Option{}
 	if conf.Slack.APIURL != "" {
 		slackOptions = append(slackOptions, slack.OptionAPIURL(conf.Slack.APIURL))
 	}
 	app.slackClient = slack.New(conf.Slack.Token, slackOptions...)
-
-	serverMux := http.NewServeMux()
-	serverMux.HandleFunc("/", app.ActionsHandler)
-	app.httpServer = &http.Server{
-		Addr:    conf.Slack.Listen,
-		Handler: serverMux,
-	}
-	var once sync.Once
-	app.stop = func() {
-		once.Do(func() {
-			log.Infof("Attempting graceful shutdown...")
-			cancel()
-			sctx, _ := context.WithTimeout(context.TODO(), time.Second*20)
-			if err := app.httpServer.Shutdown(sctx); err != nil {
-				log.Errorf("Server shutdown failed: %s", err)
-			}
-		})
-	}
-	app.cache = NewRequestCache(ctx)
 	return app, nil
 }
 
+func (a *App) finish(err error) {
+	a.Lock()
+	defer a.Unlock()
+	a.err = err
+	a.cache = nil
+	a.httpServer = nil
+	a.stop = nil
+	a.cancel = nil
+	a.waitCond = nil
+}
+
+// Close signals the App to shutdown immediately
+func (a *App) Close() {
+	a.Lock()
+	defer a.Unlock()
+	if cancel := a.cancel; cancel != nil {
+		log.Infof("Force shutdown...")
+		cancel()
+	}
+}
+
+// Stop signals the App to shutdown gracefully
 func (a *App) Stop() {
-	a.stop()
+	a.Lock()
+	defer a.Unlock()
+	if stop := a.stop; stop != nil {
+		stop()
+	}
 }
 
-// TODO: add error consolidation
+// Wait blocks until watcher and http server finish
 func (a *App) Wait() {
-	<-a.ctx.Done()
+	a.Lock()
+	defer a.Unlock()
+	if cond := a.waitCond; cond != nil {
+		cond.Wait()
+	}
 }
 
-func (a *App) Start() {
+// Error returns the error returned by watcher/http server or them both
+func (a *App) Error() error {
+	return a.err
+}
+
+// Start runs a watcher and http server
+func (a *App) Start(ctx context.Context) error {
+	a.Lock()
+	defer a.Unlock()
+
+	ctx, cancel := context.WithCancel(ctx)
+
+	if client, err := access.NewClient(ctx, a.conf.Teleport.AuthServer, a.tlsConf); err == nil {
+		a.accessClient = client
+	} else {
+		cancel()
+		return trace.Wrap(err)
+	}
+	a.cancel = cancel
+
+	a.cache = NewRequestCache(ctx)
+
+	var (
+		httpErr, watcherErr error
+		workers             sync.WaitGroup
+	)
+	workers.Add(2)
+	cond := sync.NewCond(a)
+	a.waitCond = cond
+	a.err = nil
+
+	httpServer := a.newHttpServer(ctx)
+	a.httpServer = httpServer
+
+	var once sync.Once
+	shutdown := func() {
+		once.Do(func() {
+			defer cancel() // We have to wait first because cancellation breaks cache
+			log.Infof("Attempting graceful shutdown...")
+			sctx, scancel := context.WithTimeout(ctx, time.Second*20)
+			defer scancel()
+			if err := httpServer.Shutdown(sctx); err != nil {
+				log.Errorf("HTTP server graceful shutdown failed: %s", err)
+			}
+		})
+	}
+	a.stop = func() { go shutdown() }
+
 	go func() {
-		defer a.Stop()
+		defer shutdown()
+		defer workers.Done()
 		log.Infof("Starting server on %s", a.conf.Slack.Listen)
-		if err := a.httpServer.ListenAndServe(); err != http.ErrServerClosed {
-			log.Fatalf("Server failed: %s", err)
+		if err := httpServer.ListenAndServe(); err != http.ErrServerClosed {
+			httpErr = trace.Wrap(err)
 		}
 	}()
 	go func() {
-		defer a.Stop()
-		if err := a.watchRequests(); err != nil {
-			log.Fatalf("Watcher failed: %s", err)
+		<-ctx.Done()
+		httpServer.Close()
+	}()
+	go func() {
+		defer shutdown()
+		defer workers.Done()
+		if err := a.watchRequests(ctx); err != nil {
+			watcherErr = trace.Wrap(err)
 		}
 	}()
+	go func() {
+		defer cond.Broadcast()
+		workers.Wait()
+		a.finish(trace.NewAggregate(httpErr, watcherErr))
+	}()
+	return nil
 }
 
-func (a *App) watchRequests() error {
-	watcher, err := a.accessClient.WatchRequests(a.ctx, access.Filter{
+// newHttpServer creates a http server bound to the current context
+func (a *App) newHttpServer(ctx context.Context) *http.Server {
+	serverMux := http.NewServeMux()
+	serverMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		a.ActionsHandler(ctx, w, r)
+	})
+	return &http.Server{
+		Addr:    a.conf.Slack.Listen,
+		Handler: serverMux,
+	}
+}
+
+// watchRequests starts a GRPC watcher which monitors access requests
+func (a *App) watchRequests(ctx context.Context) error {
+	watcher, err := a.accessClient.WatchRequests(ctx, access.Filter{
 		State: access.StatePending,
 	})
 	if err != nil {
@@ -232,7 +346,7 @@ Watch:
 
 // loadRequest loads the specified request in order to correctly format
 // a response.
-func (a *App) loadRequest(reqID string) (access.Request, error) {
+func (a *App) loadRequest(ctx context.Context, reqID string) (access.Request, error) {
 	if entry, err := a.cache.Pop(reqID); err == nil {
 		return entry.Request, nil
 	} else {
@@ -242,7 +356,7 @@ func (a *App) loadRequest(reqID string) (access.Request, error) {
 			return access.Request{}, trace.Wrap(err)
 		}
 	}
-	reqs, err := a.accessClient.GetRequests(a.ctx, access.Filter{
+	reqs, err := a.accessClient.GetRequests(ctx, access.Filter{
 		ID: reqID,
 	})
 	if err != nil {
@@ -254,7 +368,7 @@ func (a *App) loadRequest(reqID string) (access.Request, error) {
 	return reqs[0], nil
 }
 
-func (a *App) OnCallback(cb slack.InteractionCallback) error {
+func (a *App) OnCallback(ctx context.Context, cb slack.InteractionCallback) error {
 	if len(cb.ActionCallback.BlockActions) != 1 {
 		return trace.BadParameter("expected exactly one block action")
 	}
@@ -264,7 +378,7 @@ func (a *App) OnCallback(cb slack.InteractionCallback) error {
 	var status string
 	switch action.ActionID {
 	case ActionApprove:
-		req, err = a.loadRequest(action.Value)
+		req, err = a.loadRequest(ctx, action.Value)
 		if err != nil {
 			if trace.IsNotFound(err) {
 				return nil
@@ -273,12 +387,12 @@ func (a *App) OnCallback(cb slack.InteractionCallback) error {
 			}
 		}
 		log.Infof("Approving request %+v", req)
-		if err := a.accessClient.SetRequestState(a.ctx, req.ID, access.StateApproved); err != nil {
+		if err := a.accessClient.SetRequestState(ctx, req.ID, access.StateApproved); err != nil {
 			return trace.Wrap(err)
 		}
 		status = "APPROVED"
 	case ActionDeny:
-		req, err = a.loadRequest(action.Value)
+		req, err = a.loadRequest(ctx, action.Value)
 		if err != nil {
 			if trace.IsNotFound(err) {
 				return nil
@@ -287,7 +401,7 @@ func (a *App) OnCallback(cb slack.InteractionCallback) error {
 			}
 		}
 		log.Infof("Denying request %+v", req)
-		if err := a.accessClient.SetRequestState(a.ctx, req.ID, access.StateDenied); err != nil {
+		if err := a.accessClient.SetRequestState(ctx, req.ID, access.StateDenied); err != nil {
 			return trace.Wrap(err)
 		}
 		status = "DENIED"
@@ -340,7 +454,7 @@ func (a *App) OnCallback(cb slack.InteractionCallback) error {
 	return nil
 }
 
-func (a *App) ActionsHandler(w http.ResponseWriter, r *http.Request) {
+func (a *App) ActionsHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	sv, err := slack.NewSecretsVerifier(r.Header, a.conf.Slack.Secret)
 	if err != nil {
 		log.Errorf("Failed to initialize secrets verifier: %s", err)
@@ -364,7 +478,7 @@ func (a *App) ActionsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to parse response", 500)
 		return
 	}
-	if err := a.OnCallback(cb); err != nil {
+	if err := a.OnCallback(ctx, cb); err != nil {
 		log.Errorf("Failed to process callback: %s", err)
 		http.Error(w, "failed to process callback", 500)
 		return
