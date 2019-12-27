@@ -368,9 +368,9 @@ func (a *App) loadRequest(ctx context.Context, reqID string) (access.Request, er
 	return reqs[0], nil
 }
 
-func (a *App) OnCallback(ctx context.Context, cb slack.InteractionCallback) error {
+func (a *App) OnCallback(ctx context.Context, cb slack.InteractionCallback) (slack.Message, error) {
 	if len(cb.ActionCallback.BlockActions) != 1 {
-		return trace.BadParameter("expected exactly one block action")
+		return slack.Message{}, trace.BadParameter("expected exactly one block action")
 	}
 	action := cb.ActionCallback.BlockActions[0]
 	var req access.Request
@@ -381,77 +381,42 @@ func (a *App) OnCallback(ctx context.Context, cb slack.InteractionCallback) erro
 		req, err = a.loadRequest(ctx, action.Value)
 		if err != nil {
 			if trace.IsNotFound(err) {
-				return nil
+				return slack.Message{}, nil
 			} else {
-				return trace.Wrap(err)
+				return slack.Message{}, trace.Wrap(err)
 			}
 		}
 		log.Infof("Approving request %+v", req)
 		if err := a.accessClient.SetRequestState(ctx, req.ID, access.StateApproved); err != nil {
-			return trace.Wrap(err)
+			return slack.Message{}, trace.Wrap(err)
 		}
 		status = "APPROVED"
 	case ActionDeny:
 		req, err = a.loadRequest(ctx, action.Value)
 		if err != nil {
 			if trace.IsNotFound(err) {
-				return nil
+				return slack.Message{}, nil
 			} else {
-				return trace.Wrap(err)
+				return slack.Message{}, trace.Wrap(err)
 			}
 		}
 		log.Infof("Denying request %+v", req)
 		if err := a.accessClient.SetRequestState(ctx, req.ID, access.StateDenied); err != nil {
-			return trace.Wrap(err)
+			return slack.Message{}, trace.Wrap(err)
 		}
 		status = "DENIED"
 	default:
-		return trace.BadParameter("Unknown ActionID: %s", action.ActionID)
+		return slack.Message{}, trace.BadParameter("Unknown ActionID: %s", action.ActionID)
 	}
-	if cb.ResponseURL == "" {
-		return nil
-	}
-	go func() {
-		msg := msgText(
-			req.ID,
-			req.User,
-			req.Roles,
-			status,
-		)
-		sec := msgSection(msg)
-		secJson, err := json.Marshal(&sec)
-		if err != nil {
-			log.Errorf("Failed to serialize msg block: %s", err)
-			return
-		}
-		// I am literally at a loss for how to achieve this using nlopes/slack,
-		// so we're just hard-coding the json and manually POSTing it...
-		// Janky? yes. Better than nothing? Also yes.
-		rjson := fmt.Sprintf(`{"blocks":[%s],"replace_original":"true"}`, secJson)
-		rsp, err := http.Post(cb.ResponseURL, "application/json", strings.NewReader(rjson))
-		if err != nil {
-			log.Errorf("Failed to send update: %s", err)
-			return
-		}
-		rbody, err := ioutil.ReadAll(rsp.Body)
-		if err != nil {
-			log.Errorf("Failed to read update response: %s", err)
-			return
-		}
-		var ursp struct {
-			Ok bool `json:"ok"`
-		}
-		if err := json.Unmarshal(rbody, &ursp); err != nil {
-			log.Errorf("Failed to parse response body: %s", err)
-			return
-		}
-		if !ursp.Ok {
-			log.Errorf("Failed to update msg for %+v", req)
-			return
-		}
-		log.Debugf("Successfully updated msg for %+v", req)
-	}()
-	return nil
+	msg := msgText(
+		req.ID,
+		req.User,
+		req.Roles,
+		status,
+	)
+	message := cb.OriginalMessage
+	message.Blocks.BlockSet = []slack.Block { msgSection(msg) }
+	return message, nil
 }
 
 func (a *App) ActionsHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -478,10 +443,13 @@ func (a *App) ActionsHandler(ctx context.Context, w http.ResponseWriter, r *http
 		http.Error(w, "failed to parse response", 500)
 		return
 	}
-	if err := a.OnCallback(ctx, cb); err != nil {
+	if msg, err := a.OnCallback(ctx, cb); err != nil {
 		log.Errorf("Failed to process callback: %s", err)
 		http.Error(w, "failed to process callback", 500)
-		return
+	} else {
+		w.Header().Add("Content-type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(&msg)
 	}
 }
 

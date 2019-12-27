@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os/user"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -227,9 +228,20 @@ func (s *SlackbotSuite) TestApproval(c *C) {
 		ActionID: "approve_request",
 		Value:    request.GetName(),
 	})
+
 	response, err := s.postCallback(c, cb)
 	c.Assert(err, IsNil)
 	c.Assert(response.StatusCode, Equals, 200)
+	var msg slack.Message
+	err = json.NewDecoder(response.Body).Decode(&msg)
+	c.Assert(err, IsNil)
+	c.Assert(len(msg.Blocks.BlockSet), Equals, 1)
+	c.Assert(msg.Blocks.BlockSet[0], FitsTypeOf, &slack.SectionBlock{})
+	blockSection := msg.Blocks.BlockSet[0].(*slack.SectionBlock)
+	matched, err := regexp.MatchString("APPROVED", blockSection.Text.Text) // For some reason Matches checker doesn't work
+	c.Assert(err, IsNil)
+	c.Assert(matched, Equals, true)
+
 	auth := s.teleport.Process.GetAuthServer()
 	request, err = auth.GetAccessRequest(request.GetName())
 	c.Assert(err, IsNil)
@@ -243,9 +255,20 @@ func (s *SlackbotSuite) TestDenial(c *C) {
 		ActionID: "deny_request",
 		Value:    request.GetName(),
 	})
+
 	response, err := s.postCallback(c, cb)
 	c.Assert(err, IsNil)
 	c.Assert(response.StatusCode, Equals, 200)
+	var msg slack.Message
+	err = json.NewDecoder(response.Body).Decode(&msg)
+	c.Assert(err, IsNil)
+	c.Assert(len(msg.Blocks.BlockSet), Equals, 1)
+	c.Assert(msg.Blocks.BlockSet[0], FitsTypeOf, &slack.SectionBlock{})
+	blockSection := msg.Blocks.BlockSet[0].(*slack.SectionBlock)
+	matched, err := regexp.MatchString("DENIED", blockSection.Text.Text) // For some reason Matches checker doesn't work
+	c.Assert(err, IsNil)
+	c.Assert(matched, Equals, true)
+
 	auth := s.teleport.Process.GetAuthServer()
 	request, err = auth.GetAccessRequest(request.GetName())
 	c.Assert(err, IsNil)
