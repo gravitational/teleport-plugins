@@ -210,6 +210,8 @@ func (a *App) Wait() {
 
 // Error returns the error returned by watcher/http server or them both
 func (a *App) Error() error {
+	a.Lock()
+	defer a.Unlock()
 	return a.err
 }
 
