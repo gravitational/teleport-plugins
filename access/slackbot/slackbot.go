@@ -109,7 +109,6 @@ func serveSignals(app *App) {
 	signal.Notify(sigC,
 		syscall.SIGQUIT, // graceful shutdown
 		syscall.SIGTERM, // fast shutdown
-		syscall.SIGKILL, // fast shutdown
 		syscall.SIGINT,  // graceful-then-fast shutdown
 	)
 	var alreadyInterrupted bool
@@ -426,7 +425,7 @@ func (a *App) OnCallback(ctx context.Context, cb slack.InteractionCallback) (sla
 		status,
 	)
 	message := cb.OriginalMessage
-	message.Blocks.BlockSet = []slack.Block { msgSection(msg) }
+	message.Blocks.BlockSet = []slack.Block{msgSection(msg)}
 	return message, nil
 }
 
@@ -470,7 +469,10 @@ func (a *App) ActionsHandler(ctx context.Context, w http.ResponseWriter, r *http
 	} else {
 		w.Header().Add("Content-type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(&msg)
+		err = json.NewEncoder(w).Encode(&msg)
+		if err != nil {
+			log.Error("Failed to write JSON: ", err)
+		}
 	}
 }
 
@@ -489,12 +491,11 @@ func (a *App) OnPendingRequest(req access.Request) error {
 		return trace.Wrap(err)
 	}
 	log.Debugf("Posted to channel %s at time %s", channelID, timestamp)
-	a.cache.Put(Entry{
+	return a.cache.Put(Entry{
 		Request:   req,
 		ChannelID: channelID,
 		Timestamp: timestamp,
 	})
-	return nil
 }
 
 func (a *App) expireEntry(entry Entry) error {
