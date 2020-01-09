@@ -29,7 +29,6 @@ import (
 )
 
 const (
-	Loopback    = "127.0.0.1"
 	Host        = "localhost"
 	HostID      = "00000000-0000-0000-0000-000000000000"
 	Site        = "local-site"
@@ -50,6 +49,7 @@ var _ = Suite(&SlackbotSuite{})
 func TestSlackbot(t *testing.T) { TestingT(t) }
 
 func (s *SlackbotSuite) SetUpSuite(c *C) {
+	var err error
 	log.SetLevel(log.DebugLevel)
 	priv, pub, err := testauthority.New().GenerateKeyPair("")
 	c.Assert(err, IsNil)
@@ -80,7 +80,8 @@ func (s *SlackbotSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 	t.AddUserWithRole("plugin", accessPluginRole)
 
-	t.Create(nil, true, nil)
+	err = t.Create(nil, true, nil)
+	c.Assert(err, IsNil)
 	if err := t.Start(); err != nil {
 		c.Fatalf("Unexpected response from Start: %v", err)
 	}

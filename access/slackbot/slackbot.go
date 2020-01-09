@@ -109,7 +109,6 @@ func serveSignals(app *App) {
 	signal.Notify(sigC,
 		syscall.SIGQUIT, // graceful shutdown
 		syscall.SIGTERM, // fast shutdown
-		syscall.SIGKILL, // fast shutdown
 		syscall.SIGINT,  // graceful-then-fast shutdown
 	)
 	var alreadyInterrupted bool
@@ -273,8 +272,19 @@ func (a *App) Start(ctx context.Context) error {
 	go func() {
 		defer shutdown()
 		defer workers.Done()
-		if err := a.watchRequests(ctx); err != nil {
-			watcherErr = trace.Wrap(err)
+		for {
+			log.Info("Starting a request watcher...")
+			if err := a.watchRequests(ctx); err != nil {
+				if trace.IsEOF(err) || trace.IsConnectionProblem(err) {
+					log.Error("Watcher connection closed: ", err)
+					continue
+				} else {
+					watcherErr = trace.Wrap(err)
+					return
+				}
+			} else {
+				return
+			}
 		}
 	}()
 	go func() {
@@ -313,7 +323,7 @@ Watch:
 			req, op := event.Request, event.Type
 			switch op {
 			case access.OpInit:
-				log.Infof("watcher initialized...")
+				log.Info("Watcher connected")
 			case access.OpPut:
 				if !req.State.IsPending() {
 					log.Warnf("non-pending request event %+v", event)
@@ -415,11 +425,14 @@ func (a *App) OnCallback(ctx context.Context, cb slack.InteractionCallback) (sla
 		status,
 	)
 	message := cb.OriginalMessage
-	message.Blocks.BlockSet = []slack.Block { msgSection(msg) }
+	message.Blocks.BlockSet = []slack.Block{msgSection(msg)}
 	return message, nil
 }
 
 func (a *App) ActionsHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*2500) // Slack requires to respond within 3000 milliseconds
+	defer cancel()
+
 	sv, err := slack.NewSecretsVerifier(r.Header, a.conf.Slack.Secret)
 	if err != nil {
 		log.Errorf("Failed to initialize secrets verifier: %s", err)
@@ -445,11 +458,21 @@ func (a *App) ActionsHandler(ctx context.Context, w http.ResponseWriter, r *http
 	}
 	if msg, err := a.OnCallback(ctx, cb); err != nil {
 		log.Errorf("Failed to process callback: %s", err)
-		http.Error(w, "failed to process callback", 500)
+		var code int
+		switch {
+		case access.IsDeadline(err):
+			code = 503
+		default:
+			code = 500
+		}
+		http.Error(w, "failed to process callback", code)
 	} else {
 		w.Header().Add("Content-type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(&msg)
+		err = json.NewEncoder(w).Encode(&msg)
+		if err != nil {
+			log.Error("Failed to write JSON: ", err)
+		}
 	}
 }
 
@@ -468,12 +491,11 @@ func (a *App) OnPendingRequest(req access.Request) error {
 		return trace.Wrap(err)
 	}
 	log.Debugf("Posted to channel %s at time %s", channelID, timestamp)
-	a.cache.Put(Entry{
+	return a.cache.Put(Entry{
 		Request:   req,
 		ChannelID: channelID,
 		Timestamp: timestamp,
 	})
-	return nil
 }
 
 func (a *App) expireEntry(entry Entry) error {

@@ -19,12 +19,14 @@ package access
 import (
 	"context"
 	"crypto/tls"
+	"io"
 	"sync"
 	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
 
 	"github.com/gravitational/trace"
 	"github.com/gravitational/trace/trail"
@@ -110,10 +112,14 @@ type clt struct {
 
 func NewClient(ctx context.Context, addr string, tc *tls.Config) (Client, error) {
 	ctx, cancel := context.WithCancel(ctx)
-	conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(credentials.NewTLS(tc)))
+	conn, err := grpc.DialContext(ctx, addr,
+		grpc.WithTransportCredentials(credentials.NewTLS(tc)),
+		grpc.WithBackoffMaxDelay(time.Second*2),
+		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
+	)
 	if err != nil {
 		cancel()
-		return nil, trail.FromGRPC(err)
+		return nil, fromGRPC(err)
 	}
 	return &clt{
 		clt:    proto.NewAuthServiceClient(conn),
@@ -129,7 +135,7 @@ func (c *clt) WatchRequests(ctx context.Context, fltr Filter) (Watcher, error) {
 func (c *clt) GetRequests(ctx context.Context, fltr Filter) ([]Request, error) {
 	rsp, err := c.clt.GetAccessRequests(ctx, &fltr)
 	if err != nil {
-		return nil, trail.FromGRPC(err)
+		return nil, fromGRPC(err)
 	}
 	var reqs []Request
 	for _, req := range rsp.AccessRequests {
@@ -170,7 +176,7 @@ func (c *clt) setRequestState(ctx context.Context, reqID string, state State) er
 		ID:    reqID,
 		State: state,
 	})
-	return trail.FromGRPC(err)
+	return fromGRPC(err)
 }
 
 func (c *clt) Close() {
@@ -178,16 +184,45 @@ func (c *clt) Close() {
 }
 
 type watcher struct {
-	stream proto.AuthService_WatchEventsClient
 	eventC chan Event
-	ctx    context.Context
+	doneC  chan struct{}
 	emux   sync.Mutex
 	err    error
 	cancel context.CancelFunc
 }
 
+// TODO: remove this when trail.FromGRPC will understand additional error codes
+func fromGRPC(err error) error {
+	switch {
+	case err == io.EOF:
+	case status.Code(err) == codes.Canceled, err == context.Canceled:
+	case status.Code(err) == codes.DeadlineExceeded, err == context.DeadlineExceeded:
+		return trace.Wrap(err)
+	}
+	return trail.FromGRPC(err)
+}
+
+// TODO: remove this when trail.FromGRPC will understand additional error codes
+func IsDeadline(err error) bool {
+	err = trace.Unwrap(err)
+	return err == context.DeadlineExceeded || status.Code(err) == codes.DeadlineExceeded
+}
+
 func newWatcher(ctx context.Context, clt proto.AuthServiceClient, fltr Filter) (*watcher, error) {
 	ctx, cancel := context.WithCancel(ctx)
+	w := &watcher{
+		eventC: make(chan Event),
+		doneC:  make(chan struct{}),
+		cancel: cancel,
+	}
+	go w.run(ctx, clt, fltr)
+	return w, nil
+}
+
+func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, fltr Filter) {
+	defer w.Close()
+	defer close(w.doneC)
+
 	stream, err := clt.WatchEvents(ctx, &proto.Watch{
 		Kinds: []proto.WatchKind{
 			proto.WatchKind{
@@ -197,26 +232,15 @@ func newWatcher(ctx context.Context, clt proto.AuthServiceClient, fltr Filter) (
 		},
 	})
 	if err != nil {
-		cancel()
-		return nil, trail.FromGRPC(err)
+		w.setError(fromGRPC(err))
+		return
 	}
-	w := &watcher{
-		stream: stream,
-		eventC: make(chan Event),
-		ctx:    ctx,
-		cancel: cancel,
-	}
-	go w.run()
-	return w, nil
-}
 
-func (w *watcher) run() {
-	defer w.cancel()
 	for {
-		event, err := w.stream.Recv()
+		event, err := stream.Recv()
 		if err != nil {
-			if grpc.Code(err) != codes.Canceled {
-				err = trail.FromGRPC(err)
+			if status.Code(err) != codes.Canceled {
+				err = fromGRPC(err)
 				w.setError(err)
 			}
 			return
@@ -262,7 +286,7 @@ func (w *watcher) Events() <-chan Event {
 }
 
 func (w *watcher) Done() <-chan struct{} {
-	return w.ctx.Done()
+	return w.doneC
 }
 
 func (w *watcher) Error() error {
