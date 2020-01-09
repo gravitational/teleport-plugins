@@ -137,7 +137,7 @@ type killSwitch func()
 // App contains global application state.
 type App struct {
 	sync.Mutex
-	waitCond     *sync.Cond
+	doneC        chan struct{}
 	accessClient access.Client
 	slackClient  *slack.Client
 	httpServer   *http.Server
@@ -176,7 +176,7 @@ func (a *App) finish(err error) {
 	a.httpServer = nil
 	a.stop = nil
 	a.cancel = nil
-	a.waitCond = nil
+	a.doneC = nil
 }
 
 // Close signals the App to shutdown immediately
@@ -201,9 +201,10 @@ func (a *App) Stop() {
 // Wait blocks until watcher and http server finish
 func (a *App) Wait() {
 	a.Lock()
-	defer a.Unlock()
-	if cond := a.waitCond; cond != nil {
-		cond.Wait()
+	c := a.doneC
+	a.Unlock()
+	if c != nil {
+		<-c
 	}
 }
 
@@ -236,8 +237,8 @@ func (a *App) Start(ctx context.Context) error {
 		workers             sync.WaitGroup
 	)
 	workers.Add(2)
-	cond := sync.NewCond(a)
-	a.waitCond = cond
+	doneC := make(chan struct{})
+	a.doneC = doneC
 	a.err = nil
 
 	httpServer := a.newHttpServer(ctx)
@@ -290,7 +291,7 @@ func (a *App) Start(ctx context.Context) error {
 		}
 	}()
 	go func() {
-		defer cond.Broadcast()
+		defer close(doneC)
 		workers.Wait()
 		a.finish(trace.NewAggregate(httpErr, watcherErr))
 	}()
