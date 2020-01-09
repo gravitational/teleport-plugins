@@ -272,17 +272,19 @@ func (a *App) Start(ctx context.Context) error {
 	go func() {
 		defer shutdown()
 		defer workers.Done()
+		log.Info("Starting a request watcher...")
 		for {
-			log.Info("Starting a request watcher...")
-			if err := a.watchRequests(ctx); err != nil {
-				if trace.IsEOF(err) || trace.IsConnectionProblem(err) {
-					log.Error("Watcher connection closed: ", err)
-					continue
-				} else {
-					watcherErr = trace.Wrap(err)
-					return
-				}
-			} else {
+			err := a.watchRequests(ctx)
+			switch {
+			case trace.IsConnectionProblem(err):
+				log.Errorf("Watcher connection error: %v. Reconnecting...", err)
+			case trace.IsEOF(err):
+				log.Errorf("Watcher stream closed: %v. Reconnecting...", err)
+			case access.IsCanceled(err):
+				// Context cancellation is not an error
+				return
+			default:
+				watcherErr = trace.Wrap(err)
 				return
 			}
 		}
@@ -309,21 +311,22 @@ func (a *App) newHttpServer(ctx context.Context) *http.Server {
 
 // watchRequests starts a GRPC watcher which monitors access requests
 func (a *App) watchRequests(ctx context.Context) error {
-	watcher, err := a.accessClient.WatchRequests(ctx, access.Filter{
+	watcher := a.accessClient.WatchRequests(ctx, access.Filter{
 		State: access.StatePending,
 	})
-	if err != nil {
+	defer watcher.Close()
+
+	if err := watcher.WaitInit(ctx, 5*time.Second); err != nil {
 		return trace.Wrap(err)
 	}
-	defer watcher.Close()
+	log.Info("Watcher connected")
+
 Watch:
 	for {
 		select {
 		case event := <-watcher.Events():
 			req, op := event.Request, event.Type
 			switch op {
-			case access.OpInit:
-				log.Info("Watcher connected")
 			case access.OpPut:
 				if !req.State.IsPending() {
 					log.Warnf("non-pending request event %+v", event)
@@ -460,7 +463,7 @@ func (a *App) ActionsHandler(ctx context.Context, w http.ResponseWriter, r *http
 		log.Errorf("Failed to process callback: %s", err)
 		var code int
 		switch {
-		case access.IsDeadline(err):
+		case access.IsCanceled(err) || access.IsDeadline(err):
 			code = 503
 		default:
 			code = 500
