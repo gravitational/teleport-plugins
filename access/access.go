@@ -87,6 +87,7 @@ type Request struct {
 
 // Watcher is used to monitor access requests.
 type Watcher interface {
+	WaitInit(ctx context.Context, timeout time.Duration) error
 	Events() <-chan Event
 	Done() <-chan struct{}
 	Error() error
@@ -96,7 +97,7 @@ type Watcher interface {
 // Client is an access request management client.
 type Client interface {
 	// WatchRequests registers a new watcher for pending access requests.
-	WatchRequests(ctx context.Context, fltr Filter) (Watcher, error)
+	WatchRequests(ctx context.Context, fltr Filter) Watcher
 	// GetRequests loads all requests which match provided filter.
 	GetRequests(ctx context.Context, fltr Filter) ([]Request, error)
 	// SetRequestState updates the state of a request.
@@ -127,9 +128,8 @@ func NewClient(ctx context.Context, addr string, tc *tls.Config) (Client, error)
 	}, nil
 }
 
-func (c *clt) WatchRequests(ctx context.Context, fltr Filter) (Watcher, error) {
-	watcher, err := newWatcher(ctx, c.clt, fltr)
-	return watcher, trace.Wrap(err)
+func (c *clt) WatchRequests(ctx context.Context, fltr Filter) Watcher {
+	return newWatcher(ctx, c.clt, fltr)
 }
 
 func (c *clt) GetRequests(ctx context.Context, fltr Filter) ([]Request, error) {
@@ -185,6 +185,7 @@ func (c *clt) Close() {
 
 type watcher struct {
 	eventC chan Event
+	initC  chan struct{}
 	doneC  chan struct{}
 	emux   sync.Mutex
 	err    error
@@ -195,11 +196,20 @@ type watcher struct {
 func fromGRPC(err error) error {
 	switch {
 	case err == io.EOF:
+		fallthrough
 	case status.Code(err) == codes.Canceled, err == context.Canceled:
+		fallthrough
 	case status.Code(err) == codes.DeadlineExceeded, err == context.DeadlineExceeded:
 		return trace.Wrap(err)
+	default:
+		return trail.FromGRPC(err)
 	}
-	return trail.FromGRPC(err)
+}
+
+// TODO: remove this when trail.FromGRPC will understand additional error codes
+func IsCanceled(err error) bool {
+	err = trace.Unwrap(err)
+	return err == context.Canceled || status.Code(err) == codes.Canceled
 }
 
 // TODO: remove this when trail.FromGRPC will understand additional error codes
@@ -208,15 +218,16 @@ func IsDeadline(err error) bool {
 	return err == context.DeadlineExceeded || status.Code(err) == codes.DeadlineExceeded
 }
 
-func newWatcher(ctx context.Context, clt proto.AuthServiceClient, fltr Filter) (*watcher, error) {
+func newWatcher(ctx context.Context, clt proto.AuthServiceClient, fltr Filter) *watcher {
 	ctx, cancel := context.WithCancel(ctx)
 	w := &watcher{
 		eventC: make(chan Event),
+		initC:  make(chan struct{}),
 		doneC:  make(chan struct{}),
 		cancel: cancel,
 	}
 	go w.run(ctx, clt, fltr)
-	return w, nil
+	return w
 }
 
 func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, fltr Filter) {
@@ -239,16 +250,14 @@ func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, fltr Fil
 	for {
 		event, err := stream.Recv()
 		if err != nil {
-			if status.Code(err) != codes.Canceled {
-				err = fromGRPC(err)
-				w.setError(err)
-			}
+			w.setError(fromGRPC(err))
 			return
 		}
 		var req Request
 		switch event.Type {
 		case OpInit:
-			// req remains empty; nothing to do here.
+			close(w.initC)
+			continue
 		case OpPut:
 			r := event.GetAccessRequest()
 			if r == nil {
@@ -278,6 +287,19 @@ func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, fltr Fil
 			Type:    event.Type,
 			Request: req,
 		}
+	}
+}
+
+func (w *watcher) WaitInit(ctx context.Context, timeout time.Duration) error {
+	select {
+	case <-w.initC:
+		return nil
+	case <-time.After(timeout):
+		return trace.ConnectionProblem(nil, "watcher initialization timed out")
+	case <-w.Done():
+		return w.Error()
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
