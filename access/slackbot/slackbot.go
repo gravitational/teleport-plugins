@@ -220,6 +220,8 @@ func (a *App) Start(ctx context.Context) error {
 	a.Lock()
 	defer a.Unlock()
 
+	log.Infof("Starting Teleport Access Slackbot %s:%s", Version, Gitref)
+
 	ctx, cancel := context.WithCancel(ctx)
 
 	if client, err := access.NewClient(ctx, a.conf.Teleport.AuthServer, a.tlsConf); err == nil {
