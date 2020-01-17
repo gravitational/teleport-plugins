@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -382,9 +383,9 @@ func (a *App) loadRequest(ctx context.Context, reqID string) (access.Request, er
 	return reqs[0], nil
 }
 
-func (a *App) OnCallback(ctx context.Context, cb slack.InteractionCallback) (slack.Message, error) {
+func (a *App) OnCallback(ctx context.Context, cb slack.InteractionCallback) error {
 	if len(cb.ActionCallback.BlockActions) != 1 {
-		return slack.Message{}, trace.BadParameter("expected exactly one block action")
+		return trace.BadParameter("expected exactly one block action")
 	}
 	action := cb.ActionCallback.BlockActions[0]
 	var req access.Request
@@ -395,42 +396,81 @@ func (a *App) OnCallback(ctx context.Context, cb slack.InteractionCallback) (sla
 		req, err = a.loadRequest(ctx, action.Value)
 		if err != nil {
 			if trace.IsNotFound(err) {
-				return slack.Message{}, nil
+				status = "EXPIRED"
 			} else {
-				return slack.Message{}, trace.Wrap(err)
+				return trace.Wrap(err)
 			}
+		} else {
+			log.Infof("Approving request %+v", req)
+			if err := a.accessClient.SetRequestState(ctx, req.ID, access.StateApproved); err != nil {
+				return trace.Wrap(err)
+			}
+			status = "APPROVED"
 		}
-		log.Infof("Approving request %+v", req)
-		if err := a.accessClient.SetRequestState(ctx, req.ID, access.StateApproved); err != nil {
-			return slack.Message{}, trace.Wrap(err)
-		}
-		status = "APPROVED"
 	case ActionDeny:
 		req, err = a.loadRequest(ctx, action.Value)
 		if err != nil {
 			if trace.IsNotFound(err) {
-				return slack.Message{}, nil
+				status = "EXPIRED"
 			} else {
-				return slack.Message{}, trace.Wrap(err)
+				return trace.Wrap(err)
 			}
+		} else {
+			log.Infof("Denying request %+v", req)
+			if err := a.accessClient.SetRequestState(ctx, req.ID, access.StateDenied); err != nil {
+				return trace.Wrap(err)
+			}
+			status = "DENIED"
 		}
-		log.Infof("Denying request %+v", req)
-		if err := a.accessClient.SetRequestState(ctx, req.ID, access.StateDenied); err != nil {
-			return slack.Message{}, trace.Wrap(err)
-		}
-		status = "DENIED"
 	default:
-		return slack.Message{}, trace.BadParameter("Unknown ActionID: %s", action.ActionID)
+		return trace.BadParameter("Unknown ActionID: %s", action.ActionID)
 	}
-	msg := msgText(
-		req.ID,
-		req.User,
-		req.Roles,
-		status,
-	)
-	message := cb.OriginalMessage
-	message.Blocks.BlockSet = []slack.Block{msgSection(msg)}
-	return message, nil
+
+	// In real world it cannot be empty. This is for tests.
+	if cb.ResponseURL == "" {
+		return nil
+	}
+	go func() {
+		msg := msgText(
+			req.ID,
+			req.User,
+			req.Roles,
+			status,
+		)
+
+		var message slack.Message
+		message.Blocks.BlockSet = []slack.Block{msgSection(msg)}
+		message.ReplaceOriginal = true
+		body, err := json.Marshal(message)
+		if err != nil {
+			log.Errorf("Failed to serialize msg block: %s", err)
+			return
+		}
+		rsp, err := http.Post(cb.ResponseURL, "application/json", bytes.NewReader(body))
+		if err != nil {
+			log.Errorf("Failed to send update: %s", err)
+			return
+		}
+		rbody, err := ioutil.ReadAll(rsp.Body)
+		if err != nil {
+			log.Errorf("Failed to read update response: %s", err)
+			return
+		}
+		var ursp struct {
+			Ok bool `json:"ok"`
+		}
+		if err := json.Unmarshal(rbody, &ursp); err != nil {
+			log.Errorf("Failed to parse response body: %s", err)
+			return
+		}
+		if !ursp.Ok {
+			log.Errorf("Failed to update msg for %+v", req)
+			return
+		}
+		log.Debugf("Successfully updated msg for %+v", req)
+	}()
+	return nil
+
 }
 
 func (a *App) ActionsHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -460,7 +500,7 @@ func (a *App) ActionsHandler(ctx context.Context, w http.ResponseWriter, r *http
 		http.Error(w, "failed to parse response", 500)
 		return
 	}
-	if msg, err := a.OnCallback(ctx, cb); err != nil {
+	if err := a.OnCallback(ctx, cb); err != nil {
 		log.Errorf("Failed to process callback: %s", err)
 		var code int
 		switch {
@@ -471,12 +511,7 @@ func (a *App) ActionsHandler(ctx context.Context, w http.ResponseWriter, r *http
 		}
 		http.Error(w, "failed to process callback", code)
 	} else {
-		w.Header().Add("Content-type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		err = json.NewEncoder(w).Encode(&msg)
-		if err != nil {
-			log.Error("Failed to write JSON: ", err)
-		}
 	}
 }
 
