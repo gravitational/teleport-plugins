@@ -27,6 +27,6 @@ plugin can be found in the plugin's [README](./access/slackbot/README.md).
 
 ## notes
 
-This repository's `vendor` folder is just `gravitaional/teleport`'s `vendor`
+This repository's `vendor` folder is just `gravitational/teleport`'s `vendor`
 folder "flattened" to include `gravitational/teleport` as a member, with the
 exception of `nlopes/slack`, which is not a dependency of `teleport`.
