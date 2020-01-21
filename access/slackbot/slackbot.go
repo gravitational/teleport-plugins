@@ -17,17 +17,11 @@ limitations under the License.
 package main
 
 import (
-	"bytes"
 	"context"
 	"crypto/tls"
-	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
-	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -35,15 +29,7 @@ import (
 	"github.com/gravitational/kingpin"
 	"github.com/gravitational/teleport-plugins/access"
 	"github.com/gravitational/trace"
-	"github.com/nlopes/slack"
 	log "github.com/sirupsen/logrus"
-)
-
-const (
-	// ActionApprove uniquely identifies the approve button in events.
-	ActionApprove = "approve_request"
-	// ActionDeny uniquely identifies the deny button in events.
-	ActionDeny = "deny_request"
 )
 
 // eprintln prints an optionally formatted string to stderr.
@@ -60,7 +46,9 @@ func bail(msg string, a ...interface{}) {
 
 func main() {
 	app := kingpin.New("slackbot", "Teleport plugin for access requests approval via Slack.")
+
 	app.Command("configure", "Prints an example configuration file")
+
 	startCmd := app.Command("start", "Starts a bot daemon")
 	path := startCmd.Arg("path", "Configuration file path").
 		Required().
@@ -68,10 +56,12 @@ func main() {
 	debug := startCmd.Flag("debug", "Enable verbose logging to stderr").
 		Short('d').
 		Bool()
+
 	selectedCmd, err := app.Parse(os.Args[1:])
 	if err != nil {
 		bail("error: %s", err)
 	}
+
 	switch selectedCmd {
 	case "configure":
 		fmt.Print(exampleConfig)
@@ -91,18 +81,17 @@ func run(configPath string) error {
 	if err != nil {
 		return trace.Wrap(err)
 	}
-	ctx := context.Background()
+
 	app, err := NewApp(*conf)
 	if err != nil {
 		return trace.Wrap(err)
 	}
+
 	serveSignals(app)
-	err = app.Start(ctx)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-	app.Wait()
-	return app.Error()
+
+	return trace.Wrap(
+		app.Run(context.Background()),
+	)
 }
 
 func serveSignals(app *App) {
@@ -138,16 +127,17 @@ type killSwitch func()
 // App contains global application state.
 type App struct {
 	sync.Mutex
-	doneC        chan struct{}
-	accessClient access.Client
-	slackClient  *slack.Client
-	httpServer   *http.Server
-	cache        *RequestCache
-	conf         Config
-	tlsConf      *tls.Config
-	stop         killSwitch
-	cancel       context.CancelFunc
-	err          error
+
+	conf    Config
+	tlsConf *tls.Config
+
+	accessClient   access.Client
+	cache          *RequestCache
+	slackClient    *SlackClient
+	callbackServer *CallbackServer
+
+	stop   killSwitch
+	cancel context.CancelFunc
 }
 
 func NewApp(conf Config) (*App, error) {
@@ -159,34 +149,33 @@ func NewApp(conf Config) (*App, error) {
 }
 
 func NewAppWithTLSConfig(conf Config, tlsConf *tls.Config) (*App, error) {
-	app := &App{conf: conf, tlsConf: tlsConf}
-
-	slackOptions := []slack.Option{}
-	if conf.Slack.APIURL != "" {
-		slackOptions = append(slackOptions, slack.OptionAPIURL(conf.Slack.APIURL))
+	app := &App{
+		conf:        conf,
+		tlsConf:     tlsConf,
+		slackClient: NewSlackClient(&conf),
 	}
-	app.slackClient = slack.New(conf.Slack.Token, slackOptions...)
+
 	return app, nil
 }
 
-func (a *App) finish(err error) {
-	a.Lock()
-	defer a.Unlock()
-	a.err = err
+func (a *App) finish() {
+	a.accessClient = nil
 	a.cache = nil
-	a.httpServer = nil
+	a.slackClient = nil
+	a.callbackServer = nil
+
 	a.stop = nil
 	a.cancel = nil
-	a.doneC = nil
 }
 
 // Close signals the App to shutdown immediately
 func (a *App) Close() {
 	a.Lock()
 	defer a.Unlock()
-	if cancel := a.cancel; cancel != nil {
+
+	if a.cancel != nil {
 		log.Infof("Force shutdown...")
-		cancel()
+		a.cancel()
 	}
 }
 
@@ -194,126 +183,89 @@ func (a *App) Close() {
 func (a *App) Stop() {
 	a.Lock()
 	defer a.Unlock()
-	if stop := a.stop; stop != nil {
-		stop()
+
+	if a.stop != nil {
+		a.stop()
 	}
 }
 
-// Wait blocks until watcher and http server finish
-func (a *App) Wait() {
-	a.Lock()
-	c := a.doneC
-	a.Unlock()
-	if c != nil {
-		<-c
-	}
-}
-
-// Error returns the error returned by watcher/http server or them both
-func (a *App) Error() error {
+// Run initializes and runs a watcher and a callback server
+func (a *App) Run(ctx context.Context) error {
 	a.Lock()
 	defer a.Unlock()
-	return a.err
-}
 
-// Start runs a watcher and http server
-func (a *App) Start(ctx context.Context) error {
-	a.Lock()
-	defer a.Unlock()
+	defer a.finish()
+
+	var err error
 
 	log.Infof("Starting Teleport Access Slackbot %s:%s", Version, Gitref)
 
 	ctx, cancel := context.WithCancel(ctx)
+	a.cancel = cancel
 
-	if client, err := access.NewClient(ctx, a.conf.Teleport.AuthServer, a.tlsConf); err == nil {
-		a.accessClient = client
-	} else {
+	a.accessClient, err = access.NewClient(ctx, a.conf.Teleport.AuthServer, a.tlsConf)
+	if err != nil {
 		cancel()
 		return trace.Wrap(err)
 	}
-	a.cancel = cancel
 
 	a.cache = NewRequestCache(ctx)
 
-	var (
-		httpErr, watcherErr error
-		workers             sync.WaitGroup
-	)
-	workers.Add(2)
-	doneC := make(chan struct{})
-	a.doneC = doneC
-	a.err = nil
-
-	httpServer := a.newHttpServer(ctx)
-	a.httpServer = httpServer
+	// Create callback server prividing a.OnSlackAction as a callback function
+	a.callbackServer = NewCallbackServer(ctx, &a.conf, a.OnSlackAction)
 
 	var once sync.Once
 	shutdown := func() {
 		once.Do(func() {
-			defer cancel() // We have to wait first because cancellation breaks cache
+			defer cancel()
+
 			log.Infof("Attempting graceful shutdown...")
-			sctx, scancel := context.WithTimeout(ctx, time.Second*20)
-			defer scancel()
-			if err := httpServer.Shutdown(sctx); err != nil {
+
+			if err := a.callbackServer.Shutdown(ctx); err != nil {
 				log.Errorf("HTTP server graceful shutdown failed: %s", err)
 			}
 		})
 	}
 	a.stop = func() { go shutdown() }
 
+	var (
+		httpErr, watcherErr error
+		workers             sync.WaitGroup
+	)
+
+	workers.Add(2)
+
 	go func() {
 		defer shutdown()
 		defer workers.Done()
+
 		log.Infof("Starting server on %s", a.conf.Slack.Listen)
-		if err := httpServer.ListenAndServe(); err != http.ErrServerClosed {
-			httpErr = trace.Wrap(err)
-		}
+
+		httpErr = trace.Wrap(
+			a.callbackServer.ListenAndServe(),
+		)
 	}()
-	go func() {
-		<-ctx.Done()
-		httpServer.Close()
-	}()
+
 	go func() {
 		defer shutdown()
 		defer workers.Done()
+
 		log.Info("Starting a request watcher...")
-		for {
-			err := a.watchRequests(ctx)
-			switch {
-			case trace.IsConnectionProblem(err):
-				log.Errorf("Watcher connection error: %v. Reconnecting...", err)
-			case trace.IsEOF(err):
-				log.Errorf("Watcher stream closed: %v. Reconnecting...", err)
-			case access.IsCanceled(err):
-				// Context cancellation is not an error
-				return
-			default:
-				watcherErr = trace.Wrap(err)
-				return
-			}
-		}
+
+		watcherErr = trace.Wrap(
+			// Start watching for request events
+			a.WatchRequests(ctx),
+		)
 	}()
-	go func() {
-		defer close(doneC)
-		workers.Wait()
-		a.finish(trace.NewAggregate(httpErr, watcherErr))
-	}()
-	return nil
+
+	// Unlock the app, wait for workers, and lock again
+	a.Unlock()
+	workers.Wait()
+	a.Lock()
+
+	return trace.NewAggregate(httpErr, watcherErr)
 }
 
-// newHttpServer creates a http server bound to the current context
-func (a *App) newHttpServer(ctx context.Context) *http.Server {
-	serverMux := http.NewServeMux()
-	serverMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		a.ActionsHandler(ctx, w, r)
-	})
-	return &http.Server{
-		Addr:    a.conf.Slack.Listen,
-		Handler: serverMux,
-	}
-}
-
-// watchRequests starts a GRPC watcher which monitors access requests
 func (a *App) watchRequests(ctx context.Context) error {
 	watcher := a.accessClient.WatchRequests(ctx, access.Filter{
 		State: access.StatePending,
@@ -323,9 +275,9 @@ func (a *App) watchRequests(ctx context.Context) error {
 	if err := watcher.WaitInit(ctx, 5*time.Second); err != nil {
 		return trace.Wrap(err)
 	}
+
 	log.Info("Watcher connected")
 
-Watch:
 	for {
 		select {
 		case event := <-watcher.Events():
@@ -334,22 +286,14 @@ Watch:
 			case access.OpPut:
 				if !req.State.IsPending() {
 					log.Warnf("non-pending request event %+v", event)
-					continue Watch
+					continue
 				}
-				if err := a.OnPendingRequest(req); err != nil {
+
+				if err := a.onPendingRequest(req); err != nil {
 					return trace.Wrap(err)
 				}
 			case access.OpDelete:
-				entry, err := a.cache.Pop(req.ID)
-				if err != nil {
-					if trace.IsNotFound(err) {
-						log.Warnf("cannot expire unknown request: %s", err)
-						continue Watch
-					} else {
-						return trace.Wrap(err)
-					}
-				}
-				if err := a.expireEntry(entry); err != nil {
+				if err := a.onDeletedRequest(req); err != nil {
 					return trace.Wrap(err)
 				}
 			default:
@@ -361,238 +305,135 @@ Watch:
 	}
 }
 
-// loadRequest loads the specified request in order to correctly format
-// a response.
-func (a *App) loadRequest(ctx context.Context, reqID string) (access.Request, error) {
-	if entry, err := a.cache.Pop(reqID); err == nil {
-		return entry.Request, nil
-	} else {
-		if trace.IsNotFound(err) {
-			log.Warnf("Cache-miss: %s", err)
-		} else {
-			return access.Request{}, trace.Wrap(err)
+// WatchRequests starts a GRPC watcher which monitors access requests and restarts it on expected errors.
+// It calls onPendingRequest when new pending event is added and onDeletedRequest when request is deleted
+func (a *App) WatchRequests(ctx context.Context) error {
+	log.Info("Starting a request watcher...")
+
+	for {
+		err := a.watchRequests(ctx)
+
+		switch {
+		case trace.IsConnectionProblem(err):
+			log.Errorf("Watcher connection error: %v. Reconnecting...", err)
+		case trace.IsEOF(err):
+			log.Errorf("Watcher stream closed: %v. Reconnecting...", err)
+		case access.IsCanceled(err):
+			// Context cancellation is not an error
+			return nil
+		default:
+			return trace.Wrap(err)
 		}
 	}
+}
+
+// loadRequest loads the specified request in order to correctly format a response.
+func (a *App) loadRequest(ctx context.Context, reqID string) (access.Request, error) {
 	reqs, err := a.accessClient.GetRequests(ctx, access.Filter{
 		ID: reqID,
 	})
 	if err != nil {
-		return access.Request{}, trace.Wrap(err)
+		return access.Request{ID: reqID}, trace.Wrap(err)
 	}
+
 	if len(reqs) < 1 {
-		return access.Request{}, trace.NotFound("no request matching %q", reqID)
+		return access.Request{ID: reqID}, trace.NotFound("no request matching %q", reqID)
 	}
+
 	return reqs[0], nil
 }
 
-func (a *App) OnCallback(ctx context.Context, cb slack.InteractionCallback) error {
-	if len(cb.ActionCallback.BlockActions) != 1 {
-		return trace.BadParameter("expected exactly one block action")
+// OnSlackAction processes Slack actions and updates original Slack message with a new status
+func (a *App) OnSlackAction(ctx context.Context, reqID, actionID, responseURL string) error {
+	var (
+		reqState    access.State
+		slackStatus string
+	)
+
+	// Drop cache entry so it can't be expired.
+	// TODO: Remove when ext-data is integrated
+	if err := a.cache.Drop(reqID); err != nil {
+		return trace.Wrap(err)
 	}
-	action := cb.ActionCallback.BlockActions[0]
-	var req access.Request
-	var err error
-	var status string
-	switch action.ActionID {
-	case ActionApprove:
-		req, err = a.loadRequest(ctx, action.Value)
-		if err != nil {
-			if trace.IsNotFound(err) {
-				status = "EXPIRED"
-			} else {
-				return trace.Wrap(err)
-			}
+
+	req, err := a.loadRequest(ctx, reqID)
+
+	if err != nil {
+		if trace.IsNotFound(err) {
+			// Request wasn't found, need to expire it's post in Slack
+			slackStatus = "EXPIRED"
 		} else {
+			return trace.Wrap(err)
+		}
+	} else {
+		if req.State != access.StatePending {
+			return trace.Errorf("Can't process not pending request: %+v", req)
+		}
+
+		switch actionID {
+		case ActionApprove:
 			log.Infof("Approving request %+v", req)
-			if err := a.accessClient.SetRequestState(ctx, req.ID, access.StateApproved); err != nil {
-				return trace.Wrap(err)
-			}
-			status = "APPROVED"
-		}
-	case ActionDeny:
-		req, err = a.loadRequest(ctx, action.Value)
-		if err != nil {
-			if trace.IsNotFound(err) {
-				status = "EXPIRED"
-			} else {
-				return trace.Wrap(err)
-			}
-		} else {
+			reqState = access.StateApproved
+			slackStatus = "APPROVED"
+		case ActionDeny:
 			log.Infof("Denying request %+v", req)
-			if err := a.accessClient.SetRequestState(ctx, req.ID, access.StateDenied); err != nil {
-				return trace.Wrap(err)
-			}
-			status = "DENIED"
+			reqState = access.StateDenied
+			slackStatus = "DENIED"
+		default:
+			return trace.BadParameter("Unknown ActionID: %s", actionID)
 		}
-	default:
-		return trace.BadParameter("Unknown ActionID: %s", action.ActionID)
+
+		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
+			return trace.Wrap(err)
+		}
 	}
 
 	// In real world it cannot be empty. This is for tests.
-	if cb.ResponseURL == "" {
-		return nil
+	if responseURL != "" {
+		go func() {
+			if err := a.slackClient.Respond(req, slackStatus, responseURL); err != nil {
+				log.Error(err)
+				return
+			}
+			log.Debugf("Successfully updated msg for %+v", req)
+		}()
 	}
-	go func() {
-		msg := msgText(
-			req.ID,
-			req.User,
-			req.Roles,
-			status,
-		)
 
-		var message slack.Message
-		message.Blocks.BlockSet = []slack.Block{msgSection(msg)}
-		message.ReplaceOriginal = true
-		body, err := json.Marshal(message)
-		if err != nil {
-			log.Errorf("Failed to serialize msg block: %s", err)
-			return
-		}
-		rsp, err := http.Post(cb.ResponseURL, "application/json", bytes.NewReader(body))
-		if err != nil {
-			log.Errorf("Failed to send update: %s", err)
-			return
-		}
-		rbody, err := ioutil.ReadAll(rsp.Body)
-		if err != nil {
-			log.Errorf("Failed to read update response: %s", err)
-			return
-		}
-		var ursp struct {
-			Ok bool `json:"ok"`
-		}
-		if err := json.Unmarshal(rbody, &ursp); err != nil {
-			log.Errorf("Failed to parse response body: %s", err)
-			return
-		}
-		if !ursp.Ok {
-			log.Errorf("Failed to update msg for %+v", req)
-			return
-		}
-		log.Debugf("Successfully updated msg for %+v", req)
-	}()
 	return nil
-
 }
 
-func (a *App) ActionsHandler(ctx context.Context, w http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*2500) // Slack requires to respond within 3000 milliseconds
-	defer cancel()
-
-	sv, err := slack.NewSecretsVerifier(r.Header, a.conf.Slack.Secret)
-	if err != nil {
-		log.Errorf("Failed to initialize secrets verifier: %s", err)
-		http.Error(w, "verification failed", 500)
-		return
-	}
-	// tee body into verifier as it is read.
-	r.Body = ioutil.NopCloser(io.TeeReader(r.Body, &sv))
-	payload := []byte(r.FormValue("payload"))
-	// the FormValue method exhausts the reader, so signature
-	// verification can now proceed.
-	if err := sv.Ensure(); err != nil {
-		log.Errorf("Secret verification failed: %s", err)
-		http.Error(w, "verification failed", 500)
-		return
-	}
-
-	var cb slack.InteractionCallback
-	if err := json.Unmarshal(payload, &cb); err != nil {
-		log.Errorf("Failed to parse json response: %s", err)
-		http.Error(w, "failed to parse response", 500)
-		return
-	}
-	if err := a.OnCallback(ctx, cb); err != nil {
-		log.Errorf("Failed to process callback: %s", err)
-		var code int
-		switch {
-		case access.IsCanceled(err) || access.IsDeadline(err):
-			code = 503
-		default:
-			code = 500
-		}
-		http.Error(w, "failed to process callback", code)
-	} else {
-		w.WriteHeader(http.StatusOK)
-	}
-}
-
-func (a *App) OnPendingRequest(req access.Request) error {
-	msg := msgText(
-		req.ID,
-		req.User,
-		req.Roles,
-		"PENDING",
-	)
-	channelID, timestamp, err := a.slackClient.PostMessage(
-		a.conf.Slack.Channel,
-		slack.MsgOptionBlocks(msgSection(msg), actionBlock(req)),
-	)
+func (a *App) onPendingRequest(req access.Request) error {
+	channelID, timestamp, err := a.slackClient.Post(req)
 	if err != nil {
 		return trace.Wrap(err)
 	}
+
 	log.Debugf("Posted to channel %s at time %s", channelID, timestamp)
-	return a.cache.Put(Entry{
-		Request:   req,
-		ChannelID: channelID,
-		Timestamp: timestamp,
-	})
+
+	entry := Entry{Request: req, ChannelID: channelID, Timestamp: timestamp}
+
+	return trace.Wrap(
+		a.cache.Put(entry),
+	)
 }
 
-func (a *App) expireEntry(entry Entry) error {
-	msg := msgText(
-		entry.Request.ID,
-		entry.Request.User,
-		entry.Request.Roles,
-		"EXPIRED",
-	)
-	_, _, _, err := a.slackClient.UpdateMessage(entry.ChannelID, entry.Timestamp, slack.MsgOptionBlocks(msgSection(msg)))
+func (a *App) onDeletedRequest(req access.Request) error {
+	// TODO: Remove when ext-data is integrated
+	entry, err := a.cache.Pop(req.ID)
 	if err != nil {
+		if trace.IsNotFound(err) {
+			log.Warnf("cannot expire unknown request: %s", err)
+			return nil
+		} else {
+			return trace.Wrap(err)
+		}
+	}
+
+	if err := a.slackClient.Expire(entry.Request, entry.ChannelID, entry.Timestamp); err != nil {
 		return trace.Wrap(err)
 	}
-	log.Debugf("Successfully marked request %s as expired", entry.Request.ID)
+
+	log.Debugf("Successfully marked request %+v as expired", req)
+
 	return nil
-}
-
-// msgText builds the message text payload (contains markdown).
-func msgText(reqID string, user string, roles []string, status string) string {
-	return fmt.Sprintf(
-		"```\nRequest %s\nUser    %s\nRole(s) %s\nStatus  %s```\n",
-		reqID,
-		user,
-		strings.Join(roles, ","),
-		status,
-	)
-}
-
-// msgSection builds a slack message section (obeys markdown).
-func msgSection(msg string) slack.SectionBlock {
-	return slack.SectionBlock{
-		Type: slack.MBTSection,
-		Text: &slack.TextBlockObject{
-			Type: slack.MarkdownType,
-			Text: msg,
-		},
-	}
-}
-
-// actionBlock builds a slack action block for a pending request.
-func actionBlock(req access.Request) *slack.ActionBlock {
-	return slack.NewActionBlock(
-		"approve_or_deny",
-		&slack.ButtonBlockElement{
-			Type:     slack.METButton,
-			ActionID: ActionApprove,
-			Text:     slack.NewTextBlockObject("plain_text", "Approve", true, false),
-			Value:    req.ID,
-			Style:    slack.StylePrimary,
-		},
-		&slack.ButtonBlockElement{
-			Type:     slack.METButton,
-			ActionID: ActionDeny,
-			Text:     slack.NewTextBlockObject("plain_text", "Deny", true, false),
-			Value:    req.ID,
-			Style:    slack.StyleDanger,
-		},
-	)
 }
