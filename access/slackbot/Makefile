@@ -37,6 +37,7 @@ release: clean $(VERSRC) $(BINARY)
 	cp -rf $(BINARY) \
 		README.md \
 		CHANGELOG.md \
+		install \
 		$(RELEASE_NAME)/
 	echo $(GITTAG) > $(RELEASE_NAME)/VERSION
 	tar -czf $(RELEASE).tar.gz $(RELEASE_NAME)
