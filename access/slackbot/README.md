@@ -13,16 +13,16 @@ configuration file that looks something like this:
 ```toml
 # example slackbot configuration file
 [teleport]
-auth-server = "example.com:3025"  # Auth GRPC API address
-client-key = "path/to/client.key" # Teleport GRPC client secret key
-client-crt = "path/to/client.crt" # Teleport GRPC client certificate 
-root-cas = "path/to/root.cas"     # Teleport cluster CA certs
+auth-server = "example.com:3025"                  # Auth GRPC API address.  
+client-key = "/var/lib/teleport/plugin/plug.key"" # Teleport GRPC client secret key
+client-crt = "/var/lib/teleport/plugin/plug.crt"  # Teleport GRPC client certificate 
+root-cas = "/var/lib/teleport/plugin/plug.cas"    # Teleport cluster CA certs
 
 [slack]
-token = "api-token"       # Slack Bot OAuth token
-secret = "secret-value"   # Slack API Signing Secret
-channel = "channel-name"  # Message delivery channel
-listen = ":8080"          # Slack interaction callback listener
+token = "api-token"         # Slack Bot OAuth token
+secret = "secret-value"     # Slack API Signing Secret
+channel = "channel-name"    # Message delivery channel
+listen = "example.com:8080" # Slack interaction callback listener. Later used for Request URL.
 ```
 
 ### `[teleport]`
