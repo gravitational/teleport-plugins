@@ -47,11 +47,12 @@ func bail(msg string, a ...interface{}) {
 func main() {
 	app := kingpin.New("slackbot", "Teleport plugin for access requests approval via Slack.")
 
-	app.Command("configure", "Prints an example configuration file")
+	app.Command("configure", "Prints an example .TOML configuration file")
 
 	startCmd := app.Command("start", "Starts a bot daemon")
-	path := startCmd.Arg("path", "Configuration file path").
-		Required().
+	path := startCmd.Flag("config", "TOML config file path").
+		Short('c').
+		Default("/etc/teleport-slackbot.toml").
 		String()
 	debug := startCmd.Flag("debug", "Enable verbose logging to stderr").
 		Short('d').
@@ -372,11 +373,13 @@ func (a *App) OnSlackAction(ctx context.Context, reqID, actionID, responseURL st
 
 		switch actionID {
 		case ActionApprove:
-			log.Infof("Approving request %+v", req)
+			log.Infof("Slack user %s approved the request %s by %s for roles: %s on Slack channel %s",
+				cb.User.Name, req.ID, req.User, req.Roles, cb.Channel.Name)
 			reqState = access.StateApproved
 			slackStatus = "APPROVED"
 		case ActionDeny:
-			log.Infof("Denying request %+v", req)
+			log.Infof("Slack user %s denied the request %s by %s for roles: %s on Slack channel %s",
+				cb.User.Name, req.ID, req.User, req.Roles, cb.Channel.Name)
 			reqState = access.StateDenied
 			slackStatus = "DENIED"
 		default:
