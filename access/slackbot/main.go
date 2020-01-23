@@ -247,8 +247,6 @@ func (a *App) Run(ctx context.Context) error {
 		defer workers.Done()
 		defer shutdown()
 
-		log.Infof("Starting server on %s", a.conf.Slack.Listen)
-
 		httpErr = trace.Wrap(
 			a.callbackServer.ListenAndServe(),
 		)
@@ -257,8 +255,6 @@ func (a *App) Run(ctx context.Context) error {
 	go func() {
 		defer workers.Done()
 		defer shutdown()
-
-		log.Info("Starting a request watcher...")
 
 		watcherErr = trace.Wrap(
 			// Start watching for request events
@@ -316,6 +312,8 @@ func (a *App) watchRequests(ctx context.Context) error {
 // WatchRequests starts a GRPC watcher which monitors access requests and restarts it on expected errors.
 // It calls onPendingRequest when new pending event is added and onDeletedRequest when request is deleted
 func (a *App) WatchRequests(ctx context.Context) error {
+	log.Info("Starting a request watcher...")
+
 	for {
 		err := a.watchRequests(ctx)
 

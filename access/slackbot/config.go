@@ -21,9 +21,13 @@ type Config struct {
 		Token   string `toml:"token"`
 		Secret  string `toml:"secret"`
 		Channel string `toml:"channel"`
-		Listen  string `toml:"listen"`
 		APIURL  string
 	} `toml:"slack"`
+	HTTP struct {
+		Listen   string `toml:"listen"`
+		KeyFile  string `toml:"https-key-file,omitempty"`
+		CertFile string `toml:"https-cert-file,omitempty"`
+	}
 }
 
 const exampleConfig = `# example slackbot configuration TOML file
@@ -37,7 +41,11 @@ root-cas = "path/to/root.cas"     # Teleport cluster CA certs
 token = "api-token"       # Slack Bot OAuth token
 secret = "signing-secret-value"   # Slack API Signing Secret
 channel = "channel-name"  # Message delivery channel
+
+[http]
 listen = ":8081"          # Slack interaction callback listener
+# https-key-file = "/var/lib/teleport/slackbot_key.pem"  # TLS private key
+# https-cert-file = "/var/lib/teleport/slackbot_cert.pem" # TLS certificate
 `
 
 func LoadConfig(filepath string) (*Config, error) {
@@ -77,8 +85,14 @@ func (c *Config) CheckAndSetDefaults() error {
 	if c.Slack.Channel == "" {
 		return trace.BadParameter("missing required value slack.channel")
 	}
-	if c.Slack.Listen == "" {
-		c.Slack.Listen = ":8081"
+	if c.HTTP.Listen == "" {
+		c.HTTP.Listen = ":8081"
+	}
+	if c.HTTP.KeyFile != "" && c.HTTP.CertFile == "" {
+		return trace.BadParameter("https-cert-file is required when https-key-file is specified")
+	}
+	if c.HTTP.CertFile != "" && c.HTTP.KeyFile == "" {
+		return trace.BadParameter("https-key-file is required when https-cert-file is specified")
 	}
 	return nil
 }

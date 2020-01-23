@@ -22,16 +22,20 @@ type CallbackServer struct {
 	secret     string
 	onCallback CallbackFunc
 	httpServer *http.Server
+	keyFile    string
+	certFile   string
 }
 
 func NewCallbackServer(ctx context.Context, conf *Config, onCallback CallbackFunc) *CallbackServer {
 	s := CallbackServer{
 		secret:     conf.Slack.Secret,
 		onCallback: onCallback,
+		keyFile:    conf.HTTP.KeyFile,
+		certFile:   conf.HTTP.CertFile,
 	}
 
 	s.httpServer = &http.Server{
-		Addr: conf.Slack.Listen,
+		Addr: conf.HTTP.Listen,
 		Handler: http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 			s.processCallback(ctx, rw, r)
 		}),
@@ -46,7 +50,14 @@ func NewCallbackServer(ctx context.Context, conf *Config, onCallback CallbackFun
 }
 
 func (s *CallbackServer) ListenAndServe() error {
-	err := s.httpServer.ListenAndServe()
+	var err error
+	if s.certFile != "" {
+		log.Infof("Starting secure HTTPS server on %s", s.httpServer.Addr)
+		err = s.httpServer.ListenAndServeTLS(s.certFile, s.keyFile)
+	} else {
+		log.Infof("Starting insecure HTTP server on %s", s.httpServer.Addr)
+		err = s.httpServer.ListenAndServe()
+	}
 	if err == http.ErrServerClosed {
 		return nil
 	}
