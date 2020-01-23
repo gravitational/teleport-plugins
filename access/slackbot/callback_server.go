@@ -64,6 +64,11 @@ func (s *CallbackServer) processCallback(ctx context.Context, rw http.ResponseWr
 	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*2500) // Slack requires to respond within 3000 milliseconds
 	defer cancel()
 
+	if r.Method != "POST" {
+		http.Error(rw, "", 400)
+		return
+	}
+
 	sv, err := slack.NewSecretsVerifier(r.Header, s.secret)
 	if err != nil {
 		log.Errorf("Failed to initialize secrets verifier: %s", err)
