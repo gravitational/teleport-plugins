@@ -393,6 +393,7 @@ func (a *App) OnCallback(ctx context.Context, cb slack.InteractionCallback) erro
 	var req access.Request
 	var err error
 	var status string
+
 	switch action.ActionID {
 	case ActionApprove:
 		req, err = a.loadRequest(ctx, action.Value)
@@ -403,7 +404,9 @@ func (a *App) OnCallback(ctx context.Context, cb slack.InteractionCallback) erro
 				return trace.Wrap(err)
 			}
 		} else {
-			log.Infof("Approving request %+v", req)
+			log.Infof("Slack user %s approved the request %s by %s for roles: %s on Slack channel %s",
+				cb.User.Name, req.ID, req.User, req.Roles, cb.Channel.Name)
+
 			if err := a.accessClient.SetRequestState(ctx, req.ID, access.StateApproved); err != nil {
 				return trace.Wrap(err)
 			}
@@ -418,7 +421,8 @@ func (a *App) OnCallback(ctx context.Context, cb slack.InteractionCallback) erro
 				return trace.Wrap(err)
 			}
 		} else {
-			log.Infof("Denying request %+v", req)
+			log.Infof("Slack user %s approved the request %s by %s for roles: %s on Slack channel %s",
+				cb.User.Name, req.ID, req.User, req.Roles, cb.Channel.Name)
 			if err := a.accessClient.SetRequestState(ctx, req.ID, access.StateDenied); err != nil {
 				return trace.Wrap(err)
 			}
