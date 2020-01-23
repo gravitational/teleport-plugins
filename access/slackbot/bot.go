@@ -9,30 +9,31 @@ import (
 	"strings"
 
 	"github.com/gravitational/teleport-plugins/access"
+	"github.com/gravitational/trace"
 	"github.com/nlopes/slack"
 	log "github.com/sirupsen/logrus"
 )
 
-// SlackClient is a wrapper around slack.Client that works with access.Request
-type SlackClient struct {
+// Bot is a wrapper around slack.Client that works with access.Request
+type Bot struct {
 	client  *slack.Client
 	channel string
 }
 
-func NewSlackClient(conf *Config) *SlackClient {
+func NewBot(conf *Config) *Bot {
 	slackOptions := []slack.Option{}
 	if conf.Slack.APIURL != "" {
 		slackOptions = append(slackOptions, slack.OptionAPIURL(conf.Slack.APIURL))
 	}
 
-	return &SlackClient{
+	return &Bot{
 		client:  slack.New(conf.Slack.Token, slackOptions...),
 		channel: conf.Slack.Channel,
 	}
 }
 
 // Post posts request info to Slack with action buttons
-func (c *SlackClient) Post(req access.Request) (channelID, timestamp string, err error) {
+func (c *Bot) Post(req access.Request) (channelID, timestamp string, err error) {
 	channelID, timestamp, err = c.client.PostMessage(
 		c.channel,
 		slack.MsgOptionBlocks(
@@ -46,7 +47,7 @@ func (c *SlackClient) Post(req access.Request) (channelID, timestamp string, err
 
 // Expire updates request's Slack post with EXPIRED status and removes action buttons.
 // TODO: Use ext-data when it's integrated
-func (c *SlackClient) Expire(req access.Request, channelID, timestamp string) error {
+func (c *Bot) Expire(req access.Request, channelID, timestamp string) error {
 	if len(channelID) == 0 || len(timestamp) == 0 {
 		log.Warningf("can't expire slack message without channel ID or timestamp")
 		return nil
@@ -63,36 +64,36 @@ func (c *SlackClient) Expire(req access.Request, channelID, timestamp string) er
 	return err
 }
 
-// Respond updates Slack post with the new request info and the new status, and removes action buttons
-func (c *SlackClient) Respond(req access.Request, status string, responseURL string) error {
+// RespondSlack updates Slack post with the new request info and the new status, and removes action buttons
+func RespondSlack(req access.Request, status string, responseURL string) error {
 	var message slack.Message
 	message.Blocks.BlockSet = []slack.Block{msgSection(msgText(req, status))}
 	message.ReplaceOriginal = true
 
 	body, err := json.Marshal(message)
 	if err != nil {
-		return fmt.Errorf("Failed to serialize msg block: %s", err)
+		return trace.Errorf("Failed to serialize msg block: %s", err)
 	}
 
 	rsp, err := http.Post(responseURL, "application/json", bytes.NewReader(body))
 	if err != nil {
-		return fmt.Errorf("Failed to send update: %s", err)
+		return trace.Errorf("Failed to send update: %s", err)
 	}
 
 	rbody, err := ioutil.ReadAll(rsp.Body)
 	if err != nil {
-		return fmt.Errorf("Failed to read update response: %s", err)
+		return trace.Errorf("Failed to read update response: %s", err)
 	}
 
 	var ursp struct {
 		Ok bool `json:"ok"`
 	}
 	if err := json.Unmarshal(rbody, &ursp); err != nil {
-		return fmt.Errorf("Failed to parse response body: %s", err)
+		return trace.Errorf("Failed to parse response body: %s", err)
 	}
 
 	if !ursp.Ok {
-		return fmt.Errorf("Failed to update msg for %+v", req)
+		return trace.Errorf("Failed to update msg for %+v", req)
 	}
 
 	return nil

@@ -13,14 +13,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	// ActionApprove uniquely identifies the approve button in events.
-	ActionApprove = "approve_request"
-	// ActionDeny uniquely identifies the deny button in events.
-	ActionDeny = "deny_request"
-)
-
-type CallbackFunc func(ctx context.Context, reqID, actionID, responseURL string) error
+type Callback = slack.InteractionCallback
+type CallbackFunc func(ctx context.Context, callback Callback) error
 
 // CallbackServer is a wrapper around http.Server that processes Slack interaction events.
 // It verifies incoming requests and calls onCallback for valid ones
@@ -95,15 +89,7 @@ func (s *CallbackServer) processCallback(ctx context.Context, rw http.ResponseWr
 		return
 	}
 
-	if len(cb.ActionCallback.BlockActions) != 1 {
-		log.Warnf("Received more than one Slack action: %+v", cb.ActionCallback.BlockActions)
-		http.Error(rw, "expected exactly one block action", 500)
-		return
-	}
-
-	action := cb.ActionCallback.BlockActions[0]
-
-	if err := s.onCallback(ctx, action.Value, action.ActionID, cb.ResponseURL); err != nil {
+	if err := s.onCallback(ctx, cb); err != nil {
 		log.Errorf("Failed to process callback: %s", err)
 		var code int
 		switch {

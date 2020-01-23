@@ -32,6 +32,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+const (
+	// ActionApprove uniquely identifies the approve button in events.
+	ActionApprove = "approve_request"
+	// ActionDeny uniquely identifies the deny button in events.
+	ActionDeny = "deny_request"
+)
+
 // eprintln prints an optionally formatted string to stderr.
 func eprintln(msg string, a ...interface{}) {
 	fmt.Fprintf(os.Stderr, msg, a...)
@@ -134,7 +141,7 @@ type App struct {
 
 	accessClient   access.Client
 	cache          *RequestCache
-	slackClient    *SlackClient
+	bot            *Bot
 	callbackServer *CallbackServer
 
 	stop   killSwitch
@@ -151,9 +158,9 @@ func NewApp(conf Config) (*App, error) {
 
 func NewAppWithTLSConfig(conf Config, tlsConf *tls.Config) (*App, error) {
 	app := &App{
-		conf:        conf,
-		tlsConf:     tlsConf,
-		slackClient: NewSlackClient(&conf),
+		conf:    conf,
+		tlsConf: tlsConf,
+		bot:     NewBot(&conf),
 	}
 
 	return app, nil
@@ -162,7 +169,7 @@ func NewAppWithTLSConfig(conf Config, tlsConf *tls.Config) (*App, error) {
 func (a *App) finish() {
 	a.accessClient = nil
 	a.cache = nil
-	a.slackClient = nil
+	a.bot = nil
 	a.callbackServer = nil
 
 	a.stop = nil
@@ -212,8 +219,8 @@ func (a *App) Run(ctx context.Context) error {
 
 	a.cache = NewRequestCache(ctx)
 
-	// Create callback server prividing a.OnSlackAction as a callback function
-	a.callbackServer = NewCallbackServer(ctx, &a.conf, a.OnSlackAction)
+	// Create callback server prividing a.OnSlackCallback as a callback function
+	a.callbackServer = NewCallbackServer(ctx, &a.conf, a.OnSlackCallback)
 
 	var once sync.Once
 	shutdown := func() {
@@ -237,8 +244,8 @@ func (a *App) Run(ctx context.Context) error {
 	workers.Add(2)
 
 	go func() {
-		defer shutdown()
 		defer workers.Done()
+		defer shutdown()
 
 		log.Infof("Starting server on %s", a.conf.Slack.Listen)
 
@@ -248,8 +255,8 @@ func (a *App) Run(ctx context.Context) error {
 	}()
 
 	go func() {
-		defer shutdown()
 		defer workers.Done()
+		defer shutdown()
 
 		log.Info("Starting a request watcher...")
 
@@ -309,8 +316,6 @@ func (a *App) watchRequests(ctx context.Context) error {
 // WatchRequests starts a GRPC watcher which monitors access requests and restarts it on expected errors.
 // It calls onPendingRequest when new pending event is added and onDeletedRequest when request is deleted
 func (a *App) WatchRequests(ctx context.Context) error {
-	log.Info("Starting a request watcher...")
-
 	for {
 		err := a.watchRequests(ctx)
 
@@ -344,8 +349,17 @@ func (a *App) loadRequest(ctx context.Context, reqID string) (access.Request, er
 	return reqs[0], nil
 }
 
-// OnSlackAction processes Slack actions and updates original Slack message with a new status
-func (a *App) OnSlackAction(ctx context.Context, reqID, actionID, responseURL string) error {
+// OnSlackCallback processes Slack actions and updates original Slack message with a new status
+func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
+	if len(cb.ActionCallback.BlockActions) != 1 {
+		log.Warnf("Received more than one Slack action: %+v", cb.ActionCallback.BlockActions)
+		return trace.Errorf("expected exactly one block action")
+	}
+
+	action := cb.ActionCallback.BlockActions[0]
+	reqID := action.Value
+	actionID := action.ActionID
+
 	var (
 		reqState    access.State
 		slackStatus string
@@ -392,9 +406,9 @@ func (a *App) OnSlackAction(ctx context.Context, reqID, actionID, responseURL st
 	}
 
 	// In real world it cannot be empty. This is for tests.
-	if responseURL != "" {
+	if cb.ResponseURL != "" {
 		go func() {
-			if err := a.slackClient.Respond(req, slackStatus, responseURL); err != nil {
+			if err := RespondSlack(req, slackStatus, cb.ResponseURL); err != nil {
 				log.Error(err)
 				return
 			}
@@ -406,7 +420,7 @@ func (a *App) OnSlackAction(ctx context.Context, reqID, actionID, responseURL st
 }
 
 func (a *App) onPendingRequest(req access.Request) error {
-	channelID, timestamp, err := a.slackClient.Post(req)
+	channelID, timestamp, err := a.bot.Post(req)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -432,7 +446,7 @@ func (a *App) onDeletedRequest(req access.Request) error {
 		}
 	}
 
-	if err := a.slackClient.Expire(entry.Request, entry.ChannelID, entry.Timestamp); err != nil {
+	if err := a.bot.Expire(entry.Request, entry.ChannelID, entry.Timestamp); err != nil {
 		return trace.Wrap(err)
 	}
 
