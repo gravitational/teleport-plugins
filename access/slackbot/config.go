@@ -26,7 +26,7 @@ type Config struct {
 	} `toml:"slack"`
 }
 
-const exampleConfig = `# example slackbot configuration file
+const exampleConfig = `# example slackbot configuration TOML file
 [teleport]
 auth-server = "example.com:3025"  # Auth GRPC API address
 client-key = "path/to/client.key" # Teleport GRPC client secret key

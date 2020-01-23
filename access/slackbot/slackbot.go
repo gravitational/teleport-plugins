@@ -60,7 +60,7 @@ func bail(msg string, a ...interface{}) {
 
 func main() {
 	app := kingpin.New("slackbot", "Teleport plugin for access requests approval via Slack.")
-	app.Command("configure", "Prints an example configuration file")
+	app.Command("configure", "Prints an example .TOML configuration file")
 	startCmd := app.Command("start", "Starts a bot daemon")
 	path := startCmd.Arg("path", "Configuration file path").
 		Required().
