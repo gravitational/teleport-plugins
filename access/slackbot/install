@@ -1,0 +1,14 @@
+#!/bin/sh
+
+#
+# the directory where Teleport binaries will be located
+#
+BINDIR=/usr/local/bin
+
+[ ! $(id -u) != "0" ] || { echo "ERROR: You must be root"; exit 1; }
+cd $(dirname $0)
+mkdir -p $BINDIR
+cp -f slackbot $BINDIR/ || exit 1
+
+echo "Teleport Slackbot binaries have been copied to $BINDIR"
+echo "You can run slackbot configure > /etc/teleport-slackbot.toml to bootstrap your config file"
