@@ -30,7 +30,7 @@ const exampleConfig = `# example slackbot configuration TOML file
 [teleport]
 auth-server = "example.com:3025"  # Auth GRPC API address
 client-key = "path/to/client.key" # Teleport GRPC client secret key
-client-crt = "path/to/client.crt" # Teleport GRPC client certificate 
+client-crt = "path/to/client.crt" # Teleport GRPC client certificate
 root-cas = "path/to/root.cas"     # Teleport cluster CA certs
 
 [slack]

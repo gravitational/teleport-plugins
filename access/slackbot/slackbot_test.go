@@ -8,13 +8,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
 	"os/user"
 	"strings"
 	"testing"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gravitational/teleport/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
@@ -41,6 +42,8 @@ type SlackbotSuite struct {
 	me          *user.User
 	slackServer *slacktest.Server
 	teleport    *integration.TeleInstance
+
+	appDone chan struct{}
 }
 
 var _ = Suite(&SlackbotSuite{})
@@ -97,7 +100,7 @@ func (s *SlackbotSuite) SetUpTest(c *C) {
 
 func (s *SlackbotSuite) TearDownTest(c *C) {
 	s.app.Stop()
-	s.app.Wait()
+	<-s.appDone
 	s.slackServer.Stop()
 }
 
@@ -130,8 +133,15 @@ func (s *SlackbotSuite) startApp(c *C) {
 
 	s.app, err = NewAppWithTLSConfig(conf, &tc)
 	c.Assert(err, IsNil)
-	err = s.app.Start(context.TODO())
-	c.Assert(err, IsNil)
+
+	s.appDone = make(chan struct{})
+
+	go func() {
+		defer close(s.appDone)
+
+		err = s.app.Run(context.TODO())
+		c.Assert(err, IsNil)
+	}()
 }
 
 func (s *SlackbotSuite) createAccessRequest(c *C) services.AccessRequest {

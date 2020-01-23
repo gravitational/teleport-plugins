@@ -62,19 +62,6 @@ func NewRequestCache(ctx context.Context) *RequestCache {
 	return cache
 }
 
-func (c *RequestCache) Get(reqID string) (Entry, error) {
-	c.Lock()
-	defer c.Unlock()
-	if c.err != nil {
-		return Entry{}, trace.Wrap(c.err)
-	}
-	if e, ok := c.entries[reqID]; ok {
-		return e, nil
-	} else {
-		return Entry{}, trace.NotFound("no request matching %q", reqID)
-	}
-}
-
 func (c *RequestCache) Put(entry Entry) error {
 	const TTL = 60 * 60
 	c.Lock()
@@ -102,6 +89,19 @@ func (c *RequestCache) Pop(reqID string) (Entry, error) {
 	} else {
 		return Entry{}, trace.NotFound("no request matching %q", reqID)
 	}
+}
+
+func (c *RequestCache) Drop(reqID string) error {
+	c.Lock()
+	defer c.Unlock()
+
+	if c.err != nil {
+		return trace.Wrap(c.err)
+	}
+
+	delete(c.entries, reqID)
+
+	return nil
 }
 
 func (c *RequestCache) tick() int {
