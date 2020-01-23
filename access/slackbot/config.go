@@ -25,8 +25,12 @@ type Config struct {
 	} `toml:"slack"`
 	HTTP struct {
 		Listen   string `toml:"listen"`
-		KeyFile  string `toml:"https-key-file,omitempty"`
-		CertFile string `toml:"https-cert-file,omitempty"`
+		KeyFile  string `toml:"https-key-file"`
+		CertFile string `toml:"https-cert-file"`
+	}
+	Log struct {
+		Output   string `toml:"output"`
+		Severity string `toml:"severity"`
 	}
 }
 
@@ -46,6 +50,10 @@ channel = "channel-name"  # Message delivery channel
 listen = ":8081"          # Slack interaction callback listener
 # https-key-file = "/var/lib/teleport/slackbot_key.pem"  # TLS private key
 # https-cert-file = "/var/lib/teleport/slackbot_cert.pem" # TLS certificate
+
+[log]
+output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/slackbot.log"
+severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
 `
 
 func LoadConfig(filepath string) (*Config, error) {
@@ -93,6 +101,12 @@ func (c *Config) CheckAndSetDefaults() error {
 	}
 	if c.HTTP.CertFile != "" && c.HTTP.KeyFile == "" {
 		return trace.BadParameter("https-key-file is required when https-cert-file is specified")
+	}
+	if c.Log.Output == "" {
+		c.Log.Output = "stderr"
+	}
+	if c.Log.Severity == "" {
+		c.Log.Severity = "info"
 	}
 	return nil
 }
