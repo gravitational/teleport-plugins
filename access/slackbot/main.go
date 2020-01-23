@@ -321,7 +321,7 @@ func (a *App) WatchRequests(ctx context.Context) error {
 
 		switch {
 		case trace.IsConnectionProblem(err):
-			log.Errorf("Watcher connection error: %v. Reconnecting...", err)
+			log.Errorf("Cannot connect to Teleport Auth server: %v. Reconnecting...", err)
 		case trace.IsEOF(err):
 			log.Errorf("Watcher stream closed: %v. Reconnecting...", err)
 		case access.IsCanceled(err):
