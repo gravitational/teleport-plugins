@@ -35,9 +35,9 @@ root-cas = "path/to/root.cas"     # Teleport cluster CA certs
 
 [slack]
 token = "api-token"       # Slack Bot OAuth token
-secret = "secret-value"   # Slack API Signing Secret
+secret = "signing-secret-value"   # Slack API Signing Secret
 channel = "channel-name"  # Message delivery channel
-listen = ":8080"          # Slack interaction callback listener
+listen = ":8081"          # Slack interaction callback listener
 `
 
 func LoadConfig(filepath string) (*Config, error) {
@@ -78,7 +78,7 @@ func (c *Config) CheckAndSetDefaults() error {
 		return trace.BadParameter("missing required value slack.channel")
 	}
 	if c.Slack.Listen == "" {
-		c.Slack.Listen = ":8080"
+		c.Slack.Listen = ":8081"
 	}
 	return nil
 }

@@ -132,7 +132,7 @@ root-cas = "/var/lib/teleport/plugin/plug.cas"     # Teleport cluster CA certs
 token = "api-token"       # Slack Bot OAuth token
 secret = "secret-value"   # Slack API Signing Secret
 channel = "channel-name"  # Message delivery channel
-listen = "example.com:8080"          # Slack interaction callback listener
+listen = "example.com:8081"          # Slack interaction callback listener
 ```
 
 ## Test Run 
