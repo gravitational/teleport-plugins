@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
+	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/nlopes/slack"
 	log "github.com/sirupsen/logrus"
 )
@@ -19,56 +20,30 @@ type CallbackFunc func(ctx context.Context, callback Callback) error
 // CallbackServer is a wrapper around http.Server that processes Slack interaction events.
 // It verifies incoming requests and calls onCallback for valid ones
 type CallbackServer struct {
+	http       *utils.HTTP
 	secret     string
 	onCallback CallbackFunc
-	httpServer *http.Server
-	keyFile    string
-	certFile   string
 }
 
-func NewCallbackServer(ctx context.Context, conf *Config, onCallback CallbackFunc) *CallbackServer {
-	s := CallbackServer{
-		secret:     conf.Slack.Secret,
-		onCallback: onCallback,
-		keyFile:    conf.HTTP.KeyFile,
-		certFile:   conf.HTTP.CertFile,
+func NewCallbackServer(conf *Config, onCallback CallbackFunc) *CallbackServer {
+	return &CallbackServer{
+		utils.NewHTTP(conf.HTTP),
+		conf.Slack.Secret,
+		onCallback,
 	}
-
-	s.httpServer = &http.Server{
-		Addr: conf.HTTP.Listen,
-		Handler: http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-			s.processCallback(ctx, rw, r)
-		}),
-	}
-
-	go func() {
-		<-ctx.Done()
-		s.httpServer.Close()
-	}()
-
-	return &s
 }
 
-func (s *CallbackServer) ListenAndServe() error {
-	var err error
-	if s.certFile != "" {
-		log.Infof("Starting secure HTTPS server on %s", s.httpServer.Addr)
-		err = s.httpServer.ListenAndServeTLS(s.certFile, s.keyFile)
-	} else {
-		log.Infof("Starting insecure HTTP server on %s", s.httpServer.Addr)
-		err = s.httpServer.ListenAndServe()
+func (s *CallbackServer) Run(ctx context.Context) error {
+	if err := s.http.EnsureCert(DefaultDir + "/server"); err != nil {
+		return err
 	}
-	if err == http.ErrServerClosed {
-		return nil
-	}
-	return err
+	s.http.Handle(ctx, "/", s.processCallback)
+	return s.http.ListenAndServe(ctx)
 }
 
 func (s *CallbackServer) Shutdown(ctx context.Context) error {
-	sctx, scancel := context.WithTimeout(ctx, time.Second*20)
-	defer scancel()
-
-	return s.httpServer.Shutdown(sctx)
+	// 5 seconds should be enough since every callback is limited to execute within 2500 milliseconds
+	return s.http.ShutdownWithTimeout(ctx, time.Second*5)
 }
 
 func (s *CallbackServer) processCallback(ctx context.Context, rw http.ResponseWriter, r *http.Request) {

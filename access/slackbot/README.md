@@ -14,15 +14,24 @@ configuration file that looks something like this:
 # example slackbot configuration file
 [teleport]
 auth-server = "example.com:3025"                  # Auth GRPC API address.  
-client-key = "/var/lib/teleport/plugin/plug.key"" # Teleport GRPC client secret key
-client-crt = "/var/lib/teleport/plugin/plug.crt"  # Teleport GRPC client certificate 
-root-cas = "/var/lib/teleport/plugin/plug.cas"    # Teleport cluster CA certs
+client-key = "/var/lib/teleport/plugins/slackbot/auth.key"  # Teleport GRPC client secret key
+client-crt = "/var/lib/teleport/plugins/slackbot/auth.crt"  # Teleport GRPC client certificate 
+root-cas = "/var/lib/teleport/plugins/slackbot/auth.cas"    # Teleport cluster CA certs
 
 [slack]
 token = "api-token"         # Slack Bot OAuth token
 secret = "secret-value"     # Slack API Signing Secret
 channel = "channel-name"    # Message delivery channel
-listen = "example.com:8080" # Slack interaction callback listener. Later used for Request URL.
+
+[http]
+listen = ":8080" # Callback http server listen addr.
+# host = "example.com" # Host name by which interaction callback is accessible publicly.
+# https-key-file = "/var/lib/teleport/plugins/slackbot/server.key"  # TLS private key
+# https-cert-file = "/var/lib/teleport/plugins/slackbot/server.crt" # TLS certificate
+
+[log]
+output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/slackbot.log"
+severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
 ```
 
 ### `[teleport]`
@@ -44,13 +53,13 @@ to be able to receive callbacks from slack when users interact with messages.
 A token can be provisioned from [api.slack.com](https://api.slack.com) by
 registering an App and associated Bot User for your workspace.
 
-In order to receive interaction callbacks, make sure the `listen` address is
+In order to receive interaction callbacks, make sure the `host` address is
 publicly accessible and register it with your App under 
 `Features > Interactive Components > Request URL`.
 
 *NOTE*: For debug purposes, slack recommends using `ngrok http` to get a
-public HTTPS endpoint for your interaction callback.
-
+public HTTPS endpoint for your interaction callback. You must also use
+`--insecure-no-tls` option when running Slackbot under `ngrok`.
 
 ## Usage
 

@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/gravitational/trace"
 	"github.com/pelletier/go-toml"
 )
@@ -23,12 +24,8 @@ type Config struct {
 		Channel string `toml:"channel"`
 		APIURL  string
 	} `toml:"slack"`
-	HTTP struct {
-		Listen   string `toml:"listen"`
-		KeyFile  string `toml:"https-key-file"`
-		CertFile string `toml:"https-cert-file"`
-	}
-	Log struct {
+	HTTP utils.HTTPConfig
+	Log  struct {
 		Output   string `toml:"output"`
 		Severity string `toml:"severity"`
 	}
@@ -37,9 +34,9 @@ type Config struct {
 const exampleConfig = `# example slackbot configuration TOML file
 [teleport]
 auth-server = "example.com:3025"  # Auth GRPC API address
-client-key = "path/to/client.key" # Teleport GRPC client secret key
-client-crt = "path/to/client.crt" # Teleport GRPC client certificate
-root-cas = "path/to/root.cas"     # Teleport cluster CA certs
+client-key = "/var/lib/teleport/plugins/slackbot/auth.key" # Teleport GRPC client secret key
+client-crt = "/var/lib/teleport/plugins/slackbot/auth.crt" # Teleport GRPC client certificate
+root-cas = "/var/lib/teleport/plugins/slackbot/auth.cas"   # Teleport cluster CA certs
 
 [slack]
 token = "api-token"       # Slack Bot OAuth token
@@ -48,8 +45,9 @@ channel = "channel-name"  # Message delivery channel
 
 [http]
 listen = ":8081"          # Slack interaction callback listener
-# https-key-file = "/var/lib/teleport/slackbot_key.pem"  # TLS private key
-# https-cert-file = "/var/lib/teleport/slackbot_cert.pem" # TLS certificate
+# host = "example.com"    # Host name by which bot is accessible
+# https-key-file = "/var/lib/teleport/plugins/slackbot/server.key"  # TLS private key
+# https-cert-file = "/var/lib/teleport/plugins/slackbot/server.crt" # TLS certificate
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/slackbot.log"

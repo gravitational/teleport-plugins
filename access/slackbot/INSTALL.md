@@ -48,11 +48,11 @@ $ tctl create -f rscs.yaml
 Teleport Plugin uses the `access-plugin`role and user to peform the approval. We export the identify files, using [`tctl auth sign`](https://gravitational.com/teleport/docs/cli-docs/#tctl-auth-sign).
 
 ```
-$ tctl auth sign --format=tls --user=access-plugin --out=plug --ttl=8760h
+$ tctl auth sign --format=tls --user=access-plugin --out=auth --ttl=8760h
 # ...
 ```
 
-The above sequence should result in three PEM encoded files being generated: plug.crt, plug.key, and plug.cas (certificate, private key, and CA certs respectively).  We'll reference these later when [configuring Teleport-Plugins](#configuration-file).
+The above sequence should result in three PEM encoded files being generated: auth.crt, auth.key, and auth.cas (certificate, private key, and CA certs respectively).  We'll reference these later when [configuring Teleport-Plugins](#configuration-file).
 
 _Note: by default, tctl auth sign produces certificates with a relatively short lifetime. For production deployments, the --ttl flag can be used to ensure a more practical certificate lifetime. --ttl=8760h exports a 1 year token_
   
@@ -124,15 +124,17 @@ _Note: in production, you'll want to have this URL publicly accessible on your i
 # Example Teleport slackbot TOML configuration file
 [teleport]
 auth-server = "example.com:3025"  # Auth GRPC API address
-client-key = "/var/lib/teleport/plugin/plug.key" # Teleport GRPC client secret key
-client-crt = "/var/lib/teleport/plugin/plug.crt" # Teleport GRPC client certificate 
-root-cas = "/var/lib/teleport/plugin/plug.cas"     # Teleport cluster CA certs
+client-key = "/var/lib/teleport/plugins/slackbot/auth.key" # Teleport GRPC client secret key
+client-crt = "/var/lib/teleport/plugins/slackbot/auth.crt" # Teleport GRPC client certificate 
+root-cas = "/var/lib/teleport/plugins/slackbot/auth.cas"   # Teleport cluster CA certs
 
 [slack]
 token = "api-token"       # Slack Bot OAuth token
 secret = "secret-value"   # Slack API Signing Secret
 channel = "channel-name"  # Message delivery channel
-listen = "example.com:8081"          # Slack interaction callback listener
+
+[http]
+listen = ":8081"          # Slack interaction callback listener
 ```
 
 ## Test Run 

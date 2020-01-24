@@ -38,6 +38,8 @@ const (
 	ActionApprove = "approve_request"
 	// ActionDeny uniquely identifies the deny button in events.
 	ActionDeny = "deny_request"
+
+	DefaultDir = "/var/lib/teleport/plugins/slackbot"
 )
 
 // eprintln prints an optionally formatted string to stderr.
@@ -65,6 +67,9 @@ func main() {
 	debug := startCmd.Flag("debug", "Enable verbose logging to stderr").
 		Short('d').
 		Bool()
+	insecure := startCmd.Flag("insecure-no-tls", "Disable TLS for the callback server").
+		Default("false").
+		Bool()
 
 	selectedCmd, err := app.Parse(os.Args[1:])
 	if err != nil {
@@ -75,21 +80,18 @@ func main() {
 	case "configure":
 		fmt.Print(exampleConfig)
 	case "start":
-		if *debug {
-			log.SetLevel(log.DebugLevel)
-			log.Debugf("DEBUG logging enabled")
-		}
-		if err := run(*path); err != nil {
-			bail("error: %s", err)
+		if err := run(*path, *insecure, *debug); err != nil {
+			bail("error: %s", trace.DebugReport(err))
 		}
 	}
 }
 
-func run(configPath string) error {
+func run(configPath string, insecure bool, debug bool) error {
 	conf, err := LoadConfig(configPath)
 	if err != nil {
 		return trace.Wrap(err)
 	}
+	conf.HTTP.Insecure = insecure
 
 	app, err := NewApp(*conf)
 	if err != nil {
@@ -100,6 +102,11 @@ func run(configPath string) error {
 	if err != nil {
 		return err
 	}
+	if debug {
+		log.SetLevel(log.DebugLevel)
+		log.Debugf("DEBUG logging enabled")
+	}
+
 	serveSignals(app)
 
 	return trace.Wrap(
@@ -256,7 +263,7 @@ func (a *App) Run(ctx context.Context) error {
 	a.cache = NewRequestCache(ctx)
 
 	// Create callback server prividing a.OnSlackCallback as a callback function
-	a.callbackServer = NewCallbackServer(ctx, &a.conf, a.OnSlackCallback)
+	a.callbackServer = NewCallbackServer(&a.conf, a.OnSlackCallback)
 
 	var once sync.Once
 	shutdown := func() {
@@ -284,7 +291,7 @@ func (a *App) Run(ctx context.Context) error {
 		defer shutdown()
 
 		httpErr = trace.Wrap(
-			a.callbackServer.ListenAndServe(),
+			a.callbackServer.Run(ctx),
 		)
 	}()
 

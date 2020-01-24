@@ -54,12 +54,12 @@ EOF
 # ...
 $ tctl create rscs.yaml
 # ...
-$ tctl auth sign --format=tls --user=access-plugin --out=plug
+$ tctl auth sign --format=tls --user=access-plugin --out=auth
 # ...
 ```
 
 The above sequence should result in three PEM encoded files being generated:
-`plug.crt`, `plug.key`, and `plug.cas` (certificate, private key, and CA certs
+`auth.crt`, `auth.key`, and `auth.cas` (certificate, private key, and CA certs
 respectively).
 
 *Note:* by default, `tctl auth sign` produces certificates with a relatively short
