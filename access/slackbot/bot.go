@@ -106,6 +106,7 @@ func msgText(req access.Request, status string) string {
 
 	fmt.Fprintln(b, "```")
 	msgFieldToBuilder(b, "Request ", req.ID)
+	msgFieldToBuilder(b, "Cluster ", req.ClusterName)
 
 	if len(req.User) > 0 {
 		msgFieldToBuilder(b, "User    ", req.User)

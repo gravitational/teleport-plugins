@@ -31,8 +31,10 @@ import (
 	"github.com/gravitational/trace"
 	"github.com/gravitational/trace/trail"
 
+	"github.com/gravitational/teleport/lib/auth"
 	"github.com/gravitational/teleport/lib/auth/proto"
 	"github.com/gravitational/teleport/lib/services"
+	"github.com/gravitational/teleport/lib/utils"
 )
 
 // State represents the state of an access request.
@@ -83,6 +85,8 @@ type Request struct {
 	Roles []string
 	// State is the current state of the request.
 	State State
+	// ClusterName is a name of cluster that request belongs to
+	ClusterName string
 }
 
 // Watcher is used to monitor access requests.
@@ -107,11 +111,17 @@ type Client interface {
 // clt is a thin wrapper around the raw GRPC types that implements the
 // access.Client interface.
 type clt struct {
-	clt    proto.AuthServiceClient
-	cancel context.CancelFunc
+	clt         proto.AuthServiceClient
+	cancel      context.CancelFunc
+	clusterName string
 }
 
 func NewClient(ctx context.Context, addr string, tc *tls.Config) (Client, error) {
+	clusterName, err := getClusterName(addr, tc)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	conn, err := grpc.DialContext(ctx, addr,
 		grpc.WithTransportCredentials(credentials.NewTLS(tc)),
@@ -123,13 +133,34 @@ func NewClient(ctx context.Context, addr string, tc *tls.Config) (Client, error)
 		return nil, fromGRPC(err)
 	}
 	return &clt{
-		clt:    proto.NewAuthServiceClient(conn),
-		cancel: cancel,
+		clt:         proto.NewAuthServiceClient(conn),
+		cancel:      cancel,
+		clusterName: clusterName,
 	}, nil
 }
 
+func getClusterName(addr string, tc *tls.Config) (string, error) {
+	addrs, err := utils.ParseAddrs([]string{addr})
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+
+	client, err := auth.NewTLSClient(auth.ClientConfig{Addrs: addrs, TLS: tc})
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+	defer client.Close()
+
+	clusterName, err := client.GetClusterName()
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+
+	return clusterName.GetClusterName(), nil
+}
+
 func (c *clt) WatchRequests(ctx context.Context, fltr Filter) Watcher {
-	return newWatcher(ctx, c.clt, fltr)
+	return newWatcher(ctx, c.clt, fltr, c.clusterName)
 }
 
 func (c *clt) GetRequests(ctx context.Context, fltr Filter) ([]Request, error) {
@@ -140,10 +171,11 @@ func (c *clt) GetRequests(ctx context.Context, fltr Filter) ([]Request, error) {
 	var reqs []Request
 	for _, req := range rsp.AccessRequests {
 		r := Request{
-			ID:    req.GetName(),
-			User:  req.GetUser(),
-			Roles: req.GetRoles(),
-			State: req.GetState(),
+			ID:          req.GetName(),
+			User:        req.GetUser(),
+			Roles:       req.GetRoles(),
+			State:       req.GetState(),
+			ClusterName: c.clusterName,
 		}
 		reqs = append(reqs, r)
 	}
@@ -184,12 +216,13 @@ func (c *clt) Close() {
 }
 
 type watcher struct {
-	eventC chan Event
-	initC  chan struct{}
-	doneC  chan struct{}
-	emux   sync.Mutex
-	err    error
-	cancel context.CancelFunc
+	eventC      chan Event
+	initC       chan struct{}
+	doneC       chan struct{}
+	emux        sync.Mutex
+	err         error
+	cancel      context.CancelFunc
+	clusterName string
 }
 
 // TODO: remove this when trail.FromGRPC will understand additional error codes
@@ -218,13 +251,14 @@ func IsDeadline(err error) bool {
 	return err == context.DeadlineExceeded || status.Code(err) == codes.DeadlineExceeded
 }
 
-func newWatcher(ctx context.Context, clt proto.AuthServiceClient, fltr Filter) *watcher {
+func newWatcher(ctx context.Context, clt proto.AuthServiceClient, fltr Filter, clusterName string) *watcher {
 	ctx, cancel := context.WithCancel(ctx)
 	w := &watcher{
-		eventC: make(chan Event),
-		initC:  make(chan struct{}),
-		doneC:  make(chan struct{}),
-		cancel: cancel,
+		eventC:      make(chan Event),
+		initC:       make(chan struct{}),
+		doneC:       make(chan struct{}),
+		cancel:      cancel,
+		clusterName: clusterName,
 	}
 	go w.run(ctx, clt, fltr)
 	return w
@@ -265,10 +299,11 @@ func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, fltr Fil
 				return
 			}
 			req = Request{
-				ID:    r.GetName(),
-				User:  r.GetUser(),
-				Roles: r.GetRoles(),
-				State: r.GetState(),
+				ID:          r.GetName(),
+				User:        r.GetUser(),
+				Roles:       r.GetRoles(),
+				State:       r.GetState(),
+				ClusterName: w.clusterName,
 			}
 		case OpDelete:
 			h := event.GetResourceHeader()
@@ -277,7 +312,8 @@ func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, fltr Fil
 				return
 			}
 			req = Request{
-				ID: h.Metadata.Name,
+				ID:          h.Metadata.Name,
+				ClusterName: w.clusterName,
 			}
 		default:
 			w.setError(trace.Errorf("unexpected event op type %s", event.Type))
