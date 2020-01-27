@@ -113,7 +113,7 @@ func (c *RequestCache) tick() int {
 	}
 	for reqID, entry := range c.entries {
 		if entry.exp < c.index {
-			log.Debugf("removing expired cache entry %s...", reqID)
+			log.WithField("request_id", reqID).Debugf("removing expired cache entry...")
 			delete(c.entries, reqID)
 			continue
 		}
