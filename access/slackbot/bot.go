@@ -13,6 +13,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var emojiByStatus = map[string]string{
+	"PENDING":  ":hourglass_flowing_sand: ",
+	"APPROVED": ":white_check_mark: ",
+	"DENIED":   ":x: ",
+	"EXPIRED":  ":hourglass: ",
+}
+
 // Bot is a wrapper around slack.Client that works with access.Request
 type Bot struct {
 	client      *slack.Client
@@ -36,10 +43,7 @@ func NewBot(conf *Config) *Bot {
 func (b *Bot) Post(reqID string, reqData requestData) (data slackData, err error) {
 	data.channelID, data.timestamp, err = b.client.PostMessage(
 		b.channel,
-		slack.MsgOptionBlocks(
-			msgSection(b.msgText(reqID, reqData, "PENDING")),
-			actionBlock(reqID),
-		),
+		slack.MsgOptionBlocks(b.msgSections(reqID, reqData, "PENDING", true)...),
 	)
 
 	return
@@ -55,9 +59,7 @@ func (b *Bot) Expire(reqID string, reqData requestData, slackData slackData) err
 	_, _, _, err := b.client.UpdateMessage(
 		slackData.channelID,
 		slackData.timestamp,
-		slack.MsgOptionBlocks(
-			msgSection(b.msgText(reqID, reqData, "EXPIRED")),
-		),
+		slack.MsgOptionBlocks(b.msgSections(reqID, reqData, "EXPIRED", false)...),
 	)
 
 	return err
@@ -65,7 +67,7 @@ func (b *Bot) Expire(reqID string, reqData requestData, slackData slackData) err
 
 func (b *Bot) Respond(reqID string, reqData requestData, status string, responseURL string) error {
 	var message slack.Message
-	message.Blocks.BlockSet = []slack.Block{msgSection(b.msgText(reqID, reqData, status))}
+	message.Blocks.BlockSet = b.msgSections(reqID, reqData, status, false)
 	message.ReplaceOriginal = true
 
 	body, err := json.Marshal(message)
@@ -97,61 +99,76 @@ func (b *Bot) Respond(reqID string, reqData requestData, status string, response
 	return nil
 }
 
-// msgText builds the message text payload (contains markdown).
-func (b *Bot) msgText(reqID string, reqData requestData, status string) string {
+// msgSection builds a slack message section (obeys markdown).
+func (b *Bot) msgSections(reqID string, reqData requestData, status string, actions bool) []slack.Block {
 	builder := new(strings.Builder)
 	builder.Grow(128)
 
-	fmt.Fprintln(builder, "```")
-	msgFieldToBuilder(builder, "Request ", reqID)
+	msgFieldToBuilder(builder, "ID", reqID)
+	msgFieldToBuilder(builder, "Cluster", b.clusterName)
 
 	if len(reqData.user) > 0 {
-		msgFieldToBuilder(builder, "User    ", reqData.user)
+		msgFieldToBuilder(builder, "User", reqData.user)
 	}
 	if reqData.roles != nil {
-		msgFieldToBuilder(builder, "Role(s) ", strings.Join(reqData.roles, ","))
+		msgFieldToBuilder(builder, "Role(s)", strings.Join(reqData.roles, ","))
 	}
 
-	msgFieldToBuilder(builder, "Status  ", status)
-	fmt.Fprintln(builder, "```")
+	sections := []slack.Block{
+		&slack.SectionBlock{
+			Type: slack.MBTSection,
+			Text: &slack.TextBlockObject{
+				Type: slack.MarkdownType,
+				Text: "You have a new Role Request:",
+			},
+		},
+		&slack.SectionBlock{
+			Type: slack.MBTSection,
+			Text: &slack.TextBlockObject{
+				Type: slack.MarkdownType,
+				Text: builder.String(),
+			},
+		},
+		&slack.ContextBlock{
+			Type: slack.MBTContext,
+			ContextElements: slack.ContextElements{
+				Elements: []slack.MixedElement{
+					&slack.TextBlockObject{
+						Type: slack.MarkdownType,
+						Text: fmt.Sprintf("*Status:* %s%s", emojiByStatus[status], status),
+					},
+				},
+			},
+		},
+	}
 
-	return builder.String()
+	if actions {
+		sections = append(sections, slack.NewActionBlock(
+			"approve_or_deny",
+			&slack.ButtonBlockElement{
+				Type:     slack.METButton,
+				ActionID: ActionApprove,
+				Text:     slack.NewTextBlockObject("plain_text", "Approve", true, false),
+				Value:    reqID,
+				Style:    slack.StylePrimary,
+			},
+			&slack.ButtonBlockElement{
+				Type:     slack.METButton,
+				ActionID: ActionDeny,
+				Text:     slack.NewTextBlockObject("plain_text", "Deny", true, false),
+				Value:    reqID,
+				Style:    slack.StyleDanger,
+			},
+		))
+	}
+
+	return sections
 }
 
 func msgFieldToBuilder(b *strings.Builder, field, value string) {
+	b.WriteString("*")
 	b.WriteString(field)
+	b.WriteString("*: ")
 	b.WriteString(value)
 	b.WriteString("\n")
-}
-
-// msgSection builds a slack message section (obeys markdown).
-func msgSection(msg string) slack.SectionBlock {
-	return slack.SectionBlock{
-		Type: slack.MBTSection,
-		Text: &slack.TextBlockObject{
-			Type: slack.MarkdownType,
-			Text: msg,
-		},
-	}
-}
-
-// actionBlock builds a slack action block for a pending request.
-func actionBlock(reqID string) *slack.ActionBlock {
-	return slack.NewActionBlock(
-		"approve_or_deny",
-		&slack.ButtonBlockElement{
-			Type:     slack.METButton,
-			ActionID: ActionApprove,
-			Text:     slack.NewTextBlockObject("plain_text", "Approve", true, false),
-			Value:    reqID,
-			Style:    slack.StylePrimary,
-		},
-		&slack.ButtonBlockElement{
-			Type:     slack.METButton,
-			ActionID: ActionDeny,
-			Text:     slack.NewTextBlockObject("plain_text", "Deny", true, false),
-			Value:    reqID,
-			Style:    slack.StyleDanger,
-		},
-	)
 }
