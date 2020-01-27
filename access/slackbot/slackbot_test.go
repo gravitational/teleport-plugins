@@ -129,7 +129,8 @@ func (s *SlackbotSuite) startApp(c *C) {
 	conf.Slack.Token = "000000"
 	conf.Slack.Channel = "test"
 	conf.Slack.APIURL = "http://" + s.slackServer.ServerAddr + "/"
-	conf.Slack.Listen = ":" + s.appPort
+	conf.HTTP.Listen = ":" + s.appPort
+	conf.HTTP.Insecure = true
 
 	s.app, err = NewAppWithTLSConfig(conf, &tc)
 	c.Assert(err, IsNil)
