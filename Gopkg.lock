@@ -441,7 +441,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:357e03d2db5fe15e9fb210f40e7ccf2ba45eac9cb116755df9681fe0e39d8aa1"
+  digest = "1:6ece29d0bc2694f665ed19db4ee6f897e6574f157bc4caa7a660c4be2b956f3f"
   name = "github.com/gravitational/teleport"
   packages = [
     ".",
@@ -505,8 +505,7 @@
     "lib/wrappers",
   ]
   pruneopts = "NUT"
-  revision = "b06a05d2d1964b4584d241e5bb2f591e527484f2"
-  version = "v4.2.2"
+  revision = "919e69df32714b0e4e3533a225802b72ec86ea02"
 
 [[projects]]
   digest = "1:a43816dbfa9fa218af700e9d230d1adbcef12ffc495efe46046a57fe5490aad0"
@@ -1386,9 +1385,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/gravitational/kingpin",
-    "github.com/gravitational/teleport",
     "github.com/gravitational/teleport/integration",
-    "github.com/gravitational/teleport/lib/auth",
     "github.com/gravitational/teleport/lib/auth/proto",
     "github.com/gravitational/teleport/lib/auth/testauthority",
     "github.com/gravitational/teleport/lib/services",

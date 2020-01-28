@@ -29,7 +29,7 @@ ignored = ["github.com/Sirupsen/logrus", "github.com/gravitational/license/gener
 
 [[constraint]]
   name = "github.com/gravitational/teleport"
-  version = "4.2.2"
+  revision = "919e69df32714b0e4e3533a225802b72ec86ea02"
 
 [[constraint]]
   name = "github.com/gravitational/kingpin"
