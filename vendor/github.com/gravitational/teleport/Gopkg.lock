@@ -560,15 +560,16 @@
   version = "v0.3.4"
 
 [[projects]]
-  digest = "1:6fdc5ab2b51daaff685258da6a6b6dec3fffcf4207fab3df360e3a2b42d2f1af"
+  digest = "1:de4c308afcff6ffdbfaf7dbdcd5951cfd72f2c48465bf16789b5b8a50e72aa97"
   name = "github.com/iovisor/gobpf"
   packages = [
     "bcc",
     "pkg/cpuonline",
   ]
   pruneopts = "NUT"
-  revision = "0e328af3088341056aa453a95756f94c87492220"
+  revision = "3bb6e7ff1bc74fa4b3053e2dd0948b6228e5f3b1"
   source = "github.com/gravitational/gobpf"
+  version = "v0.0.1"
 
 [[projects]]
   digest = "1:ac6d01547ec4f7f673311b4663909269bfb8249952de3279799289467837c3cc"
@@ -576,6 +577,19 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "0b12d6b5"
+
+[[projects]]
+  branch = "master"
+  digest = "1:c7e512739a7c523bc273aacfd021a71893c5870a7f26dc892c94debcaa8546d4"
+  name = "github.com/johannesboyne/gofakes3"
+  packages = [
+    ".",
+    "backend/s3mem",
+    "internal/goskipiter",
+    "internal/s3io",
+  ]
+  pruneopts = "NUT"
+  revision = "9aee1c78a2524d95af6250163ddf3ec23e0170ed"
 
 [[projects]]
   branch = "master"
@@ -852,11 +866,27 @@
   revision = "605161228693b2efadce55323c9c661a40c5fbaa"
 
 [[projects]]
+  branch = "master"
+  digest = "1:8bc4ea931d51467ab9dd8c1fb6213625e7ac1de24a4883e992a1b0b713a8d1eb"
+  name = "github.com/ryszard/goskiplist"
+  packages = ["skiplist"]
+  pruneopts = "NUT"
+  revision = "2dfbae5fcf46374f166f8969cb07e167f1be6273"
+
+[[projects]]
   digest = "1:54f275b550b8a8a20bc91e2067ed740600b69dae9dcf9cdfe905bac1b9cfd1d0"
   name = "github.com/satori/go.uuid"
   packages = ["."]
   pruneopts = "NUT"
   revision = "5bf94b69c6b68ee1b541973bb8e1144db23a194b"
+
+[[projects]]
+  branch = "master"
+  digest = "1:c7ce4b0ec2e461e9e71c883b7f1c9f4e963396b1ddab6f5cd49d6f622fa46a67"
+  name = "github.com/shabbyrobe/gocovmerge"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "3e036491d500ffc86c35e2cbe2e9c92f84183f7c"
 
 [[projects]]
   digest = "1:ed14ef2a880d6674d8d9847a765b887fbb2af7b2e940900241a1e85bf1b4ca1f"
@@ -1060,14 +1090,14 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8cac879720b683f6e1c14fa63076f5b5538ff95fd8f43028940ad396d81b5bee"
+  digest = "1:855811b1c0699e1d3852fc4670d880ae4c80682a7b970faada7668e616294e6b"
   name = "golang.org/x/sys"
   packages = [
     "unix",
     "windows",
   ]
   pruneopts = "NUT"
-  revision = "1d206c9fa8975fb4cf00df1dc8bf3283dc24ba0e"
+  revision = "548cf772de5052aa878ccb47cdeb7d262b75c8ec"
 
 [[projects]]
   digest = "1:28675596ba760768a08ebfc0872bf8188a30c6b31f056b791e06e94e3c40c81a"
@@ -1092,6 +1122,14 @@
   ]
   pruneopts = "NUT"
   revision = "19e51611da83d6be54ddafce4a4af510cb3e9ea4"
+
+[[projects]]
+  branch = "master"
+  digest = "1:c276671750a5c4cb0605e33621ae51fcf2284ffff76c35fa65e6680bbc26bf70"
+  name = "golang.org/x/tools"
+  packages = ["cover"]
+  pruneopts = "NUT"
+  revision = "7b8e75db28f4b09dc0b853eadee5b034956bcb9e"
 
 [[projects]]
   digest = "1:f1032e77d26c5a2ffe345c6643d02437a3ca9aa976830f2251d9784264bda6d4"
@@ -1437,6 +1475,8 @@
     "github.com/gravitational/trace/trail",
     "github.com/gravitational/ttlmap",
     "github.com/iovisor/gobpf/bcc",
+    "github.com/johannesboyne/gofakes3",
+    "github.com/johannesboyne/gofakes3/backend/s3mem",
     "github.com/jonboulle/clockwork",
     "github.com/json-iterator/go",
     "github.com/julienschmidt/httprouter",

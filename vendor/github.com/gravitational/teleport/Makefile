@@ -10,7 +10,7 @@
 # Naming convention:
 #	for stable releases we use "1.0.0" format
 #   for pre-releases, we use   "1.0.0-beta.2" format
-VERSION=4.2.0-rc.1
+VERSION=4.2.2-alpha.1
 
 DOCKER_IMAGE ?= quay.io/gravitational/teleport
 
@@ -362,6 +362,15 @@ pkg:
 	# we pass them through for consistency - they will be dropped by the build script
 	cd $(BUILDDIR) && ./build-package.sh -t oss -v $(VERSION) -p pkg -a $(ARCH) $(RUNTIME_SECTION) $(TARBALL_PATH_SECTION)
 	if [ -f e/Makefile ]; then $(MAKE) -C e pkg; fi
+
+# build tsh client-only .pkg
+.PHONY: pkg-tsh
+pkg-tsh:
+	cp ./build.assets/build-package.sh $(BUILDDIR)/
+	chmod +x $(BUILDDIR)/build-package.sh
+	# arch and runtime are currently ignored on OS X
+	# we pass them through for consistency - they will be dropped by the build script
+	cd $(BUILDDIR) && ./build-package.sh -t oss -v $(VERSION) -p pkg -a $(ARCH) -m tsh $(RUNTIME_SECTION) $(TARBALL_PATH_SECTION)
 
 # build .rpm
 .PHONY: rpm

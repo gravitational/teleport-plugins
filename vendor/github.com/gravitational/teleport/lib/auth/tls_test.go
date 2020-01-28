@@ -1383,13 +1383,13 @@ func (s *TLSSuite) TestAccessRequest(c *check.C) {
 	req, err := services.NewAccessRequest(user, role)
 	c.Assert(err, check.IsNil)
 
-	c.Assert(userClient.CreateAccessRequest(req), check.IsNil)
+	c.Assert(userClient.CreateAccessRequest(context.TODO(), req), check.IsNil)
 
 	// sanity check; ensure that roles for which no `allow` directive
 	// exists cannot be requested.
 	badReq, err := services.NewAccessRequest(user, "some-fake-role")
 	c.Assert(err, check.IsNil)
-	c.Assert(userClient.CreateAccessRequest(badReq), check.NotNil)
+	c.Assert(userClient.CreateAccessRequest(context.TODO(), badReq), check.NotNil)
 
 	// generateCerts executes a GenerateUserCerts request, optionally applying
 	// one or more access-requests to the certificate.
@@ -1424,12 +1424,14 @@ func (s *TLSSuite) TestAccessRequest(c *check.C) {
 	_, err = generateCerts(req.GetName())
 	c.Assert(err, check.NotNil)
 
+	updateCtx := withUpdateBy(context.TODO(), "some-user")
+
 	// verify that user does not have the ability to approve their own request (not a special case, this
 	// user just wasn't created with the necessary roles for request management).
-	c.Assert(userClient.SetAccessRequestState(req.GetName(), services.RequestState_APPROVED), check.NotNil)
+	c.Assert(userClient.SetAccessRequestState(updateCtx, req.GetName(), services.RequestState_APPROVED), check.NotNil)
 
 	// attempt to apply request in APPROVED state (should succeed)
-	c.Assert(s.server.Auth().SetAccessRequestState(req.GetName(), services.RequestState_APPROVED), check.IsNil)
+	c.Assert(s.server.Auth().SetAccessRequestState(updateCtx, req.GetName(), services.RequestState_APPROVED), check.IsNil)
 	userCerts, err = generateCerts(req.GetName())
 	c.Assert(err, check.IsNil)
 	// ensure that the requested role was actually applied to the cert
@@ -1438,15 +1440,93 @@ func (s *TLSSuite) TestAccessRequest(c *check.C) {
 	}
 
 	// attempt to apply request in DENIED state (should fail)
-	c.Assert(s.server.Auth().SetAccessRequestState(req.GetName(), services.RequestState_DENIED), check.IsNil)
+	c.Assert(s.server.Auth().SetAccessRequestState(updateCtx, req.GetName(), services.RequestState_DENIED), check.IsNil)
 	_, err = generateCerts(req.GetName())
 	c.Assert(err, check.NotNil)
 
 	// ensure that once in the DENIED state, a request cannot be set back to PENDING state.
-	c.Assert(s.server.Auth().SetAccessRequestState(req.GetName(), services.RequestState_PENDING), check.NotNil)
+	c.Assert(s.server.Auth().SetAccessRequestState(updateCtx, req.GetName(), services.RequestState_PENDING), check.NotNil)
 
 	// ensure that once in the DENIED state, a request cannot be set back to APPROVED state.
-	c.Assert(s.server.Auth().SetAccessRequestState(req.GetName(), services.RequestState_APPROVED), check.NotNil)
+	c.Assert(s.server.Auth().SetAccessRequestState(updateCtx, req.GetName(), services.RequestState_APPROVED), check.NotNil)
+}
+
+func (s *TLSSuite) TestPluginData(c *check.C) {
+	priv, pub, err := s.server.Auth().GenerateKeyPair("")
+	c.Assert(err, check.IsNil)
+
+	// make sure we can parse the private and public key
+	privateKey, err := ssh.ParseRawPrivateKey(priv)
+	c.Assert(err, check.IsNil)
+
+	_, err = tlsca.MarshalPublicKeyFromPrivateKeyPEM(privateKey)
+	c.Assert(err, check.IsNil)
+
+	_, _, _, _, err = ssh.ParseAuthorizedKey(pub)
+	c.Assert(err, check.IsNil)
+
+	user := "user1"
+	role := "some-role"
+	_, err = CreateUserRoleAndRequestable(s.server.Auth(), user, role)
+	c.Assert(err, check.IsNil)
+
+	testUser := TestUser(user)
+	testUser.TTL = time.Hour
+	userClient, err := s.server.NewClient(testUser)
+	c.Assert(err, check.IsNil)
+
+	req, err := services.NewAccessRequest(user, role)
+	c.Assert(err, check.IsNil)
+
+	c.Assert(userClient.CreateAccessRequest(context.TODO(), req), check.IsNil)
+
+	plugin := "my-plugin"
+
+	err = s.server.Auth().UpdatePluginData(context.TODO(), services.PluginDataUpdateParams{
+		Kind:     services.KindAccessRequest,
+		Resource: req.GetName(),
+		Plugin:   plugin,
+		Set: map[string]string{
+			"foo": "bar",
+		},
+	})
+	c.Assert(err, check.IsNil)
+
+	data, err := s.server.Auth().GetPluginData(context.TODO(), services.PluginDataFilter{
+		Kind:     services.KindAccessRequest,
+		Resource: req.GetName(),
+	})
+	c.Assert(err, check.IsNil)
+	c.Assert(len(data), check.Equals, 1)
+
+	entry, ok := data[0].Entries()[plugin]
+	c.Assert(ok, check.Equals, true)
+	c.Assert(entry.Data, check.DeepEquals, map[string]string{"foo": "bar"})
+
+	err = s.server.Auth().UpdatePluginData(context.TODO(), services.PluginDataUpdateParams{
+		Kind:     services.KindAccessRequest,
+		Resource: req.GetName(),
+		Plugin:   plugin,
+		Set: map[string]string{
+			"foo":  "",
+			"spam": "eggs",
+		},
+		Expect: map[string]string{
+			"foo": "bar",
+		},
+	})
+	c.Assert(err, check.IsNil)
+
+	data, err = s.server.Auth().GetPluginData(context.TODO(), services.PluginDataFilter{
+		Kind:     services.KindAccessRequest,
+		Resource: req.GetName(),
+	})
+	c.Assert(err, check.IsNil)
+	c.Assert(len(data), check.Equals, 1)
+
+	entry, ok = data[0].Entries()[plugin]
+	c.Assert(ok, check.Equals, true)
+	c.Assert(entry.Data, check.DeepEquals, map[string]string{"spam": "eggs"})
 }
 
 // TestGenerateCerts tests edge cases around authorization of

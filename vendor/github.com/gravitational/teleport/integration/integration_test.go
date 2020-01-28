@@ -103,8 +103,7 @@ func TestMain(m *testing.M) {
 func (s *IntSuite) SetUpSuite(c *check.C) {
 	var err error
 
-	//utils.InitLoggerForTests(testing.Verbose())
-	utils.InitLoggerForTests()
+	utils.InitLoggerForTests(testing.Verbose())
 
 	SetTestTimeouts(time.Millisecond * time.Duration(100))
 
@@ -1539,15 +1538,23 @@ func (s *IntSuite) trustedClusters(c *check.C, test trustedClusterTest) {
 	main := NewInstance(InstanceConfig{ClusterName: clusterMain, HostID: HostID, NodeName: Host, Ports: s.getPorts(5), Priv: s.priv, Pub: s.pub, MultiplexProxy: test.multiplex})
 	aux := NewInstance(InstanceConfig{ClusterName: clusterAux, HostID: HostID, NodeName: Host, Ports: s.getPorts(5), Priv: s.priv, Pub: s.pub})
 
-	// main cluster has a local user and belongs to role "main-devs"
+	// main cluster has a local user and belongs to role "main-devs" and "main-admins"
 	mainDevs := "main-devs"
-	role, err := services.NewRole(mainDevs, services.RoleSpecV3{
+	devsRole, err := services.NewRole(mainDevs, services.RoleSpecV3{
 		Allow: services.RoleConditions{
 			Logins: []string{username},
 		},
 	})
 	c.Assert(err, check.IsNil)
-	main.AddUserWithRole(username, role)
+
+	mainAdmins := "main-admins"
+	adminsRole, err := services.NewRole(mainAdmins, services.RoleSpecV3{
+		Allow: services.RoleConditions{
+			Logins: []string{"superuser"},
+		},
+	})
+
+	main.AddUserWithRole(username, devsRole, adminsRole)
 
 	// for role mapping test we turn on Web API on the main cluster
 	// as it's used
@@ -1565,23 +1572,25 @@ func (s *IntSuite) trustedClusters(c *check.C, test trustedClusterTest) {
 	c.Assert(main.CreateEx(makeConfig(false)), check.IsNil)
 	c.Assert(aux.CreateEx(makeConfig(true)), check.IsNil)
 
-	// auxiliary cluster has a role aux-devs
+	// auxiliary cluster has only a role aux-devs
 	// connect aux cluster to main cluster
 	// using trusted clusters, so remote user will be allowed to assume
 	// role specified by mapping remote role "devs" to local role "local-devs"
 	auxDevs := "aux-devs"
-	role, err = services.NewRole(auxDevs, services.RoleSpecV3{
+	auxRole, err := services.NewRole(auxDevs, services.RoleSpecV3{
 		Allow: services.RoleConditions{
 			Logins: []string{username},
 		},
 	})
 	c.Assert(err, check.IsNil)
-	err = aux.Process.GetAuthServer().UpsertRole(role)
+	err = aux.Process.GetAuthServer().UpsertRole(auxRole)
 	c.Assert(err, check.IsNil)
 	trustedClusterToken := "trusted-cluster-token"
 	err = main.Process.GetAuthServer().UpsertToken(
 		services.MustCreateProvisionToken(trustedClusterToken, []teleport.Role{teleport.RoleTrustedCluster}, time.Time{}))
 	c.Assert(err, check.IsNil)
+	// Note that the mapping omits admins role, this is to cover the scenario
+	// when root cluster and leaf clusters have different role sets
 	trustedCluster := main.Secrets.AsTrustedCluster(trustedClusterToken, services.RoleMap{
 		{Remote: mainDevs, Local: []string{auxDevs}},
 	})
@@ -1622,6 +1631,7 @@ func (s *IntSuite) trustedClusters(c *check.C, test trustedClusterTest) {
 		RouteToCluster: clusterAux,
 	})
 	c.Assert(err, check.IsNil)
+
 	tc, err := main.NewClientWithCreds(ClientConfig{
 		Login:    username,
 		Cluster:  clusterAux,
@@ -1630,6 +1640,15 @@ func (s *IntSuite) trustedClusters(c *check.C, test trustedClusterTest) {
 		JumpHost: test.useJumpHost,
 	}, *creds)
 	c.Assert(err, check.IsNil)
+
+	// tell the client to trust aux cluster CAs (from secrets). this is the
+	// equivalent of 'known hosts' in openssh
+	auxCAS := aux.Secrets.GetCAs()
+	for i := range auxCAS {
+		err = tc.AddTrustedCA(auxCAS[i])
+		c.Assert(err, check.IsNil)
+	}
+
 	output := &bytes.Buffer{}
 	tc.Stdout = output
 	c.Assert(err, check.IsNil)
@@ -1642,6 +1661,13 @@ func (s *IntSuite) trustedClusters(c *check.C, test trustedClusterTest) {
 	}
 	c.Assert(err, check.IsNil)
 	c.Assert(output.String(), check.Equals, "hello world\n")
+
+	// ListNodes expect labels as a value of host
+	tc.Host = ""
+	servers, err := tc.ListNodes(context.TODO())
+	c.Assert(err, check.IsNil)
+	c.Assert(servers, check.HasLen, 2)
+	tc.Host = Loopback
 
 	// check that remote cluster has been provisioned
 	remoteClusters, err := main.Process.GetAuthServer().GetRemoteClusters()
@@ -4014,6 +4040,131 @@ func (s *IntSuite) TestBPFExec(c *check.C) {
 			c.Assert(err, check.NotNil)
 		}
 	}
+}
+
+// TestBPFSessionDifferentiation verifies that the bpf package can
+// differentiate events from two different sessions. This test in turn also
+// verifies the cgroup package.
+func (s *IntSuite) TestBPFSessionDifferentiation(c *check.C) {
+	tr := utils.NewTracer(utils.ThisFunction()).Start()
+	defer tr.Stop()
+
+	// Check if BPF tests can be run on this host.
+	err := canTestBPF()
+	if err != nil {
+		c.Skip(fmt.Sprintf("Tests for BPF functionality can not be run: %v.", err))
+		return
+	}
+
+	lsPath, err := exec.LookPath("ls")
+	c.Assert(err, check.IsNil)
+
+	// Create temporary directory where cgroup2 hierarchy will be mounted.
+	dir, err := ioutil.TempDir("", "cgroup-test")
+	c.Assert(err, check.IsNil)
+	defer os.RemoveAll(dir)
+
+	// Create and start a Teleport cluster.
+	makeConfig := func() (*check.C, []string, []*InstanceSecrets, *service.Config) {
+		clusterConfig, err := services.NewClusterConfig(services.ClusterConfigSpecV3{
+			SessionRecording: services.RecordAtNode,
+			LocalAuth:        services.NewBool(true),
+		})
+		c.Assert(err, check.IsNil)
+
+		// Create default config.
+		tconf := service.MakeDefaultConfig()
+
+		// Configure Auth.
+		tconf.Auth.Preference.SetSecondFactor("off")
+		tconf.Auth.Enabled = true
+		tconf.Auth.ClusterConfig = clusterConfig
+
+		// Configure Proxy.
+		tconf.Proxy.Enabled = true
+		tconf.Proxy.DisableWebService = false
+		tconf.Proxy.DisableWebInterface = true
+
+		// Configure Node. If session are being recorded at the proxy, don't enable
+		// BPF to simulate an OpenSSH node.
+		tconf.SSH.Enabled = true
+		tconf.SSH.BPF.Enabled = true
+		tconf.SSH.BPF.CgroupPath = dir
+		return c, nil, nil, tconf
+	}
+	main := s.newTeleportWithConfig(makeConfig())
+	defer main.Stop(true)
+
+	// Create two client terminals and channel to signal when the clients are
+	// done with the terminals.
+	termA := NewTerminal(250)
+	termB := NewTerminal(250)
+	doneCh := make(chan bool, 2)
+
+	// Open a terminal and type "ls" into both and exit.
+	writeTerm := func(term Terminal) {
+		client, err := main.NewClient(ClientConfig{
+			Login:   s.me.Username,
+			Cluster: Site,
+			Host:    Host,
+			Port:    main.GetPortSSHInt(),
+		})
+		c.Assert(err, check.IsNil)
+
+		// Connect terminal to std{in,out} of client.
+		client.Stdout = &term
+		client.Stdin = &term
+
+		// "Type" a command into the terminal.
+		term.Type(fmt.Sprintf("\a%v\n\r\aexit\n\r\a", lsPath))
+		err = client.SSH(context.Background(), []string{}, false)
+		c.Assert(err, check.IsNil)
+
+		// Signal that the client has finished the interactive session.
+		doneCh <- true
+	}
+	writeTerm(termA)
+	writeTerm(termB)
+
+	// Wait 10 seconds for both events to arrive, otherwise timeout.
+	timeout := time.After(10 * time.Second)
+	for i := 0; i < 2; i++ {
+		select {
+		case <-doneCh:
+			if i == 1 {
+				break
+			}
+		case <-timeout:
+			c.Fatalf("Timed out waiting for client to finish interactive session.")
+		}
+	}
+
+	// Try to find two command events from different sessions. Timeout after
+	// 10 seconds.
+	for i := 0; i < 10; i++ {
+		sessionIDs := map[string]bool{}
+
+		eventFields, err := eventsInLog(main.Config.DataDir+"/log/events.log", events.SessionCommandEvent)
+		if err != nil {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+
+		for _, fields := range eventFields {
+			if fields.GetString(events.EventType) == events.SessionCommandEvent &&
+				fields.GetString(events.Path) == lsPath {
+				sessionIDs[fields.GetString(events.SessionEventID)] = true
+			}
+		}
+
+		// If two command events for "ls" from different sessions, return right
+		// away, test was successful.
+		if len(sessionIDs) == 2 {
+			return
+		}
+		time.Sleep(1 * time.Second)
+	}
+	c.Fatalf("Failed to find command events from two different sessions.")
 }
 
 // findEventInLog polls the event log looking for an event of a particular type.

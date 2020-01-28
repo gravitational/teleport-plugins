@@ -468,7 +468,7 @@ func (i *TeleInstance) GenerateConfig(trustedSecrets []*InstanceSecrets, tconf *
 	}
 	tconf.DataDir = dataDir
 	tconf.UploadEventsC = i.UploadEventsC
-	tconf.CachePolicy.Enabled = false // TODO: temporary disable cache until https://github.com/gravitational/teleport/issues/3213 is resolved
+	tconf.CachePolicy.Enabled = true
 	tconf.Auth.ClusterName, err = services.NewClusterName(services.ClusterNameSpecV2{
 		ClusterName: i.Secrets.SiteName,
 	})
@@ -576,6 +576,8 @@ func (i *TeleInstance) CreateEx(trustedSecrets []*InstanceSecrets, tconf *servic
 		if err != nil {
 			return trace.Wrap(err)
 		}
+		// set hardcode traits to trigger new style certificates
+		teleUser.SetTraits(map[string][]string{"testing": []string{"integration"}})
 		var roles []services.Role
 		if len(user.Roles) == 0 {
 			role := services.RoleForUser(teleUser)
@@ -850,12 +852,13 @@ func (i *TeleInstance) Reset() (err error) {
 	return nil
 }
 
-// AddUserUserWithRole adds user with assigned role
-func (i *TeleInstance) AddUserWithRole(username string, role services.Role) *User {
+// AddUserUserWithRole adds user with one or many assigned roles
+func (i *TeleInstance) AddUserWithRole(username string, roles ...services.Role) *User {
 	user := &User{
 		Username: username,
-		Roles:    []services.Role{role},
+		Roles:    make([]services.Role, len(roles)),
 	}
+	copy(user.Roles, roles)
 	i.Secrets.Users[username] = user
 	return user
 }

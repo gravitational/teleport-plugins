@@ -195,7 +195,7 @@ func (g *GRPCServer) GetAccessRequests(ctx context.Context, f *services.AccessRe
 	if f != nil {
 		filter = *f
 	}
-	reqs, err := auth.AuthWithRoles.GetAccessRequests(filter)
+	reqs, err := auth.AuthWithRoles.GetAccessRequests(ctx, filter)
 	if err != nil {
 		return nil, trail.ToGRPC(err)
 	}
@@ -218,7 +218,7 @@ func (g *GRPCServer) CreateAccessRequest(ctx context.Context, req *services.Acce
 	if err != nil {
 		return nil, trail.ToGRPC(err)
 	}
-	if err := auth.AuthWithRoles.CreateAccessRequest(req); err != nil {
+	if err := auth.AuthWithRoles.CreateAccessRequest(ctx, req); err != nil {
 		return nil, trail.ToGRPC(err)
 	}
 	return &empty.Empty{}, nil
@@ -229,7 +229,7 @@ func (g *GRPCServer) DeleteAccessRequest(ctx context.Context, id *proto.RequestI
 	if err != nil {
 		return nil, trail.ToGRPC(err)
 	}
-	if err := auth.AuthWithRoles.DeleteAccessRequest(id.ID); err != nil {
+	if err := auth.AuthWithRoles.DeleteAccessRequest(ctx, id.ID); err != nil {
 		return nil, trail.ToGRPC(err)
 	}
 	return &empty.Empty{}, nil
@@ -240,7 +240,43 @@ func (g *GRPCServer) SetAccessRequestState(ctx context.Context, req *proto.Reque
 	if err != nil {
 		return nil, trail.ToGRPC(err)
 	}
-	if err := auth.SetAccessRequestState(req.ID, req.State); err != nil {
+	if err := auth.AuthWithRoles.SetAccessRequestState(ctx, req.ID, req.State); err != nil {
+		return nil, trail.ToGRPC(err)
+	}
+	return &empty.Empty{}, nil
+}
+
+func (g *GRPCServer) GetPluginData(ctx context.Context, filter *services.PluginDataFilter) (*proto.PluginDataSeq, error) {
+	// TODO(fspmarshall): Add rate-limiting.
+	auth, err := g.authenticate(ctx)
+	if err != nil {
+		return nil, trail.ToGRPC(err)
+	}
+	data, err := auth.AuthWithRoles.GetPluginData(ctx, *filter)
+	if err != nil {
+		return nil, trail.ToGRPC(err)
+	}
+	var seq []*services.PluginDataV3
+	for _, rsc := range data {
+		d, ok := rsc.(*services.PluginDataV3)
+		if !ok {
+			err = trace.BadParameter("unexpected plugin data type %T", rsc)
+			return nil, trail.ToGRPC(err)
+		}
+		seq = append(seq, d)
+	}
+	return &proto.PluginDataSeq{
+		PluginData: seq,
+	}, nil
+}
+
+func (g *GRPCServer) UpdatePluginData(ctx context.Context, params *services.PluginDataUpdateParams) (*empty.Empty, error) {
+	// TODO(fspmarshall): Add rate-limiting.
+	auth, err := g.authenticate(ctx)
+	if err != nil {
+		return nil, trail.ToGRPC(err)
+	}
+	if err := auth.AuthWithRoles.UpdatePluginData(ctx, *params); err != nil {
 		return nil, trail.ToGRPC(err)
 	}
 	return &empty.Empty{}, nil
