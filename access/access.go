@@ -19,18 +19,16 @@ package access
 import (
 	"context"
 	"crypto/tls"
-	"io"
 	"sync"
 	"time"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/status"
 
 	"github.com/gravitational/trace"
-	"github.com/gravitational/trace/trail"
 
+	"github.com/gravitational/teleport-plugins/plugin_data"
+	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/gravitational/teleport/lib/auth/proto"
 	"github.com/gravitational/teleport/lib/services"
 )
@@ -102,16 +100,23 @@ type Client interface {
 	GetRequests(ctx context.Context, fltr Filter) ([]Request, error)
 	// SetRequestState updates the state of a request.
 	SetRequestState(ctx context.Context, reqID string, state State) error
+	// GetPluginData fetches plugin data of the specific request.
+	GetPluginData(ctx context.Context, reqID string, data plugin_data.PluginDataOutput) error
+	// GetPluginData overwrites plugin data of the specific request.
+	SetPluginData(ctx context.Context, reqID string, data plugin_data.PluginDataInput) error
+	// UpdatePluginData updates plugin data of the specific request comparing it with a previous value.
+	UpdatePluginData(ctx context.Context, reqID string, set plugin_data.PluginDataInput, expect plugin_data.PluginDataInput) error
 }
 
 // clt is a thin wrapper around the raw GRPC types that implements the
 // access.Client interface.
 type clt struct {
-	clt    proto.AuthServiceClient
-	cancel context.CancelFunc
+	clt     proto.AuthServiceClient
+	plugins plugin_data.Client
+	cancel  context.CancelFunc
 }
 
-func NewClient(ctx context.Context, addr string, tc *tls.Config) (Client, error) {
+func NewClient(ctx context.Context, plugin string, addr string, tc *tls.Config) (Client, error) {
 	ctx, cancel := context.WithCancel(ctx)
 	conn, err := grpc.DialContext(ctx, addr,
 		grpc.WithTransportCredentials(credentials.NewTLS(tc)),
@@ -120,11 +125,18 @@ func NewClient(ctx context.Context, addr string, tc *tls.Config) (Client, error)
 	)
 	if err != nil {
 		cancel()
-		return nil, fromGRPC(err)
+		return nil, utils.FromGRPC(err)
+	}
+	authClient := proto.NewAuthServiceClient(conn)
+	pluginDataClient, err := plugin_data.NewClient(authClient, plugin)
+	if err != nil {
+		cancel()
+		return nil, err
 	}
 	return &clt{
-		clt:    proto.NewAuthServiceClient(conn),
-		cancel: cancel,
+		clt:     authClient,
+		plugins: pluginDataClient,
+		cancel:  cancel,
 	}, nil
 }
 
@@ -135,7 +147,7 @@ func (c *clt) WatchRequests(ctx context.Context, fltr Filter) Watcher {
 func (c *clt) GetRequests(ctx context.Context, fltr Filter) ([]Request, error) {
 	rsp, err := c.clt.GetAccessRequests(ctx, &fltr)
 	if err != nil {
-		return nil, fromGRPC(err)
+		return nil, utils.FromGRPC(err)
 	}
 	var reqs []Request
 	for _, req := range rsp.AccessRequests {
@@ -151,32 +163,23 @@ func (c *clt) GetRequests(ctx context.Context, fltr Filter) ([]Request, error) {
 }
 
 func (c *clt) SetRequestState(ctx context.Context, reqID string, state State) error {
-	// this function attempts a small number of retries if updating request state
-	// fails due to concurrent updates.  Since the auth server ensures that a
-	// denied request cannot be subsequently approved, retries are safe.
-	const maxAttempts = 3
-	const baseSleep = time.Millisecond * 199
-	var err error
-	for i := 1; i <= maxAttempts; i++ {
-		err = c.setRequestState(ctx, reqID, state)
-		if !trace.IsCompareFailed(err) {
-			return trace.Wrap(err)
-		}
-		select {
-		case <-time.After(baseSleep * time.Duration(i)):
-		case <-ctx.Done():
-			return trace.Wrap(err)
-		}
-	}
-	return trace.Wrap(err)
-}
-
-func (c *clt) setRequestState(ctx context.Context, reqID string, state State) error {
 	_, err := c.clt.SetAccessRequestState(ctx, &proto.RequestStateSetter{
 		ID:    reqID,
 		State: state,
 	})
-	return fromGRPC(err)
+	return utils.FromGRPC(err)
+}
+
+func (c *clt) GetPluginData(ctx context.Context, reqID string, data plugin_data.PluginDataOutput) error {
+	return c.plugins.GetPluginData(ctx, services.KindAccessRequest, reqID, data)
+}
+
+func (c *clt) SetPluginData(ctx context.Context, reqID string, data plugin_data.PluginDataInput) error {
+	return c.UpdatePluginData(ctx, reqID, data, nil)
+}
+
+func (c *clt) UpdatePluginData(ctx context.Context, reqID string, set plugin_data.PluginDataInput, expect plugin_data.PluginDataInput) error {
+	return c.plugins.UpdatePluginData(ctx, services.KindAccessRequest, reqID, set, expect)
 }
 
 func (c *clt) Close() {
@@ -190,32 +193,6 @@ type watcher struct {
 	emux   sync.Mutex
 	err    error
 	cancel context.CancelFunc
-}
-
-// TODO: remove this when trail.FromGRPC will understand additional error codes
-func fromGRPC(err error) error {
-	switch {
-	case err == io.EOF:
-		fallthrough
-	case status.Code(err) == codes.Canceled, err == context.Canceled:
-		fallthrough
-	case status.Code(err) == codes.DeadlineExceeded, err == context.DeadlineExceeded:
-		return trace.Wrap(err)
-	default:
-		return trail.FromGRPC(err)
-	}
-}
-
-// TODO: remove this when trail.FromGRPC will understand additional error codes
-func IsCanceled(err error) bool {
-	err = trace.Unwrap(err)
-	return err == context.Canceled || status.Code(err) == codes.Canceled
-}
-
-// TODO: remove this when trail.FromGRPC will understand additional error codes
-func IsDeadline(err error) bool {
-	err = trace.Unwrap(err)
-	return err == context.DeadlineExceeded || status.Code(err) == codes.DeadlineExceeded
 }
 
 func newWatcher(ctx context.Context, clt proto.AuthServiceClient, fltr Filter) *watcher {
@@ -243,14 +220,14 @@ func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, fltr Fil
 		},
 	})
 	if err != nil {
-		w.setError(fromGRPC(err))
+		w.setError(utils.FromGRPC(err))
 		return
 	}
 
 	for {
 		event, err := stream.Recv()
 		if err != nil {
-			w.setError(fromGRPC(err))
+			w.setError(utils.FromGRPC(err))
 			return
 		}
 		var req Request

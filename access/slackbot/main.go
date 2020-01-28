@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
+	"github.com/gravitational/teleport-plugins/plugin_data"
 	"github.com/gravitational/teleport-plugins/utils"
 
 	"github.com/gravitational/kingpin"
@@ -187,7 +188,6 @@ type App struct {
 	tlsConf *tls.Config
 
 	accessClient   access.Client
-	cache          *RequestCache
 	bot            *Bot
 	callbackServer *CallbackServer
 
@@ -215,7 +215,6 @@ func NewAppWithTLSConfig(conf Config, tlsConf *tls.Config) (*App, error) {
 
 func (a *App) finish() {
 	a.accessClient = nil
-	a.cache = nil
 	a.bot = nil
 	a.callbackServer = nil
 
@@ -258,13 +257,11 @@ func (a *App) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	a.cancel = cancel
 
-	a.accessClient, err = access.NewClient(ctx, a.conf.Teleport.AuthServer, a.tlsConf)
+	a.accessClient, err = access.NewClient(ctx, "slackbot", a.conf.Teleport.AuthServer, a.tlsConf)
 	if err != nil {
 		cancel()
 		return trace.Wrap(err)
 	}
-
-	a.cache = NewRequestCache(ctx)
 
 	// Create callback server prividing a.OnSlackCallback as a callback function
 	a.callbackServer = NewCallbackServer(&a.conf, a.OnSlackCallback)
@@ -340,11 +337,11 @@ func (a *App) watchRequests(ctx context.Context) error {
 					continue
 				}
 
-				if err := a.onPendingRequest(req); err != nil {
+				if err := a.onPendingRequest(ctx, req); err != nil {
 					return trace.Wrap(err)
 				}
 			case access.OpDelete:
-				if err := a.onDeletedRequest(req); err != nil {
+				if err := a.onDeletedRequest(ctx, req); err != nil {
 					return trace.Wrap(err)
 				}
 			default:
@@ -369,7 +366,7 @@ func (a *App) WatchRequests(ctx context.Context) error {
 			log.WithError(err).Error("Cannot connect to Teleport Auth server. Reconnecting...")
 		case trace.IsEOF(err):
 			log.WithError(err).Error("Watcher stream closed. Reconnecting...")
-		case access.IsCanceled(err):
+		case utils.IsCanceled(err):
 			// Context cancellation is not an error
 			return nil
 		default:
@@ -410,18 +407,18 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 		slackStatus string
 	)
 
-	// Drop cache entry so it can't be expired.
-	// TODO: Remove when ext-data is integrated
-	if err := a.cache.Drop(reqID); err != nil {
-		return trace.Wrap(err)
-	}
-
 	req, err := a.loadRequest(ctx, reqID)
+	var reqData requestData
 
 	if err != nil {
 		if trace.IsNotFound(err) {
 			// Request wasn't found, need to expire it's post in Slack
 			slackStatus = "EXPIRED"
+
+			// And try to fetch its request data if it exists
+			var appData appData
+			_ = a.accessClient.GetPluginData(ctx, reqID, &appData)
+			reqData = appData.requestData
 		} else {
 			return trace.Wrap(err)
 		}
@@ -454,12 +451,15 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
 			return trace.Wrap(err)
 		}
+
+		// Simply fill reqData from the request itself.
+		reqData = requestData{user: req.User, roles: req.Roles}
 	}
 
 	// In real world it cannot be empty. This is for tests.
 	if cb.ResponseURL != "" {
 		go func() {
-			if err := RespondSlack(req, slackStatus, cb.ResponseURL); err != nil {
+			if err := RespondSlack(req.ID, reqData, slackStatus, cb.ResponseURL); err != nil {
 				log.WithError(err).WithField("request_id", req.ID).Error("Can't update Slack message")
 				return
 			}
@@ -470,27 +470,42 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 	return nil
 }
 
-func (a *App) onPendingRequest(req access.Request) error {
-	channelID, timestamp, err := a.bot.Post(req)
+func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
+	reqData := requestData{user: req.User, roles: req.Roles}
+	slackData, err := a.bot.Post(req.ID, reqData)
+
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
 	log.WithFields(log.Fields{
-		"slack_channel":   channelID,
-		"slack_timestamp": timestamp,
+		"slack_channel":   slackData.channelID,
+		"slack_timestamp": slackData.timestamp,
 	}).Debug("Posted to Slack")
 
-	entry := Entry{Request: req, ChannelID: channelID, Timestamp: timestamp}
+	err = a.accessClient.SetPluginData(ctx, req.ID, &appData{reqData, slackData})
 
-	return trace.Wrap(
-		a.cache.Put(entry),
-	)
+	a.verifyRequestData(ctx, req.ID)
+
+	return trace.Wrap(err)
 }
 
-func (a *App) onDeletedRequest(req access.Request) error {
-	// TODO: Remove when ext-data is integrated
-	entry, err := a.cache.Pop(req.ID)
+// TODO: debug method, remove it before merge
+func (a *App) verifyRequestData(ctx context.Context, reqID string) {
+	var dataMap plugin_data.PluginDataMap
+
+	err := a.accessClient.GetPluginData(ctx, reqID, &dataMap)
+	if err != nil {
+		log.WithError(err).Debug("Cannot fetch request data")
+	}
+	log.Debug(dataMap)
+}
+
+func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
+	var appData appData
+	reqID := req.ID // This is the only available field
+
+	err := a.accessClient.GetPluginData(ctx, reqID, &appData)
 	if err != nil {
 		if trace.IsNotFound(err) {
 			log.WithError(err).Warnf("cannot expire unknown request")
@@ -500,11 +515,11 @@ func (a *App) onDeletedRequest(req access.Request) error {
 		}
 	}
 
-	if err := a.bot.Expire(entry.Request, entry.ChannelID, entry.Timestamp); err != nil {
+	if err := a.bot.Expire(reqID, appData.requestData, appData.slackData); err != nil {
 		return trace.Wrap(err)
 	}
 
-	log.WithField("request_id", req.ID).Debug("Successfully marked request as expired")
+	log.WithField("request_id", reqID).Debug("Successfully marked request as expired")
 
 	return nil
 }

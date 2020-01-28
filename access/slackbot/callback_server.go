@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/access"
 	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/nlopes/slack"
 	log "github.com/sirupsen/logrus"
@@ -84,7 +83,7 @@ func (s *CallbackServer) processCallback(ctx context.Context, rw http.ResponseWr
 		log.WithError(err).Error("Failed to process callback")
 		var code int
 		switch {
-		case access.IsCanceled(err) || access.IsDeadline(err):
+		case utils.IsCanceled(err) || utils.IsDeadline(err):
 			code = 503
 		default:
 			code = 500

@@ -65,7 +65,7 @@ func run(configPath string) error {
 	}
 	ctx := context.TODO()
 	// Establish new client connection to the Teleport auth server.
-	client, err := access.NewClient(ctx, conf.AuthServer, tc)
+	client, err := access.NewClient(ctx, "example", conf.AuthServer, tc)
 	if err != nil {
 		return trace.Wrap(err)
 	}

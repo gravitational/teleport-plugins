@@ -21,7 +21,6 @@ import (
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/teleport/lib/utils"
-	"github.com/gravitational/trace"
 	"github.com/nlopes/slack"
 	"github.com/nlopes/slack/slacktest"
 
@@ -167,9 +166,9 @@ func (s *SlackbotSuite) createExpiredAccessRequest(c *C) services.AccessRequest 
 	c.Assert(err, IsNil)
 	time.Sleep(ttl + time.Millisecond*2)
 	auth := s.teleport.Process.GetAuthServer()
-	_, err = auth.GetAccessRequest(req.GetName())
-	c.Assert(err, NotNil)
-	c.Assert(trace.IsNotFound(err), Equals, true) // Make sure that request was really expired by the system
+	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: req.GetName()})
+	c.Assert(err, IsNil)
+	c.Assert(requests, HasLen, 0)
 	return req
 }
 
@@ -245,8 +244,10 @@ func (s *SlackbotSuite) TestApproval(c *C) {
 	c.Assert(response.StatusCode, Equals, 200)
 
 	auth := s.teleport.Process.GetAuthServer()
-	request, err = auth.GetAccessRequest(request.GetName())
+	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: request.GetName()})
 	c.Assert(err, IsNil)
+	c.Assert(requests, HasLen, 1)
+	request = requests[0]
 	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
 }
 
@@ -263,8 +264,10 @@ func (s *SlackbotSuite) TestDenial(c *C) {
 	c.Assert(response.StatusCode, Equals, 200)
 
 	auth := s.teleport.Process.GetAuthServer()
-	request, err = auth.GetAccessRequest(request.GetName())
+	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: request.GetName()})
 	c.Assert(err, IsNil)
+	c.Assert(requests, HasLen, 1)
+	request = requests[0]
 	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
 }
 
