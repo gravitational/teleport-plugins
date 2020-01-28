@@ -57,7 +57,7 @@ func (s *CallbackServer) processCallback(ctx context.Context, rw http.ResponseWr
 
 	sv, err := slack.NewSecretsVerifier(r.Header, s.secret)
 	if err != nil {
-		log.Errorf("Failed to initialize secrets verifier: %s", err)
+		log.WithError(err).Error("Failed to initialize secrets verifier")
 		http.Error(rw, "verification failed", 500)
 		return
 	}
@@ -68,20 +68,20 @@ func (s *CallbackServer) processCallback(ctx context.Context, rw http.ResponseWr
 	// the FormValue method exhausts the reader, so signature
 	// verification can now proceed.
 	if err := sv.Ensure(); err != nil {
-		log.Errorf("Secret verification failed: %s", err)
+		log.WithError(err).Error("Secret verification failed")
 		http.Error(rw, "verification failed", 500)
 		return
 	}
 
 	var cb slack.InteractionCallback
 	if err := json.Unmarshal(payload, &cb); err != nil {
-		log.Errorf("Failed to parse json response: %s", err)
+		log.WithError(err).Error("Failed to parse json response")
 		http.Error(rw, "failed to parse response", 500)
 		return
 	}
 
 	if err := s.onCallback(ctx, cb); err != nil {
-		log.Errorf("Failed to process callback: %s", err)
+		log.WithError(err).Error("Failed to process callback")
 		var code int
 		switch {
 		case access.IsCanceled(err) || access.IsDeadline(err):

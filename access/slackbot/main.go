@@ -127,6 +127,10 @@ func setupLogger(conf *Config) error {
 			return trace.Wrap(err, "failed to create the log file")
 		}
 		log.SetOutput(logFile)
+		log.SetFormatter(&log.TextFormatter{
+			DisableColors: true,
+			FullTimestamp: true,
+		})
 	}
 
 	switch strings.ToLower(conf.Log.Severity) {
@@ -273,7 +277,7 @@ func (a *App) Run(ctx context.Context) error {
 			log.Infof("Attempting graceful shutdown...")
 
 			if err := a.callbackServer.Shutdown(ctx); err != nil {
-				log.Errorf("HTTP server graceful shutdown failed: %s", err)
+				log.WithError(err).Error("HTTP server graceful shutdown failed")
 			}
 		})
 	}
@@ -332,7 +336,7 @@ func (a *App) watchRequests(ctx context.Context) error {
 			switch op {
 			case access.OpPut:
 				if !req.State.IsPending() {
-					log.Warnf("non-pending request event %+v", event)
+					log.WithField("event", event).Warn("non-pending request event")
 					continue
 				}
 
@@ -362,9 +366,9 @@ func (a *App) WatchRequests(ctx context.Context) error {
 
 		switch {
 		case trace.IsConnectionProblem(err):
-			log.Errorf("Cannot connect to Teleport Auth server: %v. Reconnecting...", err)
+			log.WithError(err).Error("Cannot connect to Teleport Auth server. Reconnecting...")
 		case trace.IsEOF(err):
-			log.Errorf("Watcher stream closed: %v. Reconnecting...", err)
+			log.WithError(err).Error("Watcher stream closed. Reconnecting...")
 		case access.IsCanceled(err):
 			// Context cancellation is not an error
 			return nil
@@ -393,7 +397,7 @@ func (a *App) loadRequest(ctx context.Context, reqID string) (access.Request, er
 // OnSlackCallback processes Slack actions and updates original Slack message with a new status
 func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 	if len(cb.ActionCallback.BlockActions) != 1 {
-		log.Warnf("Received more than one Slack action: %+v", cb.ActionCallback.BlockActions)
+		log.WithField("actions", cb.ActionCallback.BlockActions).Warn("Received more than one Slack action")
 		return trace.Errorf("expected exactly one block action")
 	}
 
@@ -426,15 +430,21 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 			return trace.Errorf("Can't process not pending request: %+v", req)
 		}
 
+		logFields := log.Fields{
+			"slack_user":    cb.User.Name,
+			"slack_channel": cb.Channel.Name,
+			"request_id":    req.ID,
+			"user":          req.User,
+			"roles":         req.Roles,
+		}
+
 		switch actionID {
 		case ActionApprove:
-			log.Infof("Slack user %s approved the request %s by %s for roles: %s on Slack channel %s",
-				cb.User.Name, req.ID, req.User, req.Roles, cb.Channel.Name)
+			log.WithFields(logFields).Info("Slack user approved the request")
 			reqState = access.StateApproved
 			slackStatus = "APPROVED"
 		case ActionDeny:
-			log.Infof("Slack user %s denied the request %s by %s for roles: %s on Slack channel %s",
-				cb.User.Name, req.ID, req.User, req.Roles, cb.Channel.Name)
+			log.WithFields(logFields).Info("Slack user denied the request")
 			reqState = access.StateDenied
 			slackStatus = "DENIED"
 		default:
@@ -450,10 +460,10 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 	if cb.ResponseURL != "" {
 		go func() {
 			if err := RespondSlack(req, slackStatus, cb.ResponseURL); err != nil {
-				log.Error(err)
+				log.WithError(err).WithField("request_id", req.ID).Error("Can't update Slack message")
 				return
 			}
-			log.Debugf("Successfully updated msg for %+v", req)
+			log.WithField("request_id", req.ID).Debug("Successfully updated Slack message")
 		}()
 	}
 
@@ -466,7 +476,10 @@ func (a *App) onPendingRequest(req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	log.Debugf("Posted to channel %s at time %s", channelID, timestamp)
+	log.WithFields(log.Fields{
+		"slack_channel":   channelID,
+		"slack_timestamp": timestamp,
+	}).Debug("Posted to Slack")
 
 	entry := Entry{Request: req, ChannelID: channelID, Timestamp: timestamp}
 
@@ -480,7 +493,7 @@ func (a *App) onDeletedRequest(req access.Request) error {
 	entry, err := a.cache.Pop(req.ID)
 	if err != nil {
 		if trace.IsNotFound(err) {
-			log.Warnf("cannot expire unknown request: %s", err)
+			log.WithError(err).Warnf("cannot expire unknown request")
 			return nil
 		} else {
 			return trace.Wrap(err)
@@ -491,7 +504,7 @@ func (a *App) onDeletedRequest(req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	log.Debugf("Successfully marked request %+v as expired", req)
+	log.WithField("request_id", req.ID).Debug("Successfully marked request as expired")
 
 	return nil
 }
