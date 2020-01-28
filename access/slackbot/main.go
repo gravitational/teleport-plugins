@@ -27,9 +27,12 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gravitational/kingpin"
 	"github.com/gravitational/teleport-plugins/access"
+	"github.com/gravitational/teleport-plugins/utils"
+
+	"github.com/gravitational/kingpin"
 	"github.com/gravitational/trace"
+
 	log "github.com/sirupsen/logrus"
 )
 
@@ -55,6 +58,7 @@ func bail(msg string, a ...interface{}) {
 }
 
 func main() {
+	utils.InitLogger()
 	app := kingpin.New("slackbot", "Teleport plugin for access requests approval via Slack.")
 
 	app.Command("configure", "Prints an example .TOML configuration file")
@@ -127,10 +131,6 @@ func setupLogger(conf *Config) error {
 			return trace.Wrap(err, "failed to create the log file")
 		}
 		log.SetOutput(logFile)
-		log.SetFormatter(&log.TextFormatter{
-			DisableColors: true,
-			FullTimestamp: true,
-		})
 	}
 
 	switch strings.ToLower(conf.Log.Severity) {
