@@ -7,13 +7,10 @@ import (
 
 // Bot contains information about a bot
 type Bot struct {
-	ID      string   `json:"id"`
-	Name    string   `json:"name"`
-	Deleted bool     `json:"deleted"`
-	UserID  string   `json:"user_id"`
-	AppID   string   `json:"app_id"`
-	Updated JSONTime `json:"updated"`
-	Icons   Icons    `json:"icons"`
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Deleted bool   `json:"deleted"`
+	Icons   Icons  `json:"icons"`
 }
 
 type botResponseFull struct {

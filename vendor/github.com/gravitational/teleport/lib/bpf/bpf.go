@@ -84,6 +84,7 @@ func New(config *Config) (BPF, error) {
 	// If BPF-based auditing is not enabled, don't configure anything return
 	// right away.
 	if !config.Enabled {
+		log.Debugf("Enhanced session recording is not enabled, skipping.")
 		return &NOP{}, nil
 	}
 
@@ -120,22 +121,27 @@ func New(config *Config) (BPF, error) {
 		return nil, trace.Wrap(err)
 	}
 
-	// Compile and start BPF programs.
-	s.exec, err = startExec(closeContext, config.CommandBufferSize)
+	start := time.Now()
+	log.Debugf("Starting enhanced session recording.")
+
+	// Compile and start BPF programs if they are enabled (buffer size given).
+	s.exec, err = startExec(closeContext, *config.CommandBufferSize)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	s.open, err = startOpen(closeContext, config.DiskBufferSize)
+	s.open, err = startOpen(closeContext, *config.DiskBufferSize)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	s.conn, err = startConn(closeContext, config.NetworkBufferSize)
+	s.conn, err = startConn(closeContext, *config.NetworkBufferSize)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
-	log.Debugf("Started enhanced auditing with buffer sizes %v %v %v and cgroup mount path: %v.",
-		s.CommandBufferSize, s.DiskBufferSize, s.NetworkBufferSize, s.CgroupPath)
+	log.Debugf("Started enhanced session recording with buffer sizes (command=%v, "+
+		"disk=%v, network=%v) and cgroup mount path: %v. Took %v.",
+		*s.CommandBufferSize, *s.DiskBufferSize, *s.NetworkBufferSize, s.CgroupPath,
+		time.Since(start))
 
 	// Start pulling events off the perf buffers and emitting them to the
 	// Audit Log.
@@ -288,8 +294,8 @@ func (s *Service) emitCommandEvent(eventBytes []byte) {
 			events.EventLogin:      ctx.Login,
 			events.EventUser:       ctx.User,
 			// Command fields.
-			events.PID:        event.PPID,
-			events.PPID:       event.PID,
+			events.PID:        event.PID,
+			events.PPID:       event.PPID,
 			events.CgroupID:   event.CgroupID,
 			events.Program:    convertString(unsafe.Pointer(&event.Command)),
 			events.Path:       argv[0],
@@ -477,4 +483,10 @@ func unmarshalEvent(data []byte, v interface{}) error {
 // convertString converts a C string to a Go string.
 func convertString(s unsafe.Pointer) string {
 	return C.GoString((*C.char)(s))
+}
+
+// SystemHasBPF returns true if the binary was build with support for BPF
+// compiled in.
+func SystemHasBPF() bool {
+	return true
 }
