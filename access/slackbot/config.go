@@ -24,11 +24,8 @@ type Config struct {
 		Channel string `toml:"channel"`
 		APIURL  string
 	} `toml:"slack"`
-	HTTP utils.HTTPConfig
-	Log  struct {
-		Output   string `toml:"output"`
-		Severity string `toml:"severity"`
-	}
+	HTTP utils.HTTPConfig `toml:"http"`
+	Log  utils.LogConfig  `toml:"log"`
 }
 
 const exampleConfig = `# example slackbot configuration TOML file

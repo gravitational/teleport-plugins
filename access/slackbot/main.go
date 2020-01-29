@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -95,14 +94,8 @@ func run(configPath string, insecure bool, debug bool) error {
 	if err != nil {
 		return trace.Wrap(err)
 	}
-	conf.HTTP.Insecure = insecure
 
-	app, err := NewApp(*conf)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	err = setupLogger(conf)
+	err = utils.SetupLogger(conf.Log)
 	if err != nil {
 		return err
 	}
@@ -111,42 +104,17 @@ func run(configPath string, insecure bool, debug bool) error {
 		log.Debugf("DEBUG logging enabled")
 	}
 
+	conf.HTTP.Insecure = insecure
+	app, err := NewApp(*conf)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
 	serveSignals(app)
 
 	return trace.Wrap(
 		app.Run(context.Background()),
 	)
-}
-
-func setupLogger(conf *Config) error {
-	switch conf.Log.Output {
-	case "stderr", "error", "2":
-		log.SetOutput(os.Stderr)
-	case "stdout", "out", "1":
-		log.SetOutput(os.Stdout)
-	default:
-		// assume it's a file path:
-		logFile, err := os.Create(conf.Log.Output)
-		if err != nil {
-			return trace.Wrap(err, "failed to create the log file")
-		}
-		log.SetOutput(logFile)
-	}
-
-	switch strings.ToLower(conf.Log.Severity) {
-	case "info":
-		log.SetLevel(log.InfoLevel)
-	case "err", "error":
-		log.SetLevel(log.ErrorLevel)
-	case "debug":
-		log.SetLevel(log.DebugLevel)
-	case "warn", "warning":
-		log.SetLevel(log.WarnLevel)
-	default:
-		return trace.BadParameter("unsupported logger severity: '%v'", conf.Log.Severity)
-	}
-
-	return nil
 }
 
 func serveSignals(app *App) {
