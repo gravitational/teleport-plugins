@@ -49,6 +49,10 @@ ignored = ["github.com/Sirupsen/logrus", "github.com/gravitational/license/gener
   version = "1.0.0"
 
 [[constraint]]
+  name = "github.com/pelletier/go-toml"
+  version = "1.6.0"
+
+[[constraint]]
   name = "github.com/nlopes/slack"
   source = "github.com/marshall-lee/slack"
   branch = "slacktest-fixes"
