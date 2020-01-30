@@ -48,6 +48,10 @@ ignored = ["github.com/Sirupsen/logrus", "github.com/gravitational/license/gener
   source = "github.com/gravitational/logrus"
   version = "1.0.0"
 
+[[constraint]]
+  name = "github.com/nlopes/slack"
+  source = "github.com/marshall-lee/slack"
+  branch = "slacktest-fixes"
 
 # Teleport dependencies overrides
 

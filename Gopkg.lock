@@ -723,7 +723,8 @@
   version = "1.0.0"
 
 [[projects]]
-  digest = "1:907a5c6b8742b617fc863a39822195b23f85bd972d6d4a7e837bc3e8fed958c7"
+  branch = "slacktest-fixes"
+  digest = "1:7580b2ad9f746fa5f868cd01e4836ce4912ccfc0612977ce2217ee7f1b983598"
   name = "github.com/nlopes/slack"
   packages = [
     ".",
@@ -733,8 +734,8 @@
     "slackutilsx",
   ]
   pruneopts = "NUT"
-  revision = "1af34b6bda3d43878255fff7bd2884ea0c23295e"
-  version = "v0.6.0"
+  revision = "5efb9dafdf1bd7359332a472332bc4413e45b36e"
+  source = "github.com/marshall-lee/slack"
 
 [[projects]]
   digest = "1:cce3a18fb0b96b5015cd8ca03a57d20a662679de03c4dc4b6ff5f17ea2050fa6"

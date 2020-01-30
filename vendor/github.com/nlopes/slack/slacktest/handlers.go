@@ -81,6 +81,26 @@ func (sts *Server) postMessageHandler(w http.ResponseWriter, r *http.Request) {
 		m.User = BotIDFromContext(r.Context())
 		m.Username = BotNameFromContext(r.Context())
 	}
+
+	if blocksParam := values.Get("blocks"); blocksParam != "" {
+		decoded, err := url.QueryUnescape(blocksParam)
+		if err != nil {
+			msg := fmt.Sprintf("Unable to decode blocks: %s", err.Error())
+			log.Printf(msg)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
+		var blocks slack.Blocks
+		aJErr := json.Unmarshal([]byte(decoded), &blocks)
+		if aJErr != nil {
+			msg := fmt.Sprintf("Unable to decode blocks string to json: %s", aJErr.Error())
+			log.Printf(msg)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
+		m.Blocks = blocks
+	}
+
 	attachments := values.Get("attachments")
 	if attachments != "" {
 		decoded, err := url.QueryUnescape(attachments)
@@ -107,11 +127,94 @@ func (sts *Server) postMessageHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, msg, http.StatusInternalServerError)
 		return
 	}
-	go sts.queueForWebsocket(string(jsonMessage), serverAddr)
+	go sts.postProcessMessage(string(jsonMessage), serverAddr)
 	_, _ = w.Write([]byte(resp))
 }
 
-func rtmConnectHandler(w http.ResponseWriter, r *http.Request) {
+// handle chat.update
+func (sts *Server) updateHandler(w http.ResponseWriter, r *http.Request) {
+	serverAddr := r.Context().Value(ServerBotHubNameContextKey).(string)
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		msg := fmt.Sprintf("error reading body: %s", err.Error())
+		log.Printf(msg)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+	values, vErr := url.ParseQuery(string(data))
+	if vErr != nil {
+		msg := fmt.Sprintf("Unable to decode query params: %s", vErr.Error())
+		log.Printf(msg)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+
+	ts := values.Get("ts")
+	resp := fmt.Sprintf(`{"channel":"%s","ts":"%d", "text":"%s", "ok": true}`, values.Get("channel"), ts, values.Get("text"))
+	m := slack.Message{}
+	m.Type = "message"
+	m.Channel = values.Get("channel")
+	m.Timestamp = ts
+	m.Text = values.Get("text")
+	if values.Get("as_user") != "true" {
+		m.User = defaultNonBotUserID
+		m.Username = defaultNonBotUserName
+	} else {
+		m.User = BotIDFromContext(r.Context())
+		m.Username = BotNameFromContext(r.Context())
+	}
+
+	if blocksParam := values.Get("blocks"); blocksParam != "" {
+		decoded, err := url.QueryUnescape(blocksParam)
+		if err != nil {
+			msg := fmt.Sprintf("Unable to decode blocks: %s", err.Error())
+			log.Printf(msg)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
+		var blocks slack.Blocks
+		aJErr := json.Unmarshal([]byte(decoded), &blocks)
+		if aJErr != nil {
+			msg := fmt.Sprintf("Unable to decode blocks string to json: %s", aJErr.Error())
+			log.Printf(msg)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
+		m.Blocks = blocks
+	}
+
+	attachments := values.Get("attachments")
+	if attachments != "" {
+		decoded, err := url.QueryUnescape(attachments)
+		if err != nil {
+			msg := fmt.Sprintf("Unable to decode attachments: %s", err.Error())
+			log.Printf(msg)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
+		var attaches []slack.Attachment
+		aJErr := json.Unmarshal([]byte(decoded), &attaches)
+		if aJErr != nil {
+			msg := fmt.Sprintf("Unable to decode attachments string to json: %s", aJErr.Error())
+			log.Printf(msg)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
+		}
+		m.Attachments = attaches
+	}
+	jsonMessage, jsonErr := json.Marshal(m)
+	if jsonErr != nil {
+		msg := fmt.Sprintf("Unable to marshal message: %s", jsonErr.Error())
+		log.Printf(msg)
+		http.Error(w, msg, http.StatusInternalServerError)
+		return
+	}
+	go sts.postProcessMessage(string(jsonMessage), serverAddr)
+	_, _ = w.Write([]byte(resp))
+}
+
+// RTMConnectHandler generates a valid connection
+func RTMConnectHandler(w http.ResponseWriter, r *http.Request) {
 	_, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		msg := fmt.Sprintf("Error reading body: %s", err.Error())
@@ -172,57 +275,100 @@ func rtmStartHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (sts *Server) wsHandler(w http.ResponseWriter, r *http.Request) {
-	upgrader := websocket.Upgrader{
-		ReadBufferSize:  1024,
-		WriteBufferSize: 1024,
-		CheckOrigin: func(r *http.Request) bool {
-			return true
-		},
-	}
-	c, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		msg := fmt.Sprintf("Unable to upgrade to ws connection: %s", err.Error())
-		log.Print(msg)
-		http.Error(w, msg, http.StatusInternalServerError)
-		return
-	}
-	defer func() { _ = c.Close() }()
-	serverAddr := r.Context().Value(ServerBotHubNameContextKey).(string)
-	go handlePendingMessages(c, serverAddr)
-	for {
-		mt, messageBytes, err := c.ReadMessage()
+	Websocket(func(c *websocket.Conn) {
+		serverAddr := r.Context().Value(ServerBotHubNameContextKey).(string)
+		go handlePendingMessages(c, serverAddr)
+		for {
+			var (
+				err   error
+				m     json.RawMessage
+				mtype string
+			)
+
+			if mtype, m, err = RTMRespEventType(c); err != nil {
+				if websocket.IsUnexpectedCloseError(err) {
+					return
+				}
+
+				log.Printf("read error: %s", err.Error())
+				continue
+			}
+
+			switch mtype {
+			case "ping":
+				if err = RTMRespPong(c, m); err != nil {
+					log.Println("ping error:", err)
+				}
+			default:
+				sts.postProcessMessage(string(m), serverAddr)
+			}
+		}
+	})(w, r)
+}
+
+// Websocket handler
+func Websocket(delegate func(c *websocket.Conn)) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		upgrader := websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		}
+		c, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
-			log.Printf("read error: %s", err.Error())
-			continue
+			msg := fmt.Sprintf("Unable to upgrade to ws connection: %s", err.Error())
+			log.Print(msg)
+			http.Error(w, msg, http.StatusInternalServerError)
+			return
 		}
-		message := string(messageBytes)
-		evt := &slack.Event{}
-		if err := json.Unmarshal(messageBytes, evt); err != nil {
-			log.Printf("Error unmarshalling message: %s", err.Error())
-			log.Printf("failed message: %s", string(message))
-			continue
-		}
-		if evt.Type == "ping" {
-			p := &slack.Ping{}
-			jErr := json.Unmarshal(messageBytes, p)
-			if jErr != nil {
-				log.Printf("Unable to decode ping event: %s", jErr.Error())
-				continue
-			}
-			//log.Print("responding to slack ping")
-			pong := &slack.Pong{
-				ReplyTo: p.ID,
-				Type:    "pong",
-			}
-			j, _ := json.Marshal(pong)
-			wErr := c.WriteMessage(mt, j)
-			if wErr != nil {
-				log.Printf("error writing pong back to socket: %s", wErr.Error())
-				continue
-			}
-			continue
-		} else {
-			go sts.postProcessMessage(message, serverAddr)
-		}
+		defer func() { _ = c.Close() }()
+		delegate(c)
 	}
+}
+
+// RTMServerSendGoodbye send a goodbye event
+func RTMServerSendGoodbye(c *websocket.Conn) error {
+	return c.WriteJSON(slack.Event{Type: "goodbye"})
+}
+
+// RTMRespEventType retrieve the event type from the next message
+func RTMRespEventType(c *websocket.Conn) (t string, m json.RawMessage, err error) {
+	var (
+		evt slack.Event
+	)
+
+	if err = c.ReadJSON(&m); err != nil {
+		return "", m, err
+	}
+
+	if err = json.Unmarshal(m, &evt); err != nil {
+		return "", m, err
+	}
+
+	return evt.Type, m, nil
+}
+
+// RTMRespPong decode a ping and respond with a pong event.
+func RTMRespPong(c *websocket.Conn, m json.RawMessage) (err error) {
+	var (
+		ping slack.Ping
+		pong slack.Pong
+	)
+
+	if err = json.Unmarshal(m, &ping); err != nil {
+		return err
+	}
+
+	pong = slack.Pong{
+		Type:    "pong",
+		ReplyTo: ping.ID,
+	}
+
+	if err = c.WriteJSON(pong); err != nil {
+		return err
+	}
+
+	return nil
 }
