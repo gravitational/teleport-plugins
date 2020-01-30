@@ -139,7 +139,9 @@ func (s *DynamicAccessService) GetAccessRequests(ctx context.Context, filter ser
 			return nil, trace.Wrap(err)
 		}
 		if !filter.Match(req) {
-			return nil, trace.NotFound("no matching access requests")
+			// A filter with zero matches is still a success, it just
+			// happens to return an empty slice.
+			return nil, nil
 		}
 		return []services.AccessRequest{req}, nil
 	}
@@ -228,7 +230,9 @@ func (s *DynamicAccessService) getAccessRequestPluginData(ctx context.Context, f
 			return nil, trace.Wrap(err)
 		}
 		if !filter.Match(data) {
-			return nil, trace.NotFound("no matching plugin data")
+			// A filter with zero matches is still a success, it just
+			// happens to return an empty slice.
+			return nil, nil
 		}
 		return []services.PluginData{data}, nil
 	}
