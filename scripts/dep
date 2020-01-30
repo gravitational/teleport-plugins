@@ -1,0 +1,13 @@
+#!/bin/sh
+
+# github.com/gravitational/teleport contains private git submodules that can't be
+# checkouted by dep, so we have to use git wrapper that ignores submodules
+
+_dep=$(which dep)
+
+SCRIPTDIR=$(dirname "$(realpath "$0")")
+
+export _GIT_ORIGIN=$(which git)
+export PATH=$SCRIPTDIR:$PATH
+
+$_dep $@

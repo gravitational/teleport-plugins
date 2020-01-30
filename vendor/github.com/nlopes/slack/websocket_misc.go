@@ -131,7 +131,7 @@ type MemberJoinedChannelEvent struct {
 	Inviter     string `json:"inviter"`
 }
 
-// MemberLeftChannelEvent a user left a public or private channel
+// MemberJoinedChannelEvent, a user left a public or private channel
 type MemberLeftChannelEvent struct {
 	Type        string `json:"type"`
 	User        string `json:"user"`

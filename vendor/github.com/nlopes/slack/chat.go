@@ -228,7 +228,6 @@ type sendConfig struct {
 	endpoint     string
 	values       url.Values
 	attachments  []Attachment
-	blocks       Blocks
 	responseType string
 }
 
@@ -243,7 +242,6 @@ func (t sendConfig) BuildRequest(token, channelID string) (req *http.Request, _ 
 			endpoint:     t.endpoint,
 			values:       t.values,
 			attachments:  t.attachments,
-			blocks:       t.blocks,
 			responseType: t.responseType,
 		}.BuildRequest()
 	default:
@@ -267,7 +265,6 @@ type responseURLSender struct {
 	endpoint     string
 	values       url.Values
 	attachments  []Attachment
-	blocks       Blocks
 	responseType string
 }
 
@@ -276,7 +273,6 @@ func (t responseURLSender) BuildRequest() (*http.Request, func(*chatResponseFull
 		Text:         t.values.Get("text"),
 		Timestamp:    t.values.Get("ts"),
 		Attachments:  t.attachments,
-		Blocks:       t.blocks,
 		ResponseType: t.responseType,
 	})
 	return req, func(resp *chatResponseFull) responseParser {
@@ -423,8 +419,6 @@ func MsgOptionBlocks(blocks ...Block) MsgOption {
 		if blocks == nil {
 			return nil
 		}
-
-		config.blocks.BlockSet = append(config.blocks.BlockSet, blocks...)
 
 		blocks, err := json.Marshal(blocks)
 		if err == nil {
