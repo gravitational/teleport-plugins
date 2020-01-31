@@ -13,10 +13,8 @@ DATADIR=/var/lib/teleport/plugins/slackbot
 
 [ ! $(id -u) != "0" ] || { echo "ERROR: You must be root"; exit 1; }
 cd $(dirname $0)
-mkdir -p $BINDIR
+mkdir -p $BINDIR $DATADIR || exit 1
 cp -f slackbot $BINDIR/ || exit 1
-
-mkdir -p $DATADIR
 
 echo "Teleport Slackbot binaries have been copied to $BINDIR"
 echo "You can run slackbot configure > /etc/teleport-slackbot.toml to bootstrap your config file"
