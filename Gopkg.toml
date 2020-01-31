@@ -66,6 +66,10 @@ ignored = ["github.com/Sirupsen/logrus", "github.com/gravitational/license/gener
   source = "github.com/marshall-lee/slack"
   branch = "slacktest-fixes"
 
+[[constraint]]
+  name = "gopkg.in/andygrunwald/go-jira.v1"
+  version = "1.12.0"
+
 # Teleport dependencies overrides
 
 [[override]]
