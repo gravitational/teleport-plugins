@@ -30,7 +30,7 @@ type Config struct {
 
 const exampleConfig = `# example slackbot configuration TOML file
 [teleport]
-auth-server = "example.com:3025"  # Auth GRPC API address
+auth-server = "example.com:3025"  # Teleport Auth Server GRPC API address
 client-key = "/var/lib/teleport/plugins/slackbot/auth.key" # Teleport GRPC client secret key
 client-crt = "/var/lib/teleport/plugins/slackbot/auth.crt" # Teleport GRPC client certificate
 root-cas = "/var/lib/teleport/plugins/slackbot/auth.cas"   # Teleport cluster CA certs
@@ -38,11 +38,11 @@ root-cas = "/var/lib/teleport/plugins/slackbot/auth.cas"   # Teleport cluster CA
 [slack]
 token = "api-token"       # Slack Bot OAuth token
 secret = "signing-secret-value"   # Slack API Signing Secret
-channel = "channel-name"  # Message delivery channel
+channel = "channel-name"  # Slack Channel name to post requests to
 
 [http]
 listen = ":8081"          # Slack interaction callback listener
-# host = "example.com"    # Host name by which bot is accessible
+# host = "example.com"    # Host name for the Slackbot to listen on
 # https-key-file = "/var/lib/teleport/plugins/slackbot/server.key"  # TLS private key
 # https-cert-file = "/var/lib/teleport/plugins/slackbot/server.crt" # TLS certificate
 
