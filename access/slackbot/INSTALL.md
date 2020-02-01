@@ -196,10 +196,16 @@ tctl request ls
 ```
 
 ### TSH User Login and Request Admin Role. 
+
+You can also test the full workflow from the user's perspective using `tsh`: 
+
 ```bash
-➜ tsh login --request-roles=admin
+➜ tsh login --request-roles=REQUESTED_ROLE
 Seeking request approval... (id: 8f77d2d1-2bbf-4031-a300-58926237a807)
 ```
+
+You should now see a new request in Teleport, and a message about the request on Slack. You can approve or deny it and `tsh`should login successfully or error out right after you click an action button on Slack.
+
 
 ### Setup with SystemD
 In production, we recommend starting teleport daemon via an init system like systemd . Here's the recommended Teleport service unit file for systemd: 
@@ -212,9 +218,9 @@ After=network.target
 [Service]
 Type=simple
 Restart=on-failure
-ExecStart=/usr/local/bin/teleport-slackbot start --config=/etc/teleport-slackbot.toml --pid-file=/var/run/teleport.pid
+ExecStart=/usr/local/bin/teleport-slackbot start --config=/etc/teleport-slackbot.toml --pid-file=/var/run/teleport-slackbot.pid
 ExecReload=/bin/kill -HUP $MAINPID
-PIDFile=/var/run/teleport.pid
+PIDFile=/var/run/teleport-slackbot.pid
 
 [Install]
 WantedBy=multi-user.target
