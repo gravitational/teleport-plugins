@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"os"
 	"os/signal"
@@ -60,9 +61,9 @@ func main() {
 	utils.InitLogger()
 	app := kingpin.New("slackbot", "Teleport plugin for access requests approval via Slack.")
 
-	app.Command("configure", "Prints an example .TOML configuration file")
+	app.Command("configure", "Prints an example .TOML configuration file.")
 
-	startCmd := app.Command("start", "Starts a bot daemon")
+	startCmd := app.Command("start", "Starts the Teleport Slack plugin")
 	path := startCmd.Flag("config", "TOML config file path").
 		Short('c').
 		Default("/etc/teleport-slackbot.toml").
@@ -225,6 +226,16 @@ func (a *App) Run(ctx context.Context) error {
 
 	ctx, cancel := context.WithCancel(ctx)
 	a.cancel = cancel
+	
+	clientCert, err := x509.ParseCertificate(a.tlsConf.Certificates[0].Certificate[0])
+	if err != nil {
+		cancel()
+		return trace.Wrap(err)
+	}
+
+	if time.Now().After(clientCert.NotAfter) {
+		log.Error("Teleport Auth certificates are expired.")
+	}
 
 	a.accessClient, err = access.NewClient(ctx, a.conf.Teleport.AuthServer, a.tlsConf)
 	if err != nil {
