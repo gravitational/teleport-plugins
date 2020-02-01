@@ -5,9 +5,15 @@
 #
 BINDIR=/usr/local/bin
 
+#
+# the directory where Teleport Plugins store their data files
+# and certificates
+#
+DATADIR=/var/lib/teleport/plugins/slackbot
+
 [ ! $(id -u) != "0" ] || { echo "ERROR: You must be root"; exit 1; }
 cd $(dirname $0)
-mkdir -p $BINDIR
+mkdir -p $BINDIR $DATADIR || exit 1
 cp -f slackbot $BINDIR/ || exit 1
 
 echo "Teleport Slackbot binaries have been copied to $BINDIR"
