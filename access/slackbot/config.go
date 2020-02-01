@@ -42,7 +42,6 @@ channel = "channel-name"  # Slack Channel name to post requests to
 
 [http]
 listen = ":8081"          # Slack interaction callback listener
-# host = "example.com"    # Host name for the Slackbot to listen on
 # https-key-file = "/var/lib/teleport/plugins/slackbot/server.key"  # TLS private key
 # https-cert-file = "/var/lib/teleport/plugins/slackbot/server.crt" # TLS certificate
 
