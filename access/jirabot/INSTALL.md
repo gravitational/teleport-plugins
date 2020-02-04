@@ -111,7 +111,7 @@ You can now run `sudo teleport-jirabot configure > /etc/teleport-jirabot.toml`, 
 
 By default, Jira Teleport Plugin will use a config in `/etc/teleport-jirabot.toml`, and you can override it with `-c config/file/path.toml` flag.
 
-``toml
+```toml
 # example jirabot configuration TOML file
 [teleport]
 auth-server = "example.com:3025"  # Auth GRPC API address
