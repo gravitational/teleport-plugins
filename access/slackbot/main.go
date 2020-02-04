@@ -60,9 +60,9 @@ func main() {
 	utils.InitLogger()
 	app := kingpin.New("slackbot", "Teleport plugin for access requests approval via Slack.")
 
-	app.Command("configure", "Prints an example .TOML configuration file")
+	app.Command("configure", "Prints an example .TOML configuration file.")
 
-	startCmd := app.Command("start", "Starts a bot daemon")
+	startCmd := app.Command("start", "Starts a the Teleport Slack plugin.")
 	path := startCmd.Flag("config", "TOML config file path").
 		Short('c').
 		Default("/etc/teleport-slackbot.toml").
@@ -151,8 +151,7 @@ type killSwitch func()
 type App struct {
 	sync.Mutex
 
-	conf    Config
-	tlsConf *tls.Config
+	conf Config
 
 	accessClient   access.Client
 	cache          *RequestCache
@@ -164,21 +163,7 @@ type App struct {
 }
 
 func NewApp(conf Config) (*App, error) {
-	tc, err := conf.LoadTLSConfig()
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	return NewAppWithTLSConfig(conf, tc)
-}
-
-func NewAppWithTLSConfig(conf Config, tlsConf *tls.Config) (*App, error) {
-	app := &App{
-		conf:    conf,
-		tlsConf: tlsConf,
-		bot:     NewBot(&conf),
-	}
-
-	return app, nil
+	return &App{conf: conf}, nil
 }
 
 func (a *App) finish() {
@@ -226,7 +211,30 @@ func (a *App) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	a.cancel = cancel
 
-	a.accessClient, err = access.NewClient(ctx, a.conf.Teleport.AuthServer, a.tlsConf)
+	a.bot = NewBot(&a.conf)
+	clientCert, err := access.LoadX509Cert(a.conf.Teleport.ClientCrt, a.conf.Teleport.ClientKey)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	now := time.Now()
+	if now.After(clientCert.Leaf.NotAfter) {
+		log.Error("Auth client TLS certificate seems to be expired, you should re-new it.")
+	}
+	if now.Before(clientCert.Leaf.NotBefore) {
+		log.Error("Auth client TLS certificate seems to be invalid, check its notBefore date.")
+	}
+	caPool, err := access.LoadX509CertPool(a.conf.Teleport.RootCAs)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	a.accessClient, err = access.NewClient(
+		ctx,
+		a.conf.Teleport.AuthServer,
+		&tls.Config{
+			Certificates: []tls.Certificate{clientCert},
+			RootCAs:      caPool,
+		},
+	)
 	if err != nil {
 		cancel()
 		return trace.Wrap(err)

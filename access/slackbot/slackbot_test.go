@@ -4,12 +4,13 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha256"
-	"crypto/tls"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"os/user"
 	"strings"
 	"testing"
@@ -41,6 +42,7 @@ type SlackbotSuite struct {
 	me          *user.User
 	slackServer *slacktest.Server
 	teleport    *integration.TeleInstance
+	tmpFiles    []*os.File
 
 	appDone chan struct{}
 }
@@ -101,6 +103,18 @@ func (s *SlackbotSuite) TearDownTest(c *C) {
 	s.app.Stop()
 	<-s.appDone
 	s.slackServer.Stop()
+	for _, tmp := range s.tmpFiles {
+		err := os.Remove(tmp.Name())
+		c.Assert(err, IsNil)
+	}
+	s.tmpFiles = []*os.File{}
+}
+
+func (s *SlackbotSuite) newTmpFile(c *C, pattern string) (file *os.File) {
+	file, err := ioutil.TempFile("", pattern)
+	c.Assert(err, IsNil)
+	s.tmpFiles = append(s.tmpFiles, file)
+	return
 }
 
 func (s *SlackbotSuite) startSlack(c *C) {
@@ -110,20 +124,35 @@ func (s *SlackbotSuite) startSlack(c *C) {
 }
 
 func (s *SlackbotSuite) startApp(c *C) {
-	var tc tls.Config
 	auth := s.teleport.Process.GetAuthServer()
 	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
 	c.Assert(err, IsNil)
-	rootCAs, err := services.CertPoolFromCertAuthorities(certAuthorities)
-	c.Assert(err, IsNil)
 	pluginKey := s.teleport.Secrets.Users["plugin"].Key
-	keyPair, err := tls.X509KeyPair(pluginKey.TLSCert, pluginKey.Priv)
+
+	keyFile := s.newTmpFile(c, "auth.*.key")
+	_, err = keyFile.Write(pluginKey.Priv)
 	c.Assert(err, IsNil)
-	tc.Certificates = append(tc.Certificates, keyPair)
-	tc.RootCAs = rootCAs
+	keyFile.Close()
+
+	certFile := s.newTmpFile(c, "auth.*.crt")
+	_, err = certFile.Write(pluginKey.TLSCert)
+	c.Assert(err, IsNil)
+	certFile.Close()
+
+	casFile := s.newTmpFile(c, "auth.*.cas")
+	for _, ca := range certAuthorities {
+		for _, keyPair := range ca.GetTLSKeyPairs() {
+			_, err = casFile.Write(keyPair.Cert)
+			c.Assert(err, IsNil)
+		}
+	}
+	casFile.Close()
 
 	var conf Config
 	conf.Teleport.AuthServer = s.teleport.Config.Auth.SSHAddr.Addr
+	conf.Teleport.ClientCrt = certFile.Name()
+	conf.Teleport.ClientKey = keyFile.Name()
+	conf.Teleport.RootCAs = casFile.Name()
 	conf.Slack.Secret = SlackSecret
 	conf.Slack.Token = "000000"
 	conf.Slack.Channel = "test"
@@ -131,7 +160,7 @@ func (s *SlackbotSuite) startApp(c *C) {
 	conf.HTTP.Listen = ":" + s.appPort
 	conf.HTTP.Insecure = true
 
-	s.app, err = NewAppWithTLSConfig(conf, &tc)
+	s.app, err = NewApp(conf)
 	c.Assert(err, IsNil)
 
 	s.appDone = make(chan struct{})
