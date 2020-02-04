@@ -74,7 +74,7 @@ func bail(msg string, a ...interface{}) {
 
 func main() {
 	utils.InitLogger()
-	app := kingpin.New("jirabot", "Teleport plugin for access requests approval via JIRA.")
+	app := kingpin.New("teleport-jirabot", "Teleport plugin for access requests approval via JIRA.")
 
 	app.Command("configure", "Prints an example .TOML configuration file.")
 

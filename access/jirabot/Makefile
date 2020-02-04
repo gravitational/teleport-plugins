@@ -1,7 +1,7 @@
 VERSION=0.1.0-dev.1
 
 BUILDDIR ?= build
-BINARY = $(BUILDDIR)/jirabot
+BINARY = $(BUILDDIR)/teleport-jirabot
 GITTAG=v$(VERSION)
 ADDFLAGS ?=
 BUILDFLAGS ?= $(ADDFLAGS) -ldflags '-w -s'
