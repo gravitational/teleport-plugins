@@ -1393,6 +1393,7 @@
     "github.com/gravitational/teleport/lib/utils",
     "github.com/gravitational/trace",
     "github.com/gravitational/trace/trail",
+    "github.com/julienschmidt/httprouter",
     "github.com/nlopes/slack",
     "github.com/nlopes/slack/slacktest",
     "github.com/pelletier/go-toml",

@@ -10,6 +10,7 @@ import (
 
 	"github.com/gravitational/teleport/lib/utils"
 	"github.com/gravitational/trace"
+	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -27,33 +28,47 @@ type HTTPConfig struct {
 // So you are guaranteed that server will be closed when the context is cancelled.
 type HTTP struct {
 	HTTPConfig
-	mux    *http.ServeMux
+	*httprouter.Router
 	server http.Server
 }
-type HTTPHandlerFunc = func(ctx context.Context, rw http.ResponseWriter, r *http.Request)
+
+type httpHandlerWrapper struct {
+	serve func(http.ResponseWriter, *http.Request)
+}
 
 // NewHTTP creates a new HTTP wrapper
 func NewHTTP(config HTTPConfig) *HTTP {
-	var mux = http.NewServeMux()
 	return &HTTP{
 		config,
-		mux,
-		http.Server{
-			Addr:    config.Listen,
-			Handler: mux,
+		httprouter.New(),
+		http.Server{Addr: config.Listen},
+	}
+}
+
+func newHttpHandlerWrapper(baseCtx context.Context, handler http.Handler) *httpHandlerWrapper {
+	return &httpHandlerWrapper{
+		func(rw http.ResponseWriter, r *http.Request) {
+			ctx, cancel := context.WithCancel(baseCtx)
+			defer cancel()
+			go func() {
+				select {
+				case <-r.Context().Done():
+					cancel()
+				case <-ctx.Done():
+				}
+			}()
+			handler.ServeHTTP(rw, r.WithContext(ctx))
 		},
 	}
 }
 
-// Handle registers the request handler function for a given path pattern.
-func (h *HTTP) Handle(ctx context.Context, pattern string, handler HTTPHandlerFunc) {
-	h.mux.HandleFunc(pattern, func(rw http.ResponseWriter, r *http.Request) {
-		handler(ctx, rw, r)
-	})
+func (h *httpHandlerWrapper) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	h.serve(rw, r)
 }
 
 // ListenAndServe runs a http(s) server on a provided port.
 func (h *HTTP) ListenAndServe(ctx context.Context) error {
+	h.server.Handler = newHttpHandlerWrapper(ctx, h.Router)
 	go func() {
 		<-ctx.Done()
 		h.server.Close()

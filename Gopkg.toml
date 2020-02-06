@@ -48,6 +48,10 @@ ignored = ["github.com/Sirupsen/logrus", "github.com/gravitational/license/gener
   source = "github.com/gravitational/logrus"
   version = "1.0.0"
 
+[[override]]
+  name = "github.com/julienschmidt/httprouter"
+  version = ">=1.0.0, <=64.0.0-gb428fda"
+
 [[constraint]]
   name = "github.com/pelletier/go-toml"
   version = "1.6.0"

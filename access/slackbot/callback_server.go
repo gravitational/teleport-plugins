@@ -10,6 +10,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/access"
 	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/julienschmidt/httprouter"
 	"github.com/nlopes/slack"
 	log "github.com/sirupsen/logrus"
 )
@@ -26,18 +27,19 @@ type CallbackServer struct {
 }
 
 func NewCallbackServer(conf *Config, onCallback CallbackFunc) *CallbackServer {
-	return &CallbackServer{
+	srv := &CallbackServer{
 		utils.NewHTTP(conf.HTTP),
 		conf.Slack.Secret,
 		onCallback,
 	}
+	srv.http.POST("/", srv.processCallback)
+	return srv
 }
 
 func (s *CallbackServer) Run(ctx context.Context) error {
 	if err := s.http.EnsureCert(DefaultDir + "/server"); err != nil {
 		return err
 	}
-	s.http.Handle(ctx, "/", s.processCallback)
 	return s.http.ListenAndServe(ctx)
 }
 
@@ -46,14 +48,9 @@ func (s *CallbackServer) Shutdown(ctx context.Context) error {
 	return s.http.ShutdownWithTimeout(ctx, time.Second*5)
 }
 
-func (s *CallbackServer) processCallback(ctx context.Context, rw http.ResponseWriter, r *http.Request) {
-	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*2500) // Slack requires to respond within 3000 milliseconds
+func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*2500) // Slack requires to respond within 3000 milliseconds
 	defer cancel()
-
-	if r.Method != "POST" {
-		http.Error(rw, "", 400)
-		return
-	}
 
 	sv, err := slack.NewSecretsVerifier(r.Header, s.secret)
 	if err != nil {
