@@ -240,6 +240,11 @@ func (a *App) Run(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
+	err = a.checkTeleportVersion(ctx)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
 	a.cache = NewRequestCache(ctx)
 
 	// Create callback server prividing a.OnSlackCallback as a callback function
@@ -291,6 +296,20 @@ func (a *App) Run(ctx context.Context) error {
 	a.Lock()
 
 	return trace.NewAggregate(httpErr, watcherErr)
+}
+
+func (a *App) checkTeleportVersion(ctx context.Context) error {
+	log.Info("Checking Teleport server version")
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	pong, err := a.accessClient.Ping(ctx)
+	if err != nil {
+		log.Error("Unable to get Teleport server version")
+		return trace.Wrap(err)
+	}
+	a.bot.clusterName = pong.ClusterName
+	err = pong.AssertServerVersion()
+	return trace.Wrap(err)
 }
 
 func (a *App) watchRequests(ctx context.Context) error {
@@ -435,7 +454,7 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 	// In real world it cannot be empty. This is for tests.
 	if cb.ResponseURL != "" {
 		go func() {
-			if err := RespondSlack(req, slackStatus, cb.ResponseURL); err != nil {
+			if err := a.bot.Respond(req, slackStatus, cb.ResponseURL); err != nil {
 				log.WithError(err).WithField("request_id", req.ID).Error("Can't update Slack message")
 				return
 			}

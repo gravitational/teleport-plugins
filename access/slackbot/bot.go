@@ -16,8 +16,9 @@ import (
 
 // Bot is a wrapper around slack.Client that works with access.Request
 type Bot struct {
-	client  *slack.Client
-	channel string
+	client      *slack.Client
+	channel     string
+	clusterName string
 }
 
 func NewBot(conf *Config) *Bot {
@@ -33,11 +34,11 @@ func NewBot(conf *Config) *Bot {
 }
 
 // Post posts request info to Slack with action buttons
-func (c *Bot) Post(req access.Request) (channelID, timestamp string, err error) {
-	channelID, timestamp, err = c.client.PostMessage(
-		c.channel,
+func (b *Bot) Post(req access.Request) (channelID, timestamp string, err error) {
+	channelID, timestamp, err = b.client.PostMessage(
+		b.channel,
 		slack.MsgOptionBlocks(
-			msgSection(msgText(req, "PENDING")),
+			msgSection(b.msgText(req, "PENDING")),
 			actionBlock(req.ID),
 		),
 	)
@@ -47,27 +48,27 @@ func (c *Bot) Post(req access.Request) (channelID, timestamp string, err error) 
 
 // Expire updates request's Slack post with EXPIRED status and removes action buttons.
 // TODO: Use ext-data when it's integrated
-func (c *Bot) Expire(req access.Request, channelID, timestamp string) error {
+func (b *Bot) Expire(req access.Request, channelID, timestamp string) error {
 	if len(channelID) == 0 || len(timestamp) == 0 {
 		log.Warningf("can't expire slack message without channel ID or timestamp")
 		return nil
 	}
 
-	_, _, _, err := c.client.UpdateMessage(
+	_, _, _, err := b.client.UpdateMessage(
 		channelID,
 		timestamp,
 		slack.MsgOptionBlocks(
-			msgSection(msgText(req, "EXPIRED")),
+			msgSection(b.msgText(req, "EXPIRED")),
 		),
 	)
 
 	return err
 }
 
-// RespondSlack updates Slack post with the new request info and the new status, and removes action buttons
-func RespondSlack(req access.Request, status string, responseURL string) error {
+// Respond updates Slack post with the new request info and the new status, and removes action buttons
+func (b *Bot) Respond(req access.Request, status string, responseURL string) error {
 	var message slack.Message
-	message.Blocks.BlockSet = []slack.Block{msgSection(msgText(req, status))}
+	message.Blocks.BlockSet = []slack.Block{msgSection(b.msgText(req, status))}
 	message.ReplaceOriginal = true
 
 	body, err := json.Marshal(message)
@@ -100,24 +101,25 @@ func RespondSlack(req access.Request, status string, responseURL string) error {
 }
 
 // msgText builds the message text payload (contains markdown).
-func msgText(req access.Request, status string) string {
-	b := new(strings.Builder)
-	b.Grow(128)
+func (b *Bot) msgText(req access.Request, status string) string {
+	builder := new(strings.Builder)
+	builder.Grow(128)
 
-	fmt.Fprintln(b, "```")
-	msgFieldToBuilder(b, "Request ", req.ID)
+	fmt.Fprintln(builder, "```")
+	msgFieldToBuilder(builder, "Request ", req.ID)
+	msgFieldToBuilder(builder, "Cluster ", b.clusterName)
 
 	if len(req.User) > 0 {
-		msgFieldToBuilder(b, "User    ", req.User)
+		msgFieldToBuilder(builder, "User    ", req.User)
 	}
 	if req.Roles != nil {
-		msgFieldToBuilder(b, "Role(s) ", strings.Join(req.Roles, ","))
+		msgFieldToBuilder(builder, "Role(s) ", strings.Join(req.Roles, ","))
 	}
 
-	msgFieldToBuilder(b, "Status  ", status)
-	fmt.Fprintln(b, "```")
+	msgFieldToBuilder(builder, "Status  ", status)
+	fmt.Fprintln(builder, "```")
 
-	return b.String()
+	return builder.String()
 }
 
 func msgFieldToBuilder(b *strings.Builder, field, value string) {

@@ -29,7 +29,8 @@ ignored = ["github.com/Sirupsen/logrus", "github.com/gravitational/license/gener
 
 [[constraint]]
   name = "github.com/gravitational/teleport"
-  branch = "master"
+  #branch = "master"
+  revision = "2634a66379a488468435156f1a033614eac698a9" # TODO: temporary change
 
 [[constraint]]
   name = "github.com/gravitational/kingpin"
@@ -55,6 +56,10 @@ ignored = ["github.com/Sirupsen/logrus", "github.com/gravitational/license/gener
 [[constraint]]
   name = "github.com/pelletier/go-toml"
   version = "1.6.0"
+
+[[constraint]]
+  name = "github.com/hashicorp/go-version"
+  version = "1.2.0"
 
 [[constraint]]
   name = "github.com/nlopes/slack"

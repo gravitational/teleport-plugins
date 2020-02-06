@@ -30,10 +30,13 @@ import (
 
 	"github.com/gravitational/trace"
 	"github.com/gravitational/trace/trail"
+	"github.com/hashicorp/go-version"
 
 	"github.com/gravitational/teleport/lib/auth/proto"
 	"github.com/gravitational/teleport/lib/services"
 )
+
+const MinServerVersion = "4.2.2-alpha.1"
 
 // State represents the state of an access request.
 type State = services.RequestState
@@ -85,6 +88,12 @@ type Request struct {
 	State State
 }
 
+// Pong describes a ping response.
+type Pong struct {
+	ServerVersion string
+	ClusterName   string
+}
+
 // Watcher is used to monitor access requests.
 type Watcher interface {
 	WaitInit(ctx context.Context, timeout time.Duration) error
@@ -96,6 +105,8 @@ type Watcher interface {
 
 // Client is an access request management client.
 type Client interface {
+	// Ping loads basic information about Teleport version and cluster name
+	Ping(ctx context.Context) (Pong, error)
 	// WatchRequests registers a new watcher for pending access requests.
 	WatchRequests(ctx context.Context, fltr Filter) Watcher
 	// GetRequests loads all requests which match provided filter.
@@ -125,6 +136,17 @@ func NewClient(ctx context.Context, addr string, tc *tls.Config) (Client, error)
 	return &clt{
 		clt:    proto.NewAuthServiceClient(conn),
 		cancel: cancel,
+	}, nil
+}
+
+func (c *clt) Ping(ctx context.Context) (Pong, error) {
+	rsp, err := c.clt.Ping(ctx, &proto.PingRequest{})
+	if err != nil {
+		return Pong{}, fromGRPC(err)
+	}
+	return Pong{
+		rsp.ServerVersion,
+		rsp.ClusterName,
 	}, nil
 }
 
@@ -325,4 +347,21 @@ func (w *watcher) setError(err error) {
 
 func (w *watcher) Close() {
 	w.cancel()
+}
+
+// AssertServerVersion returns an error if server version in ping response is
+// less than minimum required version.
+func (p *Pong) AssertServerVersion() error {
+	actual, err := version.NewVersion(p.ServerVersion)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	required, err := version.NewVersion(MinServerVersion)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	if actual.LessThan(required) {
+		return trace.Errorf("server version %s is less than %s", p.ServerVersion, MinServerVersion)
+	}
+	return nil
 }
