@@ -441,8 +441,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  branch = "master"
-  digest = "1:2f93ff53ddaa1516fb1df016cf7a148887d9231afe06c09d7a5b1f213e8d3231"
+  digest = "1:28e20498fc5da87077b605d7e085367c7e35022486e02126cc534244ed44bc0c"
   name = "github.com/gravitational/teleport"
   packages = [
     ".",
@@ -506,7 +505,7 @@
     "lib/wrappers",
   ]
   pruneopts = "NUT"
-  revision = "257274b26f653e04b4a21acd30cdaa50c292f5bc"
+  revision = "2634a66379a488468435156f1a033614eac698a9"
 
 [[projects]]
   digest = "1:a43816dbfa9fa218af700e9d230d1adbcef12ffc495efe46046a57fe5490aad0"
@@ -537,6 +536,14 @@
   ]
   pruneopts = "NUT"
   revision = "9cad4c3443a7200dd6400aef47183728de563a38"
+
+[[projects]]
+  digest = "1:53a4ebb0e1eb24a4644a3eec9457ba6ead5476a9ea5af43bf2c8b8b1a8ce47f2"
+  name = "github.com/hashicorp/go-version"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "ac23dc3fea5d1a983c43f6a0f6e2c13f0195d8bd"
+  version = "v1.2.0"
 
 [[projects]]
   branch = "master"
@@ -1393,6 +1400,7 @@
     "github.com/gravitational/teleport/lib/utils",
     "github.com/gravitational/trace",
     "github.com/gravitational/trace/trail",
+    "github.com/hashicorp/go-version",
     "github.com/julienschmidt/httprouter",
     "github.com/nlopes/slack",
     "github.com/nlopes/slack/slacktest",
