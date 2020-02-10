@@ -22,6 +22,10 @@ export
 $(BINARY):
 	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BINARY) $(BUILDFLAGS)
 
+.PHONY: test
+test:
+	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go test $(FLAGS) $(ADDFLAGS)
+
 clean:
 	@echo "---> Cleaning up build artifacts."
 	rm -rf $(BUILDDIR)
