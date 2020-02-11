@@ -111,6 +111,8 @@ type Client interface {
 	WatchRequests(ctx context.Context, fltr Filter) Watcher
 	// GetRequests loads all requests which match provided filter.
 	GetRequests(ctx context.Context, fltr Filter) ([]Request, error)
+	// GetRequest loads a request matching ID.
+	GetRequest(ctx context.Context, reqID string) (Request, error)
 	// SetRequestState updates the state of a request.
 	SetRequestState(ctx context.Context, reqID string, state State) error
 	// GetPluginData fetches plugin data of the specific request.
@@ -177,6 +179,19 @@ func (c *clt) GetRequests(ctx context.Context, fltr Filter) ([]Request, error) {
 		reqs = append(reqs, r)
 	}
 	return reqs, nil
+}
+
+func (c *clt) GetRequest(ctx context.Context, reqID string) (Request, error) {
+	reqs, err := c.GetRequests(ctx, Filter{
+		ID: reqID,
+	})
+	if err != nil {
+		return Request{ID: reqID}, trace.Wrap(err)
+	}
+	if len(reqs) < 1 {
+		return Request{ID: reqID}, trace.NotFound("no request matching %q", reqID)
+	}
+	return reqs[0], nil
 }
 
 func (c *clt) SetRequestState(ctx context.Context, reqID string, state State) error {

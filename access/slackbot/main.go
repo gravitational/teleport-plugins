@@ -386,22 +386,6 @@ func (a *App) WatchRequests(ctx context.Context) error {
 	}
 }
 
-// loadRequest loads the specified request in order to correctly format a response.
-func (a *App) loadRequest(ctx context.Context, reqID string) (access.Request, error) {
-	reqs, err := a.accessClient.GetRequests(ctx, access.Filter{
-		ID: reqID,
-	})
-	if err != nil {
-		return access.Request{ID: reqID}, trace.Wrap(err)
-	}
-
-	if len(reqs) < 1 {
-		return access.Request{ID: reqID}, trace.NotFound("no request matching %q", reqID)
-	}
-
-	return reqs[0], nil
-}
-
 // OnSlackCallback processes Slack actions and updates original Slack message with a new status
 func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 	if len(cb.ActionCallback.BlockActions) != 1 {
@@ -418,7 +402,7 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 		slackStatus string
 	)
 
-	req, err := a.loadRequest(ctx, reqID)
+	req, err := a.accessClient.GetRequest(ctx, reqID)
 	var reqData requestData
 
 	if err != nil {
