@@ -134,34 +134,41 @@ func run(configPath string, insecure bool, debug bool) error {
 }
 
 func serveSignals(app *App) {
+	ctx := context.Background()
 	sigC := make(chan os.Signal)
 	signal.Notify(sigC,
-		syscall.SIGQUIT, // graceful shutdown
-		syscall.SIGTERM, // fast shutdown
+		syscall.SIGTERM, // graceful shutdown
 		syscall.SIGINT,  // graceful-then-fast shutdown
 	)
 	var alreadyInterrupted bool
+	gracefulShutdown := func() {
+		tctx, tcancel := context.WithTimeout(ctx, 2*time.Second)
+		defer tcancel()
+		log.Infof("Attempting graceful shutdown...")
+		if err := app.Shutdown(tctx); err != nil {
+			log.Infof("Graceful shutdown failed. Trying fast shutdown...")
+			app.Close()
+		}
+	}
 	go func() {
 		for {
 			signal := <-sigC
 			switch signal {
-			case syscall.SIGQUIT:
-				app.Stop()
-			case syscall.SIGTERM, syscall.SIGKILL:
-				app.Close()
+			case syscall.SIGTERM:
+				gracefulShutdown()
+				return
 			case syscall.SIGINT:
 				if alreadyInterrupted {
 					app.Close()
+					return
 				} else {
-					app.Stop()
+					go gracefulShutdown()
 					alreadyInterrupted = true
 				}
 			}
 		}
 	}()
 }
-
-type killSwitch func()
 
 // App contains global application state.
 type App struct {
@@ -173,7 +180,13 @@ type App struct {
 	bot            *Bot
 	callbackServer *CallbackServer
 
-	stop   killSwitch
+	doneCh chan struct{}
+	// spawn runs a goroutine in the app's context as a job with waiting for
+	// its completion on shutdown.
+	spawn func(func(context.Context))
+	// terminate signals the app to terminate gracefully.
+	terminate func()
+	// cancel signals the app to terminate immediately
 	cancel context.CancelFunc
 }
 
@@ -186,28 +199,47 @@ func (a *App) finish() {
 	a.bot = nil
 	a.callbackServer = nil
 
-	a.stop = nil
+	a.doneCh = nil
+	a.spawn = nil
+	a.terminate = nil
 	a.cancel = nil
 }
 
 // Close signals the App to shutdown immediately
 func (a *App) Close() {
 	a.Lock()
-	defer a.Unlock()
+	cancel := a.cancel
+	doneCh := a.doneCh
+	a.Unlock()
 
-	if a.cancel != nil {
-		log.Infof("Force shutdown...")
-		a.cancel()
+	if cancel != nil {
+		cancel()
+		<-doneCh
 	}
 }
 
-// Stop signals the App to shutdown gracefully
-func (a *App) Stop() {
+// Shutdown signals the App to shutdown gracefully and waits for shutdown.
+func (a *App) Shutdown(ctx context.Context) error {
 	a.Lock()
-	defer a.Unlock()
+	terminate := a.terminate
+	doneCh := a.doneCh
+	a.Unlock()
 
-	if a.stop != nil {
-		a.stop()
+	if terminate != nil {
+		terminate()
+		select {
+		case <-doneCh:
+			return nil
+		case <-ctx.Done():
+			return trace.Wrap(ctx.Err())
+		}
+	}
+
+	select {
+	case <-ctx.Done():
+		return trace.Wrap(ctx.Err())
+	default:
+		return nil
 	}
 }
 
@@ -263,49 +295,59 @@ func (a *App) Run(ctx context.Context) error {
 	// Create callback server prividing a.OnSlackCallback as a callback function
 	a.callbackServer = NewCallbackServer(&a.conf, a.OnSlackCallback)
 
+	// Create separate context for Watcher in order to terminate it individually.
+	wctx, wcancel := context.WithCancel(ctx)
+
+	var jobs sync.WaitGroup
+	a.spawn = func(f func(context.Context)) {
+		jobs.Add(1)
+		go func() {
+			f(ctx)
+			jobs.Done()
+		}()
+	}
+
+	jobs.Add(1) // Start the "app" job. We have to do it for Wait() not being returned beforehand.
+	a.doneCh = make(chan struct{})
+	defer close(a.doneCh)
+
 	var once sync.Once
-	shutdown := func() {
+	a.terminate = func() {
 		once.Do(func() {
-			defer cancel()
+			jobs.Done() // Complete the "app" job.
 
-			log.Infof("Attempting graceful shutdown...")
+			wcancel()
 
-			if err := a.callbackServer.Shutdown(ctx); err != nil {
-				log.WithError(err).Error("HTTP server graceful shutdown failed")
-			}
+			go func() {
+				if err := a.callbackServer.Shutdown(ctx); err != nil {
+					log.WithError(err).Error("HTTP server graceful shutdown failed")
+				}
+			}()
 		})
 	}
-	a.stop = func() { go shutdown() }
 
-	var (
-		httpErr, watcherErr error
-		workers             sync.WaitGroup
-	)
+	var httpErr, watcherErr error
 
-	workers.Add(2)
-
-	go func() {
-		defer workers.Done()
-		defer shutdown()
+	a.spawn(func(ctx context.Context) {
+		defer a.terminate()
 
 		httpErr = trace.Wrap(
 			a.callbackServer.Run(ctx),
 		)
-	}()
+	})
 
-	go func() {
-		defer workers.Done()
-		defer shutdown()
+	a.spawn(func(ctx context.Context) {
+		defer a.terminate()
 
 		watcherErr = trace.Wrap(
 			// Start watching for request events
-			a.WatchRequests(ctx),
+			a.WatchRequests(wctx),
 		)
-	}()
+	})
 
-	// Unlock the app, wait for workers, and lock again
+	// Unlock the app, wait for jobs, and lock again
 	a.Unlock()
-	workers.Wait()
+	jobs.Wait()
 	a.Lock()
 
 	return trace.NewAggregate(httpErr, watcherErr)
@@ -348,13 +390,17 @@ func (a *App) watchRequests(ctx context.Context) error {
 					continue
 				}
 
-				if err := a.onPendingRequest(ctx, req); err != nil {
-					return trace.Wrap(err)
-				}
+				a.spawn(func(ctx context.Context) {
+					if err := a.onPendingRequest(ctx, req); err != nil {
+						log.WithError(err).WithField("request_id", req.ID).Errorf("Failed to process pending request")
+					}
+				})
 			case access.OpDelete:
-				if err := a.onDeletedRequest(ctx, req); err != nil {
-					return trace.Wrap(err)
-				}
+				a.spawn(func(ctx context.Context) {
+					if err := a.onDeletedRequest(ctx, req); err != nil {
+						log.WithError(err).WithField("request_id", req.ID).Errorf("Failed to process deleted request")
+					}
+				})
 			default:
 				return trace.BadParameter("unexpected event operation %s", op)
 			}
@@ -368,6 +414,7 @@ func (a *App) watchRequests(ctx context.Context) error {
 // It calls onPendingRequest when new pending event is added and onDeletedRequest when request is deleted
 func (a *App) WatchRequests(ctx context.Context) error {
 	log.Info("Starting a request watcher...")
+	defer log.Info("Request watcher terminated")
 
 	for {
 		err := a.watchRequests(ctx)
@@ -453,13 +500,13 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 
 	// In real world it cannot be empty. This is for tests.
 	if cb.ResponseURL != "" {
-		go func() {
-			if err := a.bot.Respond(req.ID, reqData, slackStatus, cb.ResponseURL); err != nil {
+		a.spawn(func(ctx context.Context) {
+			if err := a.bot.Respond(ctx, req.ID, reqData, slackStatus, cb.ResponseURL); err != nil {
 				log.WithError(err).WithField("request_id", req.ID).Error("Can't update Slack message")
 				return
 			}
 			log.WithField("request_id", req.ID).Debug("Successfully updated Slack message")
-		}()
+		})
 	}
 
 	return nil
@@ -467,7 +514,7 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 
 func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 	reqData := requestData{user: req.User, roles: req.Roles}
-	slackData, err := a.bot.Post(req.ID, reqData)
+	slackData, err := a.bot.Post(ctx, req.ID, reqData)
 
 	if err != nil {
 		return trace.Wrap(err)
@@ -476,37 +523,26 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 	log.WithFields(log.Fields{
 		"slack_channel":   slackData.channelID,
 		"slack_timestamp": slackData.timestamp,
-	}).Debug("Posted to Slack")
+	}).Debug("Successfully posted to Slack")
 
 	err = a.setPluginData(ctx, req.ID, pluginData{reqData, slackData})
 
-	a.verifyRequestData(ctx, req.ID)
-
 	return trace.Wrap(err)
-}
-
-// TODO: debug method, remove it before merge
-func (a *App) verifyRequestData(ctx context.Context, reqID string) {
-	data, err := a.accessClient.GetPluginData(ctx, reqID)
-	if err != nil {
-		log.WithError(err).Debug("Cannot fetch request data")
-	}
-	log.Debug(data)
 }
 
 func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 	reqID := req.ID // This is the only available field
 	pluginData, err := a.getPluginData(ctx, reqID)
 	if err != nil {
-		if trace.IsNotFound(err) {
-			log.WithError(err).Warnf("cannot expire unknown request")
-			return nil
-		} else {
-			return trace.Wrap(err)
-		}
+		return trace.Wrap(err)
 	}
 
-	if err := a.bot.Expire(reqID, pluginData.requestData, pluginData.slackData); err != nil {
+	reqData, slackData := pluginData.requestData, pluginData.slackData
+	if len(slackData.channelID) == 0 || len(slackData.timestamp) == 0 {
+		return trace.NotFound("plugin data was expired")
+	}
+
+	if err := a.bot.Expire(ctx, reqID, reqData, slackData); err != nil {
 		return trace.Wrap(err)
 	}
 

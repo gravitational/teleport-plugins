@@ -2,16 +2,20 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gravitational/trace"
 	"github.com/nlopes/slack"
-	log "github.com/sirupsen/logrus"
 )
+
+const slackMaxConns = 100
+const slackHttpTimeout = 10 * time.Second
 
 var emojiByStatus = map[string]string{
 	"PENDING":  ":hourglass_flowing_sand: ",
@@ -20,80 +24,98 @@ var emojiByStatus = map[string]string{
 	"EXPIRED":  ":hourglass: ",
 }
 
-// Bot is a wrapper around slack.Client that works with access.Request
+// Bot is a wrapper around slack.Client that works with access.Request.
 type Bot struct {
 	client      *slack.Client
+	respClient  *http.Client
 	channel     string
 	clusterName string
 }
 
 func NewBot(conf *Config) *Bot {
-	slackOptions := []slack.Option{}
+	httpClient := &http.Client{
+		Timeout: slackHttpTimeout,
+		Transport: &http.Transport{
+			MaxConnsPerHost:     slackMaxConns,
+			MaxIdleConnsPerHost: slackMaxConns,
+		},
+	}
+
+	slackOptions := []slack.Option{
+		slack.OptionHTTPClient(httpClient),
+	}
+
+	// APIURL parameter is set only in tests
 	if conf.Slack.APIURL != "" {
 		slackOptions = append(slackOptions, slack.OptionAPIURL(conf.Slack.APIURL))
 	}
 
 	return &Bot{
-		client:  slack.New(conf.Slack.Token, slackOptions...),
-		channel: conf.Slack.Channel,
+		client:     slack.New(conf.Slack.Token, slackOptions...),
+		channel:    conf.Slack.Channel,
+		respClient: httpClient,
 	}
 }
 
-// Post posts request info to Slack with action buttons
-func (b *Bot) Post(reqID string, reqData requestData) (data slackData, err error) {
-	data.channelID, data.timestamp, err = b.client.PostMessage(
+// Post posts request info to Slack with action buttons.
+func (b *Bot) Post(ctx context.Context, reqID string, reqData requestData) (data slackData, err error) {
+	data.channelID, data.timestamp, err = b.client.PostMessageContext(
+		ctx,
 		b.channel,
 		slack.MsgOptionBlocks(b.msgSections(reqID, reqData, "PENDING", true)...),
 	)
+	err = trace.Wrap(err)
 
 	return
 }
 
 // Expire updates request's Slack post with EXPIRED status and removes action buttons.
-func (b *Bot) Expire(reqID string, reqData requestData, slackData slackData) error {
-	if len(slackData.channelID) == 0 || len(slackData.timestamp) == 0 {
-		log.Warningf("can't expire slack message without channel ID or timestamp")
-		return nil
-	}
-
-	_, _, _, err := b.client.UpdateMessage(
+func (b *Bot) Expire(ctx context.Context, reqID string, reqData requestData, slackData slackData) error {
+	_, _, _, err := b.client.UpdateMessageContext(
+		ctx,
 		slackData.channelID,
 		slackData.timestamp,
 		slack.MsgOptionBlocks(b.msgSections(reqID, reqData, "EXPIRED", false)...),
 	)
 
-	return err
+	return trace.Wrap(err)
 }
 
-func (b *Bot) Respond(reqID string, reqData requestData, status string, responseURL string) error {
+// Respond is used to send and updated message to Slack by "response_url" from interaction callback.
+func (b *Bot) Respond(ctx context.Context, reqID string, reqData requestData, status string, responseURL string) error {
 	var message slack.Message
 	message.Blocks.BlockSet = b.msgSections(reqID, reqData, status, false)
 	message.ReplaceOriginal = true
 
 	body, err := json.Marshal(message)
 	if err != nil {
-		return trace.Errorf("Failed to serialize msg block: %s", err)
+		return trace.Wrap(err, "failed to serialize msg block: %v", err)
 	}
 
-	rsp, err := http.Post(responseURL, "application/json", bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, "POST", responseURL, bytes.NewReader(body))
 	if err != nil {
-		return trace.Errorf("Failed to send update: %s", err)
+		return trace.Wrap(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	rsp, err := b.respClient.Do(req)
+	if err != nil {
+		return trace.Wrap(err, "failed to send update: %v", err)
 	}
 
 	rbody, err := ioutil.ReadAll(rsp.Body)
 	if err != nil {
-		return trace.Errorf("Failed to read update response: %s", err)
+		return trace.Wrap(err, "failed to read update response: %v", err)
 	}
 
 	var ursp struct {
 		Ok bool `json:"ok"`
 	}
 	if err := json.Unmarshal(rbody, &ursp); err != nil {
-		return trace.Errorf("Failed to parse response body: %s", err)
+		return trace.Wrap(err, "failed to parse response body: %v", err)
 	}
 
 	if !ursp.Ok {
-		return trace.Errorf("Failed to update msg for %v", reqID)
+		return trace.Errorf("operation status is not OK")
 	}
 
 	return nil
