@@ -19,12 +19,18 @@ how to use the [`access`](./access) API.
 Use `make access-example` to build the plugin and `./build/access-example configure` to print out
 a sample configuration file.
 
-### Slackbot
+### Slack Bot
 
 A basic slack plugin (WIP) can be found in [access/slackbot](./access/slackbot).
 The plugin can be built with `make access-slackbot` and instructions for configuring the
 plugin can be found in the plugin's [README](./access/slackbot/README.md).
 
-## notes
+### JIRA Bot
+
+A basic Teleport / JIRA integration (WIP) can be found in [access/jirabot](./access/jirabot).
+The plugin can be built with `make access-jirabot` and instructions for configuring the
+plugin can be found in the plugin's [README](./access/jirabot/README.md).
+
+## Notes
 
 Use `scripts/dep` for dependencies management. It is a wrapper over `dep` which ignores git submodules.
