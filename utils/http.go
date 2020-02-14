@@ -68,6 +68,8 @@ func (h *httpHandlerWrapper) ServeHTTP(rw http.ResponseWriter, r *http.Request) 
 
 // ListenAndServe runs a http(s) server on a provided port.
 func (h *HTTP) ListenAndServe(ctx context.Context) error {
+	defer log.Info("HTTP server terminated")
+
 	h.server.Handler = newHttpHandlerWrapper(ctx, h.Router)
 	go func() {
 		<-ctx.Done()

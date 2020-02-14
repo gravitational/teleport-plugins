@@ -100,7 +100,8 @@ func (s *SlackbotSuite) SetUpTest(c *C) {
 }
 
 func (s *SlackbotSuite) TearDownTest(c *C) {
-	s.app.Stop()
+	err := s.app.Shutdown(context.TODO())
+	c.Assert(err, IsNil)
 	<-s.appDone
 	s.slackServer.Stop()
 	for _, tmp := range s.tmpFiles {
