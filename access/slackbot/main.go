@@ -21,10 +21,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
@@ -126,48 +124,11 @@ func run(configPath string, insecure bool, debug bool) error {
 		return trace.Wrap(err)
 	}
 
-	serveSignals(app)
+	go utils.ServeSignals(app, 15*time.Second)
 
 	return trace.Wrap(
 		app.Run(context.Background()),
 	)
-}
-
-func serveSignals(app *App) {
-	ctx := context.Background()
-	sigC := make(chan os.Signal)
-	signal.Notify(sigC,
-		syscall.SIGTERM, // graceful shutdown
-		syscall.SIGINT,  // graceful-then-fast shutdown
-	)
-	var alreadyInterrupted bool
-	gracefulShutdown := func() {
-		tctx, tcancel := context.WithTimeout(ctx, 2*time.Second)
-		defer tcancel()
-		log.Infof("Attempting graceful shutdown...")
-		if err := app.Shutdown(tctx); err != nil {
-			log.Infof("Graceful shutdown failed. Trying fast shutdown...")
-			app.Close()
-		}
-	}
-	go func() {
-		for {
-			signal := <-sigC
-			switch signal {
-			case syscall.SIGTERM:
-				gracefulShutdown()
-				return
-			case syscall.SIGINT:
-				if alreadyInterrupted {
-					app.Close()
-					return
-				} else {
-					go gracefulShutdown()
-					alreadyInterrupted = true
-				}
-			}
-		}
-	}()
 }
 
 // App contains global application state.
