@@ -16,8 +16,9 @@ const (
 
 // Bot is a wrapper around jira.Client that works with access.Request
 type Bot struct {
-	client *jira.Client
-	project string
+	client      *jira.Client
+	project     string
+	clusterName string
 }
 
 func NewBot(conf *Config) (*Bot, error) {
@@ -31,8 +32,8 @@ func NewBot(conf *Config) (*Bot, error) {
 		return nil, trace.Wrap(err)
 	}
 	return &Bot{
-		client,
-		conf.JIRA.Project,
+		client:  client,
+		project: conf.JIRA.Project,
 	}, nil
 }
 
