@@ -141,14 +141,8 @@ type App struct {
 	bot            *Bot
 	callbackServer *CallbackServer
 
-	doneCh chan struct{}
-	// spawn runs a goroutine in the app's context as a job with waiting for
-	// its completion on shutdown.
-	spawn func(func(context.Context))
-	// terminate signals the app to terminate gracefully.
-	terminate func()
-	// cancel signals the app to terminate immediately
-	cancel context.CancelFunc
+	*utils.Process
+	shutdown func()
 }
 
 func NewApp(conf Config) (*App, error) {
@@ -160,48 +154,8 @@ func (a *App) finish() {
 	a.bot = nil
 	a.callbackServer = nil
 
-	a.doneCh = nil
-	a.spawn = nil
-	a.terminate = nil
-	a.cancel = nil
-}
-
-// Close signals the App to shutdown immediately
-func (a *App) Close() {
-	a.Lock()
-	cancel := a.cancel
-	doneCh := a.doneCh
-	a.Unlock()
-
-	if cancel != nil {
-		cancel()
-		<-doneCh
-	}
-}
-
-// Shutdown signals the App to shutdown gracefully and waits for shutdown.
-func (a *App) Shutdown(ctx context.Context) error {
-	a.Lock()
-	terminate := a.terminate
-	doneCh := a.doneCh
-	a.Unlock()
-
-	if terminate != nil {
-		terminate()
-		select {
-		case <-doneCh:
-			return nil
-		case <-ctx.Done():
-			return trace.Wrap(ctx.Err())
-		}
-	}
-
-	select {
-	case <-ctx.Done():
-		return trace.Wrap(ctx.Err())
-	default:
-		return nil
-	}
+	a.shutdown = nil
+	a.Process = nil
 }
 
 // Run initializes and runs a watcher and a callback server
@@ -216,7 +170,7 @@ func (a *App) Run(ctx context.Context) error {
 	log.Infof("Starting Teleport Access Slackbot %s:%s", Version, Gitref)
 
 	ctx, cancel := context.WithCancel(ctx)
-	a.cancel = cancel
+	defer cancel()
 
 	a.bot = NewBot(&a.conf)
 	clientCert, err := access.LoadX509Cert(a.conf.Teleport.ClientCrt, a.conf.Teleport.ClientKey)
@@ -253,52 +207,26 @@ func (a *App) Run(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
+	a.Process = utils.NewProcess(ctx)
+	process := a.Process // Save variable to access when unlocked
+
 	// Create callback server prividing a.OnSlackCallback as a callback function
 	a.callbackServer = NewCallbackServer(&a.conf, a.OnSlackCallback)
-
-	// Create separate context for Watcher in order to terminate it individually.
-	wctx, wcancel := context.WithCancel(ctx)
-
-	var jobs sync.WaitGroup
-	a.spawn = func(f func(context.Context)) {
-		jobs.Add(1)
-		go func() {
-			f(ctx)
-			jobs.Done()
-		}()
-	}
-
-	jobs.Add(1) // Start the "app" job. We have to do it for Wait() not being returned beforehand.
-	a.doneCh = make(chan struct{})
-	defer close(a.doneCh)
-
-	var once sync.Once
-	a.terminate = func() {
-		once.Do(func() {
-			jobs.Done() // Complete the "app" job.
-
-			wcancel()
-
-			go func() {
-				if err := a.callbackServer.Shutdown(ctx); err != nil {
-					log.WithError(err).Error("HTTP server graceful shutdown failed")
-				}
-			}()
-		})
-	}
-
-	var httpErr, watcherErr error
-
-	a.spawn(func(ctx context.Context) {
-		defer a.terminate()
+	var httpErr error
+	a.Spawn(func(ctx context.Context) {
+		defer a.shutdown()
 
 		httpErr = trace.Wrap(
 			a.callbackServer.Run(ctx),
 		)
 	})
 
-	a.spawn(func(ctx context.Context) {
-		defer a.terminate()
+	// Create separate context for Watcher in order to terminate it individually.
+	wctx, wcancel := context.WithCancel(ctx)
+	defer wcancel()
+	var watcherErr error
+	a.Spawn(func(ctx context.Context) {
+		defer a.shutdown()
 
 		watcherErr = trace.Wrap(
 			// Start watching for request events
@@ -306,9 +234,21 @@ func (a *App) Run(ctx context.Context) error {
 		)
 	})
 
+	var once sync.Once
+	a.shutdown = func() {
+		once.Do(func() {
+			a.Spawn(func(ctx context.Context) {
+				if err := a.callbackServer.Shutdown(ctx); err != nil {
+					log.WithError(err).Error("HTTP server graceful shutdown failed")
+				}
+			})
+			wcancel()
+		})
+	}
+
 	// Unlock the app, wait for jobs, and lock again
 	a.Unlock()
-	jobs.Wait()
+	process.Wait()
 	a.Lock()
 
 	return trace.NewAggregate(httpErr, watcherErr)
@@ -351,13 +291,13 @@ func (a *App) watchRequests(ctx context.Context) error {
 					continue
 				}
 
-				a.spawn(func(ctx context.Context) {
+				a.Spawn(func(ctx context.Context) {
 					if err := a.onPendingRequest(ctx, req); err != nil {
 						log.WithError(err).WithField("request_id", req.ID).Errorf("Failed to process pending request")
 					}
 				})
 			case access.OpDelete:
-				a.spawn(func(ctx context.Context) {
+				a.Spawn(func(ctx context.Context) {
 					if err := a.onDeletedRequest(ctx, req); err != nil {
 						log.WithError(err).WithField("request_id", req.ID).Errorf("Failed to process deleted request")
 					}
@@ -461,7 +401,7 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 
 	// In real world it cannot be empty. This is for tests.
 	if cb.ResponseURL != "" {
-		a.spawn(func(ctx context.Context) {
+		a.Spawn(func(ctx context.Context) {
 			if err := a.bot.Respond(ctx, req.ID, reqData, slackStatus, cb.ResponseURL); err != nil {
 				log.WithError(err).WithField("request_id", req.ID).Error("Can't update Slack message")
 				return
@@ -531,4 +471,25 @@ func (a *App) setPluginData(ctx context.Context, reqID string, data pluginData) 
 		"channel_id": data.channelID,
 		"timestamp":  data.timestamp,
 	}, nil)
+}
+
+// Close signals the App to shutdown immediately
+func (a *App) Close() {
+	a.Lock()
+	process := a.Process
+	a.Unlock()
+
+	process.Close()
+}
+
+// Shutdown signals the App to shutdown gracefully and waits for shutdown.
+func (a *App) Shutdown(ctx context.Context) error {
+	a.Lock()
+	shutdown := a.shutdown
+	process := a.Process
+	a.Unlock()
+	if shutdown != nil {
+		shutdown()
+	}
+	return process.Shutdown(ctx)
 }
