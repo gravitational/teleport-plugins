@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"os"
 	"time"
@@ -32,45 +33,23 @@ type HTTP struct {
 	server http.Server
 }
 
-type httpHandlerWrapper struct {
-	serve func(http.ResponseWriter, *http.Request)
-}
-
 // NewHTTP creates a new HTTP wrapper
 func NewHTTP(config HTTPConfig) *HTTP {
+	router := httprouter.New()
 	return &HTTP{
 		config,
-		httprouter.New(),
-		http.Server{Addr: config.Listen},
+		router,
+		http.Server{Addr: config.Listen, Handler: router},
 	}
-}
-
-func newHttpHandlerWrapper(baseCtx context.Context, handler http.Handler) *httpHandlerWrapper {
-	return &httpHandlerWrapper{
-		func(rw http.ResponseWriter, r *http.Request) {
-			ctx, cancel := context.WithCancel(baseCtx)
-			defer cancel()
-			go func() {
-				select {
-				case <-r.Context().Done():
-					cancel()
-				case <-ctx.Done():
-				}
-			}()
-			handler.ServeHTTP(rw, r.WithContext(ctx))
-		},
-	}
-}
-
-func (h *httpHandlerWrapper) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
-	h.serve(rw, r)
 }
 
 // ListenAndServe runs a http(s) server on a provided port.
 func (h *HTTP) ListenAndServe(ctx context.Context) error {
 	defer log.Info("HTTP server terminated")
 
-	h.server.Handler = newHttpHandlerWrapper(ctx, h.Router)
+	h.server.BaseContext = func(_ net.Listener) context.Context {
+		return ctx
+	}
 	go func() {
 		<-ctx.Done()
 		h.server.Close()
