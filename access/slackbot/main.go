@@ -136,42 +136,21 @@ type App struct {
 
 	conf Config
 
-	accessClient   access.Client
-	bot            *Bot
-	callbackServer *CallbackServer
+	accessClient access.Client
+	bot          *Bot
 
 	*utils.Process
-	shutdown func()
 }
 
 func NewApp(conf Config) (*App, error) {
 	return &App{conf: conf}, nil
 }
 
-func (a *App) finish() {
-	a.accessClient = nil
-	a.bot = nil
-	a.callbackServer = nil
-
-	a.shutdown = nil
-	a.Process = nil
-}
-
 // Run initializes and runs a watcher and a callback server
 func (a *App) Run(ctx context.Context) error {
-	a.Lock()
-	defer a.Unlock()
-
-	defer a.finish()
-
 	var err error
 
 	log.Infof("Starting Teleport Access Slackbot %s:%s", Version, Gitref)
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	a.bot = NewBot(&a.conf)
 
 	tlsConf, err := access.LoadTLSConfig(
 		a.conf.Teleport.ClientCrt,
@@ -184,6 +163,14 @@ func (a *App) Run(ctx context.Context) error {
 		return err
 	}
 
+	a.Lock()
+	defer a.Unlock()
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	a.bot = NewBot(&a.conf)
+
 	a.accessClient, err = access.NewClient(
 		ctx,
 		"slackbot",
@@ -195,56 +182,59 @@ func (a *App) Run(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	err = a.checkTeleportVersion(ctx)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
+	// Initialize the process.
 	a.Process = utils.NewProcess(ctx)
-	process := a.Process // Save variable to access when unlocked
 
-	// Create callback server prividing a.OnSlackCallback as a callback function
-	a.callbackServer = NewCallbackServer(&a.conf, a.OnSlackCallback)
-	var httpErr error
+	var versionErr, httpErr, watcherErr error
+
 	a.Spawn(func(ctx context.Context) {
-		defer a.shutdown()
-
-		httpErr = trace.Wrap(
-			a.callbackServer.Run(ctx),
+		versionErr = trace.Wrap(
+			a.checkTeleportVersion(ctx),
 		)
-	})
+		if versionErr != nil {
+			a.Terminate()
+			return
+		}
 
-	// Create separate context for Watcher in order to terminate it individually.
-	wctx, wcancel := context.WithCancel(ctx)
-	defer wcancel()
-	var watcherErr error
-	a.Spawn(func(ctx context.Context) {
-		defer a.shutdown()
+		a.Spawn(func(ctx context.Context) {
+			defer a.Terminate() // if callback server failed, shutdown everything
 
-		watcherErr = trace.Wrap(
-			// Start watching for request events
-			a.WatchRequests(wctx),
-		)
-	})
+			// Create callback server providing a.OnSlackCallback as a callback function.
+			callbackServer := NewCallbackServer(&a.conf, a.OnSlackCallback)
 
-	var once sync.Once
-	a.shutdown = func() {
-		once.Do(func() {
-			a.Spawn(func(ctx context.Context) {
-				if err := a.callbackServer.Shutdown(ctx); err != nil {
+			a.OnTerminate(func(ctx context.Context) {
+				if err := callbackServer.Shutdown(ctx); err != nil {
 					log.WithError(err).Error("HTTP server graceful shutdown failed")
 				}
 			})
-			wcancel()
+
+			httpErr = trace.Wrap(
+				callbackServer.Run(ctx),
+			)
 		})
-	}
+
+		a.Spawn(func(ctx context.Context) {
+			defer a.Terminate() // if watcher failed, shutdown everything
+
+			// Create separate context for Watcher in order to terminate it individually.
+			wctx, wcancel := context.WithCancel(ctx)
+
+			a.OnTerminate(func(_ context.Context) { wcancel() })
+
+			watcherErr = trace.Wrap(
+				// Start watching for request events
+				a.WatchRequests(wctx),
+			)
+		})
+	})
 
 	// Unlock the app, wait for jobs, and lock again
+	process := a.Process // Save variable to access when unlocked
 	a.Unlock()
-	process.Wait()
+	<-process.Done()
 	a.Lock()
 
-	return trace.NewAggregate(httpErr, watcherErr)
+	return trace.NewAggregate(versionErr, httpErr, watcherErr)
 }
 
 func (a *App) checkTeleportVersion(ctx context.Context) error {
@@ -464,25 +454,4 @@ func (a *App) setPluginData(ctx context.Context, reqID string, data pluginData) 
 		"channel_id": data.channelID,
 		"timestamp":  data.timestamp,
 	}, nil)
-}
-
-// Close signals the App to shutdown immediately
-func (a *App) Close() {
-	a.Lock()
-	process := a.Process
-	a.Unlock()
-
-	process.Close()
-}
-
-// Shutdown signals the App to shutdown gracefully and waits for shutdown.
-func (a *App) Shutdown(ctx context.Context) error {
-	a.Lock()
-	shutdown := a.shutdown
-	process := a.Process
-	a.Unlock()
-	if shutdown != nil {
-		shutdown()
-	}
-	return process.Shutdown(ctx)
 }
