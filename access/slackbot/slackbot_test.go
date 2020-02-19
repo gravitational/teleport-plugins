@@ -43,8 +43,6 @@ type SlackbotSuite struct {
 	slackServer *slacktest.Server
 	teleport    *integration.TeleInstance
 	tmpFiles    []*os.File
-
-	appDone chan struct{}
 }
 
 var _ = Suite(&SlackbotSuite{})
@@ -100,9 +98,10 @@ func (s *SlackbotSuite) SetUpTest(c *C) {
 }
 
 func (s *SlackbotSuite) TearDownTest(c *C) {
-	err := s.app.Shutdown(context.TODO())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond * 250)
+	defer cancel()
+	err := s.app.Shutdown(ctx)
 	c.Assert(err, IsNil)
-	<-s.appDone
 	s.slackServer.Stop()
 	for _, tmp := range s.tmpFiles {
 		err := os.Remove(tmp.Name())
@@ -164,11 +163,7 @@ func (s *SlackbotSuite) startApp(c *C) {
 	s.app, err = NewApp(conf)
 	c.Assert(err, IsNil)
 
-	s.appDone = make(chan struct{})
-
 	go func() {
-		defer close(s.appDone)
-
 		err = s.app.Run(context.TODO())
 		c.Assert(err, IsNil)
 	}()
@@ -232,7 +227,7 @@ func (s *SlackbotSuite) fetchSlackMessage(c *C) slack.Msg {
 	case data := <-s.slackServer.SeenFeed:
 		err := json.Unmarshal([]byte(data), &msg)
 		c.Assert(err, IsNil)
-	case <-time.After(time.Second * 2):
+	case <-time.After(time.Millisecond * 250):
 		c.Fatal("no messages were sent to a channel")
 	}
 	return msg
