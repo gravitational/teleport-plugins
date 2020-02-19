@@ -18,7 +18,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"os"
 	"strings"
@@ -173,29 +172,23 @@ func (a *App) Run(ctx context.Context) error {
 	defer cancel()
 
 	a.bot = NewBot(&a.conf)
-	clientCert, err := access.LoadX509Cert(a.conf.Teleport.ClientCrt, a.conf.Teleport.ClientKey)
-	if err != nil {
-		return trace.Wrap(err)
+
+	tlsConf, err := access.LoadTLSConfig(
+		a.conf.Teleport.ClientCrt,
+		a.conf.Teleport.ClientKey,
+		a.conf.Teleport.RootCAs,
+	)
+	if trace.Unwrap(err) == access.ErrInvalidCertificate {
+		log.WithError(err).Warning("Auth client TLS configuration error")
+	} else if err != nil {
+		return err
 	}
-	now := time.Now()
-	if now.After(clientCert.Leaf.NotAfter) {
-		log.Error("Auth client TLS certificate seems to be expired, you should re-new it.")
-	}
-	if now.Before(clientCert.Leaf.NotBefore) {
-		log.Error("Auth client TLS certificate seems to be invalid, check its notBefore date.")
-	}
-	caPool, err := access.LoadX509CertPool(a.conf.Teleport.RootCAs)
-	if err != nil {
-		return trace.Wrap(err)
-	}
+
 	a.accessClient, err = access.NewClient(
 		ctx,
 		"slackbot",
 		a.conf.Teleport.AuthServer,
-		&tls.Config{
-			Certificates: []tls.Certificate{clientCert},
-			RootCAs:      caPool,
-		},
+		tlsConf,
 	)
 	if err != nil {
 		cancel()
