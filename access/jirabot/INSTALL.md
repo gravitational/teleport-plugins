@@ -92,6 +92,11 @@ Go to Settings -> General -> System -> Webhooks and create a new Webhook for Jir
 For the webhook URL, use the URL that you'll run the plugin on. It needs to be a publicly accessible URL that we'll later setup.
 Jira requires the webhook listener to run over HTTPS.
 
+The Teleport Jira plugin webhook needs to be notified only about new issues being created, issues being updated, or deleted. You can leave all the other boxes empty.
+
+_Note: by default, Jira Webhook will send updates about any issues in any projects in your Jira installation to the webhook. 
+We suggest that you use JQL filters to limit which issues are being sent to the plugin._
+
 _Note: by default, the Plugin's web server will run with TLS, but you can disable it with `--insecure-no-tls` to test things out in a dev environment._
 
 In the webhook settings page, make sure that the webhook will only send Issue Updated updates. It's not critical if anything else gets sent, the plugin will just ignore everything else.
