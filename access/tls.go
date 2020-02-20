@@ -24,7 +24,7 @@ func LoadTLSConfig(certPath, keyPath, rootCAsPath string) (conf *tls.Config, err
 	}
 	now := time.Now()
 	if now.After(clientCert.Leaf.NotAfter) {
-		err = trace.Wrap(ErrInvalidCertificate, "certificate seems to be expired, you should re-new it.")
+		err = trace.Wrap(ErrInvalidCertificate, "certificate seems to be expired, you should renew it.")
 	}
 	if now.Before(clientCert.Leaf.NotBefore) {
 		err = trace.Wrap(ErrInvalidCertificate, "certificate seems to be invalid, check its notBefore date.")

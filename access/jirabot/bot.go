@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"time"
 
 	jira "gopkg.in/andygrunwald/go-jira.v1"
 
@@ -12,6 +14,9 @@ import (
 
 const (
 	RequestIdFieldName = "TeleportAccessRequestId"
+
+	jiraMaxConns    = 100
+	jiraHttpTimeout = 10 * time.Second
 )
 
 // Bot is a wrapper around jira.Client that works with access.Request
@@ -25,9 +30,15 @@ func NewBot(conf *Config) (*Bot, error) {
 	transport := jira.BasicAuthTransport{
 		Username: conf.JIRA.Username,
 		Password: conf.JIRA.APIToken,
+		Transport: &http.Transport{
+			MaxConnsPerHost:     jiraMaxConns,
+			MaxIdleConnsPerHost: jiraMaxConns,
+		},
 	}
+	httpClient := transport.Client()
+	httpClient.Timeout = jiraHttpTimeout
 
-	client, err := jira.NewClient(transport.Client(), conf.JIRA.URL)
+	client, err := jira.NewClient(httpClient, conf.JIRA.URL)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}

@@ -18,13 +18,10 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"os"
-	"os/signal"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
@@ -37,11 +34,6 @@ import (
 )
 
 const (
-	// ActionApprove uniquely identifies the approve button in events.
-	ActionApprove = "approve_request"
-	// ActionDeny uniquely identifies the deny button in events.
-	ActionDeny = "deny_request"
-
 	DefaultDir = "/var/lib/teleport/plugins/jirabot"
 )
 
@@ -126,42 +118,12 @@ func run(configPath string, insecure bool, debug bool) error {
 		return trace.Wrap(err)
 	}
 
-	serveSignals(app)
+	go utils.ServeSignals(app, 15*time.Second)
 
 	return trace.Wrap(
 		app.Run(context.Background()),
 	)
 }
-
-func serveSignals(app *App) {
-	sigC := make(chan os.Signal)
-	signal.Notify(sigC,
-		syscall.SIGQUIT, // graceful shutdown
-		syscall.SIGTERM, // fast shutdown
-		syscall.SIGINT,  // graceful-then-fast shutdown
-	)
-	var alreadyInterrupted bool
-	go func() {
-		for {
-			signal := <-sigC
-			switch signal {
-			case syscall.SIGQUIT:
-				app.Stop()
-			case syscall.SIGTERM, syscall.SIGKILL:
-				app.Close()
-			case syscall.SIGINT:
-				if alreadyInterrupted {
-					app.Close()
-				} else {
-					app.Stop()
-					alreadyInterrupted = true
-				}
-			}
-		}
-	}()
-}
-
-type killSwitch func()
 
 // App contains global application state.
 type App struct {
@@ -169,151 +131,107 @@ type App struct {
 
 	conf Config
 
-	accessClient  access.Client
-	bot           *Bot
-	webhookServer *WebhookServer
+	accessClient access.Client
+	bot          *Bot
 
-	stop   killSwitch
-	cancel context.CancelFunc
+	*utils.Process
 }
 
 func NewApp(conf Config) (*App, error) {
 	return &App{conf: conf}, nil
 }
 
-func (a *App) finish() {
-	a.accessClient = nil
-	a.bot = nil
-	a.webhookServer = nil
-
-	a.stop = nil
-	a.cancel = nil
-}
-
-// Close signals the App to shutdown immediately
-func (a *App) Close() {
-	a.Lock()
-	defer a.Unlock()
-
-	if a.cancel != nil {
-		log.Infof("Force shutdown...")
-		a.cancel()
-	}
-}
-
-// Stop signals the App to shutdown gracefully
-func (a *App) Stop() {
-	a.Lock()
-	defer a.Unlock()
-
-	if a.stop != nil {
-		a.stop()
-	}
-}
-
 // Run initializes and runs a watcher and a callback server
 func (a *App) Run(ctx context.Context) error {
-	a.Lock()
-	defer a.Unlock()
-
-	defer a.finish()
-
 	var err error
 
 	log.Infof("Starting Teleport Access JIRAbot %s:%s", Version, Gitref)
+
+	tlsConf, err := access.LoadTLSConfig(
+		a.conf.Teleport.ClientCrt,
+		a.conf.Teleport.ClientKey,
+		a.conf.Teleport.RootCAs,
+	)
+	if trace.Unwrap(err) == access.ErrInvalidCertificate {
+		log.WithError(err).Warning("Auth client TLS configuration error")
+	} else if err != nil {
+		return err
+	}
+
+	a.Lock()
+	defer a.Unlock()
+
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	a.bot, err = NewBot(&a.conf)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	clientCert, err := access.LoadX509Cert(a.conf.Teleport.ClientCrt, a.conf.Teleport.ClientKey)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-	now := time.Now()
-	if now.After(clientCert.Leaf.NotAfter) {
-		log.Error("Auth client TLS certificate seems to be expired, you should renew it.")
-	}
-	if now.Before(clientCert.Leaf.NotBefore) {
-		log.Error("Auth client TLS certificate seems to be invalid, check its notBefore date.")
-	}
-	caPool, err := access.LoadX509CertPool(a.conf.Teleport.RootCAs)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	a.cancel = cancel
-
 	a.accessClient, err = access.NewClient(
 		ctx,
 		"jirabot",
 		a.conf.Teleport.AuthServer,
-		&tls.Config{
-			Certificates: []tls.Certificate{clientCert},
-			RootCAs:      caPool,
-		},
+		tlsConf,
 	)
 	if err != nil {
-		cancel()
 		return trace.Wrap(err)
 	}
 
-	err = a.checkTeleportVersion(ctx)
-	if err != nil {
-		return trace.Wrap(err)
-	}
+	// Initialize the process.
+	a.Process = utils.NewProcess(ctx)
 
-	// Create callback server prividing a.OnJIRAWebhook as a callback function
-	a.webhookServer = NewWebhookServer(&a.conf, a.OnJIRAWebhook)
+	var versionErr, httpErr, watcherErr error
 
-	var once sync.Once
-	shutdown := func() {
-		once.Do(func() {
-			defer cancel()
+	a.Spawn(func(ctx context.Context) {
+		versionErr = trace.Wrap(
+			a.checkTeleportVersion(ctx),
+		)
+		if versionErr != nil {
+			a.Terminate()
+			return
+		}
 
-			log.Infof("Attempting graceful shutdown...")
+		a.Spawn(func(ctx context.Context) {
+			defer a.Terminate() // if webhook server failed, shutdown everything
 
-			if err := a.webhookServer.Shutdown(ctx); err != nil {
-				log.WithError(err).Error("HTTP server graceful shutdown failed")
-			}
+			// Create webhook server prividing a.OnJIRAWebhook as a callback function
+			webhookServer := NewWebhookServer(&a.conf, a.OnJIRAWebhook)
+
+			a.OnTerminate(func(ctx context.Context) {
+				if err := webhookServer.Shutdown(ctx); err != nil {
+					log.WithError(err).Error("HTTP server graceful shutdown failed")
+				}
+			})
+
+			httpErr = trace.Wrap(
+				webhookServer.Run(ctx),
+			)
 		})
-	}
-	a.stop = func() { go shutdown() }
 
-	var (
-		httpErr, watcherErr error
-		workers             sync.WaitGroup
-	)
+		a.Spawn(func(ctx context.Context) {
+			defer a.Terminate() // if watcher failed, shutdown everything
 
-	workers.Add(2)
+			// Create separate context for Watcher in order to terminate it individually.
+			wctx, wcancel := context.WithCancel(ctx)
 
-	go func() {
-		defer workers.Done()
-		defer shutdown()
+			a.OnTerminate(func(_ context.Context) { wcancel() })
 
-		httpErr = trace.Wrap(
-			a.webhookServer.Run(ctx),
-		)
-	}()
+			watcherErr = trace.Wrap(
+				// Start watching for request events
+				a.WatchRequests(wctx),
+			)
+		})
+	})
 
-	go func() {
-		defer workers.Done()
-		defer shutdown()
-
-		watcherErr = trace.Wrap(
-			// Start watching for request events
-			a.WatchRequests(ctx),
-		)
-	}()
-
-	// Unlock the app, wait for workers, and lock again
+	// Unlock the app, wait for jobs, and lock again
+	process := a.Process // Save variable to access when unlocked
 	a.Unlock()
-	workers.Wait()
+	<-process.Done()
 	a.Lock()
 
-	return trace.NewAggregate(httpErr, watcherErr)
+	return trace.NewAggregate(versionErr, httpErr, watcherErr)
 }
 
 func (a *App) checkTeleportVersion(ctx context.Context) error {
@@ -353,13 +271,17 @@ func (a *App) watchRequests(ctx context.Context) error {
 					continue
 				}
 
-				if err := a.onPendingRequest(ctx, req); err != nil {
-					return trace.Wrap(err)
-				}
+				a.Spawn(func(ctx context.Context) {
+					if err := a.onPendingRequest(ctx, req); err != nil {
+						log.WithError(err).WithField("request_id", req.ID).Errorf("Failed to process pending request")
+					}
+				})
 			case access.OpDelete:
-				if err := a.onDeletedRequest(ctx, req); err != nil {
-					return trace.Wrap(err)
-				}
+				a.Spawn(func(ctx context.Context) {
+					if err := a.onDeletedRequest(ctx, req); err != nil {
+						log.WithError(err).WithField("request_id", req.ID).Errorf("Failed to process deleted request")
+					}
+				})
 			default:
 				return trace.BadParameter("unexpected event operation %s", op)
 			}
