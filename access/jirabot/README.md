@@ -32,7 +32,7 @@ client-crt = "/var/lib/teleport/plugins/jirabot/auth.crt" # Teleport GRPC client
 root-cas = "/var/lib/teleport/plugins/jirabot/auth.cas"   # Teleport cluster CA certs
 
 [jira]
-url = "https://example.com/jira"    # JIRA URL. For JIRA Cloud, https://[my-jira].atlassian.net
+url = "https://[my-jira].atlassian.net"    # JIRA URL. For JIRA Cloud, https://[my-jira].atlassian.net
 username = "bot@example.com"        # JIRA username
 api-token = "token"                 # JIRA API Basic Auth token
 project = "MYPROJ"                  # JIRA Project key
@@ -63,6 +63,8 @@ for an example of how to configure an appropriate user & role.
 
 This block manages interacting with your Jira intallation. You'd need to paste your Jira dashboard URL, project key, and your access token.
 You can grab a JIRA Cloud API token [on this page](https://id.atlassian.com/manage/api-tokens).
+
+You'll need to setup a custom issue field on Jira. It's name must be `TeleportAccessRequestId`, and it should be on the issue type `Task` in the project you intend to use with Teleport.GET 
 
 ### `[http]`
 

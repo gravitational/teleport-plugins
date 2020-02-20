@@ -233,7 +233,7 @@ func (a *App) Run(ctx context.Context) error {
 	}
 	now := time.Now()
 	if now.After(clientCert.Leaf.NotAfter) {
-		log.Error("Auth client TLS certificate seems to be expired, you should re-new it.")
+		log.Error("Auth client TLS certificate seems to be expired, you should renew it.")
 	}
 	if now.Before(clientCert.Leaf.NotBefore) {
 		log.Error("Auth client TLS certificate seems to be invalid, check its notBefore date.")

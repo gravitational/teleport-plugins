@@ -70,27 +70,31 @@ Create a new board for tasks in the permission management project. The board can
 1. Approved
 2. Denied
 
-Teleport Jira Plugin will file a new task for each new permission request in the first available column on the left. When you drag the request task to Approved column on Jira, the request will be appvored. Ditto for Denied column on Jira.
+Teleport Jira Plugin will create a new issue for each new permission request in the first available column on the board. When you drag the request task to Approved column on Jira, the request will be appvored. Ditto for Denied column on Jira.
 
-TODO: needs testing.
+#### Setting up Request ID field on Jira
+Teleport Jira Plugin requires a custom issue field to be created. 
+Go to your Jira Project settings -> Issue Types -> Select type `Task` -> add a new Short Text field named `TeleportAccessRequestId`. 
+Teleport uses this field to reference it's internal request ID. If anyone changes this field on Jira, or tries to forge the permission request, Teleport will validate it and ignore it.
 
 #### Getting your Jira API token
 
-Navigate to %URL% and create a new app specific API token in your Jira installation. You'll need this token later to configure the plugin.
+If you're using Jira Cloud, navigate to [Account Settings -> Security -> API Tokens](https://id.atlassian.com/manage/api-tokens) and create a new app specific API token in your Jira installation.
+You'll need this token later to configure the plugin.
 
-TODO: Needs correct url and a screenshot.
+For Jira Server, the URL of the API tokens page will be different depending on your installation.
+
 
 #### Settings up Jira Webhooks
 
-Go to Settings -> General -> %CHECKTHIS% -> Webhooks and create a new Webhook for Jira to tell the Teleport Plugin about updates. 
+Go to Settings -> General -> System -> Webhooks and create a new Webhook for Jira to tell the Teleport Plugin about updates. 
 
 For the webhook URL, use the URL that you'll run the plugin on. It needs to be a publicly accessible URL that we'll later setup.
+Jira requires the webhook listener to run over HTTPS.
 
 _Note: by default, the Plugin's web server will run with TLS, but you can disable it with `--insecure-no-tls` to test things out in a dev environment._
 
 In the webhook settings page, make sure that the webhook will only send Issue Updated updates. It's not critical if anything else gets sent, the plugin will just ignore everything else.
-
-TODO: update this section. Needs screenshots. Needs to specify how to filter out only a single project for webhook updates.
 
 ## Installing
 

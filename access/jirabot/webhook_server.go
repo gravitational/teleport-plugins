@@ -43,7 +43,7 @@ func NewWebhookServer(conf *Config, onWebhook WebhookFunc) *WebhookServer {
 		utils.NewHTTP(conf.HTTP),
 		onWebhook,
 	}
-	srv.http.GET("/", srv.processWebhook)
+	srv.http.POST("/", srv.processWebhook)
 	return srv
 }
 
