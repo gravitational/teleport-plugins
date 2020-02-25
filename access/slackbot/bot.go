@@ -81,6 +81,14 @@ func (b *Bot) Expire(ctx context.Context, reqID string, reqData requestData, sla
 	return trace.Wrap(err)
 }
 
+func (b *Bot) GetUserEmail(ctx context.Context, id string) (string, error) {
+	user, err := b.client.GetUserInfoContext(ctx, id)
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+	return user.Profile.Email, nil
+}
+
 // Respond is used to send and updated message to Slack by "response_url" from interaction callback.
 func (b *Bot) Respond(ctx context.Context, reqID string, reqData requestData, status string, responseURL string) error {
 	var message slack.Message

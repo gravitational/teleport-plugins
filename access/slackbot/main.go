@@ -328,10 +328,7 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 	reqID := action.Value
 	actionID := action.ActionID
 
-	var (
-		reqState    access.State
-		slackStatus string
-	)
+	var slackStatus string
 
 	req, err := a.accessClient.GetRequest(ctx, reqID)
 	var reqData requestData
@@ -357,19 +354,30 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 			"slack_user":    cb.User.Name,
 			"slack_channel": cb.Channel.Name,
 			"request_id":    req.ID,
-			"user":          req.User,
-			"roles":         req.Roles,
+			"request_user":  req.User,
+			"request_roles": req.Roles,
 		}
+
+		userEmail, err := a.bot.GetUserEmail(ctx, cb.User.ID)
+		if err != nil {
+			log.WithFields(logFields).WithError(err).Warning("Cannot fetch slack user email")
+		}
+		logFields["slack_user_email"] = userEmail
+
+		var (
+			reqState   access.State
+			logMessage string
+		)
 
 		switch actionID {
 		case ActionApprove:
-			log.WithFields(logFields).Info("Slack user approved the request")
 			reqState = access.StateApproved
 			slackStatus = "APPROVED"
+			logMessage = "Slack user approved the request"
 		case ActionDeny:
-			log.WithFields(logFields).Info("Slack user denied the request")
 			reqState = access.StateDenied
 			slackStatus = "DENIED"
+			logMessage = "Slack user denied the request"
 		default:
 			return trace.BadParameter("Unknown ActionID: %s", actionID)
 		}
@@ -377,6 +385,7 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
 			return trace.Wrap(err)
 		}
+		log.WithFields(logFields).Info(logMessage)
 
 		// Simply fill reqData from the request itself.
 		reqData = requestData{user: req.User, roles: req.Roles}
