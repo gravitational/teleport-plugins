@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 	"time"
 
 	jira "gopkg.in/andygrunwald/go-jira.v1"
@@ -24,6 +25,51 @@ type Bot struct {
 	client      *jira.Client
 	project     string
 	clusterName string
+}
+
+type Issue struct {
+	*jira.Issue
+	requestIdField *jira.Field
+}
+
+type IssueUpdate struct {
+	Status string
+	Author jira.User
+}
+
+func (issue *Issue) GetRequestID() (string, error) {
+	reqID, ok := issue.Fields.Unknowns[issue.requestIdField.Key].(string)
+	if !ok {
+		return "", trace.Errorf("got non-string '%s' field", RequestIdFieldName)
+	}
+	return reqID, nil
+}
+
+func (issue *Issue) GetLastUpdateBy(status string) (IssueUpdate, error) {
+	changelog := issue.Changelog
+	if changelog == nil {
+		return IssueUpdate{}, trace.Errorf("changelog is missing in API response")
+	}
+
+	var update *IssueUpdate
+	for _, entry := range changelog.Histories {
+		for _, item := range entry.Items {
+			if item.FieldType == "jira" && item.Field == "status" && strings.ToLower(item.ToString) == status {
+				update = &IssueUpdate{
+					Status: status,
+					Author: entry.Author,
+				}
+				break
+			}
+		}
+		if update != nil {
+			break
+		}
+	}
+	if update == nil {
+		return IssueUpdate{}, trace.Errorf("cannot find a %q status update in changelog", status)
+	}
+	return *update, nil
 }
 
 func NewBot(conf *Config) (*Bot, error) {
@@ -76,25 +122,22 @@ func (c *Bot) CreateIssue(reqID string, reqData requestData) (data jiraData, err
 	return
 }
 
-func (c *Bot) GetIssue(issueID string) (issue *jira.Issue, reqID string, err error) {
-	requestIdField, err := c.GetRequestIdField()
-	if err != nil {
-		err = trace.Wrap(err)
-		return nil, "", err
-	}
-
-	issue, res, err := c.client.Issue.Get(issueID, nil)
+func (c *Bot) GetIssue(issueID string) (*Issue, error) {
+	jiraIssue, res, err := c.client.Issue.Get(issueID, &jira.GetQueryOptions{
+		Expand: "changelog",
+	})
 	if err != nil {
 		body, err := parseErrorResponse(res, err)
 		log.Error(body)
-		return nil, "", err
+		return nil, err
+	}
+	requestIdField, err := c.GetRequestIdField()
+	if err != nil {
+		err = trace.Wrap(err)
+		return nil, err
 	}
 
-	reqID, ok := issue.Fields.Unknowns[requestIdField.Key].(string)
-	if !ok {
-		return nil, "", trace.Errorf("Got non-string '%s' field", RequestIdFieldName)
-	}
-	return
+	return &Issue{jiraIssue, requestIdField}, nil
 }
 
 // ExpireIssue sets "Expired" status to an issue

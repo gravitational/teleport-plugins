@@ -326,9 +326,12 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 		return trace.Errorf("got webhook without issue info")
 	}
 
-	issueId := webhook.Issue.ID
+	issue, err := a.bot.GetIssue(webhook.Issue.ID)
+	if err != nil {
+		return trace.Wrap(err)
+	}
 
-	issue, reqID, err := a.bot.GetIssue(issueId)
+	reqID, err := issue.GetRequestID()
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -337,31 +340,43 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 
 	if err != nil {
 		if trace.IsNotFound(err) {
-			// TODO: what to do with expired issues? nothing?...
-			return nil
+			return trace.Wrap(err, "can't process expired request")
 		} else {
 			return trace.Wrap(err)
 		}
 	} else {
 		if req.State != access.StatePending {
-			return trace.Errorf("Can't process not pending request: %+v", req)
+			return trace.Errorf("can't process not pending request: %+v", req)
 		}
 
 		logFields := log.Fields{
-			"issue_id":   issueId,
-			"request_id": req.ID,
+			"jira_issue_id":  issue.ID,
+			"jira_issue_key": issue.Key,
+			"request_id":     req.ID,
+			"request_user":   req.User,
+			"request_roles":  req.Roles,
 		}
 
-		var reqState access.State
+		var (
+			reqState   access.State
+			logMessage string
+		)
 		statusName := strings.ToLower(issue.Fields.Status.Name)
+
+		issueUpdate, err := issue.GetLastUpdateBy(statusName)
+		if err != nil {
+			log.WithFields(logFields).WithError(err).Error("Cannot determine who updated the issue status")
+		}
+		logFields["jira_user_email"] = issueUpdate.Author.EmailAddress
+		logFields["jira_user_name"] = issueUpdate.Author.DisplayName
 
 		switch statusName {
 		case "approved":
-			log.WithFields(logFields).Info("JIRA user approved the request")
 			reqState = access.StateApproved
+			logMessage = "JIRA user approved the request"
 		case "denied":
-			log.WithFields(logFields).Info("JIRA user denied the request")
 			reqState = access.StateDenied
+			logMessage = "JIRA user denied the request"
 		default:
 			return trace.BadParameter("Unknown JIRA status: %s", statusName)
 		}
@@ -369,6 +384,7 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
 			return trace.Wrap(err)
 		}
+		log.WithFields(logFields).Info(logMessage)
 	}
 
 	return nil
