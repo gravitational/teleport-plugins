@@ -329,12 +329,12 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 
 	issue, err := a.bot.GetIssue(webhook.Issue.ID)
 	if err != nil {
-		return trace.Wrap(err)
+		return trace.Wrap(err, "can't load issue object with API")
 	}
 
 	reqID, err := issue.GetRequestID()
 	if err != nil {
-		return trace.Wrap(err)
+		return trace.Wrap(err, "can't get request_id from issue object")
 	}
 
 	req, err := a.accessClient.GetRequest(ctx, reqID)
@@ -348,6 +348,18 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 	} else {
 		if req.State != access.StatePending {
 			return trace.Errorf("can't process not pending request: %+v", req)
+		}
+
+		pluginData, err := a.getPluginData(ctx, reqID)
+		if err != nil {
+			return trace.Wrap(err, "can't load plugin data of the request")
+		}
+		if pluginData.jiraData.ID != issue.ID {
+			log.WithFields(logFields{
+				"plugin_data_issue_id": pluginData.jiraData.ID,
+				"issue_id":             issue.ID,
+			}).Debug("plugin_data.issue_id does not match issue.id")
+			return trace.Errorf("issue_id from request's plugin_data does not match")
 		}
 
 		log = log.WithFields(logFields{
@@ -434,11 +446,14 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 }
 
 func (a *App) getPluginData(ctx context.Context, reqID string) (data pluginData, err error) {
-	_, err = a.accessClient.GetPluginData(ctx, reqID)
+	dataMap, err := a.accessClient.GetPluginData(ctx, reqID)
 	if err != nil {
 		return data, trace.Wrap(err)
 	}
-	// TODO: set data fields
+	data.user = dataMap["user"]
+	data.roles = strings.Split(dataMap["roles"], ",")
+	data.ID = dataMap["issue_id"]
+	data.Key = dataMap["issue_key"]
 	return
 }
 
