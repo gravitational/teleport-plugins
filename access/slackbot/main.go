@@ -57,6 +57,8 @@ type pluginData struct {
 	slackData
 }
 
+type logFields = log.Fields
+
 // eprintln prints an optionally formatted string to stderr.
 func eprintln(msg string, a ...interface{}) {
 	fmt.Fprintf(os.Stderr, msg, a...)
@@ -319,8 +321,10 @@ func (a *App) WatchRequests(ctx context.Context) error {
 
 // OnSlackCallback processes Slack actions and updates original Slack message with a new status
 func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
+	log := log.WithField("slack_http_id", cb.RequestId)
+
 	if len(cb.ActionCallback.BlockActions) != 1 {
-		log.WithField("actions", cb.ActionCallback.BlockActions).Warn("Received more than one Slack action")
+		log.WithField("slack_block_actions", cb.ActionCallback.BlockActions).Warn("Received more than one Slack action")
 		return trace.Errorf("expected exactly one block action")
 	}
 
@@ -350,19 +354,22 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 			return trace.Errorf("Can't process not pending request: %+v", req)
 		}
 
-		logFields := log.Fields{
+		logger := log.WithFields(logFields{
 			"slack_user":    cb.User.Name,
 			"slack_channel": cb.Channel.Name,
-			"request_id":    req.ID,
-			"request_user":  req.User,
-			"request_roles": req.Roles,
-		}
+		})
 
 		userEmail, err := a.bot.GetUserEmail(ctx, cb.User.ID)
 		if err != nil {
-			log.WithFields(logFields).WithError(err).Warning("Cannot fetch slack user email")
+			logger.WithError(err).Warning("Cannot fetch slack user email")
 		}
-		logFields["slack_user_email"] = userEmail
+
+		logger = logger.WithFields(logFields{
+			"slack_user_email": userEmail,
+			"request_id":       req.ID,
+			"request_user":     req.User,
+			"request_roles":    req.Roles,
+		})
 
 		var (
 			reqState   access.State
@@ -385,7 +392,7 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
 			return trace.Wrap(err)
 		}
-		log.WithFields(logFields).Info(logMessage)
+		logger.Info(logMessage)
 
 		// Simply fill reqData from the request itself.
 		reqData = requestData{user: req.User, roles: req.Roles}
@@ -413,7 +420,7 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	log.WithFields(log.Fields{
+	log.WithFields(logFields{
 		"slack_channel":   slackData.channelID,
 		"slack_timestamp": slackData.timestamp,
 	}).Debug("Successfully posted to Slack")

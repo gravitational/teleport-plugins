@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/utils"
@@ -14,7 +16,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type Callback = slack.InteractionCallback
+type Callback struct {
+	RequestId string
+	slack.InteractionCallback
+}
 type CallbackFunc func(ctx context.Context, callback Callback) error
 
 // CallbackServer is a wrapper around http.Server that processes Slack interaction events.
@@ -23,13 +28,14 @@ type CallbackServer struct {
 	http       *utils.HTTP
 	secret     string
 	onCallback CallbackFunc
+	counter    uint64
 }
 
 func NewCallbackServer(conf *Config, onCallback CallbackFunc) *CallbackServer {
 	srv := &CallbackServer{
-		utils.NewHTTP(conf.HTTP),
-		conf.Slack.Secret,
-		onCallback,
+		http:       utils.NewHTTP(conf.HTTP),
+		secret:     conf.Slack.Secret,
+		onCallback: onCallback,
 	}
 	srv.http.POST("/", srv.processCallback)
 	return srv
@@ -51,10 +57,13 @@ func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request
 	ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*2500) // Slack requires to respond within 3000 milliseconds
 	defer cancel()
 
+	requestId := fmt.Sprintf("%s-%v", r.Header.Get("x-slack-request-timestamp"), atomic.AddUint64(&s.counter, 1))
+	log := log.WithField("slack_http_id", requestId)
+
 	sv, err := slack.NewSecretsVerifier(r.Header, s.secret)
 	if err != nil {
 		log.WithError(err).Error("Failed to initialize secrets verifier")
-		http.Error(rw, "verification failed", 500)
+		http.Error(rw, "", 500)
 		return
 	}
 	// tee body into verifier as it is read.
@@ -65,18 +74,18 @@ func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request
 	// verification can now proceed.
 	if err := sv.Ensure(); err != nil {
 		log.WithError(err).Error("Secret verification failed")
-		http.Error(rw, "verification failed", 500)
+		http.Error(rw, "", 500)
 		return
 	}
 
 	var cb slack.InteractionCallback
 	if err := json.Unmarshal(payload, &cb); err != nil {
 		log.WithError(err).Error("Failed to parse json response")
-		http.Error(rw, "failed to parse response", 500)
+		http.Error(rw, "", 500)
 		return
 	}
 
-	if err := s.onCallback(ctx, cb); err != nil {
+	if err := s.onCallback(ctx, Callback{requestId, cb}); err != nil {
 		log.WithError(err).Error("Failed to process callback")
 		var code int
 		switch {
@@ -85,7 +94,7 @@ func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request
 		default:
 			code = 500
 		}
-		http.Error(rw, "failed to process callback", code)
+		http.Error(rw, "", code)
 	} else {
 		rw.WriteHeader(http.StatusOK)
 	}
