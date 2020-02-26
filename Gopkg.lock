@@ -209,6 +209,14 @@
   version = "v1.1.0"
 
 [[projects]]
+  digest = "1:7a6852b35eb5bbc184561443762d225116ae630c26a7c4d90546619f1e7d2ad2"
+  name = "github.com/dgrijalva/jwt-go"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e"
+  version = "v3.2.0"
+
+[[projects]]
   digest = "1:5c709df1e94c6dbee6fdd9699b11e3cdfa06870b1e828e9311e4e879b2ae6a4a"
   name = "github.com/docker/docker"
   packages = [
@@ -239,6 +247,14 @@
   pruneopts = "NUT"
   revision = "2810ccc68e0ca445fa81ebfa03fbf70aca5c41ae"
   version = "v2.7.0"
+
+[[projects]]
+  digest = "1:aa3ed0a71c4e66e4ae6486bf97a3f4cab28edc78df2e50c5ad01dc7d91604b88"
+  name = "github.com/fatih/structs"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "4966fc68f5b7593aafa6cbbba2d65ec6e1416047"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:abfe129dc92b16fbf0cc9d6336096a2823151756f62072a700eb10754141b38e"
@@ -349,6 +365,14 @@
   packages = ["."]
   pruneopts = "NUT"
   revision = "e89373fe6b4a7413d7acd6da1725b83ef713e6e4"
+
+[[projects]]
+  digest = "1:a63cff6b5d8b95638bfe300385d93b2a6d9d687734b863da8e09dc834510a690"
+  name = "github.com/google/go-querystring"
+  packages = ["query"]
+  pruneopts = "NUT"
+  revision = "44c6ddd0a2342c386950e880b658017258da92fc"
+  version = "v1.0.0"
 
 [[projects]]
   branch = "master"
@@ -889,6 +913,17 @@
   version = "v1.0.1"
 
 [[projects]]
+  digest = "1:5e59b9b6d0c389f8b691d5caa2211dea04ac95c5285c95b3b8e1187042df3f26"
+  name = "github.com/trivago/tgo"
+  packages = [
+    "tcontainer",
+    "treflect",
+  ]
+  pruneopts = "NUT"
+  revision = "efdb64f40efe6e7cd3f50415710e7af6a7c316ad"
+  version = "v1.0.7"
+
+[[projects]]
   digest = "1:9a254b2ccae856ad6131dd6ab01651004445258f0bfc86369d27ce49dcb6ef31"
   name = "github.com/tstranex/u2f"
   packages = ["."]
@@ -1216,6 +1251,14 @@
   version = "v1.23.0"
 
 [[projects]]
+  digest = "1:016a6fc6e5c1f05582f03e57df2dd920ca846b1eed2a233743216c73f98ee95d"
+  name = "gopkg.in/andygrunwald/go-jira.v1"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "1b4556ca5af8177a656b688521514fd6a3319059"
+  version = "v1.12.0"
+
+[[projects]]
   digest = "1:67ae56e0579de0f16006ee42cc42daaaacefcfd36324ba00540f62fe42fc64df"
   name = "gopkg.in/check.v1"
   packages = ["."]
@@ -1410,6 +1453,7 @@
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/credentials",
     "google.golang.org/grpc/status",
+    "gopkg.in/andygrunwald/go-jira.v1",
     "gopkg.in/check.v1",
   ]
   solver-name = "gps-cdcl"
