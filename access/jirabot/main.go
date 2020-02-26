@@ -319,7 +319,7 @@ func (a *App) WatchRequests(ctx context.Context) error {
 func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 	log := log.WithField("jira_http_id", webhook.RequestId)
 
-	if webhook.WebhookEvent != "jira:issue_updated" || webhook.IssueEventTypeName != "issue_updated" {
+	if webhook.WebhookEvent != "jira:issue_updated" || webhook.IssueEventTypeName != "issue_generic" {
 		return nil
 	}
 
