@@ -62,21 +62,22 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 	ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*2500)
 	defer cancel()
 
-	if r.Method != "POST" {
-		http.Error(rw, "", 400)
-		return
-	}
-
 	var webhook Webhook
 
-	body, _ := ioutil.ReadAll(r.Body)
-	err := json.Unmarshal(body, &webhook)
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		http.Error(rw, "invalid webhook json", 500)
+		log.WithError(err).Error("Cannot read webhook payload")
+		http.Error(rw, "", 500)
+		return
+	}
+	err = json.Unmarshal(body, &webhook)
+	if err != nil {
+		log.WithError(err).Error("Invalid webhook payload")
+		http.Error(rw, "", 500)
 		return
 	}
 
-	if err := s.onWebhook(ctx, webhook); err != nil {
+	if err = s.onWebhook(ctx, webhook); err != nil {
 		log.WithError(err).Error("Failed to process webhook")
 		var code int
 		switch {
@@ -85,7 +86,7 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 		default:
 			code = 500
 		}
-		http.Error(rw, "failed to process webhook", code)
+		http.Error(rw, "", code)
 	} else {
 		rw.WriteHeader(http.StatusOK)
 	}
