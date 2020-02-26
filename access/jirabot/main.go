@@ -52,6 +52,8 @@ type pluginData struct {
 	jiraData
 }
 
+type logFields = log.Fields
+
 // eprintln prints an optionally formatted string to stderr.
 func eprintln(msg string, a ...interface{}) {
 	fmt.Fprintf(os.Stderr, msg, a...)
@@ -315,10 +317,9 @@ func (a *App) WatchRequests(ctx context.Context) error {
 
 // OnJIRAWebhook processes JIRA webhook and updates the status of an issue
 func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
-	if webhook.WebhookEvent != "jira:issue_updated" {
-		return nil
-	}
-	if webhook.IssueEventTypeName != "issue_updated" {
+	log := log.WithField("jira_http_id", webhook.RequestId)
+
+	if webhook.WebhookEvent != "jira:issue_updated" || webhook.IssueEventTypeName != "issue_updated" {
 		return nil
 	}
 
@@ -349,13 +350,10 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 			return trace.Errorf("can't process not pending request: %+v", req)
 		}
 
-		logFields := log.Fields{
+		log = log.WithFields(logFields{
 			"jira_issue_id":  issue.ID,
 			"jira_issue_key": issue.Key,
-			"request_id":     req.ID,
-			"request_user":   req.User,
-			"request_roles":  req.Roles,
-		}
+		})
 
 		var (
 			reqState   access.State
@@ -365,10 +363,16 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 
 		issueUpdate, err := issue.GetLastUpdateBy(statusName)
 		if err != nil {
-			log.WithFields(logFields).WithError(err).Error("Cannot determine who updated the issue status")
+			log.WithError(err).Error("Cannot determine who updated the issue status")
 		}
-		logFields["jira_user_email"] = issueUpdate.Author.EmailAddress
-		logFields["jira_user_name"] = issueUpdate.Author.DisplayName
+
+		log = log.WithFields(logFields{
+			"jira_user_email": issueUpdate.Author.EmailAddress,
+			"jira_user_name":  issueUpdate.Author.DisplayName,
+			"request_id":      req.ID,
+			"request_user":    req.User,
+			"request_roles":   req.Roles,
+		})
 
 		switch statusName {
 		case "approved":
@@ -384,7 +388,7 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
 			return trace.Wrap(err)
 		}
-		log.WithFields(logFields).Info(logMessage)
+		log.Info(logMessage)
 	}
 
 	return nil
@@ -398,7 +402,7 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	log.WithFields(log.Fields{
+	log.WithFields(logFields{
 		"issue_id":  jiraData.ID,
 		"issue_key": jiraData.Key,
 	}).Debug("JIRA Issue created")

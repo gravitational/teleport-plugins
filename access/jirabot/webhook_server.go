@@ -3,8 +3,10 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/utils"
@@ -13,6 +15,8 @@ import (
 )
 
 type Webhook struct {
+	RequestId string
+
 	Timestamp          int    `json:"timestamp"`
 	WebhookEvent       string `json:"webhookEvent"`
 	IssueEventTypeName string `json:"issue_event_type_name"`
@@ -36,12 +40,13 @@ type WebhookFunc func(ctx context.Context, webhook Webhook) error
 type WebhookServer struct {
 	http      *utils.HTTP
 	onWebhook WebhookFunc
+	counter   uint64
 }
 
 func NewWebhookServer(conf *Config, onWebhook WebhookFunc) *WebhookServer {
 	srv := &WebhookServer{
-		utils.NewHTTP(conf.HTTP),
-		onWebhook,
+		http:      utils.NewHTTP(conf.HTTP),
+		onWebhook: onWebhook,
 	}
 	srv.http.POST("/", srv.processWebhook)
 	return srv
@@ -62,7 +67,10 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 	ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*2500)
 	defer cancel()
 
-	var webhook Webhook
+	requestId := fmt.Sprintf("%v-%v", time.Now().Unix(), atomic.AddUint64(&s.counter, 1))
+	log := log.WithField("jira_http_id", requestId)
+
+	webhook := Webhook{RequestId: requestId}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
