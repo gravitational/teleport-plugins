@@ -14,6 +14,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type WebhookIssue struct {
+	ID   string `json:"id"`
+	Self string `json:"self"`
+	Key  string `json:"key"`
+}
+
 type Webhook struct {
 	RequestId string
 
@@ -27,11 +33,7 @@ type Webhook struct {
 		DisplayName string `json:"displayName"`
 		Active      bool   `json:"active"`
 	} `json:"user"`
-	Issue *struct {
-		ID   string `json:"id"`
-		Self string `json:"self"`
-		Key  string `json:"key"`
-	}
+	Issue *WebhookIssue `json:"issue"`
 }
 type WebhookFunc func(ctx context.Context, webhook Webhook) error
 

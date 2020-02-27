@@ -332,6 +332,12 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 		return trace.Wrap(err, "can't load issue object with API")
 	}
 
+	statusName := strings.ToLower(issue.Fields.Status.Name)
+	if statusName == "pending" {
+		log.Info("Issue is pending, ignoring it")
+		return nil
+	}
+
 	reqID, err := issue.GetRequestID()
 	if err != nil {
 		return trace.Wrap(err, "can't get request_id from issue object")
@@ -371,7 +377,6 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 			reqState   access.State
 			logMessage string
 		)
-		statusName := strings.ToLower(issue.Fields.Status.Name)
 
 		issueUpdate, err := issue.GetLastUpdateBy(statusName)
 		if err != nil {

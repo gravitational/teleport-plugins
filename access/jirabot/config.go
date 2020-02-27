@@ -19,10 +19,10 @@ type Config struct {
 		RootCAs    string `toml:"root-cas"`
 	} `toml:"teleport"`
 	JIRA struct {
-		URL   string `toml:"url"`
-		Username  string `toml:"username"`
+		URL      string `toml:"url"`
+		Username string `toml:"username"`
 		APIToken string `toml:"api-token"`
-		Project string `toml:"project"`
+		Project  string `toml:"project"`
 	} `toml:"jira"`
 	HTTP utils.HTTPConfig `toml:"http"`
 	Log  utils.LogConfig  `toml:"log"`
