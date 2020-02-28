@@ -347,7 +347,8 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 
 	if err != nil {
 		if trace.IsNotFound(err) {
-			return trace.Wrap(err, "can't process expired request")
+			log.WithError(err).WithField("request_id", reqID).Warning("Can't process expired request")
+			return nil
 		} else {
 			return trace.Wrap(err)
 		}

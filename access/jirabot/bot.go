@@ -72,6 +72,15 @@ func (issue *Issue) GetLastUpdateBy(status string) (IssueUpdate, error) {
 	return *update, nil
 }
 
+func (issue *Issue) GetTransition(status string) (jira.Transition, error) {
+	for _, transition := range issue.Transitions {
+		if strings.ToLower(transition.To.Name) == status {
+			return transition, nil
+		}
+	}
+	return jira.Transition{}, trace.Errorf("cannot find a %q status among possible transitions", status)
+}
+
 func NewBot(conf *Config) (*Bot, error) {
 	transport := jira.BasicAuthTransport{
 		Username: conf.JIRA.Username,
@@ -124,7 +133,7 @@ func (c *Bot) CreateIssue(reqID string, reqData requestData) (data jiraData, err
 
 func (c *Bot) GetIssue(issueID string) (*Issue, error) {
 	jiraIssue, res, err := c.client.Issue.Get(issueID, &jira.GetQueryOptions{
-		Expand: "changelog",
+		Expand: "changelog,transitions",
 	})
 	if err != nil {
 		body, err := parseErrorResponse(res, err)
@@ -142,7 +151,23 @@ func (c *Bot) GetIssue(issueID string) (*Issue, error) {
 
 // ExpireIssue sets "Expired" status to an issue
 func (c *Bot) ExpireIssue(reqID string, reqData requestData, jiraData jiraData) error {
-	// TODO: implement issue transition
+	issue, err := c.GetIssue(jiraData.ID)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	transition, err := issue.GetTransition("expired")
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	res, err := c.client.Issue.DoTransition(issue.ID, transition.ID)
+	if err != nil {
+		body, err := parseErrorResponse(res, err)
+		log.Error(body)
+		return trace.Wrap(err)
+	}
+
 	return nil
 }
 
@@ -167,6 +192,9 @@ func (c *Bot) GetRequestIdField() (field *jira.Field, err error) {
 }
 
 func parseErrorResponse(response *jira.Response, origErr error) (string, error) {
+	if response == nil {
+		return "", origErr
+	}
 	bodyBytes, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return "", trace.NewAggregate(origErr, err)

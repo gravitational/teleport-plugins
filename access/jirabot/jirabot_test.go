@@ -41,6 +41,7 @@ type JirabotSuite struct {
 	fakeJiraSrv *httptest.Server
 	issues      sync.Map
 	newIssues   chan *jira.Issue
+	transitions chan *jira.Issue
 	teleport    *integration.TeleInstance
 	tmpFiles    []*os.File
 }
@@ -103,6 +104,8 @@ func (s *JirabotSuite) TearDownTest(c *C) {
 	err := s.app.Shutdown(ctx)
 	c.Assert(err, IsNil)
 	s.fakeJiraSrv.Close()
+	close(s.newIssues)
+	close(s.transitions)
 	for _, tmp := range s.tmpFiles {
 		err := os.Remove(tmp.Name())
 		c.Assert(err, IsNil)
@@ -118,10 +121,13 @@ func (s *JirabotSuite) newTmpFile(c *C, pattern string) (file *os.File) {
 }
 
 func (s *JirabotSuite) startFakeJira(c *C) {
-	s.fakeJira = httprouter.New()
 	s.newIssues = make(chan *jira.Issue, 1)
+	s.transitions = make(chan *jira.Issue, 1)
 
+	s.fakeJira = httprouter.New()
 	s.fakeJira.GET("/rest/api/2/field", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		var err error
+
 		field := jira.Field{
 			Custom: true,
 			Name:   RequestIdFieldName,
@@ -130,11 +136,14 @@ func (s *JirabotSuite) startFakeJira(c *C) {
 		respBody, err := json.Marshal([]jira.Field{field})
 		c.Assert(err, IsNil)
 
+		rw.Header().Add("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusOK)
 		_, err = rw.Write(respBody)
 		c.Assert(err, IsNil)
 	})
 	s.fakeJira.POST("/rest/api/2/issue", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		var err error
+
 		body, err := ioutil.ReadAll(r.Body)
 		c.Assert(err, IsNil)
 
@@ -147,17 +156,31 @@ func (s *JirabotSuite) startFakeJira(c *C) {
 			issue.Fields = &jira.IssueFields{}
 		}
 		issue.Fields.Status = &jira.Status{Name: "Pending"}
+		issue.Transitions = []jira.Transition{
+			jira.Transition{
+				ID: "100001", To: jira.Status{Name: "Approved"},
+			},
+			jira.Transition{
+				ID: "100002", To: jira.Status{Name: "Denied"},
+			},
+			jira.Transition{
+				ID: "100003", To: jira.Status{Name: "Expired"},
+			},
+		}
 		s.putIssue(*issue)
 		s.newIssues <- issue
 
 		respBody, err := json.Marshal(issue)
 		c.Assert(err, IsNil)
 
+		rw.Header().Add("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusCreated)
 		_, err = rw.Write(respBody)
 		c.Assert(err, IsNil)
 	})
 	s.fakeJira.GET("/rest/api/2/issue/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		var err error
+
 		issue := s.getIssue(ps.ByName("id"))
 		if issue == nil {
 			rw.WriteHeader(http.StatusNotFound)
@@ -167,9 +190,41 @@ func (s *JirabotSuite) startFakeJira(c *C) {
 		respBody, err := json.Marshal(issue)
 		c.Assert(err, IsNil)
 
+		rw.Header().Add("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusOK)
 		_, err = rw.Write(respBody)
 		c.Assert(err, IsNil)
+	})
+	s.fakeJira.POST("/rest/api/2/issue/:id/transitions", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		var err error
+
+		issue := s.getIssue(ps.ByName("id"))
+		if issue == nil {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		body, err := ioutil.ReadAll(r.Body)
+		c.Assert(err, IsNil)
+
+		var payload jira.CreateTransitionPayload
+		err = json.Unmarshal(body, &payload)
+		c.Assert(err, IsNil)
+
+		switch payload.Transition.ID {
+		case "100001":
+			s.transitionIssue(c, issue, "Approved")
+		case "100002":
+			s.transitionIssue(c, issue, "Denied")
+		case "100003":
+			s.transitionIssue(c, issue, "Expired")
+		default:
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		rw.Header().Add("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusNoContent)
 	})
 
 	s.fakeJiraSrv = httptest.NewServer(s.fakeJira)
@@ -263,10 +318,7 @@ func (s *JirabotSuite) getIssue(idOrKey string) *jira.Issue {
 	}
 }
 
-func (s *JirabotSuite) transitionIssue(c *C, id string, status string) {
-	issue := s.getIssue(id)
-	c.Assert(issue, NotNil)
-
+func (s *JirabotSuite) transitionIssue(c *C, issue *jira.Issue, status string) {
 	if issue.Fields == nil {
 		issue.Fields = &jira.IssueFields{}
 	} else {
@@ -296,6 +348,7 @@ func (s *JirabotSuite) transitionIssue(c *C, id string, status string) {
 	}
 	issue.Changelog.Histories = append([]jira.ChangelogHistory{history}, issue.Changelog.Histories...)
 	s.putIssue(*issue)
+	s.transitions <- issue
 
 	response, err := s.postWebhook(c, &Webhook{
 		WebhookEvent:       "jira:issue_updated",
@@ -323,6 +376,7 @@ func (s *JirabotSuite) TestSlackMessagePosting(c *C) {
 	var issue *jira.Issue
 	select {
 	case issue = <-s.newIssues:
+		c.Assert(issue, NotNil)
 	case <-time.After(time.Millisecond * 250):
 		c.Fatal("issue wasn't created")
 	}
@@ -336,11 +390,12 @@ func (s *JirabotSuite) TestApproval(c *C) {
 	var issue *jira.Issue
 	select {
 	case issue = <-s.newIssues:
+		c.Assert(issue, NotNil)
 	case <-time.After(time.Millisecond * 250):
 		c.Fatal("issue wasn't created")
 	}
 
-	s.transitionIssue(c, issue.ID, "Approved")
+	s.transitionIssue(c, issue, "Approved")
 
 	auth := s.teleport.Process.GetAuthServer()
 	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: request.GetName()})
@@ -356,11 +411,12 @@ func (s *JirabotSuite) TestDenial(c *C) {
 	var issue *jira.Issue
 	select {
 	case issue = <-s.newIssues:
+		c.Assert(issue, NotNil)
 	case <-time.After(time.Millisecond * 250):
 		c.Fatal("issue wasn't created")
 	}
 
-	s.transitionIssue(c, issue.ID, "Denied")
+	s.transitionIssue(c, issue, "Denied")
 
 	auth := s.teleport.Process.GetAuthServer()
 	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: request.GetName()})
@@ -368,4 +424,17 @@ func (s *JirabotSuite) TestDenial(c *C) {
 	c.Assert(requests, HasLen, 1)
 	request = requests[0]
 	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
+}
+
+func (s *JirabotSuite) TestExpired(c *C) {
+	_ = s.createExpiredAccessRequest(c)
+
+	var issue *jira.Issue
+	select {
+	case issue = <-s.transitions:
+		c.Assert(issue, NotNil)
+	case <-time.After(time.Millisecond * 250):
+		c.Fatal("no issue transition detected")
+	}
+	c.Assert(issue.Fields.Status.Name, Equals, "Expired")
 }
