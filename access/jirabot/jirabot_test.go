@@ -125,33 +125,26 @@ func (s *JirabotSuite) startFakeJira(c *C) {
 	s.transitions = make(chan *jira.Issue, 1)
 
 	s.fakeJira = httprouter.New()
-	s.fakeJira.GET("/rest/api/2/field", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		var err error
-
-		field := jira.Field{
-			Custom: true,
-			Name:   RequestIdFieldName,
-			Key:    "custom_123",
-		}
-		respBody, err := json.Marshal([]jira.Field{field})
-		c.Assert(err, IsNil)
-
-		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
-		_, err = rw.Write(respBody)
-		c.Assert(err, IsNil)
-	})
 	s.fakeJira.POST("/rest/api/2/issue", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		var err error
 
 		body, err := ioutil.ReadAll(r.Body)
 		c.Assert(err, IsNil)
 
-		issue := &jira.Issue{}
-		err = json.Unmarshal(body, issue)
+		issueInput := jira.IssueInput{}
+		err = json.Unmarshal(body, &issueInput)
 		c.Assert(err, IsNil)
-		issue.ID = fmt.Sprintf("%v", time.Now().UnixNano())
-		issue.Key = "ISSUE-" + issue.ID
+
+		id := fmt.Sprintf("%v", time.Now().UnixNano())
+		issue := &jira.Issue{
+			ID:         id,
+			Key:        "ISSUE-" + id,
+			Fields:     issueInput.Fields,
+			Properties: make(map[string]interface{}),
+		}
+		for _, property := range issueInput.Properties {
+			issue.Properties[property.Key] = property.Value
+		}
 		if issue.Fields == nil {
 			issue.Fields = &jira.IssueFields{}
 		}
@@ -381,7 +374,7 @@ func (s *JirabotSuite) TestSlackMessagePosting(c *C) {
 		c.Fatal("issue wasn't created")
 	}
 
-	c.Assert(issue.Fields.Unknowns["custom_123"], Equals, request.GetName())
+	c.Assert(issue.Properties[RequestIdPropertyKey], Equals, request.GetName())
 }
 
 func (s *JirabotSuite) TestApproval(c *C) {

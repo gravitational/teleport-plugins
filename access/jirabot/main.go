@@ -329,7 +329,7 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 
 	issue, err := a.bot.GetIssue(webhook.Issue.ID)
 	if err != nil {
-		return trace.Wrap(err, "can't load issue object with API")
+		return trace.Wrap(err)
 	}
 
 	statusName := strings.ToLower(issue.Fields.Status.Name)
@@ -340,7 +340,7 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 
 	reqID, err := issue.GetRequestID()
 	if err != nil {
-		return trace.Wrap(err, "can't get request_id from issue object")
+		return trace.Wrap(err)
 	}
 
 	req, err := a.accessClient.GetRequest(ctx, reqID)
@@ -359,7 +359,7 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 
 		pluginData, err := a.getPluginData(ctx, reqID)
 		if err != nil {
-			return trace.Wrap(err, "can't load plugin data of the request")
+			return trace.Wrap(err)
 		}
 		if pluginData.jiraData.ID != issue.ID {
 			log.WithFields(logFields{

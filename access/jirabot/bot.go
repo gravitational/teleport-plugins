@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	RequestIdFieldName = "TeleportAccessRequestId"
+	RequestIdPropertyKey = "teleportAccessRequestId"
 
 	jiraMaxConns    = 100
 	jiraHttpTimeout = 10 * time.Second
@@ -27,10 +27,7 @@ type Bot struct {
 	clusterName string
 }
 
-type Issue struct {
-	*jira.Issue
-	requestIdField *jira.Field
-}
+type Issue jira.Issue
 
 type IssueUpdate struct {
 	Status string
@@ -38,9 +35,9 @@ type IssueUpdate struct {
 }
 
 func (issue *Issue) GetRequestID() (string, error) {
-	reqID, ok := issue.Fields.Unknowns[issue.requestIdField.Key].(string)
+	reqID, ok := issue.Properties[RequestIdPropertyKey].(string)
 	if !ok {
-		return "", trace.Errorf("got non-string '%s' field", RequestIdFieldName)
+		return "", trace.Errorf("got non-string '%s' field", RequestIdPropertyKey)
 	}
 	return reqID, nil
 }
@@ -105,19 +102,14 @@ func NewBot(conf *Config) (*Bot, error) {
 
 // CreateIssue creates an issue with "Pending" status
 func (c *Bot) CreateIssue(reqID string, reqData requestData) (data jiraData, err error) {
-	requestIdField, err := c.GetRequestIdField()
-	if err != nil {
-		return data, trace.Wrap(err)
-	}
-
 	issue, res, err := c.client.Issue.Create(&jira.Issue{
+		Properties: map[string]interface{} {
+			RequestIdPropertyKey: reqID,
+		},
 		Fields: &jira.IssueFields{
 			Type:    jira.IssueType{Name: "Task"},
 			Project: jira.Project{Key: c.project},
 			Summary: fmt.Sprintf("Incoming request %s", reqID),
-			Unknowns: map[string]interface{}{
-				requestIdField.Key: reqID,
-			},
 		},
 	})
 	if err != nil {
@@ -133,20 +125,18 @@ func (c *Bot) CreateIssue(reqID string, reqData requestData) (data jiraData, err
 
 func (c *Bot) GetIssue(issueID string) (*Issue, error) {
 	jiraIssue, res, err := c.client.Issue.Get(issueID, &jira.GetQueryOptions{
-		Expand: "changelog,transitions",
+		Expand:     "changelog,transitions",
+		Properties: RequestIdPropertyKey,
 	})
 	if err != nil {
-		body, err := parseErrorResponse(res, err)
+		err = trace.Wrap(err)
+		body, err := parseErrorResponse(res, trace.Wrap(err))
 		log.Error(body)
 		return nil, err
 	}
-	requestIdField, err := c.GetRequestIdField()
-	if err != nil {
-		err = trace.Wrap(err)
-		return nil, err
-	}
+	issue := Issue(*jiraIssue)
 
-	return &Issue{jiraIssue, requestIdField}, nil
+	return &issue, nil
 }
 
 // ExpireIssue sets "Expired" status to an issue
@@ -169,26 +159,6 @@ func (c *Bot) ExpireIssue(reqID string, reqData requestData, jiraData jiraData) 
 	}
 
 	return nil
-}
-
-func (c *Bot) GetRequestIdField() (field *jira.Field, err error) {
-	fields, res, err := c.client.Field.GetList()
-	if err != nil {
-		body, err := parseErrorResponse(res, err)
-		log.Error(body)
-		return nil, err
-	}
-
-	for _, f := range fields {
-		if f.Custom && f.Name == RequestIdFieldName {
-			field = &f
-			break
-		}
-	}
-	if field == nil {
-		err = trace.Errorf("Cannot find custom field '%s'", RequestIdFieldName)
-	}
-	return
 }
 
 func parseErrorResponse(response *jira.Response, origErr error) (string, error) {
