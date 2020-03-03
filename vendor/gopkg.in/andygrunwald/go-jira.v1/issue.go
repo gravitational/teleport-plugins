@@ -39,21 +39,14 @@ type UpdateQueryOptions struct {
 
 // Issue represents a JIRA issue.
 type Issue struct {
-	Expand         string                 `json:"expand,omitempty" structs:"expand,omitempty"`
-	ID             string                 `json:"id,omitempty" structs:"id,omitempty"`
-	Self           string                 `json:"self,omitempty" structs:"self,omitempty"`
-	Key            string                 `json:"key,omitempty" structs:"key,omitempty"`
-	Fields         *IssueFields           `json:"fields,omitempty" structs:"fields,omitempty"`
-	RenderedFields *IssueRenderedFields   `json:"renderedFields,omitempty" structs:"renderedFields,omitempty"`
-	Changelog      *Changelog             `json:"changelog,omitempty" structs:"changelog,omitempty"`
-	Properties     map[string]interface{} `json:"properties" structs:"properties"`
-	Transitions    []Transition           `json:"transitions,omitempty" structs:"transitions,omitempty"`
-}
-
-// IssueInput represents a JIRA issue input parameters for create/update operations.
-type IssueInput struct {
-	Fields     *IssueFields     `json:"fields,omitempty" structs:"fields,omitempty"`
-	Properties []EntityProperty `json:"properties,omitempty" structs:"properties,omitempty"`
+	Expand         string               `json:"expand,omitempty" structs:"expand,omitempty"`
+	ID             string               `json:"id,omitempty" structs:"id,omitempty"`
+	Self           string               `json:"self,omitempty" structs:"self,omitempty"`
+	Key            string               `json:"key,omitempty" structs:"key,omitempty"`
+	Fields         *IssueFields         `json:"fields,omitempty" structs:"fields,omitempty"`
+	RenderedFields *IssueRenderedFields `json:"renderedFields,omitempty" structs:"renderedFields,omitempty"`
+	Changelog      *Changelog           `json:"changelog,omitempty" structs:"changelog,omitempty"`
+	Transitions    []Transition         `json:"transitions,omitempty" structs:"transitions,omitempty"`
 }
 
 // ChangelogItems reflects one single changelog item of a history item
@@ -747,14 +740,8 @@ func WithQueryOptions(options interface{}) func(*http.Request) error {
 //
 // JIRA API docs: https://docs.atlassian.com/jira/REST/latest/#api/2/issue-createIssues
 func (s *IssueService) Create(issue *Issue) (*Issue, *Response, error) {
-	input := &IssueInput{
-		Fields: issue.Fields,
-	}
-	for key, value := range issue.Properties {
-		input.Properties = append(input.Properties, EntityProperty{Key: key, Value: value})
-	}
 	apiEndpoint := "rest/api/2/issue"
-	req, err := s.client.NewRequest("POST", apiEndpoint, input)
+	req, err := s.client.NewRequest("POST", apiEndpoint, issue)
 	if err != nil {
 		return nil, nil, err
 	}

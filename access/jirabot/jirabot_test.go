@@ -40,8 +40,8 @@ type JirabotSuite struct {
 	fakeJira    *httprouter.Router
 	fakeJiraSrv *httptest.Server
 	issues      sync.Map
-	newIssues   chan *jira.Issue
-	transitions chan *jira.Issue
+	newIssues   chan *Issue
+	transitions chan *Issue
 	teleport    *integration.TeleInstance
 	tmpFiles    []*os.File
 }
@@ -121,22 +121,58 @@ func (s *JirabotSuite) newTmpFile(c *C, pattern string) (file *os.File) {
 }
 
 func (s *JirabotSuite) startFakeJira(c *C) {
-	s.newIssues = make(chan *jira.Issue, 1)
-	s.transitions = make(chan *jira.Issue, 1)
+	s.newIssues = make(chan *Issue, 1)
+	s.transitions = make(chan *Issue, 1)
 
 	s.fakeJira = httprouter.New()
+	s.fakeJira.GET("/rest/api/2/myself", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		rw.Header().Add("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusOK)
+	})
+	s.fakeJira.GET("/rest/api/2/project/PROJ", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		project := &jira.Project{
+			Key:  "PROJ",
+			Name: "The Project",
+		}
+		respBody, err := json.Marshal(project)
+		c.Assert(err, IsNil)
+
+		rw.Header().Add("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusOK)
+		_, err = rw.Write(respBody)
+		c.Assert(err, IsNil)
+	})
+	s.fakeJira.GET("/rest/api/2/mypermissions", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		permissions := &Permissions{
+			Permissions: map[string]Permission{
+				"BROWSE_PROJECTS": Permission{
+					HavePermission: true,
+				},
+				"CREATE_ISSUES": Permission{
+					HavePermission: true,
+				},
+			},
+		}
+		respBody, err := json.Marshal(permissions)
+		c.Assert(err, IsNil)
+
+		rw.Header().Add("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusOK)
+		_, err = rw.Write(respBody)
+		c.Assert(err, IsNil)
+	})
 	s.fakeJira.POST("/rest/api/2/issue", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		var err error
 
 		body, err := ioutil.ReadAll(r.Body)
 		c.Assert(err, IsNil)
 
-		issueInput := jira.IssueInput{}
+		issueInput := IssueInput{}
 		err = json.Unmarshal(body, &issueInput)
 		c.Assert(err, IsNil)
 
 		id := fmt.Sprintf("%v", time.Now().UnixNano())
-		issue := &jira.Issue{
+		issue := &Issue{
 			ID:         id,
 			Key:        "ISSUE-" + id,
 			Fields:     issueInput.Fields,
@@ -297,21 +333,21 @@ func (s *JirabotSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
 	return req
 }
 
-func (s *JirabotSuite) putIssue(issue jira.Issue) {
+func (s *JirabotSuite) putIssue(issue Issue) {
 	s.issues.Store(issue.ID, issue)
 	s.issues.Store(issue.Key, issue)
 }
 
-func (s *JirabotSuite) getIssue(idOrKey string) *jira.Issue {
+func (s *JirabotSuite) getIssue(idOrKey string) *Issue {
 	if obj, ok := s.issues.Load(idOrKey); ok {
-		issue := obj.(jira.Issue)
+		issue := obj.(Issue)
 		return &issue
 	} else {
 		return nil
 	}
 }
 
-func (s *JirabotSuite) transitionIssue(c *C, issue *jira.Issue, status string) {
+func (s *JirabotSuite) transitionIssue(c *C, issue *Issue, status string) {
 	if issue.Fields == nil {
 		issue.Fields = &jira.IssueFields{}
 	} else {
@@ -366,7 +402,7 @@ func (s *JirabotSuite) postWebhook(c *C, wh *Webhook) (*http.Response, error) {
 func (s *JirabotSuite) TestSlackMessagePosting(c *C) {
 	request := s.createAccessRequest(c)
 
-	var issue *jira.Issue
+	var issue *Issue
 	select {
 	case issue = <-s.newIssues:
 		c.Assert(issue, NotNil)
@@ -380,7 +416,7 @@ func (s *JirabotSuite) TestSlackMessagePosting(c *C) {
 func (s *JirabotSuite) TestApproval(c *C) {
 	request := s.createAccessRequest(c)
 
-	var issue *jira.Issue
+	var issue *Issue
 	select {
 	case issue = <-s.newIssues:
 		c.Assert(issue, NotNil)
@@ -401,7 +437,7 @@ func (s *JirabotSuite) TestApproval(c *C) {
 func (s *JirabotSuite) TestDenial(c *C) {
 	request := s.createAccessRequest(c)
 
-	var issue *jira.Issue
+	var issue *Issue
 	select {
 	case issue = <-s.newIssues:
 		c.Assert(issue, NotNil)
@@ -422,7 +458,7 @@ func (s *JirabotSuite) TestDenial(c *C) {
 func (s *JirabotSuite) TestExpired(c *C) {
 	_ = s.createExpiredAccessRequest(c)
 
-	var issue *jira.Issue
+	var issue *Issue
 	select {
 	case issue = <-s.transitions:
 		c.Assert(issue, NotNil)

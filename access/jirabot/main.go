@@ -175,13 +175,19 @@ func (a *App) Run(ctx context.Context) error {
 	var versionErr, httpErr, watcherErr error
 
 	a.Spawn(func(ctx context.Context) {
-		versionErr = trace.Wrap(
-			a.checkTeleportVersion(ctx),
-		)
-		if versionErr != nil {
+		if versionErr = trace.Wrap(a.checkTeleportVersion(ctx)); versionErr != nil {
 			a.Terminate()
 			return
 		}
+
+		a.Spawn(func(ctx context.Context) {
+			if err := a.bot.HealthCheck(ctx); err != nil {
+				log.WithError(err).Error("JIRA API health check failed")
+				if trace.IsAccessDenied(err) {
+					a.Terminate()
+				}
+			}
+		})
 
 		a.Spawn(func(ctx context.Context) {
 			defer a.Terminate() // if webhook server failed, shutdown everything
@@ -315,7 +321,7 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 		return trace.Errorf("got webhook without issue info")
 	}
 
-	issue, err := a.bot.GetIssue(webhook.Issue.ID)
+	issue, err := a.bot.GetIssue(ctx, webhook.Issue.ID)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -367,7 +373,7 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 			logMessage string
 		)
 
-		issueUpdate, err := issue.GetLastUpdateBy(statusName)
+		issueUpdate, err := issue.GetLastUpdate(statusName)
 		if err != nil {
 			log.WithError(err).Error("Cannot determine who updated the issue status")
 		}
@@ -402,7 +408,7 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 
 func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 	reqData := requestData{user: req.User, roles: req.Roles}
-	jiraData, err := a.bot.CreateIssue(req.ID, reqData)
+	jiraData, err := a.bot.CreateIssue(ctx, req.ID, reqData)
 
 	if err != nil {
 		return trace.Wrap(err)
@@ -430,7 +436,7 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		}
 	}
 
-	if err := a.bot.ExpireIssue(reqID, pluginData.requestData, pluginData.jiraData); err != nil {
+	if err := a.bot.ExpireIssue(ctx, reqID, pluginData.requestData, pluginData.jiraData); err != nil {
 		return trace.Wrap(err)
 	}
 

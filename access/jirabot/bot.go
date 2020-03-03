@@ -1,8 +1,8 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -22,19 +22,19 @@ const (
 
 // Bot is a wrapper around jira.Client that works with access.Request
 type Bot struct {
-	client      *jira.Client
+	client      JiraClient
 	project     string
 	clusterName string
 }
 
-type Issue jira.Issue
+type BotIssue Issue
 
-type IssueUpdate struct {
+type BotIssueUpdate struct {
 	Status string
 	Author jira.User
 }
 
-func (issue *Issue) GetRequestID() (string, error) {
+func (issue *BotIssue) GetRequestID() (string, error) {
 	reqID, ok := issue.Properties[RequestIdPropertyKey].(string)
 	if !ok {
 		return "", trace.Errorf("got non-string '%s' field", RequestIdPropertyKey)
@@ -42,17 +42,17 @@ func (issue *Issue) GetRequestID() (string, error) {
 	return reqID, nil
 }
 
-func (issue *Issue) GetLastUpdateBy(status string) (IssueUpdate, error) {
+func (issue *BotIssue) GetLastUpdate(status string) (BotIssueUpdate, error) {
 	changelog := issue.Changelog
 	if changelog == nil {
-		return IssueUpdate{}, trace.Errorf("changelog is missing in API response")
+		return BotIssueUpdate{}, trace.Errorf("changelog is missing in API response")
 	}
 
-	var update *IssueUpdate
+	var update *BotIssueUpdate
 	for _, entry := range changelog.Histories {
 		for _, item := range entry.Items {
 			if item.FieldType == "jira" && item.Field == "status" && strings.ToLower(item.ToString) == status {
-				update = &IssueUpdate{
+				update = &BotIssueUpdate{
 					Status: status,
 					Author: entry.Author,
 				}
@@ -64,12 +64,12 @@ func (issue *Issue) GetLastUpdateBy(status string) (IssueUpdate, error) {
 		}
 	}
 	if update == nil {
-		return IssueUpdate{}, trace.Errorf("cannot find a %q status update in changelog", status)
+		return BotIssueUpdate{}, trace.Errorf("cannot find a %q status update in changelog", status)
 	}
 	return *update, nil
 }
 
-func (issue *Issue) GetTransition(status string) (jira.Transition, error) {
+func (issue *BotIssue) GetTransition(status string) (jira.Transition, error) {
 	for _, transition := range issue.Transitions {
 		if strings.ToLower(transition.To.Name) == status {
 			return transition, nil
@@ -95,27 +95,81 @@ func NewBot(conf *Config) (*Bot, error) {
 		return nil, trace.Wrap(err)
 	}
 	return &Bot{
-		client:  client,
+		client:  JiraClient{client},
 		project: conf.JIRA.Project,
 	}, nil
 }
 
+func (b *Bot) HealthCheck(ctx context.Context) error {
+	log.Info("Starting JIRA API health check...")
+	req, err := b.client.NewRequest(ctx, "GET", "rest/api/2/myself", nil)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	resp, err := b.client.Do(req, nil)
+	if resp != nil {
+		resp.Body.Close()
+	}
+	if err != nil {
+		if resp != nil {
+			if resp.StatusCode == 404 {
+				return trace.AccessDenied("got %s from API endpoint, perhaps JIRA URL is not configured well", resp.Status)
+			}
+			if resp.StatusCode == 403 || resp.StatusCode == 401 {
+				return trace.AccessDenied("got %s from API endpoint, perhaps JIRA credentials are not configured well", resp.Status)
+			}
+		}
+		return trace.Wrap(err)
+	}
+	if resp != nil {
+		if !strings.HasPrefix(resp.Header.Get("Content-Type"), "application/json") {
+			return trace.AccessDenied("got non-json response from API endpoint, perhaps JIRA URL is not configured well")
+		}
+	}
+
+	log.Info("Checking out JIRA project...")
+	project, err := b.client.GetProject(ctx, b.project)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	log.Infof("Found project %q: %q", project.Key, project.Name)
+
+	log.Info("Checking out JIRA project permissions...")
+	permissions, err := b.client.GetMyPermissions(ctx, &GetMyPermissionsQueryOptions{
+		ProjectKey:  b.project,
+		Permissions: []string{"BROWSE_PROJECTS", "CREATE_ISSUES"},
+	})
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	if !permissions.Permissions["BROWSE_PROJECTS"].HavePermission {
+		return trace.Errorf("bot user does not have BROWSE_PROJECTS permission")
+	}
+	if !permissions.Permissions["CREATE_ISSUES"].HavePermission {
+		return trace.Errorf("bot user does not have CREATE_ISSUES permission")
+	}
+
+	log.Info("JIRA API health check finished ok")
+	return nil
+}
+
 // CreateIssue creates an issue with "Pending" status
-func (c *Bot) CreateIssue(reqID string, reqData requestData) (data jiraData, err error) {
-	issue, res, err := c.client.Issue.Create(&jira.Issue{
-		Properties: map[string]interface{} {
-			RequestIdPropertyKey: reqID,
+func (b *Bot) CreateIssue(ctx context.Context, reqID string, reqData requestData) (data jiraData, err error) {
+	issue, err := b.client.CreateIssue(ctx, &IssueInput{
+		Properties: []jira.EntityProperty{
+			jira.EntityProperty{
+				Key:   RequestIdPropertyKey,
+				Value: reqID,
+			},
 		},
 		Fields: &jira.IssueFields{
 			Type:    jira.IssueType{Name: "Task"},
-			Project: jira.Project{Key: c.project},
+			Project: jira.Project{Key: b.project},
 			Summary: fmt.Sprintf("Incoming request %s", reqID),
 		},
 	})
-	if err != nil {
-		body, err := parseErrorResponse(res, err)
-		log.Error(body)
-		return data, err
+	if err = trace.Wrap(err); err != nil {
+		return
 	}
 
 	data.ID = issue.ID
@@ -123,25 +177,23 @@ func (c *Bot) CreateIssue(reqID string, reqData requestData) (data jiraData, err
 	return
 }
 
-func (c *Bot) GetIssue(issueID string) (*Issue, error) {
-	jiraIssue, res, err := c.client.Issue.Get(issueID, &jira.GetQueryOptions{
+// GetIssue loads the issue with all necessary nested data.
+func (b *Bot) GetIssue(ctx context.Context, id string) (*BotIssue, error) {
+	jiraIssue, err := b.client.GetIssue(ctx, id, &jira.GetQueryOptions{
 		Expand:     "changelog,transitions",
 		Properties: RequestIdPropertyKey,
 	})
 	if err != nil {
-		err = trace.Wrap(err)
-		body, err := parseErrorResponse(res, trace.Wrap(err))
-		log.Error(body)
-		return nil, err
+		return nil, trace.Wrap(err)
 	}
-	issue := Issue(*jiraIssue)
 
+	issue := BotIssue(*jiraIssue)
 	return &issue, nil
 }
 
-// ExpireIssue sets "Expired" status to an issue
-func (c *Bot) ExpireIssue(reqID string, reqData requestData, jiraData jiraData) error {
-	issue, err := c.GetIssue(jiraData.ID)
+// ExpireIssue sets "Expired" status to an issue.
+func (b *Bot) ExpireIssue(ctx context.Context, reqID string, reqData requestData, jiraData jiraData) error {
+	issue, err := b.GetIssue(ctx, jiraData.ID)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -151,23 +203,5 @@ func (c *Bot) ExpireIssue(reqID string, reqData requestData, jiraData jiraData) 
 		return trace.Wrap(err)
 	}
 
-	res, err := c.client.Issue.DoTransition(issue.ID, transition.ID)
-	if err != nil {
-		body, err := parseErrorResponse(res, err)
-		log.Error(body)
-		return trace.Wrap(err)
-	}
-
-	return nil
-}
-
-func parseErrorResponse(response *jira.Response, origErr error) (string, error) {
-	if response == nil {
-		return "", origErr
-	}
-	bodyBytes, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return "", trace.NewAggregate(origErr, err)
-	}
-	return string(bodyBytes), origErr
+	return trace.Wrap(b.client.TransitionIssue(ctx, issue.ID, transition.ID))
 }
