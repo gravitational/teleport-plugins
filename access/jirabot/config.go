@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/gravitational/trace"
@@ -82,6 +83,9 @@ func (c *Config) CheckAndSetDefaults() error {
 	}
 	if c.JIRA.URL == "" {
 		return trace.BadParameter("missing required value jira.url")
+	}
+	if !strings.HasPrefix(c.JIRA.URL, "https://") {
+		return trace.BadParameter("parameter jira.url must start with \"https://\"")
 	}
 	if c.JIRA.Username == "" {
 		return trace.BadParameter("missing required value jira.username")
