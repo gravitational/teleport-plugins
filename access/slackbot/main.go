@@ -59,18 +59,6 @@ type pluginData struct {
 
 type logFields = log.Fields
 
-// eprintln prints an optionally formatted string to stderr.
-func eprintln(msg string, a ...interface{}) {
-	fmt.Fprintf(os.Stderr, msg, a...)
-	fmt.Fprintf(os.Stderr, "\n")
-}
-
-// bail exits with nonzero exit code and optionally formatted message.
-func bail(msg string, a ...interface{}) {
-	eprintln(msg, a...)
-	os.Exit(1)
-}
-
 func main() {
 	utils.InitLogger()
 	app := kingpin.New("slackbot", "Teleport plugin for access requests approval via Slack.")
@@ -91,7 +79,7 @@ func main() {
 
 	selectedCmd, err := app.Parse(os.Args[1:])
 	if err != nil {
-		bail("error: %s", err)
+		utils.Bail(err)
 	}
 
 	switch selectedCmd {
@@ -99,7 +87,7 @@ func main() {
 		fmt.Print(exampleConfig)
 	case "start":
 		if err := run(*path, *insecure, *debug); err != nil {
-			bail("error: %s", trace.DebugReport(err))
+			utils.Bail(err)
 		}
 	}
 }
