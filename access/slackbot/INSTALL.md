@@ -8,7 +8,7 @@ Note: The Approval Workflow only works with Pro and Enterprise version of Telepo
 
 ## Prerequisites
 - An Enterprise or Pro Teleport Cluster
-- Admin Privileges. With acess and control of [`tctl`](https://gravitational.com/teleport/docs/cli-docs/#tctl)
+- Admin Privileges. With access and control of [`tctl`](https://gravitational.com/teleport/docs/cli-docs/#tctl)
 - Slack Admin Privileges to create an app and install it to your workspace.
 
 ### Create an access-plugin role and user within Teleport 
@@ -75,7 +75,7 @@ Development Slack Workspace: Pick the workspace you'd like the requests to show 
 
 ![Create Slack App](https://p197.p4.n0.cdn.getcloudapp.com/items/llu4EL7e/Image+2020-01-09+at+10.40.39+AM.png?v=d9750e4fdc77901e0c2ffb2dc6040aee)
 
-#### Setup Interactice Components
+#### Setup Interactive Components
 
 When someone tries approving / denying a request on Slack and clicks an Approve / Deny button, Slack will send a request to the Teleport Slack Plugin. In Slack App's settings, you must provide the URL for Slack to use for this. 
 
