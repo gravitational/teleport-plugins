@@ -38,8 +38,9 @@ const (
 )
 
 type requestData struct {
-	user  string
-	roles []string
+	User    string
+	Roles   []string
+	Created time.Time
 }
 
 type jiraData struct {
@@ -407,7 +408,7 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 }
 
 func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
-	reqData := requestData{user: req.User, roles: req.Roles}
+	reqData := requestData{User: req.User, Roles: req.Roles, Created: req.Created}
 	jiraData, err := a.bot.CreateIssue(ctx, req.ID, reqData)
 
 	if err != nil {
@@ -450,8 +451,11 @@ func (a *App) getPluginData(ctx context.Context, reqID string) (data pluginData,
 	if err != nil {
 		return data, trace.Wrap(err)
 	}
-	data.user = dataMap["user"]
-	data.roles = strings.Split(dataMap["roles"], ",")
+	data.User = dataMap["user"]
+	data.Roles = strings.Split(dataMap["roles"], ",")
+	var created int64
+	fmt.Sscanf(dataMap["created"], "%d", &created)
+	data.Created = time.Unix(created, 0)
 	data.ID = dataMap["issue_id"]
 	data.Key = dataMap["issue_key"]
 	return
@@ -461,7 +465,8 @@ func (a *App) setPluginData(ctx context.Context, reqID string, data pluginData) 
 	return a.accessClient.UpdatePluginData(ctx, reqID, access.PluginData{
 		"issue_id":  data.ID,
 		"issue_key": data.Key,
-		"user":      data.user,
-		"roles":     strings.Join(data.roles, ","),
+		"user":      data.User,
+		"roles":     strings.Join(data.Roles, ","),
+		"created":   fmt.Sprintf("%d", data.Created.Unix()),
 	}, nil)
 }

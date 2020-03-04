@@ -83,6 +83,8 @@ type Request struct {
 	Roles []string
 	// State is the current state of the request.
 	State State
+	// Created is a creation time of the request.
+	Created time.Time
 }
 
 // Pong describes a ping response.
@@ -171,10 +173,11 @@ func (c *clt) GetRequests(ctx context.Context, fltr Filter) ([]Request, error) {
 	var reqs []Request
 	for _, req := range rsp.AccessRequests {
 		r := Request{
-			ID:    req.GetName(),
-			User:  req.GetUser(),
-			Roles: req.GetRoles(),
-			State: req.GetState(),
+			ID:      req.GetName(),
+			User:    req.GetUser(),
+			Roles:   req.GetRoles(),
+			State:   req.GetState(),
+			Created: req.GetCreationTime(),
 		}
 		reqs = append(reqs, r)
 	}
@@ -295,10 +298,11 @@ func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, fltr Fil
 				return
 			}
 			req = Request{
-				ID:    r.GetName(),
-				User:  r.GetUser(),
-				Roles: r.GetRoles(),
-				State: r.GetState(),
+				ID:      r.GetName(),
+				User:    r.GetUser(),
+				Roles:   r.GetRoles(),
+				State:   r.GetState(),
+				Created: r.GetCreationTime(),
 			}
 		case OpDelete:
 			h := event.GetResourceHeader()
