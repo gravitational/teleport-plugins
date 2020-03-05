@@ -66,9 +66,10 @@ All new permission requests are going to show up in a project you choose. We rec
 You'll need the project Jira key to configure the plugin.
 
 #### Setting up the status board
-Create a new board for tasks in the permission management project. The board can have as many different columns (task statuses) as you want, but it must have at least these tho exactly matching: 
-1. Approved
-2. Denied
+Create a new board for tasks in the permission management project. The board has to have at least these three columns: 
+1. Pending
+2. Approved
+3. Denied
 
 Teleport Jira Plugin will create a new issue for each new permission request in the first available column on the board. When you drag the request task to Approved column on Jira, the request will be appvored. Ditto for Denied column on Jira.
 
