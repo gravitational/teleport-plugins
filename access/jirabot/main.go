@@ -237,6 +237,9 @@ func (a *App) checkTeleportVersion(ctx context.Context) error {
 	defer cancel()
 	pong, err := a.accessClient.Ping(ctx)
 	if err != nil {
+		if trace.IsNotImplemented(err) {
+			return trace.Wrap(err, "server version must be at least %s", access.MinServerVersion)
+		}
 		log.Error("Unable to get Teleport server version")
 		return trace.Wrap(err)
 	}
