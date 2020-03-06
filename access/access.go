@@ -33,7 +33,7 @@ import (
 	"github.com/gravitational/teleport/lib/services"
 )
 
-const MinServerVersion = "4.2.3"
+const MinServerVersion = "4.2.2-alpha.1"
 
 // State represents the state of an access request.
 type State = services.RequestState
