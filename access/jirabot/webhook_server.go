@@ -77,13 +77,13 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.WithError(err).Error("Cannot read webhook payload")
-		http.Error(rw, "", 500)
+		http.Error(rw, "", http.StatusInternalServerError)
 		return
 	}
 	err = json.Unmarshal(body, &webhook)
 	if err != nil {
 		log.WithError(err).Error("Invalid webhook payload")
-		http.Error(rw, "", 500)
+		http.Error(rw, "", http.StatusBadRequest)
 		return
 	}
 
@@ -92,9 +92,9 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 		var code int
 		switch {
 		case utils.IsCanceled(err) || utils.IsDeadline(err):
-			code = 503
+			code = http.StatusServiceUnavailable
 		default:
-			code = 500
+			code = http.StatusInternalServerError
 		}
 		http.Error(rw, "", code)
 	} else {

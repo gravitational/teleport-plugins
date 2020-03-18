@@ -63,7 +63,7 @@ func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request
 	sv, err := slack.NewSecretsVerifier(r.Header, s.secret)
 	if err != nil {
 		log.WithError(err).Error("Failed to initialize secrets verifier")
-		http.Error(rw, "", 500)
+		http.Error(rw, "", http.StatusInternalServerError)
 		return
 	}
 	// tee body into verifier as it is read.
@@ -74,14 +74,14 @@ func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request
 	// verification can now proceed.
 	if err := sv.Ensure(); err != nil {
 		log.WithError(err).Error("Secret verification failed")
-		http.Error(rw, "", 500)
+		http.Error(rw, "", http.StatusUnauthorized)
 		return
 	}
 
 	var cb slack.InteractionCallback
 	if err := json.Unmarshal(payload, &cb); err != nil {
 		log.WithError(err).Error("Failed to parse json response")
-		http.Error(rw, "", 500)
+		http.Error(rw, "", http.StatusBadRequest)
 		return
 	}
 
@@ -90,9 +90,9 @@ func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request
 		var code int
 		switch {
 		case utils.IsCanceled(err) || utils.IsDeadline(err):
-			code = 503
+			code = http.StatusServiceUnavailable
 		default:
-			code = 500
+			code = http.StatusInternalServerError
 		}
 		http.Error(rw, "", code)
 	} else {
