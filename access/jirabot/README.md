@@ -1,10 +1,16 @@
 # Teleport JIRA Bot
 
 This package provides Teleport <-> Jira integration that allows teams to approve or deny Access Requests on a Jira Project Board.
+It works with both Jira Cloud and Jira Server 8.
 
 ## Setup
 
-Please refer to [INSTALL.md](./INSTALL.md) for a detailed getting started guide. Next few paragraphs will guide you through building the plugin locally.
+Setup process is different for the Jira Cloud and Jira Server editions:
+
+- Please refer to [INSTALL-JIRA-CLOUD.md](./INSTALL-JIRA-CLOUD.md) for a detailed Jira Cloud getting started guide.
+- Jira Server getting started guide: [INSTALL-JIRA-SERVER.md](./INSTALL-JIRA-SERVER.md)
+
+Next few paragraphs will guide you through building the plugin locally.
 
 ```bash
 
@@ -34,7 +40,7 @@ root-cas = "/var/lib/teleport/plugins/jirabot/auth.cas"   # Teleport cluster CA 
 [jira]
 url = "https://[my-jira].atlassian.net"    # JIRA URL. For JIRA Cloud, https://[my-jira].atlassian.net
 username = "bot@example.com"        # JIRA username
-api-token = "token"                 # JIRA API Basic Auth token
+api-token = "token"                 # JIRA API Basic Auth token, or our password in case you're using Jira Server.
 project = "MYPROJ"                  # JIRA Project key
 
 [http]
