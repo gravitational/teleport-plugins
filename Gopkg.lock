@@ -140,6 +140,14 @@
   revision = "b965b613227fddccbfffe13eae360ed3fa822f8d"
 
 [[projects]]
+  digest = "1:45c41cd27a8d986998680bfc86da0bbff5fa4f90d0f446c00636c8b099028ffe"
+  name = "github.com/blang/semver"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "ba2c2ddd89069b46a7011d4106f6868f17ee1705"
+  version = "v3.6.1"
+
+[[projects]]
   digest = "1:7c96cf7bf7f52af67f7a8222185813b9b665f5172ec2ac5f7d49ed96e5fcf3e5"
   name = "github.com/boombuler/barcode"
   packages = [
@@ -236,6 +244,14 @@
   ]
   pruneopts = "NUT"
   revision = "bc6354cbbc295e925e4c611ffe90c1f287ee54db"
+
+[[projects]]
+  branch = "master"
+  digest = "1:665c8850f673be8d358fe61ab00412049e685202aa7466ae5c72ad50d89c84f7"
+  name = "github.com/dyatlov/go-opengraph"
+  packages = ["opengraph"]
+  pruneopts = "NUT"
+  revision = "816b6608b3c8c1e871bc9cf777f390e2532081fe"
 
 [[projects]]
   digest = "1:f8e6f07329067bc182633dcb19a3df53ce5d454b551e1b5a1cac2163748648d9"
@@ -712,6 +728,41 @@
   revision = "8b799c424f57fa123fc63a99d6383bc6e4c02578"
 
 [[projects]]
+  digest = "1:3e7f985557bc1a34b4a250d71801b7a1b67cce3ed1bf01f0db087efb969c29eb"
+  name = "github.com/mattermost/go-i18n"
+  packages = [
+    "i18n",
+    "i18n/bundle",
+    "i18n/language",
+    "i18n/translation",
+  ]
+  pruneopts = "NUT"
+  revision = "9a9b2eb57c9f39e7142fe48a35f047716c444ed1"
+  version = "v1.11.0"
+
+[[projects]]
+  digest = "1:15bc0a340088f6b97a007a9b7c49d711a5907e13d30f54de93d0feb2202c7a0b"
+  name = "github.com/mattermost/ldap"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "fee0a369f21be68ea3d647c0da8272a352fa1528"
+  version = "v3.0.4"
+
+[[projects]]
+  digest = "1:88d5b54874140dd4879a24b9ba94a86cd5f46c2f0919f251b219e0d7502ebe8d"
+  name = "github.com/mattermost/mattermost-server"
+  packages = [
+    "mlog",
+    "model",
+    "services/timezones",
+    "utils/jsonutils",
+    "utils/markdown",
+  ]
+  pruneopts = "NUT"
+  revision = "35ea48a071f2837d30217cefb2de7d7855fe7f77"
+  version = "v5.17.3"
+
+[[projects]]
   digest = "1:c9724c929d27a14475a45b17a267dbc60671c0bc2c5c05ed21f011f7b5bc9fb5"
   name = "github.com/mattn/go-sqlite3"
   packages = ["."]
@@ -1072,11 +1123,13 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:9a9b0d5004de42068cb40b5d29fac8c464d0ce0bb552cce25ddf258329f0c98e"
+  digest = "1:d90ac66cf4d0ca365969d0484c778cd518310fc21462314a290a685bca722cf3"
   name = "golang.org/x/net"
   packages = [
     "context",
     "context/ctxhttp",
+    "html",
+    "html/atom",
     "http/httpguts",
     "http2",
     "http2/hpack",
@@ -1114,7 +1167,7 @@
   revision = "548cf772de5052aa878ccb47cdeb7d262b75c8ec"
 
 [[projects]]
-  digest = "1:28675596ba760768a08ebfc0872bf8188a30c6b31f056b791e06e94e3c40c81a"
+  digest = "1:6d7b6a1bf0310229da85bb4aebd675f4631fa868d4945c4af9a64c302b132ae8"
   name = "golang.org/x/text"
   packages = [
     "encoding",
@@ -1122,9 +1175,11 @@
     "encoding/internal/identifier",
     "encoding/unicode",
     "internal/gen",
+    "internal/tag",
     "internal/triegen",
     "internal/ucd",
     "internal/utf8internal",
+    "language",
     "runes",
     "secure/bidirule",
     "transform",
@@ -1260,6 +1315,14 @@
   version = "v1.12.0"
 
 [[projects]]
+  digest = "1:5d6a13485ff26011c23adcbb66c33212be42d288326f2d8b9c2b6d385296b28b"
+  name = "gopkg.in/asn1-ber.v1"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "effdc98edfb5dde0d9fd8dfba266f6483e6ce9f0"
+  version = "v1.4.1"
+
+[[projects]]
   digest = "1:67ae56e0579de0f16006ee42cc42daaaacefcfd36324ba00540f62fe42fc64df"
   name = "gopkg.in/check.v1"
   packages = ["."]
@@ -1273,6 +1336,14 @@
   pruneopts = "NUT"
   revision = "d2d2541c53f18d2a059457998ce2876cc8e67cbf"
   version = "v0.9.1"
+
+[[projects]]
+  digest = "1:80c34337e8a734e190f2d1b716cae774cca74db98315166f92074434e9af0227"
+  name = "gopkg.in/natefinch/lumberjack.v2"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "a96e63847dc3c67d17befa69c303767e2f84e54f"
+  version = "v2.1"
 
 [[projects]]
   digest = "1:d5cefdf1db2a76f4b1244d058f0b379f03a908313b78361c22f6f0688bb8f52a"
@@ -1446,6 +1517,7 @@
     "github.com/gravitational/trace/trail",
     "github.com/hashicorp/go-version",
     "github.com/julienschmidt/httprouter",
+    "github.com/mattermost/mattermost-server/model",
     "github.com/nlopes/slack",
     "github.com/nlopes/slack/slacktest",
     "github.com/pelletier/go-toml",

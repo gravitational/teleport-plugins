@@ -69,6 +69,10 @@ ignored = ["github.com/Sirupsen/logrus", "github.com/gravitational/license/gener
   name = "gopkg.in/andygrunwald/go-jira.v1"
   version = "1.12.0"
 
+[[override]]
+  name = "github.com/mattermost/mattermost-server"
+  version = "5.17.0"
+
 # Teleport dependencies overrides
 
 [[override]]
