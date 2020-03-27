@@ -6,7 +6,9 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
+	"path"
 	"time"
 
 	"github.com/gravitational/teleport/lib/utils"
@@ -20,6 +22,7 @@ type HTTPConfig struct {
 	KeyFile  string `toml:"https-key-file"`
 	CertFile string `toml:"https-cert-file"`
 	Hostname string `toml:"host"`
+	BaseURL  string `toml:"base-url"`
 	Insecure bool
 }
 
@@ -82,6 +85,38 @@ func (h *HTTP) ShutdownWithTimeout(ctx context.Context, duration time.Duration) 
 	return h.Shutdown(ctx)
 }
 
+// BaseURL returns an url on which the server is accessible externally.
+func (h *HTTP) BaseURL() (*url.URL, error) {
+	if h.HTTPConfig.BaseURL != "" {
+		return url.Parse(h.HTTPConfig.BaseURL)
+	} else if h.Hostname != "" {
+		url := &url.URL{Host: h.Hostname}
+		if h.Insecure {
+			url.Scheme = "http"
+		} else {
+			url.Scheme = "https"
+		}
+		return url, nil
+	} else {
+		return nil, trace.BadParameter("no hostname or base-url was provided")
+	}
+}
+
+// NewURL builds an external url for a specific path and query parameters.
+func (h *HTTP) NewURL(subpath string, values url.Values) (*url.URL, error) {
+	url, err := h.BaseURL()
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	url.Path = path.Join(url.Path, subpath)
+
+	if values != nil {
+		url.RawQuery = values.Encode()
+	}
+
+	return url, nil
+}
+
 // EnsureCert checks cert and key files consistency. It also generates a self-signed cert if it was not specified.
 func (h *HTTP) EnsureCert(defaultPath string) (err error) {
 	if h.Insecure {
@@ -109,7 +144,19 @@ func (h *HTTP) EnsureCert(defaultPath string) (err error) {
 
 	log.Warningf("Generating self signed key and cert to %v %v.", h.KeyFile, h.CertFile)
 
-	creds, err := utils.GenerateSelfSignedCert([]string{h.Hostname, "localhost"})
+	hostname := h.Hostname
+	if hostname == "" && h.HTTPConfig.BaseURL != "" {
+		url, err := h.BaseURL()
+		if err != nil {
+			return trace.Wrap(err)
+		}
+		hostname = url.Hostname()
+	}
+	if hostname == "" {
+		return trace.BadParameter("no hostname or base-url was provided")
+	}
+
+	creds, err := utils.GenerateSelfSignedCert([]string{hostname, "localhost"})
 	if err != nil {
 		return trace.Wrap(err)
 	}
