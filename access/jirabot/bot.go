@@ -162,24 +162,24 @@ func (b *Bot) HealthCheck(ctx context.Context) error {
 }
 
 // CreateIssue creates an issue with "Pending" status
-func (b *Bot) CreateIssue(ctx context.Context, reqID string, reqData requestData) (data jiraData, err error) {
+func (b *Bot) CreateIssue(ctx context.Context, reqID string, reqData RequestData) (JiraData, error) {
 	tmpl, err := template.New("description").Parse(DescriptionTemplate)
 	if err != nil {
-		return
+		return JiraData{}, trace.Wrap(err)
 	}
 
 	description := new(strings.Builder)
 	err = tmpl.Execute(description, struct {
 		ID         string
 		TimeFormat string
-		requestData
+		RequestData
 	}{
 		reqID,
 		time.RFC822,
 		reqData,
 	})
 	if err != nil {
-		return
+		return JiraData{}, trace.Wrap(err)
 	}
 
 	issue, err := b.client.CreateIssue(ctx, &IssueInput{
@@ -196,13 +196,14 @@ func (b *Bot) CreateIssue(ctx context.Context, reqID string, reqData requestData
 			Description: description.String(),
 		},
 	})
-	if err = trace.Wrap(err); err != nil {
-		return
+	if err != nil {
+		return JiraData{}, trace.Wrap(err)
 	}
 
-	data.ID = issue.ID
-	data.Key = issue.Key
-	return
+	return JiraData{
+		ID:  issue.ID,
+		Key: issue.Key,
+	}, nil
 }
 
 // GetIssue loads the issue with all necessary nested data.
@@ -220,7 +221,7 @@ func (b *Bot) GetIssue(ctx context.Context, id string) (*BotIssue, error) {
 }
 
 // ExpireIssue sets "Expired" status to an issue.
-func (b *Bot) ExpireIssue(ctx context.Context, reqID string, reqData requestData, jiraData jiraData) error {
+func (b *Bot) ExpireIssue(ctx context.Context, reqID string, reqData RequestData, jiraData JiraData) error {
 	issue, err := b.GetIssue(ctx, jiraData.ID)
 	if err != nil {
 		return trace.Wrap(err)

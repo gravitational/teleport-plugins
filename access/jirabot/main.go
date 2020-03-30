@@ -37,20 +37,20 @@ const (
 	DefaultDir = "/var/lib/teleport/plugins/jirabot"
 )
 
-type requestData struct {
+type RequestData struct {
 	User    string
 	Roles   []string
 	Created time.Time
 }
 
-type jiraData struct {
+type JiraData struct {
 	ID  string
 	Key string
 }
 
-type pluginData struct {
-	requestData
-	jiraData
+type PluginData struct {
+	RequestData
+	JiraData
 }
 
 type logFields = log.Fields
@@ -359,9 +359,9 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 		if err != nil {
 			return trace.Wrap(err)
 		}
-		if pluginData.jiraData.ID != issue.ID {
+		if pluginData.JiraData.ID != issue.ID {
 			log.WithFields(logFields{
-				"plugin_data_issue_id": pluginData.jiraData.ID,
+				"plugin_data_issue_id": pluginData.JiraData.ID,
 				"issue_id":             issue.ID,
 			}).Debug("plugin_data.issue_id does not match issue.id")
 			return trace.Errorf("issue_id from request's plugin_data does not match")
@@ -411,7 +411,7 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 }
 
 func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
-	reqData := requestData{User: req.User, Roles: req.Roles, Created: req.Created}
+	reqData := RequestData{User: req.User, Roles: req.Roles, Created: req.Created}
 	jiraData, err := a.bot.CreateIssue(ctx, req.ID, reqData)
 
 	if err != nil {
@@ -423,7 +423,7 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 		"issue_key": jiraData.Key,
 	}).Debug("JIRA Issue created")
 
-	err = a.setPluginData(ctx, req.ID, pluginData{reqData, jiraData})
+	err = a.setPluginData(ctx, req.ID, PluginData{reqData, jiraData})
 
 	return trace.Wrap(err)
 }
@@ -440,7 +440,7 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		}
 	}
 
-	if err := a.bot.ExpireIssue(ctx, reqID, pluginData.requestData, pluginData.jiraData); err != nil {
+	if err := a.bot.ExpireIssue(ctx, reqID, pluginData.RequestData, pluginData.JiraData); err != nil {
 		return trace.Wrap(err)
 	}
 
@@ -449,7 +449,7 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 	return nil
 }
 
-func (a *App) getPluginData(ctx context.Context, reqID string) (data pluginData, err error) {
+func (a *App) getPluginData(ctx context.Context, reqID string) (data PluginData, err error) {
 	dataMap, err := a.accessClient.GetPluginData(ctx, reqID)
 	if err != nil {
 		return data, trace.Wrap(err)
@@ -464,7 +464,7 @@ func (a *App) getPluginData(ctx context.Context, reqID string) (data pluginData,
 	return
 }
 
-func (a *App) setPluginData(ctx context.Context, reqID string, data pluginData) error {
+func (a *App) setPluginData(ctx context.Context, reqID string, data PluginData) error {
 	return a.accessClient.UpdatePluginData(ctx, reqID, access.PluginData{
 		"issue_id":  data.ID,
 		"issue_key": data.Key,
