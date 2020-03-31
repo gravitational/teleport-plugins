@@ -364,18 +364,18 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 
 		var (
 			reqState   access.State
-			logMessage string
+			resolution string
 		)
 
 		switch actionID {
 		case ActionApprove:
 			reqState = access.StateApproved
 			slackStatus = "APPROVED"
-			logMessage = "Slack user approved the request"
+			resolution = "approved"
 		case ActionDeny:
 			reqState = access.StateDenied
 			slackStatus = "DENIED"
-			logMessage = "Slack user denied the request"
+			resolution = "denied"
 		default:
 			return trace.BadParameter("Unknown ActionID: %s", actionID)
 		}
@@ -383,7 +383,7 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
 			return trace.Wrap(err)
 		}
-		logger.Info(logMessage)
+		logger.Infof("Slack user %s the request", resolution)
 
 		// Simply fill reqData from the request itself.
 		reqData = requestData{user: req.User, roles: req.Roles}

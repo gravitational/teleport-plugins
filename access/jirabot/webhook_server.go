@@ -76,13 +76,12 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.WithError(err).Error("Cannot read webhook payload")
+		log.WithError(err).Error("Failed to read webhook payload")
 		http.Error(rw, "", http.StatusInternalServerError)
 		return
 	}
-	err = json.Unmarshal(body, &webhook)
-	if err != nil {
-		log.WithError(err).Error("Invalid webhook payload")
+	if err = json.Unmarshal(body, &webhook); err != nil {
+		log.WithError(err).Error("Failed to parse webhook payload")
 		http.Error(rw, "", http.StatusBadRequest)
 		return
 	}

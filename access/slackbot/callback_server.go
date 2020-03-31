@@ -80,7 +80,7 @@ func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request
 
 	var cb slack.InteractionCallback
 	if err := json.Unmarshal(payload, &cb); err != nil {
-		log.WithError(err).Error("Failed to parse json response")
+		log.WithError(err).Error("Failed to parse json body")
 		http.Error(rw, "", http.StatusBadRequest)
 		return
 	}

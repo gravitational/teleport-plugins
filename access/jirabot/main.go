@@ -374,7 +374,7 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 
 		var (
 			reqState   access.State
-			logMessage string
+			resolution string
 		)
 
 		issueUpdate, err := issue.GetLastUpdate(statusName)
@@ -393,18 +393,18 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 		switch statusName {
 		case "approved":
 			reqState = access.StateApproved
-			logMessage = "JIRA user approved the request"
+			resolution = "approved"
 		case "denied":
 			reqState = access.StateDenied
-			logMessage = "JIRA user denied the request"
+			resolution = "denied"
 		default:
-			return trace.BadParameter("Unknown JIRA status: %s", statusName)
+			return trace.BadParameter("unknown JIRA status %q", statusName)
 		}
 
 		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
 			return trace.Wrap(err)
 		}
-		log.Info(logMessage)
+		log.Infof("JIRA user %s the request", resolution)
 	}
 
 	return nil
