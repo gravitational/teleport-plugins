@@ -555,6 +555,10 @@ func NewTeleport(cfg *Config) (*TeleportProcess, error) {
 		}
 	}
 
+	if uuid.Parse(cfg.HostUUID) == nil {
+		log.Warnf("Host UUID %q is not a true UUID (not eligible for UUID-based proxying)", cfg.HostUUID)
+	}
+
 	// if user started auth and another service (without providing the auth address for
 	// that service, the address of the in-process auth will be used
 	if cfg.Auth.Enabled && len(cfg.AuthServers) == 0 {
@@ -1075,7 +1079,7 @@ func (process *TeleportProcess) initAuthService() error {
 	}
 	go mux.Serve()
 	process.RegisterCriticalFunc("auth.tls", func() error {
-		utils.Consolef(cfg.Console, teleport.ComponentAuth, "Auth service %s:%s is starting on %v.", teleport.Version, teleport.Gitref, cfg.Auth.SSHAddr.Addr)
+		utils.Consolef(cfg.Console, teleport.ComponentAuth, "Auth service is starting on %v.", cfg.Auth.SSHAddr.Addr)
 
 		// since tlsServer.Serve is a blocking call, we emit this even right before
 		// the service has started
@@ -1263,6 +1267,7 @@ func (process *TeleportProcess) newAccessCache(cfg accessCacheConfig) (*cache.Ca
 	}
 	var cacheBackend backend.Backend
 	if cfg.inMemory {
+		process.Debugf("Creating in-memory backend for %v.", cfg.cacheName)
 		mem, err := memory.New(memory.Config{
 			Context:   process.ExitContext(),
 			EventsOff: !cfg.events,
@@ -1273,6 +1278,7 @@ func (process *TeleportProcess) newAccessCache(cfg accessCacheConfig) (*cache.Ca
 		}
 		cacheBackend = mem
 	} else {
+		process.Debugf("Creating sqlite backend for %v.", cfg.cacheName)
 		path := filepath.Join(append([]string{process.Config.DataDir, "cache"}, cfg.cacheName...)...)
 		if err := os.MkdirAll(path, teleport.SharedDirMode); err != nil {
 			return nil, trace.ConvertSystemError(err)
@@ -1341,6 +1347,7 @@ func (process *TeleportProcess) newLocalCache(clt auth.ClientI, setupConfig cach
 		return clt, nil
 	}
 	cache, err := process.newAccessCache(accessCacheConfig{
+		inMemory:  process.Config.CachePolicy.Type == memory.GetName(),
 		services:  clt,
 		setup:     process.setupCachePolicy(setupConfig),
 		cacheName: cacheName,
@@ -1512,8 +1519,8 @@ func (process *TeleportProcess) initSSH() error {
 			// clean up unused descriptors passed for proxy, but not used by it
 			warnOnErr(process.closeImportedDescriptors(teleport.ComponentNode))
 
-			log.Infof("Service %s:%s is starting on %v %v.", teleport.Version, teleport.Gitref, cfg.SSH.Addr.Addr, process.Config.CachePolicy)
-			utils.Consolef(cfg.Console, teleport.ComponentNode, "Service %s:%s is starting on %v.", teleport.Version, teleport.Gitref, cfg.SSH.Addr.Addr)
+			log.Infof("Service is starting on %v %v.", cfg.SSH.Addr.Addr, process.Config.CachePolicy)
+			utils.Consolef(cfg.Console, teleport.ComponentNode, "Service is starting on %v.", cfg.SSH.Addr.Addr)
 
 			// Start the SSH server. This kicks off updating labels, starting the
 			// heartbeat, and accepting connections.
@@ -1781,6 +1788,8 @@ func (process *TeleportProcess) getAdditionalPrincipals(role teleport.Role) ([]s
 		addrs = append(addrs, process.Config.Proxy.SSHPublicAddrs...)
 		addrs = append(addrs, process.Config.Proxy.TunnelPublicAddrs...)
 		addrs = append(addrs, process.Config.Proxy.Kube.PublicAddrs...)
+		// all proxies need to be dialable on loopback
+		addrs = append(addrs, *utils.MustParseAddr(`127.0.0.1`))
 		// Automatically add wildcards for every proxy public address for k8s SNI routing
 		if process.Config.Proxy.Kube.Enabled {
 			for _, publicAddr := range utils.JoinAddrSlices(process.Config.Proxy.PublicAddrs, process.Config.Proxy.Kube.PublicAddrs) {
@@ -1796,6 +1805,10 @@ func (process *TeleportProcess) getAdditionalPrincipals(role teleport.Role) ([]s
 	case teleport.RoleAuth, teleport.RoleAdmin:
 		addrs = process.Config.Auth.PublicAddrs
 	case teleport.RoleNode:
+		// DELETE IN 5.0: We are manually adding HostUUID here in order
+		// to allow UUID based routing to function with older Auth Servers
+		// which don't automatically add UUID to the principal list.
+		principals = append(principals, process.Config.HostUUID)
 		addrs = process.Config.SSH.PublicAddrs
 		// If advertise IP is set, add it to the list of principals. Otherwise
 		// add in the default (0.0.0.0) which will be replaced by the Auth Server
@@ -2044,8 +2057,8 @@ func (process *TeleportProcess) initProxyEndpoint(conn *Connector) error {
 			return trace.Wrap(err)
 		}
 		process.RegisterCriticalFunc("proxy.reversetunnel.server", func() error {
-			utils.Consolef(cfg.Console, teleport.ComponentProxy, "Reverse tunnel service %s:%s is starting on %v.", teleport.Version, teleport.Gitref, cfg.Proxy.ReverseTunnelListenAddr.Addr)
-			log.Infof("Starting %s:%s on %v using %v", teleport.Version, teleport.Gitref, cfg.Proxy.ReverseTunnelListenAddr.Addr, process.Config.CachePolicy)
+			utils.Consolef(cfg.Console, teleport.ComponentProxy, "Reverse tunnel service is starting on %v.", cfg.Proxy.ReverseTunnelListenAddr.Addr)
+			log.Infof("Starting on %v using %v", cfg.Proxy.ReverseTunnelListenAddr.Addr, process.Config.CachePolicy)
 			if err := tsrv.Start(); err != nil {
 				log.Error(err)
 				return trace.Wrap(err)
@@ -2113,8 +2126,8 @@ func (process *TeleportProcess) initProxyEndpoint(conn *Connector) error {
 			ReadHeaderTimeout: defaults.DefaultDialTimeout,
 		}
 		process.RegisterCriticalFunc("proxy.web", func() error {
-			utils.Consolef(cfg.Console, teleport.ComponentProxy, "Web proxy service %s:%s is starting on %v.", teleport.Version, teleport.Gitref, cfg.Proxy.WebAddr.Addr)
-			log.Infof("Web proxy service %s:%s is starting on %v.", teleport.Version, teleport.Gitref, cfg.Proxy.WebAddr.Addr)
+			utils.Consolef(cfg.Console, teleport.ComponentProxy, "Web proxy service is starting on %v.", cfg.Proxy.WebAddr.Addr)
+			log.Infof("Web proxy service is starting on %v.", cfg.Proxy.WebAddr.Addr)
 			defer webHandler.Close()
 			process.BroadcastEvent(Event{Name: ProxyWebServerReady, Payload: webHandler})
 			if err := webServer.Serve(listeners.web); err != nil && err != http.ErrServerClosed {
@@ -2155,8 +2168,8 @@ func (process *TeleportProcess) initProxyEndpoint(conn *Connector) error {
 	}
 
 	process.RegisterCriticalFunc("proxy.ssh", func() error {
-		utils.Consolef(cfg.Console, teleport.ComponentProxy, "SSH proxy service %s:%s is starting on %v.", teleport.Version, teleport.Gitref, cfg.Proxy.SSHAddr.Addr)
-		log.Infof("SSH proxy service %s:%s is starting on %v", teleport.Version, teleport.Gitref, cfg.Proxy.SSHAddr.Addr)
+		utils.Consolef(cfg.Console, teleport.ComponentProxy, "SSH proxy service is starting on %v.", cfg.Proxy.SSHAddr.Addr)
+		log.Infof("SSH proxy service is starting on %v", cfg.Proxy.SSHAddr.Addr)
 		go sshProxy.Serve(listener)
 		// broadcast that the proxy ssh server has started
 		process.BroadcastEvent(Event{Name: ProxySSHReady, Payload: nil})

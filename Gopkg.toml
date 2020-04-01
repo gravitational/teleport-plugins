@@ -29,8 +29,7 @@ ignored = ["github.com/Sirupsen/logrus", "github.com/gravitational/license/gener
 
 [[constraint]]
   name = "github.com/gravitational/teleport"
-  #branch = "master"
-  revision = "2634a66379a488468435156f1a033614eac698a9" # TODO: temporary change
+  version = "4.2.8"
 
 [[constraint]]
   name = "github.com/gravitational/kingpin"

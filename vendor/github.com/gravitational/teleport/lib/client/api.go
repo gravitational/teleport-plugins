@@ -1411,6 +1411,17 @@ func (tc *TeleportClient) ListNodes(ctx context.Context) ([]services.Server, err
 	return proxyClient.FindServersByLabels(ctx, tc.Namespace, tc.Labels)
 }
 
+// ListAllNodes is the same as ListNodes except that it ignores labels.
+func (tc *TeleportClient) ListAllNodes(ctx context.Context) ([]services.Server, error) {
+	proxyClient, err := tc.ConnectToProxy(ctx)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	defer proxyClient.Close()
+
+	return proxyClient.FindServersByLabels(ctx, tc.Namespace, nil)
+}
+
 // runCommand executes a given bash command on a bunch of remote nodes
 func (tc *TeleportClient) runCommand(
 	ctx context.Context, siteName string, nodeAddresses []string, proxyClient *ProxyClient, command []string) error {
@@ -1565,6 +1576,10 @@ func (tc *TeleportClient) connectToProxy(ctx context.Context) (*ProxyClient, err
 		sshProxyAddr = tc.JumpHosts[0].Addr.Addr
 	}
 
+	// make sure that loopback-like addresses are normalized
+	// to 127.0.0.1 (required for certificate validation).
+	sshProxyAddr = utils.ForceLoopback(sshProxyAddr)
+
 	// helper to create a ProxyClient struct
 	makeProxyClient := func(sshClient *ssh.Client, m ssh.AuthMethod) *ProxyClient {
 		return &ProxyClient{
@@ -1708,6 +1723,7 @@ func (tc *TeleportClient) Login(ctx context.Context, activateKey bool) (*Key, er
 	key.Cert = response.Cert
 	key.TLSCert = response.TLSCert
 	key.ProxyHost = webProxyHost
+	key.TrustedCA = response.HostSigners
 
 	// Check that a host certificate for at least one cluster was returned and
 	// extract the name of the current cluster from the first host certificate.

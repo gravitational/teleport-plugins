@@ -465,7 +465,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:28e20498fc5da87077b605d7e085367c7e35022486e02126cc534244ed44bc0c"
+  digest = "1:2a0d908b5d20d58c4b151b65d96deef640c7fad9a006ca8c6067950296d22746"
   name = "github.com/gravitational/teleport"
   packages = [
     ".",
@@ -529,7 +529,8 @@
     "lib/wrappers",
   ]
   pruneopts = "NUT"
-  revision = "2634a66379a488468435156f1a033614eac698a9"
+  revision = "a9015b336c1f5c202f991a07165f8923f546da11"
+  version = "v4.2.8"
 
 [[projects]]
   digest = "1:a43816dbfa9fa218af700e9d230d1adbcef12ffc495efe46046a57fe5490aad0"
