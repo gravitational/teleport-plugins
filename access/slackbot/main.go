@@ -88,6 +88,8 @@ func main() {
 	case "start":
 		if err := run(*path, *insecure, *debug); err != nil {
 			utils.Bail(err)
+		} else {
+			log.Info("Successfully shut down")
 		}
 	}
 }
@@ -228,7 +230,7 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func (a *App) checkTeleportVersion(ctx context.Context) error {
-	log.Info("Checking Teleport server version")
+	log.Debug("Checking Teleport server version")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	pong, err := a.accessClient.Ping(ctx)
@@ -254,7 +256,7 @@ func (a *App) watchRequests(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	log.Info("Watcher connected")
+	log.Debug("Watcher connected")
 
 	for {
 		select {
@@ -290,8 +292,8 @@ func (a *App) watchRequests(ctx context.Context) error {
 // WatchRequests starts a GRPC watcher which monitors access requests and restarts it on expected errors.
 // It calls onPendingRequest when new pending event is added and onDeletedRequest when request is deleted
 func (a *App) WatchRequests(ctx context.Context) error {
-	log.Info("Starting a request watcher...")
-	defer log.Info("Request watcher terminated")
+	log.Debug("Starting a request watcher...")
+	defer log.Debug("Request watcher terminated")
 
 	for {
 		err := a.watchRequests(ctx)
@@ -396,7 +398,7 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 				log.WithError(err).WithField("request_id", req.ID).Error("Can't update Slack message")
 				return
 			}
-			log.WithField("request_id", req.ID).Debug("Successfully updated Slack message")
+			log.WithField("request_id", req.ID).Info("Successfully updated Slack message")
 		})
 	}
 
@@ -414,7 +416,7 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 	log.WithFields(logFields{
 		"slack_channel":   slackData.channelID,
 		"slack_timestamp": slackData.timestamp,
-	}).Debug("Successfully posted to Slack")
+	}).Info("Successfully posted to Slack")
 
 	err = a.setPluginData(ctx, req.ID, pluginData{reqData, slackData})
 
@@ -437,7 +439,7 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	log.WithField("request_id", reqID).Debug("Successfully marked request as expired")
+	log.WithField("request_id", reqID).Info("Successfully marked request as expired")
 
 	return nil
 }

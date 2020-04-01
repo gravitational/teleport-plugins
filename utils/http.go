@@ -48,7 +48,7 @@ func NewHTTP(config HTTPConfig) *HTTP {
 
 // ListenAndServe runs a http(s) server on a provided port.
 func (h *HTTP) ListenAndServe(ctx context.Context) error {
-	defer log.Info("HTTP server terminated")
+	defer log.Debug("HTTP server terminated")
 
 	h.server.BaseContext = func(_ net.Listener) context.Context {
 		return ctx
@@ -60,10 +60,10 @@ func (h *HTTP) ListenAndServe(ctx context.Context) error {
 
 	var err error
 	if h.Insecure {
-		log.Infof("Starting insecure HTTP server on %s", h.Listen)
+		log.Debugf("Starting insecure HTTP server on %s", h.Listen)
 		err = h.server.ListenAndServe()
 	} else {
-		log.Infof("Starting secure HTTPS server on %s", h.Listen)
+		log.Debugf("Starting secure HTTPS server on %s", h.Listen)
 		err = h.server.ListenAndServeTLS(h.CertFile, h.KeyFile)
 	}
 	if err == http.ErrServerClosed {
