@@ -37,7 +37,6 @@ type JirabotSuite struct {
 	appPort     string
 	webhookUrl  string
 	me          *user.User
-	fakeJira    *httprouter.Router
 	fakeJiraSrv *httptest.Server
 	issues      sync.Map
 	newIssues   chan *Issue
@@ -124,12 +123,12 @@ func (s *JirabotSuite) startFakeJira(c *C) {
 	s.newIssues = make(chan *Issue, 1)
 	s.transitions = make(chan *Issue, 1)
 
-	s.fakeJira = httprouter.New()
-	s.fakeJira.GET("/rest/api/2/myself", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	fakeJira := httprouter.New()
+	fakeJira.GET("/rest/api/2/myself", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusOK)
 	})
-	s.fakeJira.GET("/rest/api/2/project/PROJ", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	fakeJira.GET("/rest/api/2/project/PROJ", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		project := &jira.Project{
 			Key:  "PROJ",
 			Name: "The Project",
@@ -142,7 +141,7 @@ func (s *JirabotSuite) startFakeJira(c *C) {
 		_, err = rw.Write(respBody)
 		c.Assert(err, IsNil)
 	})
-	s.fakeJira.GET("/rest/api/2/mypermissions", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	fakeJira.GET("/rest/api/2/mypermissions", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		permissions := &Permissions{
 			Permissions: map[string]Permission{
 				"BROWSE_PROJECTS": Permission{
@@ -161,7 +160,7 @@ func (s *JirabotSuite) startFakeJira(c *C) {
 		_, err = rw.Write(respBody)
 		c.Assert(err, IsNil)
 	})
-	s.fakeJira.POST("/rest/api/2/issue", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	fakeJira.POST("/rest/api/2/issue", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		var err error
 
 		body, err := ioutil.ReadAll(r.Body)
@@ -207,7 +206,7 @@ func (s *JirabotSuite) startFakeJira(c *C) {
 		_, err = rw.Write(respBody)
 		c.Assert(err, IsNil)
 	})
-	s.fakeJira.GET("/rest/api/2/issue/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	fakeJira.GET("/rest/api/2/issue/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		var err error
 
 		issue := s.getIssue(ps.ByName("id"))
@@ -224,7 +223,7 @@ func (s *JirabotSuite) startFakeJira(c *C) {
 		_, err = rw.Write(respBody)
 		c.Assert(err, IsNil)
 	})
-	s.fakeJira.POST("/rest/api/2/issue/:id/transitions", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	fakeJira.POST("/rest/api/2/issue/:id/transitions", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		var err error
 
 		issue := s.getIssue(ps.ByName("id"))
@@ -256,7 +255,7 @@ func (s *JirabotSuite) startFakeJira(c *C) {
 		rw.WriteHeader(http.StatusNoContent)
 	})
 
-	s.fakeJiraSrv = httptest.NewServer(s.fakeJira)
+	s.fakeJiraSrv = httptest.NewServer(fakeJira)
 }
 
 func (s *JirabotSuite) startApp(c *C) {
