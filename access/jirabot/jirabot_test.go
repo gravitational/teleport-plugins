@@ -129,20 +129,16 @@ func (s *JirabotSuite) startFakeJira(c *C) {
 		rw.WriteHeader(http.StatusOK)
 	})
 	fakeJira.GET("/rest/api/2/project/PROJ", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		project := &jira.Project{
+		project := jira.Project{
 			Key:  "PROJ",
 			Name: "The Project",
 		}
-		respBody, err := json.Marshal(project)
-		c.Assert(err, IsNil)
-
 		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
-		_, err = rw.Write(respBody)
+		err := json.NewEncoder(rw).Encode(&project)
 		c.Assert(err, IsNil)
 	})
 	fakeJira.GET("/rest/api/2/mypermissions", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		permissions := &Permissions{
+		permissions := Permissions{
 			Permissions: map[string]Permission{
 				"BROWSE_PROJECTS": Permission{
 					HavePermission: true,
@@ -152,22 +148,15 @@ func (s *JirabotSuite) startFakeJira(c *C) {
 				},
 			},
 		}
-		respBody, err := json.Marshal(permissions)
-		c.Assert(err, IsNil)
-
 		rw.Header().Add("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusOK)
-		_, err = rw.Write(respBody)
+		err := json.NewEncoder(rw).Encode(&permissions)
 		c.Assert(err, IsNil)
 	})
 	fakeJira.POST("/rest/api/2/issue", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		var err error
+		var issueInput IssueInput
 
-		body, err := ioutil.ReadAll(r.Body)
-		c.Assert(err, IsNil)
-
-		issueInput := IssueInput{}
-		err = json.Unmarshal(body, &issueInput)
+		err := json.NewDecoder(r.Body).Decode(&issueInput)
 		c.Assert(err, IsNil)
 
 		id := fmt.Sprintf("%v", time.Now().UnixNano())
@@ -198,45 +187,32 @@ func (s *JirabotSuite) startFakeJira(c *C) {
 		s.putIssue(*issue)
 		s.newIssues <- issue
 
-		respBody, err := json.Marshal(issue)
-		c.Assert(err, IsNil)
-
 		rw.Header().Add("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusCreated)
-		_, err = rw.Write(respBody)
+		err = json.NewEncoder(rw).Encode(issue)
 		c.Assert(err, IsNil)
 	})
 	fakeJira.GET("/rest/api/2/issue/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		var err error
-
 		issue := s.getIssue(ps.ByName("id"))
 		if issue == nil {
 			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
-
-		respBody, err := json.Marshal(issue)
-		c.Assert(err, IsNil)
 
 		rw.Header().Add("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusOK)
-		_, err = rw.Write(respBody)
+		err := json.NewEncoder(rw).Encode(issue)
 		c.Assert(err, IsNil)
 	})
 	fakeJira.POST("/rest/api/2/issue/:id/transitions", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		var err error
-
 		issue := s.getIssue(ps.ByName("id"))
 		if issue == nil {
 			rw.WriteHeader(http.StatusNotFound)
 			return
 		}
 
-		body, err := ioutil.ReadAll(r.Body)
-		c.Assert(err, IsNil)
-
 		var payload jira.CreateTransitionPayload
-		err = json.Unmarshal(body, &payload)
+		err := json.NewDecoder(r.Body).Decode(&payload)
 		c.Assert(err, IsNil)
 
 		switch payload.Transition.ID {
@@ -250,7 +226,6 @@ func (s *JirabotSuite) startFakeJira(c *C) {
 			rw.WriteHeader(http.StatusBadRequest)
 			return
 		}
-
 		rw.Header().Add("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusNoContent)
 	})
@@ -388,10 +363,11 @@ func (s *JirabotSuite) transitionIssue(c *C, issue *Issue, status string) {
 }
 
 func (s *JirabotSuite) postWebhook(c *C, wh *Webhook) (*http.Response, error) {
-	body, err := json.Marshal(wh)
+	var buf bytes.Buffer
+	err := json.NewEncoder(&buf).Encode(wh)
 	c.Assert(err, IsNil)
 
-	req, err := http.NewRequest("POST", s.webhookUrl, bytes.NewReader(body))
+	req, err := http.NewRequest("POST", s.webhookUrl, &buf)
 	c.Assert(err, IsNil)
 
 	req.Header.Add("Content-Type", "application/json")
