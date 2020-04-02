@@ -300,7 +300,7 @@ func (a *App) WatchRequests(ctx context.Context) error {
 
 		switch {
 		case trace.IsConnectionProblem(err):
-			log.WithError(err).Error("Cannot connect to Teleport Auth server. Reconnecting...")
+			log.WithError(err).Error("Failed to connect to Teleport Auth server. Reconnecting...")
 		case trace.IsEOF(err):
 			log.WithError(err).Error("Watcher stream closed. Reconnecting...")
 		case utils.IsCanceled(err):
@@ -354,7 +354,7 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 
 		userEmail, err := a.bot.GetUserEmail(ctx, cb.User.ID)
 		if err != nil {
-			logger.WithError(err).Warning("Cannot fetch slack user email")
+			logger.WithError(err).Warning("Failed to fetch slack user email")
 		}
 
 		logger = logger.WithFields(logFields{
