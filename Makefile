@@ -6,6 +6,10 @@ access-slackbot:
 access-jirabot:
 	make -C access/jirabot
 
+.PHONY: access-mattermostbot
+access-mattermostbot:
+	make -C access/mattermostbot
+
 .PHONY:
 access-example:
 	go build -o build/access-example ./access/example
