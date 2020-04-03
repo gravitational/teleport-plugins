@@ -367,11 +367,7 @@ func (s *JirabotSuite) postWebhook(c *C, wh *Webhook) (*http.Response, error) {
 	err := json.NewEncoder(&buf).Encode(wh)
 	c.Assert(err, IsNil)
 
-	req, err := http.NewRequest("POST", s.webhookUrl, &buf)
-	c.Assert(err, IsNil)
-
-	req.Header.Add("Content-Type", "application/json")
-	return http.DefaultClient.Do(req)
+	return http.Post(s.webhookUrl, "application/json", &buf)
 }
 
 func (s *JirabotSuite) TestSlackMessagePosting(c *C) {
