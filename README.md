@@ -31,6 +31,13 @@ A basic Teleport / JIRA integration (WIP) can be found in [access/jirabot](./acc
 The plugin can be built with `make access-jirabot` and instructions for configuring the
 plugin can be found in the plugin's [README](./access/jirabot/README.md).
 
+
+### Pagerduty Integration
+
+A Teleport integartion with Pagerduty that allows your team to treat Teleport permission requests
+as Pagerduty incidents, and provides Pagerduty special actions to approve or deny permission requests.
+Run `make teleport-pagerduty` to build it. More docs in the [README](./access/pagerduty/README.md) 
+
 ## Notes
 
 Use `scripts/dep` for dependencies management. It is a wrapper over `dep` which ignores git submodules.

@@ -6,6 +6,10 @@ access-slackbot:
 access-jirabot:
 	make -C access/jirabot
 
+.PHONY: access-pagerduty
+access-pagerduty:
+	make -C access/pagerduty
+
 .PHONY:
 access-example:
 	go build -o build/access-example ./access/example
