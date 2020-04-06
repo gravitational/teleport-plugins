@@ -73,6 +73,10 @@ ignored = ["github.com/Sirupsen/logrus", "github.com/gravitational/license/gener
   name = "github.com/mattermost/mattermost-server"
   version = "5.17.0"
 
+[[constraint]]
+  name = "github.com/PagerDuty/go-pagerduty"
+  version = "1.1.2"
+
 # Teleport dependencies overrides
 
 [[override]]

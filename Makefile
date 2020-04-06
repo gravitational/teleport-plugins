@@ -10,6 +10,10 @@ access-jirabot:
 access-mattermostbot:
 	make -C access/mattermostbot
 
+.PHONY: access-pagerduty
+access-pagerduty:
+	make -C access/pagerduty
+
 .PHONY:
 access-example:
 	go build -o build/access-example ./access/example
