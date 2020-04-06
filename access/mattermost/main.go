@@ -328,7 +328,7 @@ func (a *App) OnMattermostAction(ctx context.Context, data BotAction) (BotAction
 		}
 	} else {
 		if req.State != access.StatePending {
-			return BotActionResponse{}, trace.Errorf("can't process not pending request: %+v", req)
+			return BotActionResponse{}, trace.Errorf("cannot process not pending request: %+v", req)
 		}
 
 		log = log.WithFields(logFields{
@@ -395,7 +395,12 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 	reqID := req.ID // This is the only available field
 	pluginData, err := a.getPluginData(ctx, reqID)
 	if err != nil {
-		return trace.Wrap(err)
+		if trace.IsNotFound(err) {
+			log.WithError(err).Warn("Cannot expire unknown request")
+			return nil
+		} else {
+			return trace.Wrap(err)
+		}
 	}
 
 	reqData, mmData := pluginData.RequestData, pluginData.MattermostData

@@ -348,14 +348,14 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 
 	if err != nil {
 		if trace.IsNotFound(err) {
-			log.WithError(err).WithField("request_id", reqID).Warning("Can't process expired request")
+			log.WithError(err).WithField("request_id", reqID).Warning("Cannot process expired request")
 			return nil
 		} else {
 			return trace.Wrap(err)
 		}
 	} else {
 		if req.State != access.StatePending {
-			return trace.Errorf("can't process not pending request: %+v", req)
+			return trace.Errorf("cannot process not pending request: %+v", req)
 		}
 
 		pluginData, err := a.getPluginData(ctx, reqID)
@@ -436,7 +436,7 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 	pluginData, err := a.getPluginData(ctx, reqID)
 	if err != nil {
 		if trace.IsNotFound(err) {
-			log.WithError(err).Warnf("cannot expire unknown request")
+			log.WithError(err).Warn("Cannot expire unknown request")
 			return nil
 		} else {
 			return trace.Wrap(err)

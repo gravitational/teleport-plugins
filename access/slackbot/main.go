@@ -344,7 +344,7 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 		}
 	} else {
 		if req.State != access.StatePending {
-			return trace.Errorf("Can't process not pending request: %+v", req)
+			return trace.Errorf("cannot process not pending request: %+v", req)
 		}
 
 		logger := log.WithFields(logFields{
@@ -395,7 +395,7 @@ func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
 	if cb.ResponseURL != "" {
 		a.Spawn(func(ctx context.Context) {
 			if err := a.bot.Respond(ctx, req.ID, reqData, slackStatus, cb.ResponseURL); err != nil {
-				log.WithError(err).WithField("request_id", req.ID).Error("Can't update Slack message")
+				log.WithError(err).WithField("request_id", req.ID).Error("Cannot update Slack message")
 				return
 			}
 			log.WithField("request_id", req.ID).Info("Successfully updated Slack message")
@@ -427,7 +427,12 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 	reqID := req.ID // This is the only available field
 	pluginData, err := a.getPluginData(ctx, reqID)
 	if err != nil {
-		return trace.Wrap(err)
+		if trace.IsNotFound(err) {
+			log.WithError(err).Warn("Cannot expire unknown request")
+			return nil
+		} else {
+			return trace.Wrap(err)
+		}
 	}
 
 	reqData, slackData := pluginData.requestData, pluginData.slackData

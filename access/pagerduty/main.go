@@ -78,6 +78,8 @@ func main() {
 	case "start":
 		if err := run(*path, *insecure, *debug); err != nil {
 			utils.Bail(err)
+		} else {
+			log.Info("Successfully shut down")
 		}
 	}
 }
@@ -209,7 +211,7 @@ func (a *App) Run(ctx context.Context) error {
 }
 
 func (a *App) checkTeleportVersion(ctx context.Context) error {
-	log.Info("Checking Teleport server version")
+	log.Debug("Checking Teleport server version")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	pong, err := a.accessClient.Ping(ctx)
@@ -235,7 +237,7 @@ func (a *App) watchRequests(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	log.Info("Watcher connected")
+	log.Debug("Watcher connected")
 
 	for {
 		select {
@@ -271,7 +273,7 @@ func (a *App) watchRequests(ctx context.Context) error {
 // WatchRequests starts a GRPC watcher which monitors access requests and restarts it on expected errors.
 // It calls onPendingRequest when new pending event is added and onDeletedRequest when request is deleted
 func (a *App) WatchRequests(ctx context.Context) error {
-	log.Info("Starting a request watcher...")
+	log.Debug("Starting a request watcher...")
 
 	for {
 		err := a.watchRequests(ctx)
@@ -312,14 +314,14 @@ func (a *App) OnPagerdutyAction(ctx context.Context, action WebhookAction) error
 
 	if err != nil {
 		if trace.IsNotFound(err) {
-			log.WithError(err).WithField("request_id", reqID).Warning("Can't process expired request")
+			log.WithError(err).WithField("request_id", reqID).Warning("Cannot process expired request")
 			return nil
 		} else {
 			return trace.Wrap(err)
 		}
 	} else {
 		if req.State != access.StatePending {
-			return trace.Errorf("can't process not pending request: %+v", req)
+			return trace.Errorf("cannot process not pending request: %+v", req)
 		}
 
 		pluginData, err := a.getPluginData(ctx, reqID)
@@ -360,7 +362,7 @@ func (a *App) OnPagerdutyAction(ctx context.Context, action WebhookAction) error
 		if err := a.bot.ResolveIncident(reqID, pluginData.PagerdutyData, resolution); err != nil {
 			return trace.Wrap(err)
 		}
-		log.Info("Incident has been resolved")
+		log.Infof("Incident %q has been resolved", action.IncidentID)
 	}
 
 	return nil
@@ -388,7 +390,7 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 	pluginData, err := a.getPluginData(ctx, reqID)
 	if err != nil {
 		if trace.IsNotFound(err) {
-			log.WithError(err).Warnf("cannot expire unknown request")
+			log.WithError(err).Warn("Cannot expire unknown request")
 			return nil
 		} else {
 			return trace.Wrap(err)
@@ -399,7 +401,7 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	log.WithField("request_id", reqID).Debug("Successfully marked request as expired")
+	log.WithField("request_id", reqID).Info("Successfully marked request as expired")
 
 	return nil
 }
