@@ -35,7 +35,11 @@ type Bot struct {
 }
 
 func NewBot(conf *Config, onAction WebhookFunc) (*Bot, error) {
-	client := pd.NewClient(conf.Pagerduty.APIKey)
+	clientOpts := []pd.ClientOptions{}
+	if conf.Pagerduty.APIEndpoint != "" {
+		clientOpts = append(clientOpts, pd.WithAPIEndpoint(conf.Pagerduty.APIEndpoint))
+	}
+	client := pd.NewClient(conf.Pagerduty.APIKey, clientOpts...)
 	client.HTTPClient = &http.Client{
 		Timeout: pdHttpTimeout,
 		Transport: &http.Transport{

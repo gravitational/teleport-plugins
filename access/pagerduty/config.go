@@ -19,9 +19,10 @@ type Config struct {
 		RootCAs    string `toml:"root-cas"`
 	} `toml:"teleport"`
 	Pagerduty struct {
-		APIKey    string `toml:"api-key"`
-		UserEmail string `toml:"user-email"`
-		ServiceId string `toml:"service-id"`
+		APIEndpoint string `toml:-`
+		APIKey      string `toml:"api-key"`
+		UserEmail   string `toml:"user-email"`
+		ServiceId   string `toml:"service-id"`
 	} `toml:"pagerduty"`
 	HTTP utils.HTTPConfig `toml:"http"`
 	Log  utils.LogConfig  `toml:"log"`

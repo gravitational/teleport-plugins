@@ -75,7 +75,7 @@ ignored = ["github.com/Sirupsen/logrus", "github.com/gravitational/license/gener
 
 [[constraint]]
   name = "github.com/PagerDuty/go-pagerduty"
-  version = "1.1.2"
+  branch = "master" # TODO: temporary change
 
 # Teleport dependencies overrides
 

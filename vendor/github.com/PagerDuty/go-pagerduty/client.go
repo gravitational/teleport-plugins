@@ -15,6 +15,17 @@ const (
 	apiEndpoint = "https://api.pagerduty.com"
 )
 
+// The type of authentication to use with the API client
+type authType int
+
+const (
+	// Account/user API token authentication
+	apiToken authType = iota
+
+	// OAuth token authentication
+	oauthToken
+)
+
 // APIObject represents generic api json response that is shared by most
 // domain object (like escalation
 type APIObject struct {
@@ -88,18 +99,50 @@ type Client struct {
 	authToken   string
 	apiEndpoint string
 
+	// Authentication type to use for API
+	authType authType
+
 	// HTTPClient is the HTTP client used for making requests against the
 	// PagerDuty API. You can use either *http.Client here, or your own
 	// implementation.
 	HTTPClient HTTPClient
 }
 
-// NewClient creates an API client
-func NewClient(authToken string) *Client {
-	return &Client{
+// NewClient creates an API client using an account/user API token
+func NewClient(authToken string, options ...ClientOptions) *Client {
+	client := Client{
 		authToken:   authToken,
 		apiEndpoint: apiEndpoint,
+		authType:    apiToken,
 		HTTPClient:  defaultHTTPClient,
+	}
+
+	for _, opt := range options {
+		opt(&client)
+	}
+
+	return &client
+}
+
+// NewOAuthClient creates an API client using an OAuth token
+func NewOAuthClient(authToken string, options ...ClientOptions) *Client {
+	return NewClient(authToken, WithOAuth())
+}
+
+// ClientOptions allows for options to be passed into the Client for customization
+type ClientOptions func(*Client)
+
+// WithAPIEndpoint allows for a custom API endpoint to be passed into the the client
+func WithAPIEndpoint(endpoint string) ClientOptions {
+	return func(c *Client) {
+		c.apiEndpoint = endpoint
+	}
+}
+
+// WithOAuth allows for an OAuth token to be passed into the the client
+func WithOAuth() ClientOptions {
+	return func(c *Client) {
+		c.authType = oauthToken
 	}
 }
 
@@ -142,7 +185,13 @@ func (c *Client) do(method, path string, body io.Reader, headers *map[string]str
 	}
 	req.Header.Set("User-Agent", "go-pagerduty/"+Version)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Token token="+c.authToken)
+
+	switch c.authType {
+	case oauthToken:
+		req.Header.Set("Authorization", "Bearer "+c.authToken)
+	default:
+		req.Header.Set("Authorization", "Token token="+c.authToken)
+	}
 
 	resp, err := c.HTTPClient.Do(req)
 	return c.checkResponse(resp, err)
