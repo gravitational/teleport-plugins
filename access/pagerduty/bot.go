@@ -26,21 +26,24 @@ const (
 
 // Bot is a wrapper around pd.Client that works with access.Request
 type Bot struct {
-	client    *pd.Client
-	server    *WebhookServer
-	from      string
-	serviceId string
+	httpClient  *http.Client
+	apiEndpoint string
+	apiKey      string
+	server      *WebhookServer
+	from        string
+	serviceId   string
 
 	clusterName string
 }
 
+type HTTPClientImpl func(*http.Request) (*http.Response, error)
+
+func (h HTTPClientImpl) Do(req *http.Request) (*http.Response, error) {
+	return h(req)
+}
+
 func NewBot(conf *Config, onAction WebhookFunc) (*Bot, error) {
-	clientOpts := []pd.ClientOptions{}
-	if conf.Pagerduty.APIEndpoint != "" {
-		clientOpts = append(clientOpts, pd.WithAPIEndpoint(conf.Pagerduty.APIEndpoint))
-	}
-	client := pd.NewClient(conf.Pagerduty.APIKey, clientOpts...)
-	client.HTTPClient = &http.Client{
+	httpClient := &http.Client{
 		Timeout: pdHttpTimeout,
 		Transport: &http.Transport{
 			MaxConnsPerHost:     pdMaxConns,
@@ -48,13 +51,27 @@ func NewBot(conf *Config, onAction WebhookFunc) (*Bot, error) {
 		},
 	}
 	bot := &Bot{
-		from:      conf.Pagerduty.UserEmail,
-		client:    client,
-		serviceId: conf.Pagerduty.ServiceId,
+		httpClient:  httpClient,
+		apiEndpoint: conf.Pagerduty.APIEndpoint,
+		apiKey:      conf.Pagerduty.APIKey,
+		from:        conf.Pagerduty.UserEmail,
+		serviceId:   conf.Pagerduty.ServiceId,
 	}
 	bot.server = NewWebhookServer(conf.HTTP, onAction)
 	return bot, nil
 
+}
+
+func (b *Bot) NewClient(ctx context.Context) *pd.Client {
+	clientOpts := []pd.ClientOptions{}
+	if b.apiEndpoint != "" {
+		clientOpts = append(clientOpts, pd.WithAPIEndpoint(b.apiEndpoint))
+	}
+	client := pd.NewClient(b.apiKey, clientOpts...)
+	client.HTTPClient = HTTPClientImpl(func(r *http.Request) (*http.Response, error) {
+		return b.httpClient.Do(r.WithContext(ctx))
+	})
+	return client
 }
 
 func (b *Bot) RunServer(ctx context.Context) error {
@@ -65,13 +82,15 @@ func (b *Bot) ShutdownServer(ctx context.Context) error {
 	return b.server.Shutdown(ctx)
 }
 
-func (b *Bot) Setup() error {
+func (b *Bot) Setup(ctx context.Context) error {
+	client := b.NewClient(ctx)
+
 	var more bool
 	var offset uint
 
 	var webhookSchemaID string
 	for offset, more = 0, true; webhookSchemaID == "" && more; {
-		schemaResp, err := b.client.ListExtensionSchemas(pd.ListExtensionSchemaOptions{
+		schemaResp, err := client.ListExtensionSchemas(pd.ListExtensionSchemaOptions{
 			APIListObject: pd.APIListObject{
 				Offset: offset,
 				Limit:  pdListLimit,
@@ -91,12 +110,12 @@ func (b *Bot) Setup() error {
 		offset += pdListLimit
 	}
 	if webhookSchemaID == "" {
-		return trace.NotFound(`Failed to find "Custom Incident Action" extension type`)
+		return trace.NotFound(`failed to find "Custom Incident Action" extension type`)
 	}
 
 	var approveExtID, denyExtID string
 	for offset, more = 0, true; (approveExtID == "" || denyExtID == "") && more; {
-		extResp, err := b.client.ListExtensions(pd.ListExtensionOptions{
+		extResp, err := client.ListExtensions(pd.ListExtensionOptions{
 			APIListObject: pd.APIListObject{
 				Offset: offset,
 				Limit:  pdListLimit,
@@ -121,17 +140,17 @@ func (b *Bot) Setup() error {
 		offset += pdListLimit
 	}
 
-	if err := b.SetupCustomAction(approveExtID, webhookSchemaID, pdApproveAction, pdApproveActionLabel); err != nil {
+	if err := b.setupCustomAction(client, approveExtID, webhookSchemaID, pdApproveAction, pdApproveActionLabel); err != nil {
 		return err
 	}
-	if err := b.SetupCustomAction(denyExtID, webhookSchemaID, pdDenyAction, pdDenyActionLabel); err != nil {
+	if err := b.setupCustomAction(client, denyExtID, webhookSchemaID, pdDenyAction, pdDenyActionLabel); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (b *Bot) SetupCustomAction(extensionId, schemaId, actionName, actionLabel string) error {
+func (b *Bot) setupCustomAction(client *pd.Client, extensionId, schemaId, actionName, actionLabel string) error {
 	actionURL, err := b.server.ActionURL(actionName)
 	if err != nil {
 		return trace.Wrap(err)
@@ -152,16 +171,18 @@ func (b *Bot) SetupCustomAction(extensionId, schemaId, actionName, actionLabel s
 		},
 	}
 	if extensionId == "" {
-		_, err := b.client.CreateExtension(ext)
+		_, err := client.CreateExtension(ext)
 		return trace.Wrap(err)
 	} else {
-		_, err := b.client.UpdateExtension(extensionId, ext)
+		_, err := client.UpdateExtension(extensionId, ext)
 		return trace.Wrap(err)
 	}
 }
 
-func (b *Bot) CreateIncident(reqID string, reqData RequestData) (PagerdutyData, error) {
-	incident, err := b.client.CreateIncident(b.from, &pd.CreateIncidentOptions{
+func (b *Bot) CreateIncident(ctx context.Context, reqID string, reqData RequestData) (PagerdutyData, error) {
+	client := b.NewClient(ctx)
+
+	incident, err := client.CreateIncident(b.from, &pd.CreateIncidentOptions{
 		Title:       fmt.Sprintf("Access request from %s", reqData.User),
 		IncidentKey: fmt.Sprintf("%s/%s", pdIncidentKeyPrefix, reqID),
 		Service: &pd.APIReference{
@@ -182,8 +203,10 @@ func (b *Bot) CreateIncident(reqID string, reqData RequestData) (PagerdutyData, 
 	}, nil
 }
 
-func (b *Bot) ResolveIncident(reqID string, pdData PagerdutyData, status string) error {
-	err := b.client.CreateIncidentNote(pdData.ID, pd.IncidentNote{
+func (b *Bot) ResolveIncident(ctx context.Context, reqID string, pdData PagerdutyData, status string) error {
+	client := b.NewClient(ctx)
+
+	err := client.CreateIncidentNote(pdData.ID, pd.IncidentNote{
 		User: pd.APIObject{
 			Summary: b.from,
 		},
@@ -192,7 +215,7 @@ func (b *Bot) ResolveIncident(reqID string, pdData PagerdutyData, status string)
 	if err != nil {
 		return trace.Wrap(err)
 	}
-	_, err = b.client.ManageIncidents(b.from, []pd.ManageIncidentsOptions{
+	_, err = client.ManageIncidents(b.from, []pd.ManageIncidentsOptions{
 		pd.ManageIncidentsOptions{
 			ID:     pdData.ID,
 			Type:   "incident_reference",

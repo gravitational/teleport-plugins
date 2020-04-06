@@ -166,7 +166,7 @@ func (a *App) Run(ctx context.Context) error {
 		}
 
 		log.Debug("Setting up the webhook extensions")
-		if err := a.bot.Setup(); err != nil {
+		if err := a.bot.Setup(ctx); err != nil {
 			log.WithError(err).Error("Error setting up webhook extensions")
 			a.Terminate()
 			return
@@ -359,7 +359,7 @@ func (a *App) OnPagerdutyAction(ctx context.Context, action WebhookAction) error
 		}
 		log.Infof("PagerDuty user %s the request", resolution)
 
-		if err := a.bot.ResolveIncident(reqID, pluginData.PagerdutyData, resolution); err != nil {
+		if err := a.bot.ResolveIncident(ctx, reqID, pluginData.PagerdutyData, resolution); err != nil {
 			return trace.Wrap(err)
 		}
 		log.Infof("Incident %q has been resolved", action.IncidentID)
@@ -371,7 +371,7 @@ func (a *App) OnPagerdutyAction(ctx context.Context, action WebhookAction) error
 func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 	reqData := RequestData{User: req.User, Roles: req.Roles}
 
-	pdData, err := a.bot.CreateIncident(req.ID, reqData)
+	pdData, err := a.bot.CreateIncident(ctx, req.ID, reqData)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -397,7 +397,7 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		}
 	}
 
-	if err := a.bot.ResolveIncident(reqID, pluginData.PagerdutyData, "expired"); err != nil {
+	if err := a.bot.ResolveIncident(ctx, reqID, pluginData.PagerdutyData, "expired"); err != nil {
 		return trace.Wrap(err)
 	}
 
