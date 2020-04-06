@@ -8,12 +8,12 @@ BINDIR=/usr/local/bin
 # the directory where Teleport plugins store their certificates
 # and other data files
 # 
-DATADIR=/var/lib/teleport/plugins/mattermostbot
+DATADIR=/var/lib/teleport/plugins/mattermost
 
 [ ! $(id -u) != "0" ] || { echo "ERROR: You must be root"; exit 1; }
 cd $(dirname $0)
 mkdir -p $BINDIR $DATADIR
-cp -f teleport-mattermostbot $BINDIR/ || exit 1
+cp -f teleport-mattermost $BINDIR/ || exit 1
 
 echo "Teleport Jira Plugin binaries have been copied to $BINDIR"
-echo "You can run teleport-mattermostbot configure > /etc/teleport-mattermostbot.toml to bootstrap your config file."
+echo "You can run teleport-mattermost configure > /etc/teleport-mattermost.toml to bootstrap your config file."

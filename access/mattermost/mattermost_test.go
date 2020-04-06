@@ -32,7 +32,7 @@ const (
 	Site   = "local-site"
 )
 
-type MattermostBotSuite struct {
+type MattermostSuite struct {
 	app               *App
 	appPort           string
 	webhookUrl        string
@@ -44,11 +44,11 @@ type MattermostBotSuite struct {
 	tmpFiles          []*os.File
 }
 
-var _ = Suite(&MattermostBotSuite{})
+var _ = Suite(&MattermostSuite{})
 
-func TestMattermostBot(t *testing.T) { TestingT(t) }
+func TestMattermost(t *testing.T) { TestingT(t) }
 
-func (s *MattermostBotSuite) SetUpSuite(c *C) {
+func (s *MattermostSuite) SetUpSuite(c *C) {
 	var err error
 	log.SetLevel(log.DebugLevel)
 	priv, pub, err := testauthority.New().GenerateKeyPair("")
@@ -90,13 +90,13 @@ func (s *MattermostBotSuite) SetUpSuite(c *C) {
 	s.webhookUrl = "http://" + Host + ":" + s.appPort + "/"
 }
 
-func (s *MattermostBotSuite) SetUpTest(c *C) {
+func (s *MattermostSuite) SetUpTest(c *C) {
 	s.startFakeMattermost(c)
 	s.startApp(c)
 	time.Sleep(time.Millisecond * 250) // Wait some time for services to start up
 }
 
-func (s *MattermostBotSuite) TearDownTest(c *C) {
+func (s *MattermostSuite) TearDownTest(c *C) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
 	defer cancel()
 	err := s.app.Shutdown(ctx)
@@ -110,14 +110,14 @@ func (s *MattermostBotSuite) TearDownTest(c *C) {
 	s.tmpFiles = []*os.File{}
 }
 
-func (s *MattermostBotSuite) newTmpFile(c *C, pattern string) (file *os.File) {
+func (s *MattermostSuite) newTmpFile(c *C, pattern string) (file *os.File) {
 	file, err := ioutil.TempFile("", pattern)
 	c.Assert(err, IsNil)
 	s.tmpFiles = append(s.tmpFiles, file)
 	return
 }
 
-func (s *MattermostBotSuite) startFakeMattermost(c *C) {
+func (s *MattermostSuite) startFakeMattermost(c *C) {
 	s.newPosts = make(chan *mm.Post, 1)
 
 	fakeMattermost := httprouter.New()
@@ -191,7 +191,7 @@ func (s *MattermostBotSuite) startFakeMattermost(c *C) {
 	s.fakeMattermostSrv = httptest.NewServer(fakeMattermost)
 }
 
-func (s *MattermostBotSuite) startApp(c *C) {
+func (s *MattermostSuite) startApp(c *C) {
 	auth := s.teleport.Process.GetAuthServer()
 	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
 	c.Assert(err, IsNil)
@@ -238,7 +238,7 @@ func (s *MattermostBotSuite) startApp(c *C) {
 	}()
 }
 
-func (s *MattermostBotSuite) createAccessRequest(c *C) services.AccessRequest {
+func (s *MattermostSuite) createAccessRequest(c *C) services.AccessRequest {
 	client, err := s.teleport.NewClient(integration.ClientConfig{Login: s.me.Username})
 	c.Assert(err, IsNil)
 	req, err := services.NewAccessRequest(s.me.Username, "admin")
@@ -249,7 +249,7 @@ func (s *MattermostBotSuite) createAccessRequest(c *C) services.AccessRequest {
 	return req
 }
 
-func (s *MattermostBotSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
+func (s *MattermostSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
 	client, err := s.teleport.NewClient(integration.ClientConfig{Login: s.me.Username})
 	c.Assert(err, IsNil)
 	req, err := services.NewAccessRequest(s.me.Username, "admin")
@@ -266,7 +266,7 @@ func (s *MattermostBotSuite) createExpiredAccessRequest(c *C) services.AccessReq
 	return req
 }
 
-func (s *MattermostBotSuite) getPost(id string) *mm.Post {
+func (s *MattermostSuite) getPost(id string) *mm.Post {
 	if obj, ok := s.posts.Load(id); ok {
 		post := obj.(mm.Post)
 		return &post
@@ -275,7 +275,7 @@ func (s *MattermostBotSuite) getPost(id string) *mm.Post {
 	}
 }
 
-func (s *MattermostBotSuite) postWebhook(c *C, post *mm.Post, actionName string) (*http.Response, error) {
+func (s *MattermostSuite) postWebhook(c *C, post *mm.Post, actionName string) (*http.Response, error) {
 	attachments := post.Attachments()
 	c.Assert(attachments, HasLen, 1)
 	var action *mm.PostAction
@@ -301,7 +301,7 @@ func (s *MattermostBotSuite) postWebhook(c *C, post *mm.Post, actionName string)
 	return http.Post(action.Integration.URL, "application/json", &buf)
 }
 
-func (s *MattermostBotSuite) TestMattermostMessagePosting(c *C) {
+func (s *MattermostSuite) TestMattermostMessagePosting(c *C) {
 	_ = s.createAccessRequest(c)
 
 	var post *mm.Post
@@ -320,7 +320,7 @@ func (s *MattermostBotSuite) TestMattermostMessagePosting(c *C) {
 	c.Assert(attachment.Actions[1].Name, Equals, "Deny")
 }
 
-func (s *MattermostBotSuite) TestApproval(c *C) {
+func (s *MattermostSuite) TestApproval(c *C) {
 	request := s.createAccessRequest(c)
 
 	var post *mm.Post
@@ -343,7 +343,7 @@ func (s *MattermostBotSuite) TestApproval(c *C) {
 	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
 }
 
-func (s *MattermostBotSuite) TestDenial(c *C) {
+func (s *MattermostSuite) TestDenial(c *C) {
 	request := s.createAccessRequest(c)
 
 	var post *mm.Post
@@ -366,7 +366,7 @@ func (s *MattermostBotSuite) TestDenial(c *C) {
 	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
 }
 
-func (s *MattermostBotSuite) TestApproveExpired(c *C) {
+func (s *MattermostSuite) TestApproveExpired(c *C) {
 	s.createExpiredAccessRequest(c)
 
 	var post *mm.Post
@@ -387,7 +387,7 @@ func (s *MattermostBotSuite) TestApproveExpired(c *C) {
 	c.Assert(attachments[0].Actions, HasLen, 0)
 }
 
-func (s *MattermostBotSuite) TestDenyExpired(c *C) {
+func (s *MattermostSuite) TestDenyExpired(c *C) {
 	s.createExpiredAccessRequest(c)
 
 	var post *mm.Post

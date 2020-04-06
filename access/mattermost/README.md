@@ -85,12 +85,12 @@ _Note: by default, tctl auth sign produces certificates with a relatively short 
 The recommended way to run Teleport Mattermost plugin is by downloading the release version and installing it: 
 
 ```bash
-$ wget https://get.gravitational.com/teleport-mattermostbot-v0.0.1-linux-amd64-bin.tar.gz
-$ tar -xzf teleport-mattermostbot-v0.0.1-linux-amd64-bin.tar.gz
-$ cd teleport-mattermostbot
+$ wget https://get.gravitational.com/teleport-mattermost-v0.0.1-linux-amd64-bin.tar.gz
+$ tar -xzf teleport-mattermost-v0.0.1-linux-amd64-bin.tar.gz
+$ cd teleport-mattermost
 $ ./install
-$ which teleport-mattermostbot
-/usr/local/bin/teleport-mattermostbot
+$ which teleport-mattermost
+/usr/local/bin/teleport-mattermost
 ```
 
 ### Building from source
@@ -101,7 +101,7 @@ $ which teleport-mattermostbot
 git clone git@github.com:gravitational/teleport-plugins.git
 cd teleport-plugins
 
-cd access/mattermostbot
+cd access/mattermost
 make
 ```
 
@@ -110,18 +110,18 @@ make
 Mattermost Bot uses a config file in TOML format. Generate a boilerplate config by running the following command: 
 
 ```
-teleport-mattermostbot configure > /etc/teleport-mattermostbot.yml
+teleport-mattermost configure > /etc/teleport-mattermost.yml
 ```
 
 Then, edit the config as needed.
 
 ```TOML
-# example mattermostbot configuration TOML file
+# example mattermost configuration TOML file
 [teleport]
 auth-server = "example.com:3025"  # Teleport Auth Server GRPC API address
-client-key = "/var/lib/teleport/plugins/mattermostbot/auth.key" # Teleport GRPC client secret key
-client-crt = "/var/lib/teleport/plugins/mattermostbot/auth.crt" # Teleport GRPC client certificate
-root-cas = "/var/lib/teleport/plugins/mattermostbot/auth.cas"   # Teleport cluster CA certs
+client-key = "/var/lib/teleport/plugins/mattermost/auth.key" # Teleport GRPC client secret key
+client-crt = "/var/lib/teleport/plugins/mattermost/auth.crt" # Teleport GRPC client certificate
+root-cas = "/var/lib/teleport/plugins/mattermost/auth.cas"   # Teleport cluster CA certs
 
 [mattermost]
 token = "BOT TOKEN"       # Mattermost Bot OAuth token
@@ -130,15 +130,15 @@ channel = "town-square"  # Mattermost Channel name to post requests to
 
 [http]
 listen = ":8081"          # Mattermost interaction callback listener
-# https-key-file = "/var/lib/teleport/plugins/mattermostbot/server.key"  # TLS private key
-# https-cert-file = "/var/lib/teleport/plugins/mattermostbot/server.crt" # TLS certificate
+# https-key-file = "/var/lib/teleport/plugins/mattermost/server.key"  # TLS private key
+# https-cert-file = "/var/lib/teleport/plugins/mattermost/server.crt" # TLS certificate
 
 [log]
-output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/mattermostbot.log"
+output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/mattermost.log"
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
 
 ```
 
 ### Running the bot
 
-With the config above, you should be able to run the bot invoking `teleport-mattermostbot start`
+With the config above, you should be able to run the bot invoking `teleport-mattermost start`

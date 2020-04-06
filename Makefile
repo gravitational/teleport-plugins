@@ -6,9 +6,9 @@ access-slackbot:
 access-jirabot:
 	make -C access/jirabot
 
-.PHONY: access-mattermostbot
-access-mattermostbot:
-	make -C access/mattermostbot
+.PHONY: access-mattermost
+access-mattermost:
+	make -C access/mattermost
 
 .PHONY: access-pagerduty
 access-pagerduty:

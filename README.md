@@ -35,7 +35,7 @@ plugin can be found in the plugin's [README](./access/jirabot/README.md).
 
 Mattermost is a private cloud messaging platform (think Slack for enterprise). Teleport provides a 
 Mattermost integration that supports request flows similar to Slack integration above.
-The plugin can be built with `make access-mattermostbot`, and instructions for configuring the 
+The plugin can be built with `make access-mattermost`, and instructions for configuring the 
 plugin can be found in the plugin's [README](./access/mattermost/README.md).
 
 ### Pagerduty Extension

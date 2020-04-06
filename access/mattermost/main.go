@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	DefaultDir = "/var/lib/teleport/plugins/mattermostbot"
+	DefaultDir = "/var/lib/teleport/plugins/mattermost"
 )
 
 type RequestData struct {
@@ -56,14 +56,14 @@ type logFields = log.Fields
 
 func main() {
 	utils.InitLogger()
-	app := kingpin.New("teleport-mattermostbot", "Teleport plugin for access requests approval via Mattermost.")
+	app := kingpin.New("teleport-mattermost", "Teleport plugin for access requests approval via Mattermost.")
 
 	app.Command("configure", "Prints an example .TOML configuration file.")
 
 	startCmd := app.Command("start", "Starts a Teleport Mattermost plugin.")
 	path := startCmd.Flag("config", "TOML config file path").
 		Short('c').
-		Default("/etc/teleport-mattermostbot.toml").
+		Default("/etc/teleport-mattermost.toml").
 		String()
 	debug := startCmd.Flag("debug", "Enable verbose logging to stderr").
 		Short('d').
@@ -163,7 +163,7 @@ func (a *App) Run(ctx context.Context) error {
 
 	a.accessClient, err = access.NewClient(
 		ctx,
-		"mattermostbot",
+		"mattermost",
 		a.conf.Teleport.AuthServer,
 		tlsConf,
 	)
