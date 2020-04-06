@@ -359,7 +359,7 @@ func (s *JirabotSuite) transitionIssue(c *C, issue *Issue, status string) {
 		Issue:              &WebhookIssue{ID: issue.ID},
 	})
 	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, 200)
+	c.Assert(response.StatusCode, Equals, http.StatusOK)
 }
 
 func (s *JirabotSuite) postWebhook(c *C, wh *Webhook) (*http.Response, error) {

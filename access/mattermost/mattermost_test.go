@@ -275,7 +275,7 @@ func (s *MattermostSuite) getPost(id string) *mm.Post {
 	}
 }
 
-func (s *MattermostSuite) postWebhook(c *C, post *mm.Post, actionName string) (*http.Response, error) {
+func (s *MattermostSuite) postWebhook(c *C, post *mm.Post, actionName string) {
 	attachments := post.Attachments()
 	c.Assert(attachments, HasLen, 1)
 	var action *mm.PostAction
@@ -298,7 +298,9 @@ func (s *MattermostSuite) postWebhook(c *C, post *mm.Post, actionName string) (*
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(&payload)
 	c.Assert(err, IsNil)
-	return http.Post(action.Integration.URL, "application/json", &buf)
+	response, err := http.Post(action.Integration.URL, "application/json", &buf)
+	c.Assert(err, IsNil)
+	c.Assert(response.StatusCode, Equals, http.StatusOK)
 }
 
 func (s *MattermostSuite) TestMattermostMessagePosting(c *C) {
@@ -331,9 +333,7 @@ func (s *MattermostSuite) TestApproval(c *C) {
 		c.Fatal("post wasn't created")
 	}
 
-	response, err := s.postWebhook(c, post, "Approve")
-	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, 200)
+	s.postWebhook(c, post, "Approve")
 
 	auth := s.teleport.Process.GetAuthServer()
 	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: request.GetName()})
@@ -354,9 +354,7 @@ func (s *MattermostSuite) TestDenial(c *C) {
 		c.Fatal("post wasn't created")
 	}
 
-	response, err := s.postWebhook(c, post, "Deny")
-	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, 200)
+	s.postWebhook(c, post, "Deny")
 
 	auth := s.teleport.Process.GetAuthServer()
 	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: request.GetName()})
@@ -377,9 +375,7 @@ func (s *MattermostSuite) TestApproveExpired(c *C) {
 		c.Fatal("post wasn't created")
 	}
 
-	response, err := s.postWebhook(c, post, "Approve")
-	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, 200)
+	s.postWebhook(c, post, "Approve")
 
 	post = s.getPost(post.Id)
 	attachments := post.Attachments()
@@ -398,9 +394,7 @@ func (s *MattermostSuite) TestDenyExpired(c *C) {
 		c.Fatal("post wasn't created")
 	}
 
-	response, err := s.postWebhook(c, post, "Deny")
-	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, 200)
+	s.postWebhook(c, post, "Deny")
 
 	post = s.getPost(post.Id)
 	attachments := post.Attachments()

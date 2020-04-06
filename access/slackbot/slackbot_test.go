@@ -98,7 +98,7 @@ func (s *SlackbotSuite) SetUpTest(c *C) {
 }
 
 func (s *SlackbotSuite) TearDownTest(c *C) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond * 250)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
 	defer cancel()
 	err := s.app.Shutdown(ctx)
 	c.Assert(err, IsNil)
@@ -197,7 +197,18 @@ func (s *SlackbotSuite) createExpiredAccessRequest(c *C) services.AccessRequest 
 	return req
 }
 
-func (s *SlackbotSuite) postCallback(c *C, cb *slack.InteractionCallback) (*http.Response, error) {
+func (s *SlackbotSuite) postCallback(c *C, actionId, reqID string) {
+	cb := &slack.InteractionCallback{
+		ActionCallback: slack.ActionCallbacks{
+			BlockActions: []*slack.BlockAction{
+				&slack.BlockAction{
+					ActionID: actionId,
+					Value:    reqID,
+				},
+			},
+		},
+	}
+
 	payload, err := json.Marshal(cb)
 	c.Assert(err, IsNil)
 	data := url.Values{
@@ -217,7 +228,9 @@ func (s *SlackbotSuite) postCallback(c *C, cb *slack.InteractionCallback) (*http
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("X-Slack-Request-Timestamp", stimestamp)
 	req.Header.Add("X-Slack-Signature", "v0="+hex.EncodeToString(signature))
-	return http.DefaultClient.Do(req)
+	response, err := http.DefaultClient.Do(req)
+	c.Assert(err, IsNil)
+	c.Assert(response.StatusCode, Equals, http.StatusOK)
 }
 
 // fetchSlackMessage and all the tests using it heavily rely on changes in slacktest package, see 13c57c4 commit.
@@ -258,15 +271,8 @@ func (s *SlackbotSuite) TestSlackMessagePosting(c *C) {
 
 func (s *SlackbotSuite) TestApproval(c *C) {
 	request := s.createAccessRequest(c)
-	cb := &slack.InteractionCallback{}
-	cb.ActionCallback.BlockActions = append(cb.ActionCallback.BlockActions, &slack.BlockAction{
-		ActionID: "approve_request",
-		Value:    request.GetName(),
-	})
 
-	response, err := s.postCallback(c, cb)
-	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, 200)
+	s.postCallback(c, "approve_request", request.GetName())
 
 	auth := s.teleport.Process.GetAuthServer()
 	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: request.GetName()})
@@ -278,15 +284,8 @@ func (s *SlackbotSuite) TestApproval(c *C) {
 
 func (s *SlackbotSuite) TestDenial(c *C) {
 	request := s.createAccessRequest(c)
-	cb := &slack.InteractionCallback{}
-	cb.ActionCallback.BlockActions = append(cb.ActionCallback.BlockActions, &slack.BlockAction{
-		ActionID: "deny_request",
-		Value:    request.GetName(),
-	})
 
-	response, err := s.postCallback(c, cb)
-	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, 200)
+	s.postCallback(c, "deny_request", request.GetName())
 
 	auth := s.teleport.Process.GetAuthServer()
 	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: request.GetName()})
@@ -299,14 +298,8 @@ func (s *SlackbotSuite) TestDenial(c *C) {
 func (s *SlackbotSuite) TestApproveExpired(c *C) {
 	request := s.createExpiredAccessRequest(c)
 	msg1 := s.fetchSlackMessage(c)
-	cb := &slack.InteractionCallback{}
-	cb.ActionCallback.BlockActions = append(cb.ActionCallback.BlockActions, &slack.BlockAction{
-		ActionID: "approve_request",
-		Value:    request.GetName(),
-	})
-	response, err := s.postCallback(c, cb)
-	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, 200)
+
+	s.postCallback(c, "approve_request", request.GetName())
 
 	// Get updated message
 	msg2 := s.fetchSlackMessage(c)
@@ -316,14 +309,8 @@ func (s *SlackbotSuite) TestApproveExpired(c *C) {
 func (s *SlackbotSuite) TestDenyExpired(c *C) {
 	request := s.createExpiredAccessRequest(c)
 	msg1 := s.fetchSlackMessage(c)
-	cb := &slack.InteractionCallback{}
-	cb.ActionCallback.BlockActions = append(cb.ActionCallback.BlockActions, &slack.BlockAction{
-		ActionID: "deny_request",
-		Value:    request.GetName(),
-	})
-	response, err := s.postCallback(c, cb)
-	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, 200)
+
+	s.postCallback(c, "deny_request", request.GetName())
 
 	// Get updated message
 	msg2 := s.fetchSlackMessage(c)
