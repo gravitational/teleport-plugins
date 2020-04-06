@@ -64,6 +64,7 @@ func NewBot(conf *Config, onAction WebhookFunc) (*Bot, error) {
 
 func (b *Bot) NewClient(ctx context.Context) *pd.Client {
 	clientOpts := []pd.ClientOptions{}
+	// apiEndpoint parameter is set only in tests
 	if b.apiEndpoint != "" {
 		clientOpts = append(clientOpts, pd.WithAPIEndpoint(b.apiEndpoint))
 	}

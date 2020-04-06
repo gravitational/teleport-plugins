@@ -19,7 +19,7 @@ type Config struct {
 		RootCAs    string `toml:"root-cas"`
 	} `toml:"teleport"`
 	Pagerduty struct {
-		APIEndpoint string
+		APIEndpoint string `toml:"-"`
 		APIKey      string `toml:"api-key"`
 		UserEmail   string `toml:"user-email"`
 		ServiceId   string `toml:"service-id"`
