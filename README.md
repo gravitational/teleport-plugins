@@ -31,12 +31,18 @@ A basic Teleport / JIRA integration (WIP) can be found in [access/jirabot](./acc
 The plugin can be built with `make access-jirabot` and instructions for configuring the
 plugin can be found in the plugin's [README](./access/jirabot/README.md).
 
+### Mattermost Bot
 
-### Pagerduty Integration
+Mattermost is a private cloud messaging platform (think Slack for enterprise). Teleport provides a 
+Mattermost integration that supports request flows similar to Slack integration above.
+The plugin can be built with `make access-mattermostbot`, and instructions for configuring the 
+plugin can be found in the plugin's [README](./access/mattermost/README.md).
+
+### Pagerduty Extension
 
 A Teleport integartion with Pagerduty that allows your team to treat Teleport permission requests
 as Pagerduty incidents, and provides Pagerduty special actions to approve or deny permission requests.
-Run `make teleport-pagerduty` to build it. More docs in the [README](./access/pagerduty/README.md) 
+Run `make teleport-pagerduty` to build it. More docs in the [README](./access/pagerduty/README.md).
 
 ## Notes
 
