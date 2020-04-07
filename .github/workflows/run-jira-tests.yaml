@@ -18,18 +18,23 @@ jobs:
       with:
         go-version: 1.13.2
       id: go
-
-    - name: Check out code into the Go module directory
+      
+    - name: Check out code into GOPATH
       uses: actions/checkout@v2
+      with:
+        path: go/src/teleport-plugins
 
     - name: Get dependencies
       run: |
-        mkdir -p ~/go/bin
-        git clone https://github.com/gravitational/teleport ~/go/src/github.com/gravitational/teleport
+        export WORKDIR=~/work/teleport-plugins/teleport-plugins
+        mkdir -p $WORKDIR/go/bin
+        export GOPATH=$WORKDIR/go
+        git clone https://github.com/gravitational/teleport $WORKDIR/src/github.com/gravitational/teleport
+        cd $WORKDIR/go/src/teleport-plugins
         go get -v -t -d ./... 
         if [ -f Gopkg.toml ]; then
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            ~/go/bin/dep ensure
+            $WORKDIR/go/bin/dep ensure
         fi
 
     - name: Run Jira tests
