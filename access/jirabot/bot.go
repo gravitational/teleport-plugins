@@ -109,7 +109,7 @@ func NewBot(conf *Config) (*Bot, error) {
 }
 
 func (b *Bot) HealthCheck(ctx context.Context) error {
-	log.Info("Starting JIRA API health check...")
+	log.Debug("Starting JIRA API health check...")
 	req, err := b.client.NewRequest(ctx, "GET", "rest/api/2/myself", nil)
 	if err != nil {
 		return trace.Wrap(err)
@@ -135,14 +135,14 @@ func (b *Bot) HealthCheck(ctx context.Context) error {
 		}
 	}
 
-	log.Info("Checking out JIRA project...")
+	log.Debug("Checking out JIRA project...")
 	project, err := b.client.GetProject(ctx, b.project)
 	if err != nil {
 		return trace.Wrap(err)
 	}
-	log.Infof("Found project %q: %q", project.Key, project.Name)
+	log.Debugf("Found project %q: %q", project.Key, project.Name)
 
-	log.Info("Checking out JIRA project permissions...")
+	log.Debug("Checking out JIRA project permissions...")
 	permissions, err := b.client.GetMyPermissions(ctx, &GetMyPermissionsQueryOptions{
 		ProjectKey:  b.project,
 		Permissions: []string{"BROWSE_PROJECTS", "CREATE_ISSUES"},
@@ -151,13 +151,13 @@ func (b *Bot) HealthCheck(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 	if !permissions.Permissions["BROWSE_PROJECTS"].HavePermission {
-		return trace.Errorf("bot user does not have BROWSE_PROJECTS permission")
+		return trace.AccessDenied("bot user does not have BROWSE_PROJECTS permission")
 	}
 	if !permissions.Permissions["CREATE_ISSUES"].HavePermission {
-		return trace.Errorf("bot user does not have CREATE_ISSUES permission")
+		return trace.AccessDenied("bot user does not have CREATE_ISSUES permission")
 	}
 
-	log.Info("JIRA API health check finished ok")
+	log.Debug("JIRA API health check finished ok")
 	return nil
 }
 
