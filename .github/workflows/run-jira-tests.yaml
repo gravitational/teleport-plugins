@@ -22,23 +22,38 @@ jobs:
     - name: Check out code into GOPATH
       uses: actions/checkout@v2
 
-    - name: Get dependencies
+    - name: Get dependencies and run tests
       run: |
+        export WORKDIR=~/work/teleport-plugins
+        export GOPATH=$WORKDIR/go
         mkdir -p $GOPATH/bin $GOPATH/src/github.com/gravitational
         cp -ax $WORKDIR/teleport-plugins $GOPATH/src/github.com/gravitational/teleport-plugins
         git clone https://github.com/gravitational/teleport.git $GOPATH/src/github.com/gravitational/teleport
+        cd $GOPATH/src/github.com/gravitational/teleport-plugins
         go get -v -t -d ./...
         if [ -f Gopkg.toml ]; then
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             $GOPATH/bin/dep ensure
         fi
-      env:
-        GOPATH: /home/runner/work/teleport-plugins/go
-        WORKDIR: /home/runner/work/teleport-plugins
-      working-directory: /home/runner/work/teleport-plugins/go/src/github.com/gravitational/teleport-plugins
-      
-    - name: Run Jira tests
-      run: make -C access/jirabot test
-      env:
-        GOPATH: /home/runner/work/teleport-plugins/go
-      working-directory: /home/runner/work/teleport-plugins/go/src/github.com/gravitational/teleport-plugins
+        
+    - name: Run tests
+      run: |
+        export GOPATH=~/work/teleport-plugins/go
+        env
+        go env
+        echo "pwd:"
+        pwd
+        echo "1:"
+        ls -l ~/work/teleport-plugins
+        echo "2:"
+        ls -l ~/work/teleport-plugins/go
+        echo "3:"
+        ls -l ~/work/teleport-plugins/go/github.com
+        echo "4:"
+        ls -l ~/work/teleport-plugins/go/github.com/gravitational
+        echo "5:"
+        ls -l ~/work/teleport-plugins/go/github.com/gravitational/teleport
+        echo "6:"
+        ls -l ~/work/teleport-plugins/go/github.com/gravitational/teleport-plugins
+        cd ~/work/teleport-plugins/go/github.com/gravitational/teleport-plugins
+        make -C access/jirabot test
