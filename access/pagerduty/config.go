@@ -88,6 +88,9 @@ func (c *Config) CheckAndSetDefaults() error {
 	if c.Pagerduty.ServiceId == "" {
 		return trace.BadParameter("missing required value pagerduty.service-id")
 	}
+	if c.HTTP.Hostname == "" && c.HTTP.BaseURL == "" {
+		return trace.BadParameter("either http.base-url or http.host is required to be set")
+	}
 	if c.HTTP.Listen == "" {
 		c.HTTP.Listen = ":8081"
 	}
