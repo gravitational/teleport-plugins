@@ -33,12 +33,12 @@ jobs:
             $GOPATH/bin/dep ensure
         fi
       env:
-        GOPATH: ~/work/teleport-plugins/go
-        WORKDIR: ~/work/teleport-plugins
-      working-directory: ~/work/teleport-plugins/go/src/github.com/gravitational/teleport-plugins
+        GOPATH: /home/runner/work/teleport-plugins/go
+        WORKDIR: /home/runner/work/teleport-plugins
+      working-directory: /home/runner/work/teleport-plugins/go/src/github.com/gravitational/teleport-plugins
       
     - name: Run Jira tests
       run: make -C access/jirabot test
       env:
-        GOPATH: ~/work/teleport-plugins/go
-      working-directory: ~/work/teleport-plugins/go/src/github.com/gravitational/teleport-plugins
+        GOPATH: /home/runner/work/teleport-plugins/go
+      working-directory: /home/runner/work/teleport-plugins/go/src/github.com/gravitational/teleport-plugins
