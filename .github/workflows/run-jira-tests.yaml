@@ -26,11 +26,11 @@ jobs:
       run: |
         export WORKDIR=~/work/teleport-plugins
         export GOPATH=$WORKDIR/go
-        mkdir -p $GOPATH/bin $GOPATH/src
-        mv $WORKDIR/teleport-plugins $GOPATH/src/github.com/gravitational/teleport-plugins        
+        mkdir -p $GOPATH/bin $GOPATH/src/github.com/gravitational
+        mv $WORKDIR/teleport-plugins $GOPATH/src/github.com/gravitational/teleport-plugins
         git clone https://github.com/gravitational/teleport $GOPATH/src/github.com/gravitational/teleport
         cd $GOPATH/src/teleport-plugins
-        go get -v -t -d ./... 
+        go get -v -t -d ./...
         if [ -f Gopkg.toml ]; then
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             $GOPATH/bin/dep ensure
