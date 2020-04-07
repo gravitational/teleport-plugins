@@ -32,9 +32,9 @@ client-crt = "/var/lib/teleport/plugins/mattermost/auth.crt" # Teleport GRPC cli
 root-cas = "/var/lib/teleport/plugins/mattermost/auth.cas"   # Teleport cluster CA certs
 
 [mattermost]
-token = "api-token"       # Mattermost Bot OAuth token
-secret = "signing-secret-value"   # Mattermost API Signing Secret
-channel = "channel-name"  # Mattermost Channel name to post requests to
+token = "api-token"              # Mattermost Bot OAuth token
+secret = "signing-secret-value"  # Mattermost API Signing Secret
+channel = "channel-name"         # Mattermost Channel name to post requests to
 
 [http]
 listen = ":8081"          # Mattermost interaction callback listener
@@ -88,6 +88,9 @@ func (c *Config) CheckAndSetDefaults() error {
 	}
 	if c.HTTP.Listen == "" {
 		c.HTTP.Listen = ":8081"
+	}
+	if c.HTTP.Hostname == "" && c.HTTP.BaseURL == "" {
+		return trace.BadParameter("either http.base-url or http.host is required to be set")
 	}
 	if c.HTTP.KeyFile != "" && c.HTTP.CertFile == "" {
 		return trace.BadParameter("https-cert-file is required when https-key-file is specified")
