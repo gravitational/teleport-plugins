@@ -35,6 +35,12 @@ jobs:
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             $GOPATH/bin/dep ensure
         fi
+        echo "1:"
+        ls -l $WORKDIR
+        echo "2:"
+        ls -l $GOPATH
+        echo "3:"
+        ls -l $GOPATH/src
 
     - name: Run Jira tests
       run: |
