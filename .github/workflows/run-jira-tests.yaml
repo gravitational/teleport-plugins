@@ -24,10 +24,9 @@ jobs:
 
     - name: Get dependencies and run tests
       run: |
-        export WORKDIR=~/work/teleport-plugins
-        export GOPATH=$WORKDIR/go
+        export GOPATH=$RUNNER_WORKSPACE/go
         mkdir -p $GOPATH/bin $GOPATH/src/github.com/gravitational
-        cp -ax $WORKDIR/teleport-plugins $GOPATH/src/github.com/gravitational/teleport-plugins
+        cp -ax $RUNNER_WORKSPACE/teleport-plugins $GOPATH/src/github.com/gravitational/
         git clone https://github.com/gravitational/teleport.git $GOPATH/src/github.com/gravitational/teleport
         cd $GOPATH/src/github.com/gravitational/teleport-plugins
         go get -v -t -d ./...
@@ -38,22 +37,22 @@ jobs:
         
     - name: Run tests
       run: |
-        export GOPATH=~/work/teleport-plugins/go
+        export GOPATH=$RUNNER_WORKSPACE/teleport-plugins/go
         env
         go env
         echo "pwd:"
         pwd
         echo "1:"
-        ls -l ~/work/teleport-plugins
+        ls -l $RUNNER_WORKSPACE
         echo "2:"
-        ls -l ~/work/teleport-plugins/go
+        ls -l $RUNNER_WORKSPACE/go
         echo "3:"
-        ls -l ~/work/teleport-plugins/go/github.com
+        ls -l $RUNNER_WORKSPACE/go/src/github.com
         echo "4:"
-        ls -l ~/work/teleport-plugins/go/github.com/gravitational
+        ls -l $RUNNER_WORKSPACE/go/src/github.com/gravitational
         echo "5:"
-        ls -l ~/work/teleport-plugins/go/github.com/gravitational/teleport
+        ls -l $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport
         echo "6:"
-        ls -l ~/work/teleport-plugins/go/github.com/gravitational/teleport-plugins
-        cd ~/work/teleport-plugins/go/github.com/gravitational/teleport-plugins
+        ls -l $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport-plugins
+        cd $RUNNER_WORKSPACE/go/github.com/gravitational/teleport-plugins
         make -C access/jirabot test
