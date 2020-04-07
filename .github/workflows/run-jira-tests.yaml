@@ -22,17 +22,24 @@ jobs:
     - name: Check out code into GOPATH
       uses: actions/checkout@v2
 
-    - name: Get dependencies and run tests
+    - name: Get dependencies
       run: |
         export WORKDIR=~/work/teleport-plugins
         export GOPATH=$WORKDIR/go
         mkdir -p $GOPATH/bin $GOPATH/src/github.com/gravitational
-        mv $WORKDIR/teleport-plugins $GOPATH/src/github.com/gravitational/teleport-plugins
+        cp -ax $WORKDIR/teleport-plugins $GOPATH/src/github.com/gravitational/teleport-plugins
         git clone https://github.com/gravitational/teleport.git $GOPATH/src/github.com/gravitational/teleport
-        cd $GOPATH/src/github.com/gravitational/teleport-plugins
         go get -v -t -d ./...
         if [ -f Gopkg.toml ]; then
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             $GOPATH/bin/dep ensure
         fi
-        make -C access/jirabot test
+      env:
+        GOPATH: ~/work/teleport-plugins/go
+      working-directory: $GOPATH/src/github.com/gravitational/teleport-plugins
+      
+    - name: Run Jira tests
+      run: make -C access/jirabot test
+      env:
+        GOPATH: ~/work/teleport-plugins/go
+      working-directory: $GOPATH/src/github.com/gravitational/teleport-plugins
