@@ -22,7 +22,7 @@ jobs:
     - name: Check out code into GOPATH
       uses: actions/checkout@v2
 
-    - name: Get dependencies
+    - name: Get dependencies and run tests
       run: |
         export WORKDIR=~/work/teleport-plugins
         export GOPATH=$WORKDIR/go
@@ -35,24 +35,10 @@ jobs:
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             $GOPATH/bin/dep ensure
         fi
-        echo "1:"
-        ls -l $WORKDIR
-        echo "2:"
-        ls -l $GOPATH
-        echo "3:"
-        ls -l $GOPATH/src
-        echo "4:"
-        ls -l $GOPATH/src/github.com
-        echo "5:"
-        ls -l $GOPATH/src/github.com/gravitational
-        echo "6:"
-        ls -l $GOPATH/src/github.com/gravitational/teleport
-        echo "7:"
-        ls -l $GOPATH/src/github.com/gravitational/teleport-plugins
 
     - name: Run Jira tests
       run: |
-        cd $GOPATH/src/github.com/gravitational/teleport-plugins
+        cd /home/runner/work/teleport-plugins/go/src/github.com/gravitational/teleport-plugins
         make -C access/jirabot test
       env:
         GOPATH: /home/runner/work/teleport-plugins/go
