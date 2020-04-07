@@ -24,8 +24,9 @@ jobs:
 
     - name: Get dependencies
       run: |
-        git clone https://github.com/gravitational/teleport.git ../teleport
+        git clone https://github.com/gravitational/teleport.git ~/go/src/github.com/gravitational/teleport
         if [ -f Gopkg.toml ]; then
+            mkdir -p ~/go/bin
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             dep ensure
         fi
