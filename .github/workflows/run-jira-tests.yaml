@@ -21,10 +21,12 @@ jobs:
 
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
+      with:
+        path: go/src/github.com/gravitational/teleport-plugins
 
     - name: Get dependencies
       run: |
-        git clone https://github.com/gravitational/teleport.git ~/go/src/github.com/gravitational/teleport
+        git clone https://github.com/gravitational/teleport.git ~/work/go/src/github.com/gravitational/teleport
         if [ -f Gopkg.toml ]; then
             mkdir -p ~/go/bin
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
