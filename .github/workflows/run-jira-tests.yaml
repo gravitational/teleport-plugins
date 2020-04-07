@@ -24,6 +24,8 @@ jobs:
 
     - name: Get dependencies
       run: |
+        mkdir -p ~/go
+        git clone https://github.com/gravitational/teleport ~/go/src/github.com/gravitational/teleport
         go get -v -d ./... 
 
     - name: Run Jira tests
