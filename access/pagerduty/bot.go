@@ -83,6 +83,16 @@ func (b *Bot) ShutdownServer(ctx context.Context) error {
 	return b.server.Shutdown(ctx)
 }
 
+func (b *Bot) HealthCheck(ctx context.Context) error {
+	client := b.NewClient(ctx)
+
+	if _, err := client.GetService(b.serviceId, nil); err != nil {
+		return trace.Wrap(err, "failed to fetch pagerduty service info: %v", err)
+	}
+
+	return nil
+}
+
 func (b *Bot) Setup(ctx context.Context) error {
 	client := b.NewClient(ctx)
 

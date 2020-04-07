@@ -129,6 +129,17 @@ func (s *PagerdutySuite) startFakePagerduty(c *C) {
 	s.newIncidentNotes = make(chan *pd.IncidentNote, 3)
 
 	fakePagerduty := httprouter.New()
+	fakePagerduty.GET("/services/1111", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		rw.Header().Add("Content-Type", "application/json")
+		rw.WriteHeader(http.StatusOK)
+		service := pd.Service{
+			APIObject: pd.APIObject{ID: "1111"},
+			Name: "Test Service",
+		}
+		resp := map[string]pd.Service {"service": service}
+		err := json.NewEncoder(rw).Encode(&resp)
+		c.Assert(err, IsNil)
+	})
 	fakePagerduty.GET("/extension_schemas", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusOK)
@@ -230,7 +241,7 @@ func (s *PagerdutySuite) startFakePagerduty(c *C) {
 			return true
 		})
 		id := fmt.Sprintf("incident-%v-%v", counter+1, time.Now().UnixNano())
-		incident := &pd.Incident{
+		incident := pd.Incident{
 			APIObject:   pd.APIObject{ID: id},
 			Id:          id,
 			IncidentKey: createOpts.IncidentKey,
@@ -246,10 +257,10 @@ func (s *PagerdutySuite) startFakePagerduty(c *C) {
 			},
 		}
 
-		s.incidents.Store(incident.ID, *incident)
-		s.newIncidents <- incident
+		s.incidents.Store(incident.ID, incident)
+		s.newIncidents <- &incident
 
-		resp := map[string]*pd.Incident{"incident": incident}
+		resp := map[string]pd.Incident{"incident": incident}
 		err = json.NewEncoder(rw).Encode(&resp)
 		c.Assert(err, IsNil)
 	})
