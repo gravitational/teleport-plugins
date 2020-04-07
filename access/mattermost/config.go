@@ -18,7 +18,7 @@ type Config struct {
 		Secret  string `toml:"secret"`
 		Team    string `toml:"team"`
 		Channel string `toml:"channel"`
-		URL     string
+		URL     string `toml:"url"`
 	} `toml:"mattermost"`
 	HTTP utils.HTTPConfig `toml:"http"`
 	Log  utils.LogConfig  `toml:"log"`
@@ -85,6 +85,9 @@ func (c *Config) CheckAndSetDefaults() error {
 	}
 	if c.Mattermost.Channel == "" {
 		return trace.BadParameter("missing required value mattermost.channel")
+	}
+	if c.Mattermost.URL == "" {
+		return trace.BadParameter("missing required value mattermost.url")
 	}
 	if c.HTTP.Listen == "" {
 		c.HTTP.Listen = ":8081"
