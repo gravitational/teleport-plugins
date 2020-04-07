@@ -35,10 +35,4 @@ jobs:
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             $GOPATH/bin/dep ensure
         fi
-
-    - name: Run Jira tests
-      run: |
-        cd /home/runner/work/teleport-plugins/go/src/github.com/gravitational/teleport-plugins
         make -C access/jirabot test
-      env:
-        GOPATH: /home/runner/work/teleport-plugins/go
