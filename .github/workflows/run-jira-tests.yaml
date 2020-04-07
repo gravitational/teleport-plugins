@@ -29,12 +29,12 @@ jobs:
         export WORKDIR=~/work/teleport-plugins/teleport-plugins
         mkdir -p $WORKDIR/go/bin
         export GOPATH=$WORKDIR/go
-        git clone https://github.com/gravitational/teleport $WORKDIR/src/github.com/gravitational/teleport
-        cd $WORKDIR/go/src/teleport-plugins
+        git clone https://github.com/gravitational/teleport $GOPATH/src/github.com/gravitational/teleport
+        cd $GOPATH/src/teleport-plugins
         go get -v -t -d ./... 
         if [ -f Gopkg.toml ]; then
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            $WORKDIR/go/bin/dep ensure
+            $GOPATH/bin/dep ensure
         fi
 
     - name: Run Jira tests
