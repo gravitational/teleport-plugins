@@ -41,6 +41,14 @@ jobs:
         ls -l $GOPATH
         echo "3:"
         ls -l $GOPATH/src
+        echo "4:"
+        ls -l $GOPATH/src/github.com
+        echo "5:"
+        ls -l $GOPATH/src/github.com/gravitational
+        echo "6:"
+        ls -l $GOPATH/src/github.com/gravitational/teleport
+        echo "7:"
+        ls -l $GOPATH/src/github.com/gravitational/teleport-plugins
 
     - name: Run Jira tests
       run: |
