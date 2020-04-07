@@ -21,14 +21,13 @@ jobs:
       
     - name: Check out code into GOPATH
       uses: actions/checkout@v2
-      with:
-        path: go/src/teleport-plugins
 
     - name: Get dependencies
       run: |
-        export WORKDIR=~/work/teleport-plugins/teleport-plugins
-        mkdir -p $WORKDIR/go/bin
+        export WORKDIR=~/work/teleport-plugins
         export GOPATH=$WORKDIR/go
+        mkdir -p $GOPATH/bin $GOPATH/src
+        mv $WORKDIR/teleport-plugins $GOPATH/src/github.com/gravitational/teleport-plugins        
         git clone https://github.com/gravitational/teleport $GOPATH/src/github.com/gravitational/teleport
         cd $GOPATH/src/teleport-plugins
         go get -v -t -d ./... 
