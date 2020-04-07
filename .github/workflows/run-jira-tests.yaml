@@ -28,7 +28,7 @@ jobs:
         if [ -f Gopkg.toml ]; then
             mkdir -p ~/go/bin
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            dep ensure
+            ~/go/bin/dep ensure
         fi
 
     - name: Run Jira tests
