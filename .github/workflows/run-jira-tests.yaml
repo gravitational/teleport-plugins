@@ -24,8 +24,6 @@ jobs:
 
     - name: Get dependencies
       run: |
-        export WORKDIR=~/work/teleport-plugins
-        export GOPATH=$WORKDIR/go
         mkdir -p $GOPATH/bin $GOPATH/src/github.com/gravitational
         cp -ax $WORKDIR/teleport-plugins $GOPATH/src/github.com/gravitational/teleport-plugins
         git clone https://github.com/gravitational/teleport.git $GOPATH/src/github.com/gravitational/teleport
@@ -36,10 +34,11 @@ jobs:
         fi
       env:
         GOPATH: ~/work/teleport-plugins/go
-      working-directory: $GOPATH/src/github.com/gravitational/teleport-plugins
+        WORKDIR: ~/work/teleport-plugins
+      working-directory: ~/work/teleport-plugins/go/src/github.com/gravitational/teleport-plugins
       
     - name: Run Jira tests
       run: make -C access/jirabot test
       env:
         GOPATH: ~/work/teleport-plugins/go
-      working-directory: $GOPATH/src/github.com/gravitational/teleport-plugins
+      working-directory: ~/work/teleport-plugins/go/src/github.com/gravitational/teleport-plugins
