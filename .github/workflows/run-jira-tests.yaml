@@ -41,4 +41,4 @@ jobs:
         cd $GOPATH/src/github.com/gravitational/teleport-plugins
         make -C access/jirabot test
       env:
-        GOPATH: ~/work/teleport-plugins/go
+        GOPATH: /home/runner/work/teleport-plugins/go
