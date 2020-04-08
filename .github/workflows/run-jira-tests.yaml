@@ -37,7 +37,7 @@ jobs:
         
     - name: Run tests
       run: |
-        export GOPATH=$RUNNER_WORKSPACE/teleport-plugins/go
+        export GOPATH=$RUNNER_WORKSPACE/go
         env
         go env
         echo "pwd:"
