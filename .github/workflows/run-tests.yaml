@@ -1,4 +1,4 @@
-name: run-jira-tests
+name: run-tests
 
 on:
   push:
