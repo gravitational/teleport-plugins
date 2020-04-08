@@ -183,6 +183,16 @@ func (a *App) Run(ctx context.Context) error {
 		}
 
 		a.Spawn(func(ctx context.Context) {
+			log.Debug("Starting Mattermost API health check...")
+			if err := a.bot.HealthCheck(); err != nil {
+				log.WithError(err).Error("Mattermost API health check failed. Check your token and make sure that bot is added to your team")
+				a.Terminate()
+				return
+			}
+			log.Debug("Mattermost API health check finished ok")
+		})
+
+		a.Spawn(func(ctx context.Context) {
 			defer a.Terminate() // if bot server failed, shutdown everything
 
 			a.OnTerminate(func(ctx context.Context) {

@@ -58,6 +58,14 @@ func (b *Bot) ShutdownServer(ctx context.Context) error {
 	return b.server.Shutdown(ctx)
 }
 
+func (b *Bot) HealthCheck() error {
+	_, resp := b.client.GetTeamByName(b.team, "")
+	if resp.Error != nil {
+		return trace.Wrap(resp.Error)
+	}
+	return nil
+}
+
 func (b *Bot) HMAC(action, reqID string) ([]byte, error) {
 	data := fmt.Sprintf("%s/%s", action, reqID)
 	mac := hmac.New(sha256.New, []byte(b.secret))
