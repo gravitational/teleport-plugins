@@ -166,8 +166,8 @@ func (b *Bot) CreateIssue(ctx context.Context, reqID string, reqData RequestData
 		return JiraData{}, trace.Wrap(err)
 	}
 
-	description := new(strings.Builder)
-	err = tmpl.Execute(description, struct {
+	var description strings.Builder
+	err = tmpl.Execute(&description, struct {
 		ID         string
 		TimeFormat string
 		RequestData

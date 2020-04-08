@@ -134,14 +134,14 @@ func (b *Bot) msgSections(reqID string, reqData requestData, status string, acti
 	builder := new(strings.Builder)
 	builder.Grow(128)
 
-	msgFieldToBuilder(builder, "ID", reqID)
-	msgFieldToBuilder(builder, "Cluster", b.clusterName)
+	msgFieldToBuilder(&builder, "ID", reqID)
+	msgFieldToBuilder(&builder, "Cluster", b.clusterName)
 
 	if len(reqData.user) > 0 {
-		msgFieldToBuilder(builder, "User", reqData.user)
+		msgFieldToBuilder(&builder, "User", reqData.user)
 	}
 	if reqData.roles != nil {
-		msgFieldToBuilder(builder, "Role(s)", strings.Join(reqData.roles, ","))
+		msgFieldToBuilder(&builder, "Role(s)", strings.Join(reqData.roles, ","))
 	}
 
 	sections := []slack.Block{

@@ -204,14 +204,14 @@ func (b *Bot) GetPostText(reqID string, reqData RequestData, status string) (str
 		statusEmoji = "⌛"
 	}
 
-	builder := new(strings.Builder)
+	var builder strings.Builder
 
 	_, err = builder.WriteString("```\n")
 	if err != nil {
 		return "", trace.Wrap(err)
 	}
 
-	err = tmpl.Execute(builder, struct {
+	err = tmpl.Execute(&builder, struct {
 		ID          string
 		Status      string
 		StatusEmoji string
