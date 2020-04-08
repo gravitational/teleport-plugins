@@ -35,24 +35,26 @@ jobs:
             $GOPATH/bin/dep ensure
         fi
         
-    - name: Run tests
+    - name: Run Jira tests
       run: |
         export GOPATH=$RUNNER_WORKSPACE/go
-        env
-        go env
-        echo "pwd:"
-        pwd
-        echo "1:"
-        ls -l $RUNNER_WORKSPACE
-        echo "2:"
-        ls -l $RUNNER_WORKSPACE/go
-        echo "3:"
-        ls -l $RUNNER_WORKSPACE/go/src/github.com
-        echo "4:"
-        ls -l $RUNNER_WORKSPACE/go/src/github.com/gravitational
-        echo "5:"
-        ls -l $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport
-        echo "6:"
-        ls -l $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport-plugins
         cd $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport-plugins
         make -C access/jirabot test
+        
+    - name: Run Slack tests
+      run: |
+        export GOPATH=$RUNNER_WORKSPACE/go
+        cd $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport-plugins
+        make -C access/slackbot test
+        
+    - name: Run Mattermost tests
+      run: |
+        export GOPATH=$RUNNER_WORKSPACE/go
+        cd $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport-plugins
+        make -C access/mattermost test
+        
+    - name: Run Pagerduty tests
+      run: |
+        export GOPATH=$RUNNER_WORKSPACE/go
+        cd $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport-plugins
+        make -C access/pagerduty test
