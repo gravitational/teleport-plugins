@@ -54,5 +54,5 @@ jobs:
         ls -l $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport
         echo "6:"
         ls -l $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport-plugins
-        cd $RUNNER_WORKSPACE/go/github.com/gravitational/teleport-plugins
+        cd $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport-plugins
         make -C access/jirabot test
