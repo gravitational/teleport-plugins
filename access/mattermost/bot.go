@@ -22,7 +22,7 @@ const (
 )
 
 const DescriptionTemplate = `User:        {{.User}}
-Roles:       {{range .Roles}}{{ . }}{{end}}
+Roles:       {{range $index, $element := .Roles}}{{if $index}}, {{end}}{{ . }}{{end}}
 Request ID:  {{.ID}}
 Status:      {{.StatusEmoji}} {{.Status}}
 `
