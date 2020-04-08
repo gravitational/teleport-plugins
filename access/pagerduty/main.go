@@ -165,19 +165,23 @@ func (a *App) Run(ctx context.Context) error {
 			return
 		}
 
-		log.Debug("Starting PagerDuty API health check...")
-		if err := a.bot.HealthCheck(ctx); err != nil {
-			log.WithError(err).Error("PagerDuty API health check failed")
-			a.Terminate()
-			return
-		}
+		a.Spawn(func(ctx context.Context) {
+			log.Debug("Starting PagerDuty API health check...")
+			if err := a.bot.HealthCheck(ctx); err != nil {
+				log.WithError(err).Error("PagerDuty API health check failed")
+				a.Terminate()
+				return
+			}
+			log.Debug("PagerDuty API health check finished ok")
 
-		log.Debug("Setting up the webhook extensions")
-		if err := a.bot.Setup(ctx); err != nil {
-			log.WithError(err).Error("Failed to set up webhook extensions")
-			a.Terminate()
-			return
-		}
+			log.Debug("Setting up the webhook extensions")
+			if err := a.bot.Setup(ctx); err != nil {
+				log.WithError(err).Error("Failed to set up webhook extensions")
+				a.Terminate()
+				return
+			}
+			log.Debug("PagerDuty webhook extensions setup finished ok")
+		})
 
 		a.Spawn(func(ctx context.Context) {
 			defer a.Terminate() // if webhook server failed, shutdown everything
