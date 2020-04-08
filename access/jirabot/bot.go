@@ -109,7 +109,6 @@ func NewBot(conf *Config) (*Bot, error) {
 }
 
 func (b *Bot) HealthCheck(ctx context.Context) error {
-	log.Debug("Starting JIRA API health check...")
 	req, err := b.client.NewRequest(ctx, "GET", "rest/api/2/myself", nil)
 	if err != nil {
 		return trace.Wrap(err)
@@ -157,7 +156,6 @@ func (b *Bot) HealthCheck(ctx context.Context) error {
 		return trace.AccessDenied("bot user does not have CREATE_ISSUES permission")
 	}
 
-	log.Debug("JIRA API health check finished ok")
 	return nil
 }
 

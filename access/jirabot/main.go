@@ -184,12 +184,13 @@ func (a *App) Run(ctx context.Context) error {
 		}
 
 		a.Spawn(func(ctx context.Context) {
+			log.Debug("Starting JIRA API health check...")
 			if err := a.bot.HealthCheck(ctx); err != nil {
 				log.WithError(err).Error("JIRA API health check failed")
-				if trace.IsAccessDenied(err) {
-					a.Terminate()
-				}
+				a.Terminate()
+				return
 			}
+			log.Debug("JIRA API health check finished ok")
 		})
 
 		a.Spawn(func(ctx context.Context) {
