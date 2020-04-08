@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
+	"text/template"
 	"time"
 
 	pd "github.com/PagerDuty/go-pagerduty"
@@ -23,6 +25,9 @@ const (
 	pdDenyAction         = "deny"
 	pdDenyActionLabel    = "Deny Request"
 )
+
+const DescriptionTemplate = `{{.User}} requested permissions for roles {{range $index, $element := .Roles}}{{if $index}}, {{end}}{{ . }}{{end}} on Teleport at {{.Created.Format .TimeFormat}}. To approve or deny the request, please use Special Actions on this incident.
+`
 
 // Bot is a wrapper around pd.Client that works with access.Request
 type Bot struct {
@@ -193,6 +198,8 @@ func (b *Bot) setupCustomAction(client *pd.Client, extensionId, schemaId, action
 func (b *Bot) CreateIncident(ctx context.Context, reqID string, reqData RequestData) (PagerdutyData, error) {
 	client := b.NewClient(ctx)
 
+	body, err := b.GetIncidentBody(reqID, reqData)
+
 	incident, err := client.CreateIncident(b.from, &pd.CreateIncidentOptions{
 		Title:       fmt.Sprintf("Access request from %s", reqData.User),
 		IncidentKey: fmt.Sprintf("%s/%s", pdIncidentKeyPrefix, reqID),
@@ -202,7 +209,7 @@ func (b *Bot) CreateIncident(ctx context.Context, reqID string, reqData RequestD
 		},
 		Body: &pd.APIDetails{
 			Type:    "incident_body",
-			Details: fmt.Sprintf("TODO %s", reqID),
+			Details: body,
 		},
 	})
 	if err != nil {
@@ -234,4 +241,26 @@ func (b *Bot) ResolveIncident(ctx context.Context, reqID string, pdData Pagerdut
 		},
 	})
 	return trace.Wrap(err)
+}
+
+func (b *Bot) GetIncidentBody(reqID string, reqData RequestData) (string, error) {
+	tmpl, err := template.New("description").Parse(DescriptionTemplate)
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+
+	var builder strings.Builder
+	err = tmpl.Execute(&builder, struct {
+		ID         string
+		TimeFormat string
+		RequestData
+	}{
+		reqID,
+		time.RFC822,
+		reqData,
+	})
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+	return builder.String(), nil
 }

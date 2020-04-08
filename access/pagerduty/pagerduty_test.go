@@ -134,9 +134,9 @@ func (s *PagerdutySuite) startFakePagerduty(c *C) {
 		rw.WriteHeader(http.StatusOK)
 		service := pd.Service{
 			APIObject: pd.APIObject{ID: "1111"},
-			Name: "Test Service",
+			Name:      "Test Service",
 		}
-		resp := map[string]pd.Service {"service": service}
+		resp := map[string]pd.Service{"service": service}
 		err := json.NewEncoder(rw).Encode(&resp)
 		c.Assert(err, IsNil)
 	})
@@ -446,7 +446,7 @@ func (s *PagerdutySuite) TestExtensionCreation(c *C) {
 	c.Assert(extEndpoints[1], Equals, s.webhookUrl+pdDenyAction)
 }
 
-func (s *PagerdutySuite) TestMessagePosting(c *C) {
+func (s *PagerdutySuite) TestIncidentCreation(c *C) {
 	req := s.createAccessRequest(c)
 
 	var incident *pd.Incident

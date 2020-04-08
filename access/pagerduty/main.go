@@ -22,8 +22,9 @@ const (
 )
 
 type RequestData struct {
-	User  string
-	Roles []string
+	User    string
+	Roles   []string
+	Created time.Time
 }
 
 type PagerdutyData struct {
@@ -380,7 +381,7 @@ func (a *App) OnPagerdutyAction(ctx context.Context, action WebhookAction) error
 }
 
 func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
-	reqData := RequestData{User: req.User, Roles: req.Roles}
+	reqData := RequestData{User: req.User, Roles: req.Roles, Created: req.Created}
 
 	pdData, err := a.bot.CreateIncident(ctx, req.ID, reqData)
 	if err != nil {
@@ -424,6 +425,9 @@ func (a *App) getPluginData(ctx context.Context, reqID string) (data PluginData,
 	}
 	data.User = dataMap["user"]
 	data.Roles = strings.Split(dataMap["roles"], ",")
+	var created int64
+	fmt.Sscanf(dataMap["created"], "%d", &created)
+	data.Created = time.Unix(created, 0)
 	data.ID = dataMap["incident_id"]
 	return
 }
@@ -433,5 +437,6 @@ func (a *App) setPluginData(ctx context.Context, reqID string, data PluginData) 
 		"incident_id": data.ID,
 		"user":        data.User,
 		"roles":       strings.Join(data.Roles, ","),
+		"created":     fmt.Sprintf("%d", data.Created.Unix()),
 	}, nil)
 }
