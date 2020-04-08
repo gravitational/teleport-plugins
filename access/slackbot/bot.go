@@ -17,13 +17,6 @@ import (
 const slackMaxConns = 100
 const slackHttpTimeout = 10 * time.Second
 
-var emojiByStatus = map[string]string{
-	"PENDING":  ":hourglass_flowing_sand: ",
-	"APPROVED": ":white_check_mark: ",
-	"DENIED":   ":x: ",
-	"EXPIRED":  ":hourglass: ",
-}
-
 // Bot is a wrapper around slack.Client that works with access.Request.
 type Bot struct {
 	client      *slack.Client
@@ -62,7 +55,7 @@ func (b *Bot) Post(ctx context.Context, reqID string, reqData requestData) (data
 	data.channelID, data.timestamp, err = b.client.PostMessageContext(
 		ctx,
 		b.channel,
-		slack.MsgOptionBlocks(b.msgSections(reqID, reqData, "PENDING", true)...),
+		slack.MsgOptionBlocks(b.msgSections(reqID, reqData, "PENDING")...),
 	)
 	err = trace.Wrap(err)
 
@@ -75,7 +68,7 @@ func (b *Bot) Expire(ctx context.Context, reqID string, reqData requestData, sla
 		ctx,
 		slackData.channelID,
 		slackData.timestamp,
-		slack.MsgOptionBlocks(b.msgSections(reqID, reqData, "EXPIRED", false)...),
+		slack.MsgOptionBlocks(b.msgSections(reqID, reqData, "EXPIRED")...),
 	)
 
 	return trace.Wrap(err)
@@ -92,7 +85,7 @@ func (b *Bot) GetUserEmail(ctx context.Context, id string) (string, error) {
 // Respond is used to send and updated message to Slack by "response_url" from interaction callback.
 func (b *Bot) Respond(ctx context.Context, reqID string, reqData requestData, status string, responseURL string) error {
 	var message slack.Message
-	message.Blocks.BlockSet = b.msgSections(reqID, reqData, status, false)
+	message.Blocks.BlockSet = b.msgSections(reqID, reqData, status)
 	message.ReplaceOriginal = true
 
 	body, err := json.Marshal(message)
@@ -130,8 +123,8 @@ func (b *Bot) Respond(ctx context.Context, reqID string, reqData requestData, st
 }
 
 // msgSection builds a slack message section (obeys markdown).
-func (b *Bot) msgSections(reqID string, reqData requestData, status string, actions bool) []slack.Block {
-	builder := new(strings.Builder)
+func (b *Bot) msgSections(reqID string, reqData requestData, status string) []slack.Block {
+	var builder strings.Builder
 	builder.Grow(128)
 
 	msgFieldToBuilder(&builder, "ID", reqID)
@@ -142,6 +135,18 @@ func (b *Bot) msgSections(reqID string, reqData requestData, status string, acti
 	}
 	if reqData.roles != nil {
 		msgFieldToBuilder(&builder, "Role(s)", strings.Join(reqData.roles, ","))
+	}
+
+	var statusEmoji string
+	switch status {
+	case "PENDING":
+		statusEmoji = ":hourglass_flowing_sand: "
+	case "APPROVED":
+		statusEmoji = ":white_check_mark: "
+	case "DENIED":
+		statusEmoji = ":x: "
+	case "EXPIRED":
+		statusEmoji = ":hourglass: "
 	}
 
 	sections := []slack.Block{
@@ -165,14 +170,14 @@ func (b *Bot) msgSections(reqID string, reqData requestData, status string, acti
 				Elements: []slack.MixedElement{
 					&slack.TextBlockObject{
 						Type: slack.MarkdownType,
-						Text: fmt.Sprintf("*Status:* %s%s", emojiByStatus[status], status),
+						Text: fmt.Sprintf("*Status:* %s%s", statusEmoji, status),
 					},
 				},
 			},
 		},
 	}
 
-	if actions {
+	if status == "PENDING" {
 		sections = append(sections, slack.NewActionBlock(
 			"approve_or_deny",
 			&slack.ButtonBlockElement{
