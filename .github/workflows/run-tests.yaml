@@ -22,10 +22,11 @@ jobs:
       with:
         path: go/src/github.com/${{ github.repository }}
 
-    - name: Set GOPATH and update PATH
+    - name: Create GOBIN, set GOPATH and update system PATH
       run: |
+        mkdir -p $GOBIN
         echo "::set-env name=GOPATH::${{ github.workspace }}/go"
-        echo "::add-path::${{ github.workspace }}/go/bin"
+        echo "::add-path::${{ github.workspace }}/go/bin"        
 
     - name: Get dependencies and run tests
       run: |
