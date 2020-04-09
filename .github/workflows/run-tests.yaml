@@ -7,7 +7,6 @@ on:
     branches: [ 'master', 'release/.*' ]
 
 jobs:
-
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -30,8 +29,6 @@ jobs:
 
     - name: Get dependencies and run tests
       run: |
-        env | sort
-        mkdir -p $GOPATH/bin $GOPATH/src/github.com/gravitational
         git clone https://github.com/gravitational/teleport.git $GOPATH/src/github.com/gravitational/teleport
         cd $GOPATH/src/github.com/$GITHUB_REPOSITORY
         go get -v -t -d ./...
