@@ -22,10 +22,9 @@ jobs:
       uses: actions/checkout@v2
       with:
         path: go/src/github.com/${{ github.repository }}
-        
+
     - name: Set GOPATH and PATH
       run: |
-        mkdir -p $GOPATH/bin $GOPATH/src/github.com/gravitational
         echo "::set-env name=GOPATH::${{ github.workspace }}/go"
         echo "::add-path::${{ github.workspace }}/go/bin"
   
@@ -35,7 +34,8 @@ jobs:
       run: echo "$GITHUB_CONTEXT"
 
     - name: Get dependencies and run tests
-      run: |        
+      run: |
+        mkdir -p $GOPATH/bin $GOPATH/src/github.com/gravitational
         git clone https://github.com/gravitational/teleport.git $GOPATH/src/github.com/gravitational/teleport
         go get -v -t -d ./...
         if [ -f Gopkg.toml ]; then
@@ -43,19 +43,19 @@ jobs:
             $GOPATH/bin/dep ensure
         fi
       working-directory: ${{ github.workspace }}/go/src/github.com/gravitational/${{ github.repository }}
-        
+
     - name: Run Jira tests
       run: make -C access/jirabot test
       working-directory: ${{ github.workspace }}/go/src/github.com/gravitational/${{ github.repository }}
-        
+
     - name: Run Slack tests
       run: make -C access/slackbot test
       working-directory: ${{ github.workspace }}/go/src/github.com/gravitational/${{ github.repository }}
-        
+
     - name: Run Mattermost tests
       run: make -C access/mattermost test
       working-directory: ${{ github.workspace }}/go/src/github.com/gravitational/${{ github.repository }}
-        
+
     - name: Run Pagerduty tests
       run: make -C access/pagerduty test
       working-directory: ${{ github.workspace }}/go/src/github.com/gravitational/${{ github.repository }}
