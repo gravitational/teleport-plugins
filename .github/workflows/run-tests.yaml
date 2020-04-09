@@ -28,8 +28,20 @@ jobs:
         echo "::set-env name=GOBIN::${{ github.workspace }}/go/bin"
         echo "::add-path::${{ github.workspace }}/go/bin"
         mkdir -p $GITHUB_WORKSPACE/go/bin
-
+        
+    - name: Cache Go packages
+      uses: actions/cache@v1
+      id: cache-go
+      env:
+        cache-name: go
+      with:
+        path: $GOPATH/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-        
+          
     - name: Get dependencies and run tests
+      if: steps.cache-go.outputs.cache-hit != 'true'
       run: |
         git clone https://github.com/gravitational/teleport.git $GOPATH/src/github.com/gravitational/teleport
         cd $GOPATH/src/github.com/$GITHUB_REPOSITORY
