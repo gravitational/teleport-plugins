@@ -24,6 +24,11 @@ jobs:
     
     - name: Set GOPATH
       run: echo ::set-env name=GOPATH::$RUNNER_WORKSPACE/go
+    
+    - name: Dump GitHub context
+      env:
+        GITHUB_CONTEXT: ${{ toJson(env) }}
+      run: echo "$GITHUB_CONTEXT"
 
     - name: Get dependencies and run tests
       run: |
