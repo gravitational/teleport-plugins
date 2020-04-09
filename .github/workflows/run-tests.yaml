@@ -34,25 +34,29 @@ jobs:
         env
         mkdir -p $GOPATH/bin $GOPATH/src/github.com/gravitational
         git clone https://github.com/gravitational/teleport.git $GOPATH/src/github.com/gravitational/teleport
+        cd $GOPATH/src/github.com/gravitational/$GITHUB_REPOSITORY
         go get -v -t -d ./...
         if [ -f Gopkg.toml ]; then
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            $GOPATH/bin/dep ensure
+            $GOBIN/dep ensure
         fi
-      working-directory: ${{ github.workspace }}/go/src/github.com/gravitational/${{ github.repository }}
 
     - name: Run Jira tests
-      run: make -C access/jirabot test
-      working-directory: ${{ github.workspace }}/go/src/github.com/gravitational/${{ github.repository }}
+      run: |
+        cd $GOPATH/src/github.com/gravitational/$GITHUB_REPOSITORY
+        make -C access/jirabot test
 
     - name: Run Slack tests
-      run: make -C access/slackbot test
-      working-directory: ${{ github.workspace }}/go/src/github.com/gravitational/${{ github.repository }}
+      run: |
+        cd $GOPATH/src/github.com/gravitational/$GITHUB_REPOSITORY
+        make -C access/slackbot test
 
     - name: Run Mattermost tests
-      run: make -C access/mattermost test
-      working-directory: ${{ github.workspace }}/go/src/github.com/gravitational/${{ github.repository }}
+      run: |
+        cd $GOPATH/src/github.com/gravitational/$GITHUB_REPOSITORY
+        make -C access/mattermost test
 
     - name: Run Pagerduty tests
-      run: make -C access/pagerduty test
-      working-directory: ${{ github.workspace }}/go/src/github.com/gravitational/${{ github.repository }}
+      run: |
+        cd $GOPATH/src/github.com/gravitational/$GITHUB_REPOSITORY
+        make -C access/pagerduty test
