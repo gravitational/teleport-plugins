@@ -1,4 +1,4 @@
-name: run-tests
+ name: run-tests
 
 on:
   push:
@@ -23,40 +23,35 @@ jobs:
       with:
         path: go/src/github.com/${{ github.repository }}
 
-    - name: Set GOPATH and PATH
+    - name: Set GOPATH and update PATH
       run: |
         echo "::set-env name=GOPATH::${{ github.workspace }}/go"
-        echo "::set-env name=GOBIN::${{ github.workspace }}/go/bin"
         echo "::add-path::${{ github.workspace }}/go/bin"
 
     - name: Get dependencies and run tests
       run: |
-        env
+        env | sort
         mkdir -p $GOPATH/bin $GOPATH/src/github.com/gravitational
         git clone https://github.com/gravitational/teleport.git $GOPATH/src/github.com/gravitational/teleport
-        cd $GOPATH/src/github.com/gravitational/$GITHUB_REPOSITORY
+        cd $GOPATH/src/github.com/$GITHUB_REPOSITORY
         go get -v -t -d ./...
         if [ -f Gopkg.toml ]; then
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-            $GOBIN/dep ensure
+            dep ensure
         fi
 
     - name: Run Jira tests
-      run: |
-        cd $GOPATH/src/github.com/gravitational/$GITHUB_REPOSITORY
-        make -C access/jirabot test
+      run: make -C access/jirabot test
+      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
 
     - name: Run Slack tests
-      run: |
-        cd $GOPATH/src/github.com/gravitational/$GITHUB_REPOSITORY
-        make -C access/slackbot test
+      run: make -C access/slackbot test
+      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
 
     - name: Run Mattermost tests
-      run: |
-        cd $GOPATH/src/github.com/gravitational/$GITHUB_REPOSITORY
-        make -C access/mattermost test
+      run: make -C access/mattermost test
+      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
 
     - name: Run Pagerduty tests
-      run: |
-        cd $GOPATH/src/github.com/gravitational/$GITHUB_REPOSITORY
-        make -C access/pagerduty test
+      run: make -C access/pagerduty test
+      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
