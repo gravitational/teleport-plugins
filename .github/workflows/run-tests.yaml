@@ -26,15 +26,12 @@ jobs:
     - name: Set GOPATH and PATH
       run: |
         echo "::set-env name=GOPATH::${{ github.workspace }}/go"
+        echo "::set-env name=GOBIN::${{ github.workspace }}/go/bin"
         echo "::add-path::${{ github.workspace }}/go/bin"
-  
-    - name: Dump GitHub context
-      env:
-        GITHUB_CONTEXT: ${{ toJson(env) }}
-      run: echo "$GITHUB_CONTEXT"
 
     - name: Get dependencies and run tests
       run: |
+        env
         mkdir -p $GOPATH/bin $GOPATH/src/github.com/gravitational
         git clone https://github.com/gravitational/teleport.git $GOPATH/src/github.com/gravitational/teleport
         go get -v -t -d ./...
