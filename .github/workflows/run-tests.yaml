@@ -19,42 +19,36 @@ jobs:
         go-version: 1.13.2
       id: go
       
-    - name: Check out code into GOPATH
+    - name: Check out code
       uses: actions/checkout@v2
+    
+    - name: Set GOPATH
+      run: echo ::set-env name=GOPATH::$RUNNER_WORKSPACE/go
 
     - name: Get dependencies and run tests
       run: |
-        export GOPATH=$RUNNER_WORKSPACE/go
         mkdir -p $GOPATH/bin $GOPATH/src/github.com/gravitational
         cp -ax $RUNNER_WORKSPACE/teleport-plugins $GOPATH/src/github.com/gravitational/
         git clone https://github.com/gravitational/teleport.git $GOPATH/src/github.com/gravitational/teleport
-        cd $GOPATH/src/github.com/gravitational/teleport-plugins
         go get -v -t -d ./...
         if [ -f Gopkg.toml ]; then
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             $GOPATH/bin/dep ensure
         fi
+      working-directory: ${{ runner.workspace }}/go/src/github.com/gravitational/teleport-plugins
         
     - name: Run Jira tests
-      run: |
-        export GOPATH=$RUNNER_WORKSPACE/go
-        cd $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport-plugins
-        make -C access/jirabot test
+      run: make -C access/jirabot test
+      working-directory: ${{ runner.workspace }}/go/src/github.com/gravitational/teleport-plugins
         
     - name: Run Slack tests
-      run: |
-        export GOPATH=$RUNNER_WORKSPACE/go
-        cd $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport-plugins
-        make -C access/slackbot test
+      run: make -C access/slackbot test
+      working-directory: ${{ runner.workspace }}/go/src/github.com/gravitational/teleport-plugins     
         
     - name: Run Mattermost tests
-      run: |
-        export GOPATH=$RUNNER_WORKSPACE/go
-        cd $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport-plugins
-        make -C access/mattermost test
+      run: make -C access/mattermost test
+      working-directory: ${{ runner.workspace }}/go/src/github.com/gravitational/teleport-plugins       
         
     - name: Run Pagerduty tests
-      run: |
-        export GOPATH=$RUNNER_WORKSPACE/go
-        cd $RUNNER_WORKSPACE/go/src/github.com/gravitational/teleport-plugins
-        make -C access/pagerduty test
+      run: make -C access/pagerduty test
+      working-directory: ${{ runner.workspace }}/go/src/github.com/gravitational/teleport-plugins 
