@@ -35,21 +35,24 @@ jobs:
       env:
         cache-name: go
       with:
-        path: $GOPATH/pkg/mod
+        path: ~/go/pkg/mod
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
           
-    - name: Get dependencies
+    - name: Download dependencies
       if: steps.cache-go.outputs.cache-hit != 'true'
+      run: go get -v -t -d ./...
+      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
+        
+    - name: Ensure dependencies
       run: |
         git clone https://github.com/gravitational/teleport.git $GOPATH/src/github.com/gravitational/teleport
-        cd $GOPATH/src/github.com/$GITHUB_REPOSITORY
-        go get -v -t -d ./...
         if [ -f Gopkg.toml ]; then
             curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
             dep ensure
         fi
+      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
 
     - name: Run Jira tests
       run: make -C access/jirabot test
