@@ -50,10 +50,6 @@ jobs:
         fi
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
 
-    - name: Clone Teleport
-      run: git clone https://github.com/gravitational/teleport.git $GOPATH/src/github.com/gravitational/teleport
-      working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
-
     - name: Run Jira tests
       run: make -C access/jirabot test
       working-directory: ${{ github.workspace }}/go/src/github.com/${{ github.repository }}
