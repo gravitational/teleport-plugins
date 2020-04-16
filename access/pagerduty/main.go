@@ -147,7 +147,7 @@ func (a *App) Run(ctx context.Context) error {
 
 	a.accessClient, err = access.NewClient(
 		ctx,
-		"jirabot",
+		"pagerduty",
 		a.conf.Teleport.AuthServer,
 		tlsConf,
 	)
