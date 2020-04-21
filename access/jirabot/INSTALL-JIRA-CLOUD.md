@@ -71,7 +71,7 @@ Create a new board for tasks in the permission management project. The board has
 2. Approved
 3. Denied
 
-Teleport Jira Plugin will create a new issue for each new permission request in the first available column on the board. When you drag the request task to Approved column on Jira, the request will be appvored. Ditto for Denied column on Jira.
+Teleport Jira Plugin will create a new issue for each new permission request in the first available column on the board. When you drag the request task to Approved column on Jira, the request will be approved. Ditto for Denied column on Jira.
 
 #### Setting up Request ID field on Jira
 Teleport Jira Plugin requires a custom issue field to be created. 
