@@ -104,16 +104,7 @@ In the webhook settings page, make sure that the webhook will only send Issue Up
 
 ## Installing
 
-To start using Teleport Plugins, you will need to Download the binaries and the license file from the customer portal. After downloading the binary tarball, run:
-
-```bash
-$ wget https://get.gravitational.com/teleport-jirabot-v0.0.1-linux-amd64-bin.tar.gz
-$ tar -xzf teleport-jirabot-v0.0.1-linux-amd64-bin.tar.gz
-$ cd teleport-jirabot
-$ ./install
-$ which teleport-jirabot
-/usr/local/bin/teleport-jirabot
-```
+To start using Teleport Plugins, you will need the teleport-jirabot executable.  See the [README](README.md) for building the teleport-jiraport executable in the Setup section.  Place the executable in the appropriate /usr/bin or /usr/local/bin on the server installation.
 
 ### Configuration file
 
