@@ -340,15 +340,13 @@ func (a *App) OnPagerdutyAction(ctx context.Context, action WebhookAction) error
 		if err != nil {
 			return trace.Wrap(err)
 		}
-		if pluginData.PagerdutyData.ID != action.IncidentID {
-			log.WithFields(logFields{
-				"plugin_data_incident_id": pluginData.PagerdutyData.ID,
-				"incident_id":             action.IncidentID,
-			}).Debug("plugin_data.incident_id does not match incident.id")
-			return trace.Errorf("incident_id from request's plugin_data does not match")
-		}
 
 		log = log.WithField("pd_incident_id", action.IncidentID)
+
+		if pluginData.PagerdutyData.ID != action.IncidentID {
+			log.WithField("plugin_data_incident_id", pluginData.PagerdutyData.ID).Debug("plugin_data.incident_id does not match incident.id")
+			return trace.Errorf("incident_id from request's plugin_data does not match")
+		}
 
 		var (
 			reqState   access.State

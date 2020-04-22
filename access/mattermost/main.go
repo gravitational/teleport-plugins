@@ -47,7 +47,7 @@ type MattermostData struct {
 	ChannelID string
 }
 
-type pluginData struct {
+type PluginData struct {
 	RequestData
 	MattermostData
 }
@@ -330,7 +330,7 @@ func (a *App) OnMattermostAction(ctx context.Context, data BotAction) (BotAction
 			mmStatus = "EXPIRED"
 
 			// And try to fetch its request data if it exists
-			var pluginData pluginData
+			var pluginData PluginData
 			pluginData, _ = a.getPluginData(ctx, reqID)
 			reqData = pluginData.RequestData
 		} else {
@@ -341,11 +341,22 @@ func (a *App) OnMattermostAction(ctx context.Context, data BotAction) (BotAction
 			return BotActionResponse{}, trace.Errorf("cannot process not pending request: %+v", req)
 		}
 
+		pluginData, err := a.getPluginData(ctx, reqID)
+		if err != nil {
+			return BotActionResponse{}, trace.Wrap(err)
+		}
+
 		log = log.WithFields(logFields{
 			"mm_channel_id": data.ChannelID,
 			"mm_post_id":    data.PostID,
 			"mm_user_id":    data.UserID,
 		})
+
+		if pluginData.MattermostData.PostID != data.PostID {
+			log.WithField("plugin_data_post_id", pluginData.MattermostData.PostID).Debug("plugin_data.post_id does not match post.id")
+			return BotActionResponse{}, trace.Errorf("post_id from request's plugin_data does not match")
+		}
+
 		user, err := a.bot.GetUser(ctx, data.UserID)
 		if err != nil {
 			log.WithError(err).Warning("Failed to fetch user info")
@@ -378,8 +389,7 @@ func (a *App) OnMattermostAction(ctx context.Context, data BotAction) (BotAction
 		}
 		log.Infof("Mattermost user %s the request", resolution)
 
-		// Simply fill reqData from the request itself.
-		reqData = RequestData{User: req.User, Roles: req.Roles}
+		reqData = pluginData.RequestData
 	}
 
 	return BotActionResponse{
@@ -397,7 +407,7 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 
 	log.WithField("mattermost_post_id", mmData.PostID).Info("Successfully posted to Mattermost")
 
-	err = a.setPluginData(ctx, req.ID, pluginData{reqData, mmData})
+	err = a.setPluginData(ctx, req.ID, PluginData{reqData, mmData})
 	return trace.Wrap(err)
 }
 
@@ -427,7 +437,7 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 	return nil
 }
 
-func (a *App) getPluginData(ctx context.Context, reqID string) (data pluginData, err error) {
+func (a *App) getPluginData(ctx context.Context, reqID string) (data PluginData, err error) {
 	dataMap, err := a.accessClient.GetPluginData(ctx, reqID)
 	if err != nil {
 		return data, trace.Wrap(err)
@@ -439,7 +449,7 @@ func (a *App) getPluginData(ctx context.Context, reqID string) (data pluginData,
 	return
 }
 
-func (a *App) setPluginData(ctx context.Context, reqID string, data pluginData) error {
+func (a *App) setPluginData(ctx context.Context, reqID string, data PluginData) error {
 	return a.accessClient.UpdatePluginData(ctx, reqID, access.PluginData{
 		"user":       data.User,
 		"roles":      strings.Join(data.Roles, ","),

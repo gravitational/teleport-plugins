@@ -366,18 +366,16 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 		if err != nil {
 			return trace.Wrap(err)
 		}
-		if pluginData.JiraData.ID != issue.ID {
-			log.WithFields(logFields{
-				"plugin_data_issue_id": pluginData.JiraData.ID,
-				"issue_id":             issue.ID,
-			}).Debug("plugin_data.issue_id does not match issue.id")
-			return trace.Errorf("issue_id from request's plugin_data does not match")
-		}
 
 		log = log.WithFields(logFields{
 			"jira_issue_id":  issue.ID,
 			"jira_issue_key": issue.Key,
 		})
+
+		if pluginData.JiraData.ID != issue.ID {
+			log.WithField("plugin_data_issue_id", pluginData.JiraData.ID).Debug("plugin_data.issue_id does not match issue.id")
+			return trace.Errorf("issue_id from request's plugin_data does not match")
+		}
 
 		var (
 			reqState   access.State
