@@ -22,11 +22,21 @@ const (
 	mmHttpTimeout = 10 * time.Second
 )
 
-const DescriptionTemplate = `User:        {{.User}}
+var postTextTemplate *template.Template
+
+func init() {
+	var err error
+	postTextTemplate, err = template.New("description").Parse(
+		`User:        {{.User}}
 Roles:       {{range $index, $element := .Roles}}{{if $index}}, {{end}}{{ . }}{{end}}
 Request ID:  {{.ID}}
 Status:      {{.StatusEmoji}} {{.Status}}
-`
+`,
+	)
+	if err != nil {
+		panic(err)
+	}
+}
 
 // Bot is a wrapper around jira.Client that works with access.Request
 type Bot struct {
@@ -182,7 +192,7 @@ func (b *Bot) NewActionsAttachment(reqID string, reqData RequestData, status str
 		actions = append(actions, approveAction, denyAction)
 	}
 
-	text, err := b.GetPostText(reqID, reqData, status)
+	text, err := b.buildPostText(reqID, reqData, status)
 	if err != nil {
 		return nil, err
 	}
@@ -194,12 +204,7 @@ func (b *Bot) NewActionsAttachment(reqID string, reqData RequestData, status str
 
 }
 
-func (b *Bot) GetPostText(reqID string, reqData RequestData, status string) (string, error) {
-	tmpl, err := template.New("description").Parse(DescriptionTemplate)
-	if err != nil {
-		return "", trace.Wrap(err)
-	}
-
+func (b *Bot) buildPostText(reqID string, reqData RequestData, status string) (string, error) {
 	var statusEmoji string
 
 	switch status {
@@ -213,14 +218,17 @@ func (b *Bot) GetPostText(reqID string, reqData RequestData, status string) (str
 		statusEmoji = "⌛"
 	}
 
-	var builder strings.Builder
+	var (
+		builder strings.Builder
+		err     error
+	)
 
 	_, err = builder.WriteString("```\n")
 	if err != nil {
 		return "", trace.Wrap(err)
 	}
 
-	err = tmpl.Execute(&builder, struct {
+	err = postTextTemplate.Execute(&builder, struct {
 		ID          string
 		Status      string
 		StatusEmoji string

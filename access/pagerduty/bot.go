@@ -26,8 +26,18 @@ const (
 	pdDenyActionLabel    = "Deny Request"
 )
 
-const DescriptionTemplate = `{{.User}} requested permissions for roles {{range $index, $element := .Roles}}{{if $index}}, {{end}}{{ . }}{{end}} on Teleport at {{.Created.Format .TimeFormat}}. To approve or deny the request, please use Special Actions on this incident.
-`
+var incidentBodyTemplate *template.Template
+
+func init() {
+	var err error
+	incidentBodyTemplate, err = template.New("description").Parse(
+		`{{.User}} requested permissions for roles {{range $index, $element := .Roles}}{{if $index}}, {{end}}{{ . }}{{end}} on Teleport at {{.Created.Format .TimeFormat}}. To approve or deny the request, please use Special Actions on this incident.
+`,
+	)
+	if err != nil {
+		panic(err)
+	}
+}
 
 // Bot is a wrapper around pd.Client that works with access.Request
 type Bot struct {
@@ -196,7 +206,7 @@ func (b *Bot) setupCustomAction(client *pd.Client, extensionId, schemaId, action
 func (b *Bot) CreateIncident(ctx context.Context, reqID string, reqData RequestData) (PagerdutyData, error) {
 	client := b.NewClient(ctx)
 
-	body, err := b.GetIncidentBody(reqID, reqData)
+	body, err := b.buildIncidentBody(reqID, reqData)
 
 	incident, err := client.CreateIncident(b.from, &pd.CreateIncidentOptions{
 		Title:       fmt.Sprintf("Access request from %s", reqData.User),
@@ -241,14 +251,9 @@ func (b *Bot) ResolveIncident(ctx context.Context, reqID string, pdData Pagerdut
 	return trace.Wrap(err)
 }
 
-func (b *Bot) GetIncidentBody(reqID string, reqData RequestData) (string, error) {
-	tmpl, err := template.New("description").Parse(DescriptionTemplate)
-	if err != nil {
-		return "", trace.Wrap(err)
-	}
-
+func (b *Bot) buildIncidentBody(reqID string, reqData RequestData) (string, error) {
 	var builder strings.Builder
-	err = tmpl.Execute(&builder, struct {
+	err := incidentBodyTemplate.Execute(&builder, struct {
 		ID         string
 		TimeFormat string
 		RequestData

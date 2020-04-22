@@ -35,12 +35,20 @@ type BotIssueUpdate struct {
 	Author jira.User
 }
 
-const DescriptionTemplate = `User *{{.User}}* requested an access on *{{.Created.Format .TimeFormat}}* with the following roles:
+var descriptionTemplate *template.Template
+
+func init() {
+	var err error
+	descriptionTemplate, err = template.New("description").Parse(`User *{{.User}}* requested an access on *{{.Created.Format .TimeFormat}}* with the following roles:
 {{range .Roles}}
 * {{ . }}
 {{end}}
 Request ID: *{{.ID}}*
-`
+`)
+	if err != nil {
+		panic(err)
+	}
+}
 
 func (issue *BotIssue) GetRequestID() (string, error) {
 	reqID, ok := issue.Properties[RequestIdPropertyKey].(string)
@@ -161,21 +169,7 @@ func (b *Bot) HealthCheck(ctx context.Context) error {
 
 // CreateIssue creates an issue with "Pending" status
 func (b *Bot) CreateIssue(ctx context.Context, reqID string, reqData RequestData) (JiraData, error) {
-	tmpl, err := template.New("description").Parse(DescriptionTemplate)
-	if err != nil {
-		return JiraData{}, trace.Wrap(err)
-	}
-
-	var description strings.Builder
-	err = tmpl.Execute(&description, struct {
-		ID         string
-		TimeFormat string
-		RequestData
-	}{
-		reqID,
-		time.RFC822,
-		reqData,
-	})
+	description, err := b.buildIssueDescription(reqID, reqData)
 	if err != nil {
 		return JiraData{}, trace.Wrap(err)
 	}
@@ -191,7 +185,7 @@ func (b *Bot) CreateIssue(ctx context.Context, reqID string, reqData RequestData
 			Type:        jira.IssueType{Name: "Task"},
 			Project:     jira.Project{Key: b.project},
 			Summary:     fmt.Sprintf("Access request from %s", reqData.User),
-			Description: description.String(),
+			Description: description,
 		},
 	})
 	if err != nil {
@@ -202,6 +196,23 @@ func (b *Bot) CreateIssue(ctx context.Context, reqID string, reqData RequestData
 		ID:  issue.ID,
 		Key: issue.Key,
 	}, nil
+}
+
+func (b *Bot) buildIssueDescription(reqID string, reqData RequestData) (string, error) {
+	var builder strings.Builder
+	err := descriptionTemplate.Execute(&builder, struct {
+		ID         string
+		TimeFormat string
+		RequestData
+	}{
+		reqID,
+		time.RFC822,
+		reqData,
+	})
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+	return builder.String(), nil
 }
 
 // GetIssue loads the issue with all necessary nested data.

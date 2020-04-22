@@ -170,7 +170,6 @@ func (s *MattermostSuite) startFakeMattermost(c *C) {
 		post := s.getPost(id)
 		if post == nil {
 			fmt.Printf("Not found %s", id)
-			panic("FUUUUU")
 			http.Error(rw, `{}`, http.StatusNotFound)
 			return
 		}
