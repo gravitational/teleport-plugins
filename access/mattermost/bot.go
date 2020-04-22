@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"strings"
 	"text/template"
 	"time"
@@ -41,6 +42,13 @@ func NewBot(conf *Config, onAction BotActionFunc) (*Bot, error) {
 	var err error
 	client := mm.NewAPIv4Client(conf.Mattermost.URL)
 	client.SetToken(conf.Mattermost.Token)
+	client.HttpClient = &http.Client{
+		Timeout: mmHttpTimeout,
+		Transport: &http.Transport{
+			MaxConnsPerHost:     mmMaxConns,
+			MaxIdleConnsPerHost: mmMaxConns,
+		},
+	}
 	bot := &Bot{
 		client:  client,
 		secret:  conf.Mattermost.Secret,
