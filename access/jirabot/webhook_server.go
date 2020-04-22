@@ -22,7 +22,7 @@ type WebhookIssue struct {
 }
 
 type Webhook struct {
-	RequestId string
+	HttpRequestID string
 
 	Timestamp          int    `json:"timestamp"`
 	WebhookEvent       string `json:"webhookEvent"`
@@ -74,10 +74,10 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 	ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*2500)
 	defer cancel()
 
-	requestId := fmt.Sprintf("%v-%v", time.Now().Unix(), atomic.AddUint64(&s.counter, 1))
-	log := log.WithField("jira_http_id", requestId)
+	httpRequestID := fmt.Sprintf("%v-%v", time.Now().Unix(), atomic.AddUint64(&s.counter, 1))
+	log := log.WithField("jira_http_id", httpRequestID)
 
-	webhook := Webhook{RequestId: requestId}
+	webhook := Webhook{HttpRequestID: httpRequestID}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {

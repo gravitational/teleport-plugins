@@ -25,11 +25,12 @@ const ActionURL = "/mattermost_action"
 
 type BotAction struct {
 	HttpRequestID string
-	UserID        string
-	PostID        string
-	ChannelID     string
-	Action        string
-	ReqID         string
+
+	UserID    string
+	PostID    string
+	ChannelID string
+	Action    string
+	ReqID     string
 }
 
 type BotActionResponse struct {
@@ -79,8 +80,8 @@ func (s *BotServer) OnAction(rw http.ResponseWriter, r *http.Request, _ httprout
 	ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*2500)
 	defer cancel()
 
-	httpRequestId := fmt.Sprintf("%v-%v", time.Now().Unix(), atomic.AddUint64(&s.counter, 1))
-	log := log.WithField("mattermost_http_id", httpRequestId)
+	httpRequestID := fmt.Sprintf("%v-%v", time.Now().Unix(), atomic.AddUint64(&s.counter, 1))
+	log := log.WithField("mm_http_id", httpRequestID)
 
 	var payload mm.PostActionIntegrationRequest
 
@@ -137,7 +138,7 @@ func (s *BotServer) OnAction(rw http.ResponseWriter, r *http.Request, _ httprout
 	}
 
 	actionData := BotAction{
-		HttpRequestID: httpRequestId,
+		HttpRequestID: httpRequestID,
 		UserID:        payload.UserId,
 		PostID:        payload.PostId,
 		ChannelID:     payload.ChannelId,

@@ -28,7 +28,8 @@ type WebhookMessage struct {
 }
 
 type WebhookAction struct {
-	HttpID      string
+	HttpRequestID string
+
 	MessageID   string
 	Event       string
 	Name        string
@@ -110,12 +111,12 @@ func (s *WebhookServer) processWebhook(actionName string, rw http.ResponseWriter
 		log = log.WithField("pd_msg_id", msg.ID)
 
 		action := WebhookAction{
-			HttpID:      httpRequestID,
-			MessageID:   msg.ID,
-			Event:       msg.Event,
-			Name:        actionName,
-			IncidentID:  msg.Incident.Id,
-			IncidentKey: msg.Incident.IncidentKey,
+			HttpRequestID: httpRequestID,
+			MessageID:     msg.ID,
+			Event:         msg.Event,
+			Name:          actionName,
+			IncidentID:    msg.Incident.Id,
+			IncidentKey:   msg.Incident.IncidentKey,
 		}
 		if err := s.onAction(ctx, action); err != nil {
 			log.WithError(err).Error("Failed to process webhook")

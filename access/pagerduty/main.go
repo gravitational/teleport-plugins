@@ -306,7 +306,7 @@ func (a *App) WatchRequests(ctx context.Context) error {
 
 func (a *App) OnPagerdutyAction(ctx context.Context, action WebhookAction) error {
 	log := log.WithFields(logFields{
-		"pd_http_id": action.HttpID,
+		"pd_http_id": action.HttpRequestID,
 		"pd_msg_id":  action.MessageID,
 	})
 
