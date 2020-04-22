@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
 )
@@ -45,13 +46,17 @@ type WebhookServer struct {
 	counter   uint64
 }
 
-func NewWebhookServer(conf *Config, onWebhook WebhookFunc) *WebhookServer {
+func NewWebhookServer(conf *Config, onWebhook WebhookFunc) (*WebhookServer, error) {
+	httpSrv, err := utils.NewHTTP(conf.HTTP)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 	srv := &WebhookServer{
-		http:      utils.NewHTTP(conf.HTTP),
+		http:      httpSrv,
 		onWebhook: onWebhook,
 	}
-	srv.http.POST("/", srv.processWebhook)
-	return srv
+	httpSrv.POST("/", srv.processWebhook)
+	return srv, nil
 }
 
 func (s *WebhookServer) Run(ctx context.Context) error {

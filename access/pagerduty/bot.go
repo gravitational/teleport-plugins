@@ -48,6 +48,10 @@ func (h HTTPClientImpl) Do(req *http.Request) (*http.Response, error) {
 }
 
 func NewBot(conf *Config, onAction WebhookFunc) (*Bot, error) {
+	server, err := NewWebhookServer(conf.HTTP, onAction)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 	httpClient := &http.Client{
 		Timeout: pdHttpTimeout,
 		Transport: &http.Transport{
@@ -55,16 +59,14 @@ func NewBot(conf *Config, onAction WebhookFunc) (*Bot, error) {
 			MaxIdleConnsPerHost: pdMaxConns,
 		},
 	}
-	bot := &Bot{
+	return &Bot{
 		httpClient:  httpClient,
+		server:      server,
 		apiEndpoint: conf.Pagerduty.APIEndpoint,
 		apiKey:      conf.Pagerduty.APIKey,
 		from:        conf.Pagerduty.UserEmail,
 		serviceId:   conf.Pagerduty.ServiceId,
-	}
-	bot.server = NewWebhookServer(conf.HTTP, onAction)
-	return bot, nil
-
+	}, nil
 }
 
 func (b *Bot) NewClient(ctx context.Context) *pd.Client {
@@ -167,11 +169,7 @@ func (b *Bot) Setup(ctx context.Context) error {
 }
 
 func (b *Bot) setupCustomAction(client *pd.Client, extensionId, schemaId, actionName, actionLabel string) error {
-	actionURL, err := b.server.ActionURL(actionName)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
+	actionURL := b.server.ActionURL(actionName)
 	ext := &pd.Extension{
 		Name:        actionLabel,
 		EndpointURL: actionURL,

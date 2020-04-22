@@ -92,14 +92,11 @@ func (c *Config) CheckAndSetDefaults() error {
 	if c.HTTP.Listen == "" {
 		c.HTTP.Listen = ":8081"
 	}
-	if c.HTTP.Hostname == "" && c.HTTP.BaseURL == "" {
+	if c.HTTP.Hostname == "" && c.HTTP.RawBaseURL == "" {
 		return trace.BadParameter("either http.base-url or http.host is required to be set")
 	}
-	if c.HTTP.KeyFile != "" && c.HTTP.CertFile == "" {
-		return trace.BadParameter("https-cert-file is required when https-key-file is specified")
-	}
-	if c.HTTP.CertFile != "" && c.HTTP.KeyFile == "" {
-		return trace.BadParameter("https-key-file is required when https-cert-file is specified")
+	if err := c.HTTP.Check(); err != nil {
+		return trace.Wrap(err)
 	}
 	if c.Log.Output == "" {
 		c.Log.Output = "stderr"

@@ -163,6 +163,12 @@ func (a *App) Run(ctx context.Context) error {
 
 	a.bot = NewBot(&a.conf)
 
+	// Create callback server providing a.OnSlackCallback as a callback function.
+	callbackServer, err := NewCallbackServer(&a.conf, a.OnSlackCallback)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
 	a.accessClient, err = access.NewClient(
 		ctx,
 		"slackbot",
@@ -190,9 +196,6 @@ func (a *App) Run(ctx context.Context) error {
 
 		a.Spawn(func(ctx context.Context) {
 			defer a.Terminate() // if callback server failed, shutdown everything
-
-			// Create callback server providing a.OnSlackCallback as a callback function.
-			callbackServer := NewCallbackServer(&a.conf, a.OnSlackCallback)
 
 			a.OnTerminate(func(ctx context.Context) {
 				if err := callbackServer.Shutdown(ctx); err != nil {

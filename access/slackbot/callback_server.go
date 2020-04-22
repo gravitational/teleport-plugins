@@ -31,14 +31,18 @@ type CallbackServer struct {
 	counter    uint64
 }
 
-func NewCallbackServer(conf *Config, onCallback CallbackFunc) *CallbackServer {
+func NewCallbackServer(conf *Config, onCallback CallbackFunc) (*CallbackServer, error) {
+	httpSrv, err := utils.NewHTTP(conf.HTTP)
+	if err != nil {
+		return nil, err
+	}
 	srv := &CallbackServer{
-		http:       utils.NewHTTP(conf.HTTP),
+		http:       httpSrv,
 		secret:     conf.Slack.Secret,
 		onCallback: onCallback,
 	}
-	srv.http.POST("/", srv.processCallback)
-	return srv
+	httpSrv.POST("/", srv.processCallback)
+	return srv, nil
 }
 
 func (s *CallbackServer) Run(ctx context.Context) error {

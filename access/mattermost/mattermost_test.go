@@ -226,7 +226,7 @@ func (s *MattermostSuite) startApp(c *C) {
 	conf.Mattermost.Channel = "test-channel"
 	conf.Mattermost.Secret = "1234567812345678123456781234567812345678123456781234567812345678"
 	conf.HTTP.Listen = ":" + s.appPort
-	conf.HTTP.BaseURL = "http://" + Host + ":" + s.appPort + "/"
+	conf.HTTP.RawBaseURL = "http://" + Host + ":" + s.appPort + "/"
 	conf.HTTP.Insecure = true
 
 	s.app, err = NewApp(conf)

@@ -346,7 +346,7 @@ func (s *PagerdutySuite) startApp(c *C) {
 	conf.Pagerduty.UserEmail = "bot@example.com"
 	conf.Pagerduty.ServiceId = "1111"
 	conf.HTTP.Listen = ":" + s.appPort
-	conf.HTTP.BaseURL = "http://" + Host + ":" + s.appPort + "/"
+	conf.HTTP.RawBaseURL = "http://" + Host + ":" + s.appPort + "/"
 	conf.HTTP.Insecure = true
 
 	s.app, err = NewApp(conf)

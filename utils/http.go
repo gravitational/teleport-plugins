@@ -18,12 +18,12 @@ import (
 )
 
 type HTTPConfig struct {
-	Listen   string `toml:"listen"`
-	KeyFile  string `toml:"https-key-file"`
-	CertFile string `toml:"https-cert-file"`
-	Hostname string `toml:"host"`
-	BaseURL  string `toml:"base-url"`
-	Insecure bool
+	Listen     string `toml:"listen"`
+	KeyFile    string `toml:"https-key-file"`
+	CertFile   string `toml:"https-cert-file"`
+	Hostname   string `toml:"host"`
+	RawBaseURL string `toml:"base-url"`
+	Insecure   bool
 }
 
 // HTTP is a tiny wrapper around standard net/http.
@@ -32,18 +32,61 @@ type HTTPConfig struct {
 // So you are guaranteed that server will be closed when the context is cancelled.
 type HTTP struct {
 	HTTPConfig
+	baseURL *url.URL
 	*httprouter.Router
 	server http.Server
 }
 
+// BaseURL builds a base url depending on either "base-url" or "host" setting.
+func (conf *HTTPConfig) BaseURL() (*url.URL, error) {
+	if raw := conf.RawBaseURL; raw != "" {
+		return url.Parse(raw)
+	} else if host := conf.Hostname; host != "" {
+		var scheme string
+		if conf.Insecure {
+			scheme = "http"
+		} else {
+			scheme = "https"
+		}
+		return &url.URL{
+			Scheme: scheme,
+			Host:   host,
+		}, nil
+	} else {
+		return nil, nil
+	}
+}
+
+func (conf *HTTPConfig) Check() error {
+	_, err := conf.BaseURL()
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	if conf.KeyFile != "" && conf.CertFile == "" {
+		return trace.BadParameter("https-cert-file is required when https-key-file is specified")
+	}
+	if conf.CertFile != "" && conf.KeyFile == "" {
+		return trace.BadParameter("https-key-file is required when https-cert-file is specified")
+	}
+	return nil
+}
+
 // NewHTTP creates a new HTTP wrapper
-func NewHTTP(config HTTPConfig) *HTTP {
+func NewHTTP(config HTTPConfig) (*HTTP, error) {
+	if err := config.Check(); err != nil {
+		return nil, trace.Wrap(err)
+	}
+	baseURL, err := config.BaseURL()
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 	router := httprouter.New()
 	return &HTTP{
 		config,
+		baseURL,
 		router,
 		http.Server{Addr: config.Listen, Handler: router},
-	}
+	}, nil
 }
 
 // ListenAndServe runs a http(s) server on a provided port.
@@ -86,35 +129,21 @@ func (h *HTTP) ShutdownWithTimeout(ctx context.Context, duration time.Duration) 
 }
 
 // BaseURL returns an url on which the server is accessible externally.
-func (h *HTTP) BaseURL() (*url.URL, error) {
-	if h.HTTPConfig.BaseURL != "" {
-		return url.Parse(h.HTTPConfig.BaseURL)
-	} else if h.Hostname != "" {
-		url := &url.URL{Host: h.Hostname}
-		if h.Insecure {
-			url.Scheme = "http"
-		} else {
-			url.Scheme = "https"
-		}
-		return url, nil
-	} else {
-		return nil, trace.BadParameter("no hostname or base-url was provided")
-	}
+func (h *HTTP) BaseURL() *url.URL {
+	url := *h.baseURL
+	return &url
 }
 
 // NewURL builds an external url for a specific path and query parameters.
-func (h *HTTP) NewURL(subpath string, values url.Values) (*url.URL, error) {
-	url, err := h.BaseURL()
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
+func (h *HTTP) NewURL(subpath string, values url.Values) *url.URL {
+	url := h.BaseURL()
 	url.Path = path.Join(url.Path, subpath)
 
 	if values != nil {
 		url.RawQuery = values.Encode()
 	}
 
-	return url, nil
+	return url
 }
 
 // EnsureCert checks cert and key files consistency. It also generates a self-signed cert if it was not specified.
@@ -144,13 +173,9 @@ func (h *HTTP) EnsureCert(defaultPath string) (err error) {
 
 	log.Warningf("Generating self signed key and cert to %v %v.", h.KeyFile, h.CertFile)
 
-	hostname := h.Hostname
-	if hostname == "" && h.HTTPConfig.BaseURL != "" {
-		url, err := h.BaseURL()
-		if err != nil {
-			return trace.Wrap(err)
-		}
-		hostname = url.Hostname()
+	var hostname string
+	if h.baseURL != nil {
+		hostname = h.baseURL.Hostname()
 	}
 	if hostname == "" {
 		return trace.BadParameter("no hostname or base-url was provided")

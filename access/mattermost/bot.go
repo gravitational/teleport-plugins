@@ -38,6 +38,7 @@ type Bot struct {
 }
 
 func NewBot(conf *Config, onAction BotActionFunc) (*Bot, error) {
+	var err error
 	client := mm.NewAPIv4Client(conf.Mattermost.URL)
 	client.SetToken(conf.Mattermost.Token)
 	bot := &Bot{
@@ -46,7 +47,10 @@ func NewBot(conf *Config, onAction BotActionFunc) (*Bot, error) {
 		team:    conf.Mattermost.Team,
 		channel: conf.Mattermost.Channel,
 	}
-	bot.server = NewBotServer(bot, onAction, conf.HTTP)
+	bot.server, err = NewBotServer(bot, onAction, conf.HTTP)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 	return bot, nil
 }
 
@@ -141,10 +145,7 @@ func (b *Bot) NewPostAction(actionId, actionName, reqID string) (*mm.PostAction,
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	actionURL, err := b.server.ActionURL()
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
+	actionURL := b.server.ActionURL()
 
 	return &mm.PostAction{
 		Name: actionName,

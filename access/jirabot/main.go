@@ -162,6 +162,12 @@ func (a *App) Run(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
+	// Create webhook server prividing a.OnJIRAWebhook as a callback function
+	webhookServer, err := NewWebhookServer(&a.conf, a.OnJIRAWebhook)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
 	a.accessClient, err = access.NewClient(
 		ctx,
 		"jirabot",
@@ -195,9 +201,6 @@ func (a *App) Run(ctx context.Context) error {
 
 		a.Spawn(func(ctx context.Context) {
 			defer a.Terminate() // if webhook server failed, shutdown everything
-
-			// Create webhook server prividing a.OnJIRAWebhook as a callback function
-			webhookServer := NewWebhookServer(&a.conf, a.OnJIRAWebhook)
 
 			a.OnTerminate(func(ctx context.Context) {
 				if err := webhookServer.Shutdown(ctx); err != nil {

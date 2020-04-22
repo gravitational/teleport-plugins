@@ -44,26 +44,26 @@ type WebhookServer struct {
 	counter  uint64
 }
 
-func NewWebhookServer(conf utils.HTTPConfig, onAction WebhookFunc) *WebhookServer {
+func NewWebhookServer(conf utils.HTTPConfig, onAction WebhookFunc) (*WebhookServer, error) {
+	httpSrv, err := utils.NewHTTP(conf)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 	srv := &WebhookServer{
-		http:     utils.NewHTTP(conf),
+		http:     httpSrv,
 		onAction: onAction,
 	}
-	srv.http.POST("/"+pdApproveAction, func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	httpSrv.POST("/"+pdApproveAction, func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		srv.processWebhook(pdApproveAction, rw, r)
 	})
-	srv.http.POST("/"+pdDenyAction, func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	httpSrv.POST("/"+pdDenyAction, func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		srv.processWebhook(pdDenyAction, rw, r)
 	})
-	return srv
+	return srv, nil
 }
 
-func (s *WebhookServer) ActionURL(actionName string) (string, error) {
-	url, err := s.http.NewURL(actionName, nil)
-	if err != nil {
-		return "", trace.Wrap(err)
-	}
-	return url.String(), nil
+func (s *WebhookServer) ActionURL(actionName string) string {
+	return s.http.NewURL(actionName, nil).String()
 }
 
 func (s *WebhookServer) Run(ctx context.Context) error {

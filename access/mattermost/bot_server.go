@@ -46,22 +46,22 @@ type BotServer struct {
 	counter  uint64
 }
 
-func NewBotServer(bot *Bot, onAction BotActionFunc, config utils.HTTPConfig) *BotServer {
+func NewBotServer(bot *Bot, onAction BotActionFunc, config utils.HTTPConfig) (*BotServer, error) {
+	httpSrv, err := utils.NewHTTP(config)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 	server := &BotServer{
 		bot:      bot,
-		http:     utils.NewHTTP(config),
+		http:     httpSrv,
 		onAction: onAction,
 	}
-	server.http.POST(ActionURL, server.OnAction)
-	return server
+	httpSrv.POST(ActionURL, server.OnAction)
+	return server, nil
 }
 
-func (s *BotServer) ActionURL() (string, error) {
-	url, err := s.http.NewURL(ActionURL, nil)
-	if err != nil {
-		return "", trace.Wrap(err)
-	}
-	return url.String(), nil
+func (s *BotServer) ActionURL() string {
+	return s.http.NewURL(ActionURL, nil).String()
 }
 
 func (s *BotServer) Run(ctx context.Context) error {
