@@ -18,12 +18,18 @@ import (
 )
 
 type HTTPConfig struct {
-	Listen     string `toml:"listen"`
-	KeyFile    string `toml:"https-key-file"`
-	CertFile   string `toml:"https-cert-file"`
-	Hostname   string `toml:"host"`
-	RawBaseURL string `toml:"base-url"`
+	Listen     string              `toml:"listen"`
+	KeyFile    string              `toml:"https-key-file"`
+	CertFile   string              `toml:"https-cert-file"`
+	Hostname   string              `toml:"host"`
+	RawBaseURL string              `toml:"base-url"`
+	BasicAuth  HTTPBasicAuthConfig `toml:"basic-auth"`
 	Insecure   bool
+}
+
+type HTTPBasicAuthConfig struct {
+	Username string `toml:"user"`
+	Password string `toml:"password"`
 }
 
 // HTTP is a tiny wrapper around standard net/http.
@@ -35,6 +41,12 @@ type HTTP struct {
 	baseURL *url.URL
 	*httprouter.Router
 	server http.Server
+}
+
+// HTTPBasicAuth wraps a http.Handler with HTTP Basic Auth check.
+type HTTPBasicAuth struct {
+	HTTPBasicAuthConfig
+	handler http.Handler
 }
 
 // BaseURL builds a base url depending on either "base-url" or "host" setting.
@@ -58,7 +70,7 @@ func (conf *HTTPConfig) BaseURL() (*url.URL, error) {
 }
 
 func (conf *HTTPConfig) Check() error {
-	_, err := conf.BaseURL()
+	baseURL, err := conf.BaseURL()
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -68,24 +80,49 @@ func (conf *HTTPConfig) Check() error {
 	if conf.CertFile != "" && conf.KeyFile == "" {
 		return trace.BadParameter("https-key-file is required when https-cert-file is specified")
 	}
+	if conf.BasicAuth.Password != "" && conf.BasicAuth.Username == "" {
+		return trace.BadParameter("basic-auth.user is required when basic-auth.password is specified")
+	}
+	if conf.BasicAuth.Username != "" && baseURL.User != nil {
+		return trace.BadParameter("passing credentials both in basic-auth section and base-url parameter is not supported")
+	}
 	return nil
+}
+
+func (auth *HTTPBasicAuth) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	username, password, ok := r.BasicAuth()
+
+	if ok && username == auth.Username && password == auth.Password {
+		auth.handler.ServeHTTP(rw, r)
+	} else {
+		rw.Header().Set("WWW-Authenticate", "Basic realm=Restricted")
+		http.Error(rw, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+	}
 }
 
 // NewHTTP creates a new HTTP wrapper
 func NewHTTP(config HTTPConfig) (*HTTP, error) {
-	if err := config.Check(); err != nil {
-		return nil, trace.Wrap(err)
-	}
 	baseURL, err := config.BaseURL()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 	router := httprouter.New()
+
+	if userInfo := baseURL.User; userInfo != nil {
+		password, _ := userInfo.Password()
+		config.BasicAuth = HTTPBasicAuthConfig{Username: userInfo.Username(), Password: password}
+	}
+
+	var handler http.Handler
+	handler = router
+	if config.BasicAuth.Username != "" {
+		handler = &HTTPBasicAuth{config.BasicAuth, handler}
+	}
 	return &HTTP{
 		config,
 		baseURL,
 		router,
-		http.Server{Addr: config.Listen, Handler: router},
+		http.Server{Addr: config.Listen, Handler: handler},
 	}, nil
 }
 
