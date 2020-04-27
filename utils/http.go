@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -17,6 +18,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type TLSConfig struct {
+	VerifyClientCertificate bool `toml:"verify-client-cert"`
+
+	VerifyClientCertificateFunc func(chains [][]*x509.Certificate) error
+}
+
 type HTTPConfig struct {
 	Listen     string              `toml:"listen"`
 	KeyFile    string              `toml:"https-key-file"`
@@ -24,7 +31,9 @@ type HTTPConfig struct {
 	Hostname   string              `toml:"host"`
 	RawBaseURL string              `toml:"base-url"`
 	BasicAuth  HTTPBasicAuthConfig `toml:"basic-auth"`
-	Insecure   bool
+	TLS        TLSConfig           `toml:"tls"`
+
+	Insecure bool
 }
 
 type HTTPBasicAuthConfig struct {
@@ -118,11 +127,31 @@ func NewHTTP(config HTTPConfig) (*HTTP, error) {
 	if config.BasicAuth.Username != "" {
 		handler = &HTTPBasicAuth{config.BasicAuth, handler}
 	}
+
+	var tlsConfig *tls.Config
+	if !config.Insecure {
+		tlsConfig = &tls.Config{}
+		if config.TLS.VerifyClientCertificate {
+			tlsConfig.ClientAuth = tls.RequireAndVerifyClientCert
+			if verify := config.TLS.VerifyClientCertificateFunc; verify != nil {
+				tlsConfig.VerifyPeerCertificate = func(_ [][]byte, chains [][]*x509.Certificate) error {
+					if err := verify(chains); err != nil {
+						log.WithError(err).Error("HTTPS client certificate verification failed")
+						return err
+					}
+					return nil
+				}
+			}
+		} else {
+			tlsConfig.ClientAuth = tls.NoClientCert
+		}
+	}
+
 	return &HTTP{
 		config,
 		baseURL,
 		router,
-		http.Server{Addr: config.Listen, Handler: handler},
+		http.Server{Addr: config.Listen, Handler: handler, TLSConfig: tlsConfig},
 	}, nil
 }
 
