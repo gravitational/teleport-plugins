@@ -47,7 +47,7 @@ $ tctl create -f rscs.yaml
 ```
 
 #### Export access-plugin Certificate
-Teleport Plugin uses the `access-plugin`role and user to peform the approval. We export the identify files, using [`tctl auth sign`](https://gravitational.com/teleport/docs/cli-docs/#tctl-auth-sign).
+Teleport Plugin uses the `access-plugin`role and user to perform the approval. We export the identity files, using [`tctl auth sign`](https://gravitational.com/teleport/docs/cli-docs/#tctl-auth-sign).
 
 ```
 $ tctl auth sign --format=tls --user=access-plugin --out=auth --ttl=8760h
