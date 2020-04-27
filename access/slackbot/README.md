@@ -6,8 +6,8 @@ via interactive slack messages.
 
 ## Setup
 
-Run `make access-slackbot && ./build/access-slackbot configure` from the
-repository root.  The `configure` command should produce an example
+Run `make access-slackbot && ./access/slackbot/build/teleport-slackbot configure` from the
+repository root.  The `configure` command will produce an example
 configuration file that looks something like this:
 
 ```toml
@@ -24,7 +24,7 @@ secret = "secret-value"     # Slack API Signing Secret
 channel = "channel-name"    # Message delivery channel
 
 [http]
-listen = ":8080" # Callback http server listen addr.
+listen = ":8081" # Callback http server listen addr.
 # host = "example.com" # Host name by which interaction callback is accessible publicly.
 # https-key-file = "/var/lib/teleport/plugins/slackbot/server.key"  # TLS private key
 # https-cert-file = "/var/lib/teleport/plugins/slackbot/server.crt" # TLS certificate
@@ -42,7 +42,7 @@ to generate the required PEM files, and make sure that the Auth Server's
 GRPC API is accessible at the address indicated by `auth-server`.
 
 *NOTE*: The slackbot must be given a teleport user identity with
-apprpopriate permissions.  See the [acccess package README](../README.md#authentication)
+appropriate permissions.  See the [acccess package README](../README.md#authentication)
 for an example of how to configure an appropriate user & role.
 
 ### `[slack]`
