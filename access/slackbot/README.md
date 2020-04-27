@@ -34,6 +34,8 @@ output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/tele
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
 ```
 
+Detailed install steps are provided within the [`install`](INSTALL.md) instructions.
+
 ### `[teleport]`
 
 This configuration section ensures that the bot can talk to your teleport
