@@ -62,12 +62,12 @@ to generate the required PEM files, and make sure that the Auth Server's
 GRPC API is accessible at the address indicated by `auth-server`.
 
 *NOTE*: The slackbot must be given a teleport user identity with
-apprpopriate permissions.  See the [acccess package README](../README.md#authentication)
+appropriate permissions.  See the [access package README](../README.md#authentication)
 for an example of how to configure an appropriate user & role.
 
 ### `[jira]`
 
-This block manages interacting with your Jira intallation. You'd need to paste your Jira dashboard URL, project key, and your access token.
+This block manages interacting with your Jira installation. You'd need to paste your Jira dashboard URL, project key, and your access token.
 You can grab a JIRA Cloud API token [on this page](https://id.atlassian.com/manage/api-tokens).
 
 You'll need to setup a custom issue field on Jira. It's name must be `TeleportAccessRequestId`, and it should be on the issue type `Task` in the project you intend to use with Teleport.GET 
