@@ -65,7 +65,7 @@ func (conf *HTTPConfig) BaseURL() (*url.URL, error) {
 			Host:   host,
 		}, nil
 	} else {
-		return nil, nil
+		return &url.URL{}, nil
 	}
 }
 
@@ -210,10 +210,7 @@ func (h *HTTP) EnsureCert(defaultPath string) (err error) {
 
 	log.Warningf("Generating self signed key and cert to %v %v.", h.KeyFile, h.CertFile)
 
-	var hostname string
-	if h.baseURL != nil {
-		hostname = h.baseURL.Hostname()
-	}
+	hostname := h.baseURL.Hostname()
 	if hostname == "" {
 		return trace.BadParameter("no hostname or base-url was provided")
 	}
