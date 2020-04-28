@@ -16,6 +16,10 @@ access-mattermost:
 access-pagerduty:
 	make -C access/pagerduty
 
+.PHONY: access-gitlab
+access-gitlab:
+	make -C access/gitlab
+
 .PHONY: access-example
 access-example:
 	go build -o build/access-example ./access/example
