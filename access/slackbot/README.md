@@ -65,7 +65,7 @@ public HTTPS endpoint for your interaction callback. You must also use
 
 ## Usage
 
-Once your slackbot has been configured, you can varify that it is working
+Once your slackbot has been configured, you can verify that it is working
 correctly by using `tctl request create <user> --roles=<roles>` to simulate
 an access request.  If everything is working as intended, a message with
 `Approve` and `Deny` buttons should appear in the channel specified under
