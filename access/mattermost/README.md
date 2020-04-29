@@ -35,10 +35,10 @@ The new bot account will need Post All permission.
 The confirmation screen after you've created the bot will give you the access token. We'll use this in the config later.
 
 #### Create an access-plugin role and user within Teleport 
-First off, using an exsiting Teleport Cluster, we are going to create a new Teleport User and Role to access Teleport.
+First off, using an existing Teleport Cluster, we are going to create a new Teleport User and Role to access Teleport.
 
 #### Create User and Role for access. 
-Log into Teleport Authenticaiont Server, this is where you normally run `tctl`. Don't change the username and the role name, it should be `access-plugin` for the plugin to work correctly.
+Log into Teleport Authentication Server, this is where you normally run `tctl`. Don't change the username and the role name, it should be `access-plugin` for the plugin to work correctly.
 
 ```bash
 $ cat > rscs.yaml <<EOF
