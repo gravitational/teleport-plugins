@@ -2,16 +2,16 @@
 
 This guide ia an additional guide to the [README.md](./README.md) and [INSTALL.md](./INSTALL-JIRA-CLOUD.md).
 It covers the differences in the setup process for the Teleport Jira Plugin for Jira Server environments.
-Because Jira Server works with a different project and kanban board setup, sevearal more steps are required to set it up to work with the plugin.
+Because Jira Server works with a different project and kanban board setup, several more steps are required to set it up to work with the plugin.
 
 
 ## Prerequisites
 
-1. A Jira Server instnace. Your user must be an owner of the instance to set it up.
+1. A Jira Server instance. Your user must be an owner of the instance to set it up.
 2. Teleport Enterprise with admin access.
 
 
-_Note:Setting up a playground:_: Before you setup the plugin in your production environment, you can setup a sanboxed jira server environment to and go through the setup process to make sure it works correctly.
+_Note:Setting up a playground:_: Before you setup the plugin in your production environment, you can setup a sandboxed jira server environment to and go through the setup process to make sure it works correctly.
 To do that, you could [run Jira Server in a Docker container](https://hub.docker.com/r/atlassian/jira-software) and go through the setup steps. 
 
 
@@ -56,13 +56,13 @@ The rules of the workflow must meet these requirements:
 
 You can choose to make the workflow strict and restrict moving requests from Approved state to Declined state and vice versa, or leave that flexible. Teleport will only change the request status once, i.e. the first time the request is approved or denied on your Jira board.
 
-With Workwlows editor you can setup who can approve or deny the request based on their Jira user permissions. We won't cover that in this guide as it mostly relates to Jira settings and Teleport will by default allow anyone who can use the workflow to approve or deny the request.
+With W editor you can setup who can approve or deny the request based on their Jira user permissions. We won't cover that in this guide as it mostly relates to Jira settings and Teleport will by default allow anyone who can use the workflow to approve or deny the request.
 
 Go to your Project Settings -> Workflows, and make sure that your workflow that you just created or edited is applied to the project you'll use for Teleport integration. 
 
 ### Setting up the webhook
 
-Teleport Jira Plugin will listen for a webhook that Jira Server sends when a requets is approved or denied. Go to Settings -> System -> Webhooks to setup the webhook. The webhook needs to be sent when issues are updated or deleted.
+Teleport Jira Plugin will listen for a webhook that Jira Server sends when a r is approved or denied. Go to Settings -> System -> Webhooks to setup the webhook. The webhook needs to be sent when issues are updated or deleted.
 
 ## Configuring the Teleport Jira Plugin for Jira Server
 
