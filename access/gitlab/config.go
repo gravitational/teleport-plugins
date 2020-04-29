@@ -49,8 +49,8 @@ project-id = "1812345"                     # GitLab Project ID
 webhook-secret = "your webhook passphrase" # A secret used to encrypt data we use in webhooks. Basically anything you'd like. 
 
 [http]
-listen = ":8081"                           # Webhook listener
-base-url = "https://480d2ded.ngrok.io"     # Host name by which bot is accessible — will be used in Gitlab webhook settings
+listen = ":8081"                                                  # Webhook listener
+base-url = "https://your-server.example.com/teleport-gitlab"      # URL by which bot is accessible — will be used in Gitlab webhook settings
 # https-key-file = "/var/lib/teleport/plugins/gitlab/server.key"  # TLS private key
 # https-cert-file = "/var/lib/teleport/plugins/gitlab/server.crt" # TLS certificate
 

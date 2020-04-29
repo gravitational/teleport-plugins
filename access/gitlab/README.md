@@ -30,7 +30,7 @@ webhook-secret = "something-secret"
 
 [http]
 listen = ":8081"
-base-url = "https://<HOSTNAME>.ngrok.io"
+base-url = "https://your-server.example.com/teleport-gitlab"
 ```
 
 The plugin creates labels on Gitlab automatically if they don't exist yet. You don't have to set anything up on Gitlab, except for the project (create new, or grab project ID from an existing one), and the Board.
