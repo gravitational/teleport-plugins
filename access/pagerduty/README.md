@@ -59,6 +59,21 @@ _Note: by default, tctl auth sign produces certificates with a relatively short 
 
 In your Pagerduty dashboard, go to **Configuration -> API Access -> Create New API Key**, add a key description, and save the key. We'll use the key in the plugin config file later.
 
+
+### Securing Pagerduty webhooks
+
+Pagerduty doesn't have a mechanism to sign it's webhook payload. Instead, they provide two good ways for you to verify the integrity and origin of the webhook requests (i.e. that the webhook is actually sent by Pagerduty, not bo something else): 
+
+- Basic auth (not recommended)
+- Certificate verification (recommended and default).
+
+To setup Basic Auth, setup a usename and password in the config below. in `[http.basic-auth]` section. 
+
+If you intend to run `teleport-pagerduty` with TLS anyway, then to ensure mutual TLS verification, you need to setup `verify-client-cert = true` in the config below in `[http.tls]` section.
+
+If you're running `teleport-pagerduty` with `--insecure-no-tls`, and another Proxy server provides TLS certs for your setup, you'll need to setup TLS verification on that proxy server instead. 
+Pagerduty documentation covers that process here: [https://developer.pagerduty.com/docs/webhooks/webhooks-mutual-tls](https://developer.pagerduty.com/docs/webhooks/webhooks-mutual-tls).
+
 ## Install
 
 ### Installing a released version
@@ -112,16 +127,23 @@ client-crt = "/var/lib/teleport/plugins/pagerduty/auth.crt" # Teleport GRPC clie
 root-cas = "/var/lib/teleport/plugins/pagerduty/auth.cas"   # Teleport cluster CA certs
 
 [pagerduty]
-api-key = "API KEY GOES HERE"               # PagerDuty API Key
-user-email = "nat@evilmartians.com" # PagerDuty bot user email (Could be admin email)
-service-id = "P4HZJDY"        # PagerDuty service id, copy it from the Pagerduty service URL
+api-key = "key"               # PagerDuty API Key
+user-email = "me@example.com" # PagerDuty bot user email (Could be admin email)
+service-id = "PIJ90N7"        # PagerDuty service id
 
 [http]
-listen = ":8081"          # PagerDuty webhook listener host&port
-base-url = "https://teleport-pagerduty.infra.corp.com" # The address pagerduty uses to send webhooks when incidents (requests) are resolved — must be accessible from the internet.
+listen = ":8081"          # PagerDuty webhook listener
+base-url = "https://teleport-pagerduty.infra.yourcorp.com" # The public address of the teleport-pagerduty webhook listener. 
 # host = "example.com"    # Host name by which bot is accessible
 # https-key-file = "/var/lib/teleport/plugins/pagerduty/server.key"  # TLS private key
 # https-cert-file = "/var/lib/teleport/plugins/pagerduty/server.crt" # TLS certificate
+
+[http.tls]
+verify-client-cert = true # The preferred way to authenticate webhooks on Pagerduty. See more: https://developer.pagerduty.com/docs/webhooks/webhooks-mutual-tls
+
+[http.basic-auth]
+user = "user"
+password = "password" # If you prefer to use basic auth for Pagerduty Webhooks authentication, use this section to store user and password
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/pagerduty.log"

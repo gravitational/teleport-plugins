@@ -42,9 +42,17 @@ service-id = "PIJ90N7"        # PagerDuty service id
 
 [http]
 listen = ":8081"          # PagerDuty webhook listener
+base-url = "https://teleport-pagerduty.infra.yourcorp.com" # The public address of the teleport-pagerduty webhook listener. 
 # host = "example.com"    # Host name by which bot is accessible
 # https-key-file = "/var/lib/teleport/plugins/pagerduty/server.key"  # TLS private key
 # https-cert-file = "/var/lib/teleport/plugins/pagerduty/server.crt" # TLS certificate
+
+[http.tls]
+verify-client-cert = true # The preferred way to authenticate webhooks on Pagerduty. See more: https://developer.pagerduty.com/docs/webhooks/webhooks-mutual-tls
+
+[http.basic-auth]
+user = "user"
+password = "password" # If you prefer to use basic auth for Pagerduty Webhooks authentication, use this section to store user and password
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/pagerduty.log"
