@@ -61,7 +61,7 @@ auth server & manage access-requests.  Use `tctl auth sign --format=tls`
 to generate the required PEM files, and make sure that the Auth Server's
 GRPC API is accessible at the address indicated by `auth-server`.
 
-*NOTE*: The slackbot must be given a teleport user identity with
+*NOTE*: The jirabot must be given a teleport user identity with
 appropriate permissions.  See the [access package README](../README.md#authentication)
 for an example of how to configure an appropriate user & role.
 
@@ -78,7 +78,7 @@ Jirabot starts it's own http server and listens to a webhook from JIRA, this blo
 
 ## Usage
 
-Once your slackbot has been configured, you can varify that it is working
+Once your jirabot has been configured, you can verify that it is working
 correctly by using `tctl request create <user> --roles=<roles>` to simulate
 an access request. You should see a new JIRA card pop up. You can now drag the card to either Approved or Denied column, and that should approve or deny the request on Teleport. You can verify that the request was indeed processed correctly by running `tctl request ls`.
 
