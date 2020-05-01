@@ -1,0 +1,22 @@
+---
+kind: pipeline
+type: kubernetes
+name: plugins-test
+
+clone:
+  disable: true
+
+steps: 
+- name: Run tests
+  image: golang:1.13.2
+  commands:
+    - mkdir -p $GOPATH/src/github.com/gravitational/teleport-plugins
+    - git clone https://github.com/gravitational/teleport-plugins.git $GOPATH/src/github.com/gravitational/teleport-plugins
+    - cd $GOPATH/src/github.com/gravitational/teleport-plugins
+    - git checkout $DRONE_COMMIT
+    - go get -v -t -d ./...
+    - cd access && go test ./...
+
+trigger:
+  branch:
+    - master
