@@ -16,3 +16,7 @@ steps:
     - git checkout $DRONE_COMMIT
     - go get -v -t -d ./...
     - cd access && go test ./...
+
+trigger:
+  branch:
+    - master
