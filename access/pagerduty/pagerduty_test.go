@@ -97,7 +97,7 @@ func (s *PagerdutySuite) SetUpSuite(c *C) {
 func (s *PagerdutySuite) SetUpTest(c *C) {
 	s.startFakePagerduty(c)
 	s.startApp(c)
-	time.Sleep(time.Milliseoncd * 750) // Wait some time for services to start up
+	time.Sleep(time.Millisecond * 750) // Wait some time for services to start up
 }
 
 func (s *PagerdutySuite) TearDownTest(c *C) {
@@ -365,7 +365,7 @@ func (s *PagerdutySuite) createAccessRequest(c *C) services.AccessRequest {
 	c.Assert(err, IsNil)
 	err = client.CreateAccessRequest(context.TODO(), req)
 	c.Assert(err, IsNil)
-	time.Sleep(time.Milliseoncd * 750) // Wait some time for watcher to receive a request
+	time.Sleep(time.Millisecond * 750) // Wait some time for watcher to receive a request
 	return req
 }
 
@@ -374,7 +374,7 @@ func (s *PagerdutySuite) createExpiredAccessRequest(c *C) services.AccessRequest
 	c.Assert(err, IsNil)
 	req, err := services.NewAccessRequest(s.me.Username, "admin")
 	c.Assert(err, IsNil)
-	ttl := time.Milliseoncd * 750
+	ttl := time.Millisecond * 750
 	req.SetAccessExpiry(time.Now().Add(ttl))
 	err = client.CreateAccessRequest(context.TODO(), req)
 	c.Assert(err, IsNil)
@@ -423,7 +423,7 @@ func (s *PagerdutySuite) TestExtensionCreation(c *C) {
 	select {
 	case extension1 = <-s.newExtensions:
 		c.Assert(extension1, NotNil)
-	case <-time.After(time.Milliseoncd * 750):
+	case <-time.After(time.Millisecond * 750):
 		c.Fatal("first extension wasn't created")
 	}
 
@@ -431,7 +431,7 @@ func (s *PagerdutySuite) TestExtensionCreation(c *C) {
 	select {
 	case extension2 = <-s.newExtensions:
 		c.Assert(extension2, NotNil)
-	case <-time.After(time.Milliseoncd * 750):
+	case <-time.After(time.Millisecond * 750):
 		c.Fatal("second extension wasn't created")
 	}
 
@@ -453,7 +453,7 @@ func (s *PagerdutySuite) TestIncidentCreation(c *C) {
 	select {
 	case incident = <-s.newIncidents:
 		c.Assert(incident, NotNil)
-	case <-time.After(time.Milliseoncd * 750):
+	case <-time.After(time.Millisecond * 750):
 		c.Fatal("incident wasn't created")
 	}
 
@@ -467,7 +467,7 @@ func (s *PagerdutySuite) TestApproval(c *C) {
 	select {
 	case incident = <-s.newIncidents:
 		c.Assert(incident, NotNil)
-	case <-time.After(time.Milliseoncd * 750):
+	case <-time.After(time.Millisecond * 750):
 		c.Fatal("incident wasn't created")
 	}
 	c.Assert(incident.Status, Equals, "triggered")
@@ -482,7 +482,7 @@ func (s *PagerdutySuite) TestApproval(c *C) {
 	select {
 	case note = <-s.newIncidentNotes:
 		c.Assert(note, NotNil)
-	case <-time.After(time.Milliseoncd * 750):
+	case <-time.After(time.Millisecond * 750):
 		c.Fatal("note wasn't created")
 	}
 	c.Assert(note.Content, Equals, "Access request has been approved")
@@ -502,7 +502,7 @@ func (s *PagerdutySuite) TestDenial(c *C) {
 	select {
 	case incident = <-s.newIncidents:
 		c.Assert(incident, NotNil)
-	case <-time.After(time.Milliseoncd * 750):
+	case <-time.After(time.Millisecond * 750):
 		c.Fatal("incident wasn't created")
 	}
 	c.Assert(incident.Status, Equals, "triggered")
@@ -517,7 +517,7 @@ func (s *PagerdutySuite) TestDenial(c *C) {
 	select {
 	case note = <-s.newIncidentNotes:
 		c.Assert(note, NotNil)
-	case <-time.After(time.Milliseoncd * 750):
+	case <-time.After(time.Millisecond * 750):
 		c.Fatal("note wasn't created")
 	}
 	c.Assert(note.Content, Equals, "Access request has been denied")
@@ -537,7 +537,7 @@ func (s *PagerdutySuite) TestApproveExpired(c *C) {
 	select {
 	case incident = <-s.newIncidents:
 		c.Assert(incident, NotNil)
-	case <-time.After(time.Milliseoncd * 750):
+	case <-time.After(time.Millisecond * 750):
 		c.Fatal("incident wasn't created")
 	}
 
@@ -551,7 +551,7 @@ func (s *PagerdutySuite) TestApproveExpired(c *C) {
 	select {
 	case note = <-s.newIncidentNotes:
 		c.Assert(note, NotNil)
-	case <-time.After(time.Milliseoncd * 750):
+	case <-time.After(time.Millisecond * 750):
 		c.Fatal("note wasn't created")
 	}
 	c.Assert(note.Content, Equals, "Access request has been expired")
@@ -564,7 +564,7 @@ func (s *PagerdutySuite) TestDenyExpired(c *C) {
 	select {
 	case incident = <-s.newIncidents:
 		c.Assert(incident, NotNil)
-	case <-time.After(time.Milliseoncd * 750):
+	case <-time.After(time.Millisecond * 750):
 		c.Fatal("incident wasn't created")
 	}
 
@@ -578,7 +578,7 @@ func (s *PagerdutySuite) TestDenyExpired(c *C) {
 	select {
 	case note = <-s.newIncidentNotes:
 		c.Assert(note, NotNil)
-	case <-time.After(time.Milliseoncd * 750):
+	case <-time.After(time.Millisecond * 750):
 		c.Fatal("note wasn't created")
 	}
 	c.Assert(note.Content, Equals, "Access request has been expired")
