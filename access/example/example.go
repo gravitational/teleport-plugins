@@ -25,7 +25,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/cloudflare/cfssl/log"
 	"github.com/gravitational/teleport-plugins/access"
 
 	"github.com/gravitational/trace"
@@ -70,13 +72,17 @@ func run(configPath string) error {
 		return trace.Wrap(err)
 	}
 	// Register a watcher for pending access requests.
-	watcher, err := client.WatchRequests(ctx, access.Filter{
+	watcher := client.WatchRequests(ctx, access.Filter{
 		State: access.StatePending,
 	})
-	if err != nil {
+	defer watcher.Close()
+
+	if err := watcher.WaitInit(ctx, 5*time.Second); err != nil {
 		return trace.Wrap(err)
 	}
-	defer watcher.Close()
+
+	log.Debug("Watcher connected")
+
 	for {
 		select {
 		case event := <-watcher.Events():
