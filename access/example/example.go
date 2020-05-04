@@ -27,7 +27,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/cloudflare/cfssl/log"
 	"github.com/gravitational/teleport-plugins/access"
 
 	"github.com/gravitational/trace"
@@ -81,7 +80,7 @@ func run(configPath string) error {
 		return trace.Wrap(err)
 	}
 
-	log.Debug("Watcher connected")
+	eprintln("Watcher connected")
 
 	for {
 		select {
