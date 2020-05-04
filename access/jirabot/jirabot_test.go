@@ -94,7 +94,7 @@ func (s *JirabotSuite) SetUpSuite(c *C) {
 func (s *JirabotSuite) SetUpTest(c *C) {
 	s.startFakeJira(c)
 	s.startApp(c)
-	time.Sleep(time.Millisecond * 750) // Wait some time for services to start up
+	time.Sleep(time.Millisecond * 250) // Wait some time for services to start up
 }
 
 func (s *JirabotSuite) TearDownTest(c *C) {
@@ -286,7 +286,7 @@ func (s *JirabotSuite) createAccessRequest(c *C) services.AccessRequest {
 	c.Assert(err, IsNil)
 	err = client.CreateAccessRequest(context.TODO(), req)
 	c.Assert(err, IsNil)
-	time.Sleep(time.Millisecond * 750) // Wait some time for watcher to receive a request
+	time.Sleep(time.Millisecond * 250) // Wait some time for watcher to receive a request
 	return req
 }
 
@@ -295,7 +295,7 @@ func (s *JirabotSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
 	c.Assert(err, IsNil)
 	req, err := services.NewAccessRequest(s.me.Username, "admin")
 	c.Assert(err, IsNil)
-	ttl := time.Millisecond * 750
+	ttl := time.Millisecond * 250
 	req.SetAccessExpiry(time.Now().Add(ttl))
 	err = client.CreateAccessRequest(context.TODO(), req)
 	c.Assert(err, IsNil)
@@ -377,7 +377,7 @@ func (s *JirabotSuite) TestSlackMessagePosting(c *C) {
 	select {
 	case issue = <-s.newIssues:
 		c.Assert(issue, NotNil)
-	case <-time.After(time.Millisecond * 750):
+	case <-time.After(time.Millisecond * 250):
 		c.Fatal("issue wasn't created")
 	}
 
@@ -391,7 +391,7 @@ func (s *JirabotSuite) TestApproval(c *C) {
 	select {
 	case issue = <-s.newIssues:
 		c.Assert(issue, NotNil)
-	case <-time.After(time.Millisecond * 750):
+	case <-time.After(time.Millisecond * 250):
 		c.Fatal("issue wasn't created")
 	}
 
@@ -412,7 +412,7 @@ func (s *JirabotSuite) TestDenial(c *C) {
 	select {
 	case issue = <-s.newIssues:
 		c.Assert(issue, NotNil)
-	case <-time.After(time.Millisecond * 750):
+	case <-time.After(time.Millisecond * 250):
 		c.Fatal("issue wasn't created")
 	}
 
@@ -433,7 +433,7 @@ func (s *JirabotSuite) TestExpired(c *C) {
 	select {
 	case issue = <-s.transitions:
 		c.Assert(issue, NotNil)
-	case <-time.After(time.Millisecond * 750):
+	case <-time.After(time.Millisecond * 250):
 		c.Fatal("no issue transition detected")
 	}
 	c.Assert(issue.Fields.Status.Name, Equals, "Expired")
