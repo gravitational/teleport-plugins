@@ -18,7 +18,12 @@ access-pagerduty:
 access-example:
 	go build -o build/access-example ./access/example
 
-# Releases
+# Run all tests
+.PHONY: test
+test:
+	go test -count 1 ./...
+
+# Individual releases
 .PHONY: release/access-slackbot
 release/access-slackbot:
 	make -C access/slackbot release
@@ -35,5 +40,6 @@ release/access-mattermost:
 release/access-pagerduty:
 	make -C access/pagerduty release
 
-.PHONY: release-all
-release-all: release/access-slackbot release/access-jirabot release/access-mattermost release/access-pagerduty
+# Run all releases
+.PHONY: release
+release: release/access-slackbot release/access-jirabot release/access-mattermost release/access-pagerduty
