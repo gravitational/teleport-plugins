@@ -7,8 +7,7 @@ clone:
   disable: true
   
 workspace:
-  base: /go/src
-  path: github.com/gravitational/teleport-plugins
+  path: /go/src/github.com/gravitational/teleport-plugins
   
 trigger:
   event:
@@ -32,8 +31,7 @@ depends_on:
   - run-tests
     
 workspace:
-  base: /go/src
-  path: github.com/gravitational/teleport-plugins
+  path: /go/src/github.com/gravitational/teleport-plugins
   
 trigger:
   event:
