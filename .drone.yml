@@ -49,7 +49,7 @@ steps:
       - go get -v -t -d ./...
       - mkdir -p build/
       - make release-all
-      - find . -iname "*.tar.gz" -exec cp {} build/ \;
+      - find access/ -iname "*.tar.gz" -exec cp {} build/ \;
 
   - name: Upload to S3
     image: plugins/s3
