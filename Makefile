@@ -43,3 +43,11 @@ release/access-pagerduty:
 # Run all releases
 .PHONY: release
 release: release/access-slackbot release/access-jirabot release/access-mattermost release/access-pagerduty
+
+.PHONY: clean
+clean:
+	find access -iname "*.tar.gz" -delete
+
+.PHONY: get-deps
+get-deps:
+	go get -v -t -d ./...
