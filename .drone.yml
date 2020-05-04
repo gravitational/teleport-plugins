@@ -19,8 +19,8 @@ steps:
   commands:
     - git clone https://github.com/gravitational/teleport-plugins.git .
     - git checkout $DRONE_COMMIT
-    - go get -v -t -d ./...
-    - go test ./...
+    - make get-deps
+    - make test
 
 ---
 kind: pipeline
@@ -46,8 +46,8 @@ steps:
     commands:
       - git clone https://github.com/gravitational/teleport-plugins.git .
       - git checkout $DRONE_COMMIT
-      - go get -v -t -d ./...
       - mkdir -p build/
+      - make get-deps
       - make release-all
       - find access/ -iname "*.tar.gz" -exec cp {} build/ \;
 
@@ -64,3 +64,4 @@ steps:
       source: /go/src/github.com/gravitational/teleport-plugins/build/*.tar.gz
       target: /plugins/drone/pr/${DRONE_PULL_REQUEST}
     strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
+
