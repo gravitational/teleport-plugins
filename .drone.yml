@@ -3,16 +3,16 @@ kind: pipeline
 type: kubernetes
 name: run-tests
 
+trigger:
+  event:
+    - pull_request
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
 clone:
   disable: true
   
-workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
-  
-trigger:
-  event:
-    - pull_request  
-
 steps: 
 - name: Run tests
   image: golang:1.13.2
@@ -29,13 +29,16 @@ name: build-artifacts
 
 depends_on:
   - run-tests
-    
-workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
   
 trigger:
   event:
     - pull_request
+    
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+clone:
+  disable: true    
 
 steps:
   - name: Build artifacts
