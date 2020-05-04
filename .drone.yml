@@ -48,7 +48,7 @@ steps:
       - git checkout $DRONE_COMMIT
       - mkdir -p build/
       - make get-deps
-      - make release-all
+      - make release
       - find access/ -iname "*.tar.gz" -exec cp {} build/ \;
 
   - name: Upload to S3

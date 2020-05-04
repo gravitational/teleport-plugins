@@ -26,27 +26,23 @@ test:
 # Individual releases
 .PHONY: release/access-slackbot
 release/access-slackbot:
-	make -C access/slackbot release
+	make -C access/slackbot clean release
 
 .PHONY: release/access-jirabot
 release/access-jirabot:
-	make -C access/jirabot release
+	make -C access/jirabot clean release
 
 .PHONY: release/access-mattermost
 release/access-mattermost:
-	make -C access/mattermost release
+	make -C access/mattermost clean release
 
 .PHONY: release/access-pagerduty
 release/access-pagerduty:
-	make -C access/pagerduty release
+	make -C access/pagerduty clean release
 
 # Run all releases
 .PHONY: release
 release: release/access-slackbot release/access-jirabot release/access-mattermost release/access-pagerduty
-
-.PHONY: clean
-clean:
-	find access -iname "*.tar.gz" -delete
 
 .PHONY: get-deps
 get-deps:
