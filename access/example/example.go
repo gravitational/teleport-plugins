@@ -27,6 +27,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/cloudflare/cfssl/log"
 	"github.com/gravitational/teleport-plugins/access"
 
 	"github.com/gravitational/trace"
@@ -74,12 +75,15 @@ func run(configPath string) error {
 	watcher := client.WatchRequests(ctx, access.Filter{
 		State: access.StatePending,
 	})
+
 	if err := watcher.WaitInit(ctx, 5*time.Second); err != nil {
 		return trace.Wrap(err)
 	} else {
 		eprintln("watcher initialized...")
 	}
-	defer watcher.Close()
+
+	log.Debug("Watcher connected")
+
 	for {
 		select {
 		case event := <-watcher.Events():
