@@ -41,8 +41,8 @@ release/access-pagerduty:
 	make -C access/pagerduty clean release
 
 # Run all releases
-.PHONY: release
-release: release/access-slackbot release/access-jirabot release/access-mattermost release/access-pagerduty
+.PHONY: releases
+releases: release/access-slackbot release/access-jirabot release/access-mattermost release/access-pagerduty
 
 .PHONY: get-deps
 get-deps:
