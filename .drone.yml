@@ -9,6 +9,10 @@ clone:
 workspace:
   base: /go/src
   path: github.com/gravitational/teleport-plugins
+  
+trigger:
+  event:
+    - pull_request  
 
 steps: 
 - name: Run tests
@@ -18,10 +22,6 @@ steps:
     - git checkout $DRONE_COMMIT
     - go get -v -t -d ./...
     - cd access && go test ./...
-
-trigger:
-  branch:
-    - master
 
 ---
 kind: pipeline
@@ -34,6 +34,10 @@ depends_on:
 workspace:
   base: /go/src
   path: github.com/gravitational/teleport-plugins
+  
+trigger:
+  event:
+    - pull_request
 
 steps:
   - name: Build artifacts
