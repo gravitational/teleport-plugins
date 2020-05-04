@@ -93,7 +93,7 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 func (s *MattermostSuite) SetUpTest(c *C) {
 	s.startFakeMattermost(c)
 	s.startApp(c)
-	time.Sleep(time.Millisecond * 250) // Wait some time for services to start up
+	time.Sleep(time.Millisecond * 500) // Wait some time for services to start up
 }
 
 func (s *MattermostSuite) TearDownTest(c *C) {
@@ -244,7 +244,7 @@ func (s *MattermostSuite) createAccessRequest(c *C) services.AccessRequest {
 	c.Assert(err, IsNil)
 	err = client.CreateAccessRequest(context.TODO(), req)
 	c.Assert(err, IsNil)
-	time.Sleep(time.Millisecond * 250) // Wait some time for watcher to receive a request
+	time.Sleep(time.Millisecond * 500) // Wait some time for watcher to receive a request
 	return req
 }
 
@@ -253,7 +253,7 @@ func (s *MattermostSuite) createExpiredAccessRequest(c *C) services.AccessReques
 	c.Assert(err, IsNil)
 	req, err := services.NewAccessRequest(s.me.Username, "admin")
 	c.Assert(err, IsNil)
-	ttl := time.Millisecond * 250
+	ttl := time.Millisecond * 500
 	req.SetAccessExpiry(time.Now().Add(ttl))
 	err = client.CreateAccessRequest(context.TODO(), req)
 	c.Assert(err, IsNil)
@@ -309,7 +309,7 @@ func (s *MattermostSuite) TestMattermostMessagePosting(c *C) {
 	select {
 	case post = <-s.newPosts:
 		c.Assert(post, NotNil)
-	case <-time.After(time.Millisecond * 250):
+	case <-time.After(time.Millisecond * 500):
 		c.Fatal("post wasn't created")
 	}
 
@@ -328,7 +328,7 @@ func (s *MattermostSuite) TestApproval(c *C) {
 	select {
 	case post = <-s.newPosts:
 		c.Assert(post, NotNil)
-	case <-time.After(time.Millisecond * 250):
+	case <-time.After(time.Millisecond * 500):
 		c.Fatal("post wasn't created")
 	}
 
@@ -349,7 +349,7 @@ func (s *MattermostSuite) TestDenial(c *C) {
 	select {
 	case post = <-s.newPosts:
 		c.Assert(post, NotNil)
-	case <-time.After(time.Millisecond * 250):
+	case <-time.After(time.Millisecond * 500):
 		c.Fatal("post wasn't created")
 	}
 
@@ -370,7 +370,7 @@ func (s *MattermostSuite) TestApproveExpired(c *C) {
 	select {
 	case post = <-s.newPosts:
 		c.Assert(post, NotNil)
-	case <-time.After(time.Millisecond * 250):
+	case <-time.After(time.Millisecond * 500):
 		c.Fatal("post wasn't created")
 	}
 
@@ -389,7 +389,7 @@ func (s *MattermostSuite) TestDenyExpired(c *C) {
 	select {
 	case post = <-s.newPosts:
 		c.Assert(post, NotNil)
-	case <-time.After(time.Millisecond * 250):
+	case <-time.After(time.Millisecond * 500):
 		c.Fatal("post wasn't created")
 	}
 
