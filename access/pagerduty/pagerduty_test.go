@@ -57,7 +57,7 @@ func (s *PagerdutySuite) SetUpSuite(c *C) {
 	log.SetLevel(log.DebugLevel)
 	priv, pub, err := testauthority.New().GenerateKeyPair("")
 	c.Assert(err, IsNil)
-	portList, err := utils.GetFreeTCPPorts(6, 300)
+	portList, err := utils.GetFreeTCPPorts(6, 20300)
 	c.Assert(err, IsNil)
 	ports := portList.PopIntSlice(5)
 	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Ports: ports, Priv: priv, Pub: pub})
