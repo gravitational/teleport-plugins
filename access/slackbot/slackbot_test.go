@@ -94,7 +94,7 @@ func (s *SlackbotSuite) SetUpSuite(c *C) {
 func (s *SlackbotSuite) SetUpTest(c *C) {
 	s.startSlack(c)
 	s.startApp(c)
-	time.Sleep(time.Millisecond * 500) // Wait some time for services to start up
+	time.Sleep(time.Millisecond * 250) // Wait some time for services to start up
 }
 
 func (s *SlackbotSuite) TearDownTest(c *C) {
@@ -176,7 +176,7 @@ func (s *SlackbotSuite) createAccessRequest(c *C) services.AccessRequest {
 	c.Assert(err, IsNil)
 	err = client.CreateAccessRequest(context.TODO(), req)
 	c.Assert(err, IsNil)
-	time.Sleep(time.Millisecond * 500) // Wait some time for watcher to receive a request
+	time.Sleep(time.Millisecond * 250) // Wait some time for watcher to receive a request
 	return req
 }
 
@@ -185,7 +185,7 @@ func (s *SlackbotSuite) createExpiredAccessRequest(c *C) services.AccessRequest 
 	c.Assert(err, IsNil)
 	req, err := services.NewAccessRequest(s.me.Username, "admin")
 	c.Assert(err, IsNil)
-	ttl := time.Millisecond * 500
+	ttl := time.Millisecond * 250
 	req.SetAccessExpiry(time.Now().Add(ttl))
 	err = client.CreateAccessRequest(context.TODO(), req)
 	c.Assert(err, IsNil)
@@ -240,7 +240,7 @@ func (s *SlackbotSuite) fetchSlackMessage(c *C) slack.Msg {
 	case data := <-s.slackServer.SeenFeed:
 		err := json.Unmarshal([]byte(data), &msg)
 		c.Assert(err, IsNil)
-	case <-time.After(time.Millisecond * 500):
+	case <-time.After(time.Millisecond * 250):
 		c.Fatal("no messages were sent to a channel")
 	}
 	return msg
