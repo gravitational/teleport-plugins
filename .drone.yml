@@ -17,7 +17,7 @@ steps:
 - name: Run tests
   image: golang:1.13.2
   commands:
-    - git clone https://github.com/gravitational/teleport-plugins.git $GOPATH/src/github.com/gravitational/teleport-plugins
+    - git clone https://github.com/gravitational/teleport-plugins.git .
     - git checkout $DRONE_COMMIT
     - go get -v -t -d ./...
     - cd access && go test ./...
@@ -41,7 +41,7 @@ steps:
   - name: Build artifacts
     image: golang:1.13.2
     commands:
-      - git clone https://github.com/gravitational/teleport-plugins.git $GOPATH/src/github.com/gravitational/teleport-plugins
+      - git clone https://github.com/gravitational/teleport-plugins.git .
       - git checkout $DRONE_COMMIT
       - go get -v -t -d ./...
       - mkdir -p build/
