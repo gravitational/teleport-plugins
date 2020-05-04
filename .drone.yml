@@ -12,15 +12,15 @@ workspace:
 
 clone:
   disable: true
-  
-steps: 
+
+steps:
 - name: Run tests
   image: golang:1.13.2
   commands:
     - git clone https://github.com/gravitational/teleport-plugins.git .
     - git checkout $DRONE_COMMIT
     - go get -v -t -d ./...
-    - cd access && go test ./...
+    - go test ./...
 
 ---
 kind: pipeline
@@ -29,16 +29,16 @@ name: build-artifacts
 
 depends_on:
   - run-tests
-  
+
 trigger:
   event:
     - pull_request
-    
+
 workspace:
   path: /go/src/github.com/gravitational/teleport-plugins
 
 clone:
-  disable: true    
+  disable: true
 
 steps:
   - name: Build artifacts
