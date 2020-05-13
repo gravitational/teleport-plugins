@@ -207,6 +207,9 @@ func (b *Bot) CreateIncident(ctx context.Context, reqID string, reqData RequestD
 	client := b.NewClient(ctx)
 
 	body, err := b.buildIncidentBody(reqID, reqData)
+	if err != nil {
+		return PagerdutyData{}, trace.Wrap(err)
+	}
 
 	incident, err := client.CreateIncident(b.from, &pd.CreateIncidentOptions{
 		Title:       fmt.Sprintf("Access request from %s", reqData.User),
