@@ -129,6 +129,7 @@ func (s *WebhookServer) processWebhook(actionName string, rw http.ResponseWriter
 		}
 		if err := s.onAction(ctx, action); err != nil {
 			log.WithError(err).Error("Failed to process webhook")
+			log.Debugf("%v", trace.DebugReport(err))
 			var code int
 			switch {
 			case utils.IsCanceled(err) || utils.IsDeadline(err):
