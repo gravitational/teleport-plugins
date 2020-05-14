@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -46,6 +47,14 @@ type WebhookServer struct {
 }
 
 func NewWebhookServer(conf utils.HTTPConfig, onAction WebhookFunc) (*WebhookServer, error) {
+	conf.TLS.VerifyClientCertificateFunc = func(chains [][]*x509.Certificate) error {
+		cert := chains[0][0]
+		if subj := cert.Subject.String(); subj != "CN=webhooks.pagerduty.com,O=PagerDuty Inc,L=San Francisco,ST=California,C=US" {
+			return trace.Errorf("wrong certificate subject: %q", subj)
+		}
+		return nil
+	}
+
 	httpSrv, err := utils.NewHTTP(conf)
 	if err != nil {
 		return nil, trace.Wrap(err)
