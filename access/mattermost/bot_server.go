@@ -148,6 +148,7 @@ func (s *BotServer) OnAction(rw http.ResponseWriter, r *http.Request, _ httprout
 
 	if actionResponse, err := s.onAction(ctx, actionData); err != nil {
 		log.WithError(err).Error("Failed to process mattermost action")
+		log.Debugf("%v", trace.DebugReport(err))
 		var code int
 		switch {
 		case utils.IsCanceled(err) || utils.IsDeadline(err):
