@@ -2,11 +2,12 @@ package utils
 
 import (
 	"context"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Terminable interface {
