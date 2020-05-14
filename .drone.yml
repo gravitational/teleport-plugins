@@ -46,10 +46,8 @@ steps:
     commands:
       - git clone https://github.com/gravitational/teleport-plugins.git .
       - git checkout $DRONE_COMMIT
-      - mkdir -p build/
       - make get-deps
       - make releases
-      - find access/ -iname "*.tar.gz" -exec cp {} build/ \;
 
   - name: Upload to S3
     image: plugins/s3
@@ -61,6 +59,6 @@ steps:
       secret_key:
         from_secret: AWS_SECRET_ACCESS_KEY
       region: us-west-2
-      source: ./build
+      source: access/**/build/*.tar.gz
       target: /plugins/drone/pr/${DRONE_PULL_REQUEST}
-    strip_prefix: ./build
+    strip_prefix: access/**/build/*.tar.gz
