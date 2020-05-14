@@ -274,13 +274,17 @@ func (a *App) watchRequests(ctx context.Context) error {
 
 				a.Spawn(func(ctx context.Context) {
 					if err := a.onPendingRequest(ctx, req); err != nil {
-						log.WithError(err).WithField("request_id", req.ID).Errorf("Failed to process pending request")
+						log := log.WithField("request_id", req.ID).WithError(err)
+						log.Errorf("Failed to process pending request")
+						log.Debugf("%v", trace.DebugReport(err))
 					}
 				})
 			case access.OpDelete:
 				a.Spawn(func(ctx context.Context) {
 					if err := a.onDeletedRequest(ctx, req); err != nil {
-						log.WithError(err).WithField("request_id", req.ID).Errorf("Failed to process deleted request")
+						log := log.WithField("request_id", req.ID).WithError(err)
+						log.Errorf("Failed to process deleted request")
+						log.Debugf("%v", trace.DebugReport(err))
 					}
 				})
 			default:

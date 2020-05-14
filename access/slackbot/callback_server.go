@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
 	"github.com/nlopes/slack"
 	log "github.com/sirupsen/logrus"
@@ -91,6 +92,7 @@ func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request
 
 	if err := s.onCallback(ctx, Callback{httpRequestID, cb}); err != nil {
 		log.WithError(err).Error("Failed to process callback")
+		log.Debugf("%v", trace.DebugReport(err))
 		var code int
 		switch {
 		case utils.IsCanceled(err) || utils.IsDeadline(err):
