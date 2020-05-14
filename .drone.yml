@@ -1,6 +1,30 @@
 ---
 kind: pipeline
 type: kubernetes
+name: run-lint
+
+trigger:
+  event:
+    - pull_request
+    - tag
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+clone:
+  disable: true
+
+steps:
+- name: Run linter
+  image: golangci/golangci-lint:v1.27.0
+  commands:
+    - git clone https://github.com/gravitational/teleport-plugins.git .
+    - git checkout $DRONE_COMMIT
+    - make lint
+
+---
+kind: pipeline
+type: kubernetes
 name: run-tests
 
 trigger:
