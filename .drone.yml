@@ -63,4 +63,4 @@ steps:
       region: us-west-2
       source: /go/src/github.com/gravitational/teleport-plugins/build/*.tar.gz
       target: plugins/drone/pr/${DRONE_PULL_REQUEST}
-    strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
+      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
