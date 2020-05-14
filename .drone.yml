@@ -6,6 +6,7 @@ name: run-tests
 trigger:
   event:
     - pull_request
+    - tag
 
 workspace:
   path: /go/src/github.com/gravitational/teleport-plugins
@@ -32,7 +33,7 @@ depends_on:
 
 trigger:
   event:
-    - pull_request
+    - tag
 
 workspace:
   path: /go/src/github.com/gravitational/teleport-plugins
@@ -62,5 +63,5 @@ steps:
         from_secret: AWS_SECRET_ACCESS_KEY
       region: us-west-2
       source: /go/src/github.com/gravitational/teleport-plugins/build/*.tar.gz
-      target: plugins/drone/pr/${DRONE_PULL_REQUEST}
+      target: plugins/drone/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
