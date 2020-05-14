@@ -59,6 +59,6 @@ steps:
       secret_key:
         from_secret: AWS_SECRET_ACCESS_KEY
       region: us-west-2
-      source: access/**/build/*.tar.gz
+      source: /go/src/github.com/gravitational/teleport-plugins/access/**/build/*.tar.gz
       target: /plugins/drone/pr/${DRONE_PULL_REQUEST}
-    strip_prefix: access/**/build/*.tar.gz
+    strip_prefix: /go/src/github.com/gravitational/teleport-plugins/access/**/build/
