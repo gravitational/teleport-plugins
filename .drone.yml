@@ -1,7 +1,7 @@
 ---
 kind: pipeline
 type: kubernetes
-name: run-lint
+name: lint
 
 trigger:
   event:
@@ -25,7 +25,7 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
-name: run-tests
+name: test
 
 trigger:
   event:
@@ -50,10 +50,11 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
-name: build-artifacts
+name: build
 
 depends_on:
-  - run-tests
+  - lint
+  - test
 
 trigger:
   event:
