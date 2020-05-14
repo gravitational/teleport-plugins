@@ -25,6 +25,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
 
@@ -70,11 +71,13 @@ func run(configPath string) error {
 		return trace.Wrap(err)
 	}
 	// Register a watcher for pending access requests.
-	watcher, err := client.WatchRequests(ctx, access.Filter{
+	watcher := client.WatchRequests(ctx, access.Filter{
 		State: access.StatePending,
 	})
-	if err != nil {
+	if err := watcher.WaitInit(ctx, 5*time.Second); err != nil {
 		return trace.Wrap(err)
+	} else {
+		eprintln("watcher initialized...")
 	}
 	defer watcher.Close()
 	for {
@@ -82,10 +85,6 @@ func run(configPath string) error {
 		case event := <-watcher.Events():
 			req, op := event.Request, event.Type
 			switch op {
-			case access.OpInit:
-				// OpInit is a sentinel value indicating that the watcher channel is fully
-				// established.  `req` is empty in this case.
-				eprintln("watcher initialized...\n")
 			case access.OpPut:
 				// OpPut indicates that a request has been created or updated.  Since we specified
 				// StatePending in our filter, only pending requests should appear here.
@@ -109,7 +108,7 @@ func run(configPath string) error {
 				if err := client.SetRequestState(ctx, req.ID, state); err != nil {
 					return trace.Wrap(err)
 				}
-				eprintln("ok.\n")
+				eprintln("ok.")
 			case access.OpDelete:
 				// request has been removed (expired).
 				// Only the ID is non-zero in this case.
@@ -117,7 +116,7 @@ func run(configPath string) error {
 				// don't really work with OpDelete events.  As such, we may get
 				// OpDelete events for requests that would not typically match
 				// the filter argument we supplied above.
-				eprintln("Request %s has automatically expired.\n", req.ID)
+				eprintln("Request %s has automatically expired.", req.ID)
 			default:
 				return trace.BadParameter("unexpected event operation %s", op)
 			}
