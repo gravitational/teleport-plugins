@@ -231,6 +231,9 @@ func (s *SlackbotSuite) postCallback(c *C, actionId, reqID string) {
 	response, err := http.DefaultClient.Do(req)
 	c.Assert(err, IsNil)
 	c.Assert(response.StatusCode, Equals, http.StatusOK)
+
+	err = response.Body.Close()
+	c.Assert(err, IsNil)
 }
 
 // fetchSlackMessage and all the tests using it heavily rely on changes in slacktest package, see 13c57c4 commit.

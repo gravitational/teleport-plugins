@@ -416,6 +416,9 @@ func (s *PagerdutySuite) postAction(c *C, incident *pd.Incident, action string) 
 	response, err := http.DefaultClient.Do(req)
 	c.Assert(err, IsNil)
 	c.Assert(response.StatusCode, Equals, http.StatusNoContent)
+
+	err = response.Body.Close()
+	c.Assert(err, IsNil)
 }
 
 func (s *PagerdutySuite) TestExtensionCreation(c *C) {

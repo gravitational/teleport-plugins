@@ -360,6 +360,9 @@ func (s *JirabotSuite) transitionIssue(c *C, issue *Issue, status string) {
 	})
 	c.Assert(err, IsNil)
 	c.Assert(response.StatusCode, Equals, http.StatusOK)
+
+	err = response.Body.Close()
+	c.Assert(err, IsNil)
 }
 
 func (s *JirabotSuite) postWebhook(c *C, wh *Webhook) (*http.Response, error) {

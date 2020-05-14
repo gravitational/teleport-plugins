@@ -103,6 +103,11 @@ func (b *Bot) Respond(ctx context.Context, reqID string, reqData requestData, st
 		return trace.Wrap(err, "failed to send update: %v", err)
 	}
 
+	err = rsp.Body.Close()
+	if err != nil {
+		return trace.Wrap(err, "failed to close body: %v", err)
+	}
+
 	rbody, err := ioutil.ReadAll(rsp.Body)
 	if err != nil {
 		return trace.Wrap(err, "failed to read update response: %v", err)

@@ -300,6 +300,9 @@ func (s *MattermostSuite) postWebhook(c *C, post *mm.Post, actionName string) {
 	response, err := http.Post(action.Integration.URL, "application/json", &buf)
 	c.Assert(err, IsNil)
 	c.Assert(response.StatusCode, Equals, http.StatusOK)
+
+	err = response.Body.Close()
+	c.Assert(err, IsNil)
 }
 
 func (s *MattermostSuite) TestMattermostMessagePosting(c *C) {
