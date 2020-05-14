@@ -98,7 +98,7 @@ func (s *SlackbotSuite) SetUpTest(c *C) {
 }
 
 func (s *SlackbotSuite) TearDownTest(c *C) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
 	err := s.app.Shutdown(ctx)
 	c.Assert(err, IsNil)
