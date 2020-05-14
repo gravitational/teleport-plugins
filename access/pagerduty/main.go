@@ -387,7 +387,8 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 	}
 
 	log.WithFields(logFields{
-		"incident_id": pdData.ID,
+		"request_id":     req.ID,
+		"pd_incident_id": pdData.ID,
 	}).Info("PagerDuty incident created")
 
 	err = a.setPluginData(ctx, req.ID, PluginData{reqData, pdData})

@@ -424,8 +424,8 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 	}
 
 	log.WithFields(logFields{
-		"issue_id":  jiraData.ID,
-		"issue_key": jiraData.Key,
+		"jira_issue_id":  jiraData.ID,
+		"jira_issue_key": jiraData.Key,
 	}).Info("JIRA Issue created")
 
 	err = a.setPluginData(ctx, req.ID, PluginData{reqData, jiraData})

@@ -405,7 +405,10 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	log.WithField("mattermost_post_id", mmData.PostID).Info("Successfully posted to Mattermost")
+	log.WithFields(logFields{
+		"request_id": req.ID,
+		"mm_post_id": mmData.PostID,
+	}).Info("Successfully posted to Mattermost")
 
 	err = a.setPluginData(ctx, req.ID, PluginData{reqData, mmData})
 	return trace.Wrap(err)
