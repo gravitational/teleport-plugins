@@ -80,8 +80,8 @@ func (s *BotServer) OnAction(rw http.ResponseWriter, r *http.Request, _ httprout
 	ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*2500)
 	defer cancel()
 
-	HTTPRequestID := fmt.Sprintf("%v-%v", time.Now().Unix(), atomic.AddUint64(&s.counter, 1))
-	log := log.WithField("mm_http_id", HTTPRequestID)
+	httpRequestID := fmt.Sprintf("%v-%v", time.Now().Unix(), atomic.AddUint64(&s.counter, 1))
+	log := log.WithField("mm_http_id", httpRequestID)
 
 	var payload mm.PostActionIntegrationRequest
 
@@ -138,7 +138,7 @@ func (s *BotServer) OnAction(rw http.ResponseWriter, r *http.Request, _ httprout
 	}
 
 	actionData := BotAction{
-		HTTPRequestID: HTTPRequestID,
+		HTTPRequestID: httpRequestID,
 		UserID:        payload.UserId,
 		PostID:        payload.PostId,
 		ChannelID:     payload.ChannelId,
