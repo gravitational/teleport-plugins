@@ -93,8 +93,8 @@ func (s *WebhookServer) processWebhook(actionName string, rw http.ResponseWriter
 	defer cancel()
 
 	webhookID := r.Header.Get("X-Webhook-Id")
-	HTTPRequestID := fmt.Sprintf("%v-%v", webhookID, atomic.AddUint64(&s.counter, 1))
-	log := log.WithField("pd_http_id", HTTPRequestID)
+	httpRequestID := fmt.Sprintf("%v-%v", webhookID, atomic.AddUint64(&s.counter, 1))
+	log := log.WithField("pd_http_id", httpRequestID)
 
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
 		log.Errorf(`Invalid "Content-Type" header %q`, contentType)
@@ -120,7 +120,7 @@ func (s *WebhookServer) processWebhook(actionName string, rw http.ResponseWriter
 		log = log.WithField("pd_msg_id", msg.ID)
 
 		action := WebhookAction{
-			HTTPRequestID: HTTPRequestID,
+			HTTPRequestID: httpRequestID,
 			MessageID:     msg.ID,
 			Event:         msg.Event,
 			Name:          actionName,

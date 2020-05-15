@@ -46,7 +46,7 @@ type Bot struct {
 	apiKey      string
 	server      *WebhookServer
 	from        string
-	ServiceID   string
+	serviceID   string
 
 	clusterName string
 }
@@ -75,7 +75,7 @@ func NewBot(conf *Config, onAction WebhookFunc) (*Bot, error) {
 		apiEndpoint: conf.Pagerduty.APIEndpoint,
 		apiKey:      conf.Pagerduty.APIKey,
 		from:        conf.Pagerduty.UserEmail,
-		ServiceID:   conf.Pagerduty.ServiceID,
+		serviceID:   conf.Pagerduty.ServiceID,
 	}, nil
 }
 
@@ -103,7 +103,7 @@ func (b *Bot) ShutdownServer(ctx context.Context) error {
 func (b *Bot) HealthCheck(ctx context.Context) error {
 	client := b.NewClient(ctx)
 
-	if _, err := client.GetService(b.ServiceID, nil); err != nil {
+	if _, err := client.GetService(b.serviceID, nil); err != nil {
 		return trace.Wrap(err, "failed to fetch pagerduty service info: %v", err)
 	}
 
@@ -116,8 +116,8 @@ func (b *Bot) Setup(ctx context.Context) error {
 	var more bool
 	var offset uint
 
-	var webhookschemaID string
-	for offset, more = 0, true; webhookschemaID == "" && more; {
+	var webhookSchemaID string
+	for offset, more = 0, true; webhookSchemaID == "" && more; {
 		schemaResp, err := client.ListExtensionSchemas(pd.ListExtensionSchemaOptions{
 			APIListObject: pd.APIListObject{
 				Offset: offset,
@@ -130,14 +130,14 @@ func (b *Bot) Setup(ctx context.Context) error {
 
 		for _, schema := range schemaResp.ExtensionSchemas {
 			if schema.Key == "custom_webhook" {
-				webhookschemaID = schema.ID
+				webhookSchemaID = schema.ID
 			}
 		}
 
 		more = schemaResp.More
 		offset += pdListLimit
 	}
-	if webhookschemaID == "" {
+	if webhookSchemaID == "" {
 		return trace.NotFound(`failed to find "Custom Incident Action" extension type`)
 	}
 
@@ -148,8 +148,8 @@ func (b *Bot) Setup(ctx context.Context) error {
 				Offset: offset,
 				Limit:  pdListLimit,
 			},
-			ExtensionObjectID: b.ServiceID,
-			ExtensionSchemaID: webhookschemaID,
+			ExtensionObjectID: b.serviceID,
+			ExtensionSchemaID: webhookSchemaID,
 		})
 		if err != nil {
 			return trace.Wrap(err)
@@ -168,10 +168,10 @@ func (b *Bot) Setup(ctx context.Context) error {
 		offset += pdListLimit
 	}
 
-	if err := b.setupCustomAction(client, approveExtID, webhookschemaID, pdApproveAction, pdApproveActionLabel); err != nil {
+	if err := b.setupCustomAction(client, approveExtID, webhookSchemaID, pdApproveAction, pdApproveActionLabel); err != nil {
 		return err
 	}
-	if err := b.setupCustomAction(client, denyExtID, webhookschemaID, pdDenyAction, pdDenyActionLabel); err != nil {
+	if err := b.setupCustomAction(client, denyExtID, webhookSchemaID, pdDenyAction, pdDenyActionLabel); err != nil {
 		return err
 	}
 
@@ -190,7 +190,7 @@ func (b *Bot) setupCustomAction(client *pd.Client, extensionID, schemaID, action
 		ExtensionObjects: []pd.APIObject{
 			pd.APIObject{
 				Type: "service_reference",
-				ID:   b.ServiceID,
+				ID:   b.serviceID,
 			},
 		},
 	}
@@ -215,7 +215,7 @@ func (b *Bot) CreateIncident(ctx context.Context, reqID string, reqData RequestD
 		IncidentKey: fmt.Sprintf("%s/%s", pdIncidentKeyPrefix, reqID),
 		Service: &pd.APIReference{
 			Type: "service_reference",
-			ID:   b.ServiceID,
+			ID:   b.serviceID,
 		},
 		Body: &pd.APIDetails{
 			Type:    "incident_body",
