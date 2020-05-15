@@ -80,7 +80,6 @@ func run(configPath string) error {
 		eprintln("watcher initialized...")
 	}
 	defer watcher.Close()
-
 	for {
 		select {
 		case event := <-watcher.Events():
