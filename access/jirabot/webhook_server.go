@@ -74,10 +74,10 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 	ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*2500)
 	defer cancel()
 
-	HTTPRequestID := fmt.Sprintf("%v-%v", time.Now().Unix(), atomic.AddUint64(&s.counter, 1))
-	log := log.WithField("jira_http_id", HTTPRequestID)
+	httpRequestID := fmt.Sprintf("%v-%v", time.Now().Unix(), atomic.AddUint64(&s.counter, 1))
+	log := log.WithField("jira_http_id", httpRequestID)
 
-	webhook := Webhook{HTTPRequestID: HTTPRequestID}
+	webhook := Webhook{HTTPRequestID: httpRequestID}
 
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
