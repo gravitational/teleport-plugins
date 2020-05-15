@@ -74,14 +74,12 @@ func run(configPath string) error {
 	watcher := client.WatchRequests(ctx, access.Filter{
 		State: access.StatePending,
 	})
-
 	if err := watcher.WaitInit(ctx, 5*time.Second); err != nil {
 		return trace.Wrap(err)
 	} else {
 		eprintln("watcher initialized...")
 	}
-
-	eprintln("Watcher connected")
+	defer watcher.Close()
 
 	for {
 		select {
