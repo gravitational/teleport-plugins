@@ -35,7 +35,7 @@ const (
 type MattermostSuite struct {
 	app               *App
 	appPort           string
-	webhookUrl        string
+	webhookURL        string
 	me                *user.User
 	fakeMattermostSrv *httptest.Server
 	posts             sync.Map
@@ -87,7 +87,7 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 	}
 	s.teleport = t
 	s.appPort = portList.Pop()
-	s.webhookUrl = "http://" + Host + ":" + s.appPort + "/"
+	s.webhookURL = "http://" + Host + ":" + s.appPort + "/"
 }
 
 func (s *MattermostSuite) SetUpTest(c *C) {
@@ -269,9 +269,8 @@ func (s *MattermostSuite) getPost(id string) *mm.Post {
 	if obj, ok := s.posts.Load(id); ok {
 		post := obj.(mm.Post)
 		return &post
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (s *MattermostSuite) postWebhook(c *C, post *mm.Post, actionName string) {

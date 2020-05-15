@@ -18,7 +18,7 @@ import (
 )
 
 type Callback struct {
-	HttpRequestID string
+	HTTPRequestID string
 	slack.InteractionCallback
 }
 type CallbackFunc func(ctx context.Context, callback Callback) error
@@ -62,8 +62,8 @@ func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request
 	ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*2500) // Slack requires to respond within 3000 milliseconds
 	defer cancel()
 
-	httpRequestID := fmt.Sprintf("%s-%v", r.Header.Get("x-slack-request-timestamp"), atomic.AddUint64(&s.counter, 1))
-	log := log.WithField("slack_http_id", httpRequestID)
+	HTTPRequestID := fmt.Sprintf("%s-%v", r.Header.Get("x-slack-request-timestamp"), atomic.AddUint64(&s.counter, 1))
+	log := log.WithField("slack_http_id", HTTPRequestID)
 
 	sv, err := slack.NewSecretsVerifier(r.Header, s.secret)
 	if err != nil {
@@ -90,7 +90,7 @@ func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := s.onCallback(ctx, Callback{httpRequestID, cb}); err != nil {
+	if err := s.onCallback(ctx, Callback{HTTPRequestID, cb}); err != nil {
 		log.WithError(err).Error("Failed to process callback")
 		log.Debugf("%v", trace.DebugReport(err))
 		var code int

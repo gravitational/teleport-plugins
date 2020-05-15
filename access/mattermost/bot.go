@@ -19,7 +19,7 @@ import (
 
 const (
 	mmMaxConns    = 100
-	mmHttpTimeout = 10 * time.Second
+	mmHTTPTimeout = 10 * time.Second
 )
 
 var postTextTemplate *template.Template
@@ -53,7 +53,7 @@ func NewBot(conf *Config, onAction BotActionFunc) (*Bot, error) {
 	client := mm.NewAPIv4Client(conf.Mattermost.URL)
 	client.SetToken(conf.Mattermost.Token)
 	client.HttpClient = &http.Client{
-		Timeout: mmHttpTimeout,
+		Timeout: mmHTTPTimeout,
 		Transport: &http.Transport{
 			MaxConnsPerHost:     mmMaxConns,
 			MaxIdleConnsPerHost: mmMaxConns,
@@ -158,8 +158,8 @@ func (b *Bot) GetUser(ctx context.Context, userID string) (*mm.User, error) {
 	return user, nil
 }
 
-func (b *Bot) NewPostAction(actionId, actionName, reqID string) (*mm.PostAction, error) {
-	signature, err := b.HMAC(actionId, reqID)
+func (b *Bot) NewPostAction(actionID, actionName, reqID string) (*mm.PostAction, error) {
+	signature, err := b.HMAC(actionID, reqID)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -170,7 +170,7 @@ func (b *Bot) NewPostAction(actionId, actionName, reqID string) (*mm.PostAction,
 		Integration: &mm.PostActionIntegration{
 			URL: actionURL,
 			Context: mm.StringInterface{
-				"action":    actionId,
+				"action":    actionID,
 				"req_id":    reqID,
 				"signature": base64.StdEncoding.EncodeToString(signature),
 			},

@@ -38,7 +38,7 @@ const (
 type SlackbotSuite struct {
 	app         *App
 	appPort     string
-	callbackUrl string
+	callbackURL string
 	me          *user.User
 	slackServer *slacktest.Server
 	teleport    *integration.TeleInstance
@@ -88,7 +88,7 @@ func (s *SlackbotSuite) SetUpSuite(c *C) {
 	}
 	s.teleport = t
 	s.appPort = portList.Pop()
-	s.callbackUrl = "http://" + Host + ":" + s.appPort + "/"
+	s.callbackURL = "http://" + Host + ":" + s.appPort + "/"
 }
 
 func (s *SlackbotSuite) SetUpTest(c *C) {
@@ -197,12 +197,12 @@ func (s *SlackbotSuite) createExpiredAccessRequest(c *C) services.AccessRequest 
 	return req
 }
 
-func (s *SlackbotSuite) postCallback(c *C, actionId, reqID string) {
+func (s *SlackbotSuite) postCallback(c *C, actionID, reqID string) {
 	cb := &slack.InteractionCallback{
 		ActionCallback: slack.ActionCallbacks{
 			BlockActions: []*slack.BlockAction{
 				&slack.BlockAction{
-					ActionID: actionId,
+					ActionID: actionID,
 					Value:    reqID,
 				},
 			},
@@ -223,7 +223,7 @@ func (s *SlackbotSuite) postCallback(c *C, actionId, reqID string) {
 
 	signature := hash.Sum(nil)
 
-	req, err := http.NewRequest("POST", s.callbackUrl, strings.NewReader(body))
+	req, err := http.NewRequest("POST", s.callbackURL, strings.NewReader(body))
 	c.Assert(err, IsNil)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("X-Slack-Request-Timestamp", stimestamp)

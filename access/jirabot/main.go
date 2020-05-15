@@ -326,7 +326,7 @@ func (a *App) WatchRequests(ctx context.Context) error {
 
 // OnJIRAWebhook processes JIRA webhook and updates the status of an issue
 func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
-	log := log.WithField("jira_http_id", webhook.HttpRequestID)
+	log := log.WithField("jira_http_id", webhook.HTTPRequestID)
 
 	if webhook.WebhookEvent != "jira:issue_updated" || webhook.IssueEventTypeName != "issue_generic" {
 		return nil
@@ -358,63 +358,61 @@ func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
 		if trace.IsNotFound(err) {
 			log.WithError(err).WithField("request_id", reqID).Warning("Cannot process expired request")
 			return nil
-		} else {
-			return trace.Wrap(err)
 		}
-	} else {
-		if req.State != access.StatePending {
-			return trace.Errorf("cannot process not pending request: %+v", req)
-		}
-
-		pluginData, err := a.getPluginData(ctx, reqID)
-		if err != nil {
-			return trace.Wrap(err)
-		}
-
-		log = log.WithFields(logFields{
-			"jira_issue_id":  issue.ID,
-			"jira_issue_key": issue.Key,
-		})
-
-		if pluginData.JiraData.ID != issue.ID {
-			log.WithField("plugin_data_issue_id", pluginData.JiraData.ID).Debug("plugin_data.issue_id does not match issue.id")
-			return trace.Errorf("issue_id from request's plugin_data does not match")
-		}
-
-		var (
-			reqState   access.State
-			resolution string
-		)
-
-		issueUpdate, err := issue.GetLastUpdate(statusName)
-		if err != nil {
-			log.WithError(err).Error("Cannot determine who updated the issue status")
-		}
-
-		log = log.WithFields(logFields{
-			"jira_user_email": issueUpdate.Author.EmailAddress,
-			"jira_user_name":  issueUpdate.Author.DisplayName,
-			"request_id":      req.ID,
-			"request_user":    req.User,
-			"request_roles":   req.Roles,
-		})
-
-		switch statusName {
-		case "approved":
-			reqState = access.StateApproved
-			resolution = "approved"
-		case "denied":
-			reqState = access.StateDenied
-			resolution = "denied"
-		default:
-			return trace.BadParameter("unknown JIRA status %q", statusName)
-		}
-
-		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
-			return trace.Wrap(err)
-		}
-		log.Infof("JIRA user %s the request", resolution)
+		return trace.Wrap(err)
 	}
+	if req.State != access.StatePending {
+		return trace.Errorf("cannot process not pending request: %+v", req)
+	}
+
+	pluginData, err := a.getPluginData(ctx, reqID)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	log = log.WithFields(logFields{
+		"jira_issue_id":  issue.ID,
+		"jira_issue_key": issue.Key,
+	})
+
+	if pluginData.JiraData.ID != issue.ID {
+		log.WithField("plugin_data_issue_id", pluginData.JiraData.ID).Debug("plugin_data.issue_id does not match issue.id")
+		return trace.Errorf("issue_id from request's plugin_data does not match")
+	}
+
+	var (
+		reqState   access.State
+		resolution string
+	)
+
+	issueUpdate, err := issue.GetLastUpdate(statusName)
+	if err != nil {
+		log.WithError(err).Error("Cannot determine who updated the issue status")
+	}
+
+	log = log.WithFields(logFields{
+		"jira_user_email": issueUpdate.Author.EmailAddress,
+		"jira_user_name":  issueUpdate.Author.DisplayName,
+		"request_id":      req.ID,
+		"request_user":    req.User,
+		"request_roles":   req.Roles,
+	})
+
+	switch statusName {
+	case "approved":
+		reqState = access.StateApproved
+		resolution = "approved"
+	case "denied":
+		reqState = access.StateDenied
+		resolution = "denied"
+	default:
+		return trace.BadParameter("unknown JIRA status %q", statusName)
+	}
+
+	if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
+		return trace.Wrap(err)
+	}
+	log.Infof("JIRA user %s the request", resolution)
 
 	return nil
 }
@@ -444,9 +442,8 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		if trace.IsNotFound(err) {
 			log.WithError(err).Warn("Cannot expire unknown request")
 			return nil
-		} else {
-			return trace.Wrap(err)
 		}
+		return trace.Wrap(err)
 	}
 
 	if err := a.bot.ExpireIssue(ctx, reqID, pluginData.RequestData, pluginData.JiraData); err != nil {

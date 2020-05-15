@@ -16,7 +16,7 @@ import (
 
 const (
 	pdMaxConns    = 100
-	pdHttpTimeout = 10 * time.Second
+	pdHTTPTimeout = 10 * time.Second
 	pdListLimit   = uint(60)
 
 	pdIncidentKeyPrefix  = "teleport-access-request"
@@ -46,7 +46,7 @@ type Bot struct {
 	apiKey      string
 	server      *WebhookServer
 	from        string
-	serviceId   string
+	ServiceID   string
 
 	clusterName string
 }
@@ -63,7 +63,7 @@ func NewBot(conf *Config, onAction WebhookFunc) (*Bot, error) {
 		return nil, trace.Wrap(err)
 	}
 	httpClient := &http.Client{
-		Timeout: pdHttpTimeout,
+		Timeout: pdHTTPTimeout,
 		Transport: &http.Transport{
 			MaxConnsPerHost:     pdMaxConns,
 			MaxIdleConnsPerHost: pdMaxConns,
@@ -75,7 +75,7 @@ func NewBot(conf *Config, onAction WebhookFunc) (*Bot, error) {
 		apiEndpoint: conf.Pagerduty.APIEndpoint,
 		apiKey:      conf.Pagerduty.APIKey,
 		from:        conf.Pagerduty.UserEmail,
-		serviceId:   conf.Pagerduty.ServiceId,
+		ServiceID:   conf.Pagerduty.ServiceID,
 	}, nil
 }
 
@@ -103,7 +103,7 @@ func (b *Bot) ShutdownServer(ctx context.Context) error {
 func (b *Bot) HealthCheck(ctx context.Context) error {
 	client := b.NewClient(ctx)
 
-	if _, err := client.GetService(b.serviceId, nil); err != nil {
+	if _, err := client.GetService(b.ServiceID, nil); err != nil {
 		return trace.Wrap(err, "failed to fetch pagerduty service info: %v", err)
 	}
 
@@ -116,8 +116,8 @@ func (b *Bot) Setup(ctx context.Context) error {
 	var more bool
 	var offset uint
 
-	var webhookSchemaID string
-	for offset, more = 0, true; webhookSchemaID == "" && more; {
+	var webhookschemaID string
+	for offset, more = 0, true; webhookschemaID == "" && more; {
 		schemaResp, err := client.ListExtensionSchemas(pd.ListExtensionSchemaOptions{
 			APIListObject: pd.APIListObject{
 				Offset: offset,
@@ -130,14 +130,14 @@ func (b *Bot) Setup(ctx context.Context) error {
 
 		for _, schema := range schemaResp.ExtensionSchemas {
 			if schema.Key == "custom_webhook" {
-				webhookSchemaID = schema.ID
+				webhookschemaID = schema.ID
 			}
 		}
 
 		more = schemaResp.More
 		offset += pdListLimit
 	}
-	if webhookSchemaID == "" {
+	if webhookschemaID == "" {
 		return trace.NotFound(`failed to find "Custom Incident Action" extension type`)
 	}
 
@@ -148,8 +148,8 @@ func (b *Bot) Setup(ctx context.Context) error {
 				Offset: offset,
 				Limit:  pdListLimit,
 			},
-			ExtensionObjectID: b.serviceId,
-			ExtensionSchemaID: webhookSchemaID,
+			ExtensionObjectID: b.ServiceID,
+			ExtensionSchemaID: webhookschemaID,
 		})
 		if err != nil {
 			return trace.Wrap(err)
@@ -168,39 +168,38 @@ func (b *Bot) Setup(ctx context.Context) error {
 		offset += pdListLimit
 	}
 
-	if err := b.setupCustomAction(client, approveExtID, webhookSchemaID, pdApproveAction, pdApproveActionLabel); err != nil {
+	if err := b.setupCustomAction(client, approveExtID, webhookschemaID, pdApproveAction, pdApproveActionLabel); err != nil {
 		return err
 	}
-	if err := b.setupCustomAction(client, denyExtID, webhookSchemaID, pdDenyAction, pdDenyActionLabel); err != nil {
+	if err := b.setupCustomAction(client, denyExtID, webhookschemaID, pdDenyAction, pdDenyActionLabel); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (b *Bot) setupCustomAction(client *pd.Client, extensionId, schemaId, actionName, actionLabel string) error {
+func (b *Bot) setupCustomAction(client *pd.Client, extensionID, schemaID, actionName, actionLabel string) error {
 	actionURL := b.server.ActionURL(actionName)
 	ext := &pd.Extension{
 		Name:        actionLabel,
 		EndpointURL: actionURL,
 		ExtensionSchema: pd.APIObject{
 			Type: "extension_schema_reference",
-			ID:   schemaId,
+			ID:   schemaID,
 		},
 		ExtensionObjects: []pd.APIObject{
 			pd.APIObject{
 				Type: "service_reference",
-				ID:   b.serviceId,
+				ID:   b.ServiceID,
 			},
 		},
 	}
-	if extensionId == "" {
+	if extensionID == "" {
 		_, err := client.CreateExtension(ext)
 		return trace.Wrap(err)
-	} else {
-		_, err := client.UpdateExtension(extensionId, ext)
-		return trace.Wrap(err)
 	}
+	_, err := client.UpdateExtension(extensionID, ext)
+	return trace.Wrap(err)
 }
 
 func (b *Bot) CreateIncident(ctx context.Context, reqID string, reqData RequestData) (PagerdutyData, error) {
@@ -216,7 +215,7 @@ func (b *Bot) CreateIncident(ctx context.Context, reqID string, reqData RequestD
 		IncidentKey: fmt.Sprintf("%s/%s", pdIncidentKeyPrefix, reqID),
 		Service: &pd.APIReference{
 			Type: "service_reference",
-			ID:   b.serviceId,
+			ID:   b.ServiceID,
 		},
 		Body: &pd.APIDetails{
 			Type:    "incident_body",

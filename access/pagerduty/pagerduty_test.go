@@ -36,7 +36,7 @@ const (
 type PagerdutySuite struct {
 	app              *App
 	appPort          string
-	webhookUrl       string
+	webhookURL       string
 	me               *user.User
 	fakePagerdutySrv *httptest.Server
 	extensions       sync.Map
@@ -91,7 +91,7 @@ func (s *PagerdutySuite) SetUpSuite(c *C) {
 	}
 	s.teleport = t
 	s.appPort = portList.Pop()
-	s.webhookUrl = "http://" + Host + ":" + s.appPort + "/"
+	s.webhookURL = "http://" + Host + ":" + s.appPort + "/"
 }
 
 func (s *PagerdutySuite) SetUpTest(c *C) {
@@ -190,7 +190,7 @@ func (s *PagerdutySuite) startFakePagerduty(c *C) {
 
 		counter := 0
 		s.extensions.Range(func(_, _ interface{}) bool {
-			counter += 1
+			counter++
 			return true
 		})
 		extension.ID = fmt.Sprintf("extension-%v-%v", counter+1, time.Now().UnixNano())
@@ -237,7 +237,7 @@ func (s *PagerdutySuite) startFakePagerduty(c *C) {
 
 		counter := 0
 		s.incidents.Range(func(_, _ interface{}) bool {
-			counter += 1
+			counter++
 			return true
 		})
 		id := fmt.Sprintf("incident-%v-%v", counter+1, time.Now().UnixNano())
@@ -344,7 +344,7 @@ func (s *PagerdutySuite) startApp(c *C) {
 	conf.Teleport.RootCAs = casFile.Name()
 	conf.Pagerduty.APIEndpoint = s.fakePagerdutySrv.URL
 	conf.Pagerduty.UserEmail = "bot@example.com"
-	conf.Pagerduty.ServiceId = "1111"
+	conf.Pagerduty.ServiceID = "1111"
 	conf.HTTP.Listen = ":" + s.appPort
 	conf.HTTP.RawBaseURL = "http://" + Host + ":" + s.appPort + "/"
 	conf.HTTP.Insecure = true
@@ -390,9 +390,8 @@ func (s *PagerdutySuite) getIncident(id string) *pd.Incident {
 	if obj, ok := s.incidents.Load(id); ok {
 		incident := obj.(pd.Incident)
 		return &incident
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (s *PagerdutySuite) postAction(c *C, incident *pd.Incident, action string) {
@@ -409,7 +408,7 @@ func (s *PagerdutySuite) postAction(c *C, incident *pd.Incident, action string) 
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(&payload)
 	c.Assert(err, IsNil)
-	req, err := http.NewRequest("POST", s.webhookUrl+action, &buf)
+	req, err := http.NewRequest("POST", s.webhookURL+action, &buf)
 	c.Assert(err, IsNil)
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("X-Webhook-Id", "Webhook-123")
@@ -445,8 +444,8 @@ func (s *PagerdutySuite) TestExtensionCreation(c *C) {
 
 	extEndpoints := []string{extension1.EndpointURL, extension2.EndpointURL}
 	sort.Strings(extEndpoints)
-	c.Assert(extEndpoints[0], Equals, s.webhookUrl+pdApproveAction)
-	c.Assert(extEndpoints[1], Equals, s.webhookUrl+pdDenyAction)
+	c.Assert(extEndpoints[0], Equals, s.webhookURL+pdApproveAction)
+	c.Assert(extEndpoints[1], Equals, s.webhookURL+pdDenyAction)
 }
 
 func (s *PagerdutySuite) TestIncidentCreation(c *C) {

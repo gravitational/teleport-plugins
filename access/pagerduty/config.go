@@ -22,7 +22,7 @@ type Config struct {
 		APIEndpoint string `toml:"-"`
 		APIKey      string `toml:"api-key"`
 		UserEmail   string `toml:"user-email"`
-		ServiceId   string `toml:"service-id"`
+		ServiceID   string `toml:"service-id"`
 	} `toml:"pagerduty"`
 	HTTP utils.HTTPConfig `toml:"http"`
 	Log  utils.LogConfig  `toml:"log"`
@@ -93,7 +93,7 @@ func (c *Config) CheckAndSetDefaults() error {
 	if c.Pagerduty.UserEmail == "" {
 		return trace.BadParameter("missing required value pagerduty.user-email")
 	}
-	if c.Pagerduty.ServiceId == "" {
+	if c.Pagerduty.ServiceID == "" {
 		return trace.BadParameter("missing required value pagerduty.service-id")
 	}
 	if c.HTTP.Hostname == "" && c.HTTP.RawBaseURL == "" {

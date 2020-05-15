@@ -46,10 +46,9 @@ func ServeSignals(app Terminable, shutdownTimeout time.Duration) {
 			if alreadyInterrupted {
 				app.Close()
 				return
-			} else {
-				go gracefulShutdown()
-				alreadyInterrupted = true
 			}
+			go gracefulShutdown()
+			alreadyInterrupted = true
 		}
 	}
 }

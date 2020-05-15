@@ -15,10 +15,10 @@ import (
 )
 
 const (
-	RequestIdPropertyKey = "teleportAccessRequestId"
+	RequestIDPropertyKey = "teleportAccessRequestId"
 
 	jiraMaxConns    = 100
-	jiraHttpTimeout = 10 * time.Second
+	jiraHTTPTimeout = 10 * time.Second
 )
 
 // Bot is a wrapper around jira.Client that works with access.Request
@@ -51,9 +51,9 @@ Request ID: *{{.ID}}*
 }
 
 func (issue *BotIssue) GetRequestID() (string, error) {
-	reqID, ok := issue.Properties[RequestIdPropertyKey].(string)
+	reqID, ok := issue.Properties[RequestIDPropertyKey].(string)
 	if !ok {
-		return "", trace.Errorf("got non-string %q field", RequestIdPropertyKey)
+		return "", trace.Errorf("got non-string %q field", RequestIDPropertyKey)
 	}
 	return reqID, nil
 }
@@ -104,7 +104,7 @@ func NewBot(conf *Config) (*Bot, error) {
 		},
 	}
 	httpClient := transport.Client()
-	httpClient.Timeout = jiraHttpTimeout
+	httpClient.Timeout = jiraHTTPTimeout
 
 	client, err := jira.NewClient(httpClient, conf.JIRA.URL)
 	if err != nil {
@@ -177,7 +177,7 @@ func (b *Bot) CreateIssue(ctx context.Context, reqID string, reqData RequestData
 	issue, err := b.client.CreateIssue(ctx, &IssueInput{
 		Properties: []jira.EntityProperty{
 			jira.EntityProperty{
-				Key:   RequestIdPropertyKey,
+				Key:   RequestIDPropertyKey,
 				Value: reqID,
 			},
 		},
@@ -219,7 +219,7 @@ func (b *Bot) buildIssueDescription(reqID string, reqData RequestData) (string, 
 func (b *Bot) GetIssue(ctx context.Context, id string) (*BotIssue, error) {
 	jiraIssue, err := b.client.GetIssue(ctx, id, &jira.GetQueryOptions{
 		Expand:     "changelog,transitions",
-		Properties: RequestIdPropertyKey,
+		Properties: RequestIDPropertyKey,
 	})
 	if err != nil {
 		return nil, trace.Wrap(err)

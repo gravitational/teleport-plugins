@@ -321,7 +321,7 @@ func (a *App) WatchRequests(ctx context.Context) error {
 
 // OnSlackCallback processes Slack actions and updates original Slack message with a new status
 func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
-	log := log.WithField("slack_http_id", cb.HttpRequestID)
+	log := log.WithField("slack_http_id", cb.HTTPRequestID)
 
 	if len(cb.ActionCallback.BlockActions) != 1 {
 		log.WithField("slack_block_actions", cb.ActionCallback.BlockActions).Warn("Received more than one Slack action")
@@ -437,9 +437,8 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		if trace.IsNotFound(err) {
 			log.WithError(err).Warn("Cannot expire unknown request")
 			return nil
-		} else {
-			return trace.Wrap(err)
 		}
+		return trace.Wrap(err)
 	}
 
 	reqData, slackData := pluginData.requestData, pluginData.slackData

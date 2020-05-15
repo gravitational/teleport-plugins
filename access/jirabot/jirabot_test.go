@@ -35,7 +35,7 @@ const (
 type JirabotSuite struct {
 	app         *App
 	appPort     string
-	webhookUrl  string
+	webhookURL  string
 	me          *user.User
 	fakeJiraSrv *httptest.Server
 	issues      sync.Map
@@ -88,7 +88,7 @@ func (s *JirabotSuite) SetUpSuite(c *C) {
 	}
 	s.teleport = t
 	s.appPort = portList.Pop()
-	s.webhookUrl = "http://" + Host + ":" + s.appPort + "/"
+	s.webhookURL = "http://" + Host + ":" + s.appPort + "/"
 }
 
 func (s *JirabotSuite) SetUpTest(c *C) {
@@ -316,9 +316,8 @@ func (s *JirabotSuite) getIssue(idOrKey string) *Issue {
 	if obj, ok := s.issues.Load(idOrKey); ok {
 		issue := obj.(Issue)
 		return &issue
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (s *JirabotSuite) transitionIssue(c *C, issue *Issue, status string) {
@@ -370,7 +369,7 @@ func (s *JirabotSuite) postWebhook(c *C, wh *Webhook) (*http.Response, error) {
 	err := json.NewEncoder(&buf).Encode(wh)
 	c.Assert(err, IsNil)
 
-	return http.Post(s.webhookUrl, "application/json", &buf)
+	return http.Post(s.webhookURL, "application/json", &buf)
 }
 
 func (s *JirabotSuite) TestSlackMessagePosting(c *C) {
@@ -384,7 +383,7 @@ func (s *JirabotSuite) TestSlackMessagePosting(c *C) {
 		c.Fatal("issue wasn't created")
 	}
 
-	c.Assert(issue.Properties[RequestIdPropertyKey], Equals, request.GetName())
+	c.Assert(issue.Properties[RequestIDPropertyKey], Equals, request.GetName())
 }
 
 func (s *JirabotSuite) TestApproval(c *C) {

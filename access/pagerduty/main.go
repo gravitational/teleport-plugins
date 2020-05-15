@@ -310,7 +310,7 @@ func (a *App) WatchRequests(ctx context.Context) error {
 
 func (a *App) OnPagerdutyAction(ctx context.Context, action WebhookAction) error {
 	log := log.WithFields(logFields{
-		"pd_http_id": action.HttpRequestID,
+		"pd_http_id": action.HTTPRequestID,
 		"pd_msg_id":  action.MessageID,
 	})
 
@@ -332,52 +332,50 @@ func (a *App) OnPagerdutyAction(ctx context.Context, action WebhookAction) error
 		if trace.IsNotFound(err) {
 			log.WithError(err).WithField("request_id", reqID).Warning("Cannot process expired request")
 			return nil
-		} else {
-			return trace.Wrap(err)
 		}
-	} else {
-		if req.State != access.StatePending {
-			return trace.Errorf("cannot process not pending request: %+v", req)
-		}
-
-		pluginData, err := a.getPluginData(ctx, reqID)
-		if err != nil {
-			return trace.Wrap(err)
-		}
-
-		log = log.WithField("pd_incident_id", action.IncidentID)
-
-		if pluginData.PagerdutyData.ID != action.IncidentID {
-			log.WithField("plugin_data_incident_id", pluginData.PagerdutyData.ID).Debug("plugin_data.incident_id does not match incident.id")
-			return trace.Errorf("incident_id from request's plugin_data does not match")
-		}
-
-		var (
-			reqState   access.State
-			resolution string
-		)
-
-		switch action.Name {
-		case pdApproveAction:
-			reqState = access.StateApproved
-			resolution = "approved"
-		case pdDenyAction:
-			reqState = access.StateDenied
-			resolution = "denied"
-		default:
-			return trace.BadParameter("unknown action: %q", action.Name)
-		}
-
-		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
-			return trace.Wrap(err)
-		}
-		log.Infof("PagerDuty user %s the request", resolution)
-
-		if err := a.bot.ResolveIncident(ctx, reqID, pluginData.PagerdutyData, resolution); err != nil {
-			return trace.Wrap(err)
-		}
-		log.Infof("Incident %q has been resolved", action.IncidentID)
+		return trace.Wrap(err)
 	}
+	if req.State != access.StatePending {
+		return trace.Errorf("cannot process not pending request: %+v", req)
+	}
+
+	pluginData, err := a.getPluginData(ctx, reqID)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	log = log.WithField("pd_incident_id", action.IncidentID)
+
+	if pluginData.PagerdutyData.ID != action.IncidentID {
+		log.WithField("plugin_data_incident_id", pluginData.PagerdutyData.ID).Debug("plugin_data.incident_id does not match incident.id")
+		return trace.Errorf("incident_id from request's plugin_data does not match")
+	}
+
+	var (
+		reqState   access.State
+		resolution string
+	)
+
+	switch action.Name {
+	case pdApproveAction:
+		reqState = access.StateApproved
+		resolution = "approved"
+	case pdDenyAction:
+		reqState = access.StateDenied
+		resolution = "denied"
+	default:
+		return trace.BadParameter("unknown action: %q", action.Name)
+	}
+
+	if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
+		return trace.Wrap(err)
+	}
+	log.Infof("PagerDuty user %s the request", resolution)
+
+	if err := a.bot.ResolveIncident(ctx, reqID, pluginData.PagerdutyData, resolution); err != nil {
+		return trace.Wrap(err)
+	}
+	log.Infof("Incident %q has been resolved", action.IncidentID)
 
 	return nil
 }
@@ -407,9 +405,8 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		if trace.IsNotFound(err) {
 			log.WithError(err).Warn("Cannot expire unknown request")
 			return nil
-		} else {
-			return trace.Wrap(err)
 		}
+		return trace.Wrap(err)
 	}
 
 	if err := a.bot.ResolveIncident(ctx, reqID, pluginData.PagerdutyData, "expired"); err != nil {
