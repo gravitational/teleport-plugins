@@ -361,23 +361,18 @@ func (p *PortList) PopIntSlice(num int) []int {
 	return ports
 }
 
-// GetFreeTCPPorts returns n free ports (which are suggested by the kernel)
-func GetFreeTCPPorts(n int) (PortList, error) {
+// PortStartingNumber is a starting port number for tests
+const PortStartingNumber = 20000
+
+// GetFreeTCPPorts returns n ports starting from port 20000.
+func GetFreeTCPPorts(n int, offset ...int) (PortList, error) {
 	list := make(PortList, 0, n)
-	for i := 0; i < n; i++ {
-		addr, err := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-
-		listen, err := net.ListenTCP("tcp", addr)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-		defer listen.Close()
-
-		port := strconv.Itoa(listen.Addr().(*net.TCPAddr).Port)
-		list = append(list, port)
+	start := PortStartingNumber
+	if len(offset) != 0 {
+		start = offset[0]
+	}
+	for i := start; i < start+n; i++ {
+		list = append(list, strconv.Itoa(i))
 	}
 	return list, nil
 }
