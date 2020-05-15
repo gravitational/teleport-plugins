@@ -18,10 +18,10 @@ import (
 	mm "github.com/mattermost/mattermost-server/model"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/gravitational/teleport/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/services"
-	"github.com/gravitational/teleport/lib/utils"
 
 	. "gopkg.in/check.v1"
 )
@@ -53,7 +53,7 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 	log.SetLevel(log.DebugLevel)
 	priv, pub, err := testauthority.New().GenerateKeyPair("")
 	c.Assert(err, IsNil)
-	portList, err := utils.GetFreeTCPPorts(6)
+	portList, err := utils.GetFreeTCPPortsForTests(6)
 	c.Assert(err, IsNil)
 	ports := portList.PopIntSlice(5)
 	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Ports: ports, Priv: priv, Pub: pub})
@@ -97,7 +97,7 @@ func (s *MattermostSuite) SetUpTest(c *C) {
 }
 
 func (s *MattermostSuite) TearDownTest(c *C) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	err := s.app.Shutdown(ctx)
 	c.Assert(err, IsNil)

@@ -1,4 +1,4 @@
-GO_LINTERS ?= "unused,govet,typecheck,deadcode,goimports,varcheck,structcheck,bodyclose,staticcheck,ineffassign,unconvert,misspell"
+GO_LINTERS ?= "golint,unused,govet,typecheck,deadcode,goimports,varcheck,structcheck,bodyclose,staticcheck,ineffassign,unconvert,misspell"
 
 .PHONY: access-slackbot
 access-slackbot:
@@ -23,7 +23,7 @@ access-example:
 # Run all tests
 .PHONY: test
 test:
-	go test -count 1 ./...
+	go test -count 1 -race ./...
 
 # Individual releases
 .PHONY: release/access-slackbot
@@ -49,7 +49,7 @@ releases: release/access-slackbot release/access-jirabot release/access-mattermo
 .PHONY: get-deps
 get-deps:
 	go get -v -t -d ./...
-	
+
 #
 # Lint the Go code.
 # By default lint scans the entire repo. Pass FLAGS='--new' to only scan local
