@@ -25,12 +25,13 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
-	"github.com/gravitational/trace"
 	"github.com/hashicorp/go-version"
+	"github.com/pborman/uuid"
 
 	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/gravitational/teleport/lib/auth/proto"
 	"github.com/gravitational/teleport/lib/services"
+	"github.com/gravitational/trace"
 )
 
 const MinServerVersion = "4.2.3"
@@ -111,6 +112,8 @@ type Client interface {
 	Ping(ctx context.Context) (Pong, error)
 	// WatchRequests registers a new watcher for pending access requests.
 	WatchRequests(ctx context.Context, fltr Filter) Watcher
+	// CreateRequest creates a request.
+	CreateRequest(ctx context.Context, user string, roles ...string) (Request, error)
 	// GetRequests loads all requests which match provided filter.
 	GetRequests(ctx context.Context, fltr Filter) ([]Request, error)
 	// GetRequest loads a request matching ID.
@@ -172,16 +175,26 @@ func (c *clt) GetRequests(ctx context.Context, fltr Filter) ([]Request, error) {
 	}
 	var reqs []Request
 	for _, req := range rsp.AccessRequests {
-		r := Request{
-			ID:      req.GetName(),
-			User:    req.GetUser(),
-			Roles:   req.GetRoles(),
-			State:   req.GetState(),
-			Created: req.GetCreationTime(),
-		}
-		reqs = append(reqs, r)
+		reqs = append(reqs, requestFromV3(req))
 	}
 	return reqs, nil
+}
+
+func (c *clt) CreateRequest(ctx context.Context, user string, roles ...string) (Request, error) {
+	req := &services.AccessRequestV3{
+		Kind:    services.KindAccessRequest,
+		Version: services.V3,
+		Metadata: services.Metadata{
+			Name: uuid.New(),
+		},
+		Spec: services.AccessRequestSpecV3{
+			User:  user,
+			Roles: roles,
+			State: services.RequestState_PENDING,
+		},
+	}
+	_, err := c.clt.CreateAccessRequest(ctx, req)
+	return requestFromV3(req), trace.Wrap(err)
 }
 
 func (c *clt) GetRequest(ctx context.Context, reqID string) (Request, error) {
@@ -297,13 +310,7 @@ func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, fltr Fil
 				w.setError(trace.Errorf("unexpected resource type %T", event.Resource))
 				return
 			}
-			req = Request{
-				ID:      r.GetName(),
-				User:    r.GetUser(),
-				Roles:   r.GetRoles(),
-				State:   r.GetState(),
-				Created: r.GetCreationTime(),
-			}
+			req = requestFromV3(r)
 		case OpDelete:
 			h := event.GetResourceHeader()
 			if h == nil {
@@ -376,4 +383,14 @@ func (p *Pong) AssertServerVersion() error {
 		return trace.Errorf("server version %s is less than %s", p.ServerVersion, MinServerVersion)
 	}
 	return nil
+}
+
+func requestFromV3(req *services.AccessRequestV3) Request {
+	return Request{
+		ID:      req.GetName(),
+		User:    req.GetUser(),
+		Roles:   req.GetRoles(),
+		State:   req.GetState(),
+		Created: req.GetCreationTime(),
+	}
 }
