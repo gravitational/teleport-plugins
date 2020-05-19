@@ -46,10 +46,6 @@ release/access-pagerduty:
 .PHONY: releases
 releases: release/access-slackbot release/access-jirabot release/access-mattermost release/access-pagerduty
 
-.PHONY: get-deps
-get-deps:
-	go get -v -t -d ./...
-
 #
 # Lint the Go code.
 # By default lint scans the entire repo. Pass FLAGS='--new' to only scan local
