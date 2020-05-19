@@ -51,8 +51,7 @@ func NewBot(conf *Config) *Bot {
 }
 
 // Post posts request info to Slack with action buttons.
-//nolint(golint)
-func (b *Bot) Post(ctx context.Context, reqID string, reqData requestData) (data slackData, err error) {
+func (b *Bot) Post(ctx context.Context, reqID string, reqData requestData) (data SlackData, err error) {
 	data.channelID, data.timestamp, err = b.client.PostMessageContext(
 		ctx,
 		b.channel,
@@ -64,7 +63,7 @@ func (b *Bot) Post(ctx context.Context, reqID string, reqData requestData) (data
 }
 
 // Expire updates request's Slack post with EXPIRED status and removes action buttons.
-func (b *Bot) Expire(ctx context.Context, reqID string, reqData requestData, slackData slackData) error {
+func (b *Bot) Expire(ctx context.Context, reqID string, reqData requestData, slackData SlackData) error {
 	_, _, _, err := b.client.UpdateMessageContext(
 		ctx,
 		slackData.channelID,
