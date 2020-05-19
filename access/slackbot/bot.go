@@ -51,6 +51,8 @@ func NewBot(conf *Config) *Bot {
 }
 
 // Post posts request info to Slack with action buttons.
+// exported method Post returns unexported type github.com/gravitational/teleport-plugins/access/slackbot.slackData, which can be annoying to use
+// This data type doesn't need to be exported.
 //nolint(golint)
 func (b *Bot) Post(ctx context.Context, reqID string, reqData requestData) (data slackData, err error) {
 	data.channelID, data.timestamp, err = b.client.PostMessageContext(
