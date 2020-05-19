@@ -47,14 +47,14 @@ type requestData struct {
 	roles []string
 }
 
-type SlackData struct {
+type slackData struct {
 	channelID string
 	timestamp string
 }
 
 type pluginData struct {
 	requestData
-	SlackData
+	slackData
 }
 
 type logFields = log.Fields
@@ -441,7 +441,7 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	reqData, slackData := pluginData.requestData, pluginData.SlackData
+	reqData, slackData := pluginData.requestData, pluginData.slackData
 	if len(slackData.channelID) == 0 || len(slackData.timestamp) == 0 {
 		return trace.NotFound("plugin data was expired")
 	}
