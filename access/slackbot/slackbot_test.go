@@ -18,10 +18,10 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/gravitational/teleport-plugins/utils/nettest"
 	"github.com/gravitational/teleport/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/services"
-	"github.com/gravitational/teleport/lib/utils"
 	"github.com/nlopes/slack"
 	"github.com/nlopes/slack/slacktest"
 
@@ -38,7 +38,7 @@ const (
 type SlackbotSuite struct {
 	app         *App
 	appPort     string
-	callbackUrl string
+	callbackURL string
 	me          *user.User
 	slackServer *slacktest.Server
 	teleport    *integration.TeleInstance
@@ -54,7 +54,7 @@ func (s *SlackbotSuite) SetUpSuite(c *C) {
 	log.SetLevel(log.DebugLevel)
 	priv, pub, err := testauthority.New().GenerateKeyPair("")
 	c.Assert(err, IsNil)
-	portList, err := utils.GetFreeTCPPorts(6)
+	portList, err := nettest.GetFreeTCPPortsForTests(6)
 	c.Assert(err, IsNil)
 	ports := portList.PopIntSlice(5)
 	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Ports: ports, Priv: priv, Pub: pub})
@@ -88,7 +88,7 @@ func (s *SlackbotSuite) SetUpSuite(c *C) {
 	}
 	s.teleport = t
 	s.appPort = portList.Pop()
-	s.callbackUrl = "http://" + Host + ":" + s.appPort + "/"
+	s.callbackURL = "http://" + Host + ":" + s.appPort + "/"
 }
 
 func (s *SlackbotSuite) SetUpTest(c *C) {
@@ -98,7 +98,7 @@ func (s *SlackbotSuite) SetUpTest(c *C) {
 }
 
 func (s *SlackbotSuite) TearDownTest(c *C) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	err := s.app.Shutdown(ctx)
 	c.Assert(err, IsNil)
@@ -197,12 +197,12 @@ func (s *SlackbotSuite) createExpiredAccessRequest(c *C) services.AccessRequest 
 	return req
 }
 
-func (s *SlackbotSuite) postCallback(c *C, actionId, reqID string) {
+func (s *SlackbotSuite) postCallback(c *C, actionID, reqID string) {
 	cb := &slack.InteractionCallback{
 		ActionCallback: slack.ActionCallbacks{
 			BlockActions: []*slack.BlockAction{
 				&slack.BlockAction{
-					ActionID: actionId,
+					ActionID: actionID,
 					Value:    reqID,
 				},
 			},
@@ -223,7 +223,7 @@ func (s *SlackbotSuite) postCallback(c *C, actionId, reqID string) {
 
 	signature := hash.Sum(nil)
 
-	req, err := http.NewRequest("POST", s.callbackUrl, strings.NewReader(body))
+	req, err := http.NewRequest("POST", s.callbackURL, strings.NewReader(body))
 	c.Assert(err, IsNil)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("X-Slack-Request-Timestamp", stimestamp)
@@ -231,6 +231,9 @@ func (s *SlackbotSuite) postCallback(c *C, actionId, reqID string) {
 	response, err := http.DefaultClient.Do(req)
 	c.Assert(err, IsNil)
 	c.Assert(response.StatusCode, Equals, http.StatusOK)
+
+	err = response.Body.Close()
+	c.Assert(err, IsNil)
 }
 
 // fetchSlackMessage and all the tests using it heavily rely on changes in slacktest package, see 13c57c4 commit.

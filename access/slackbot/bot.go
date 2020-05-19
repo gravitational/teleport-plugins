@@ -15,7 +15,7 @@ import (
 )
 
 const slackMaxConns = 100
-const slackHttpTimeout = 10 * time.Second
+const slackHTTPTimeout = 10 * time.Second
 
 // Bot is a wrapper around slack.Client that works with access.Request.
 type Bot struct {
@@ -27,7 +27,7 @@ type Bot struct {
 
 func NewBot(conf *Config) *Bot {
 	httpClient := &http.Client{
-		Timeout: slackHttpTimeout,
+		Timeout: slackHTTPTimeout,
 		Transport: &http.Transport{
 			MaxConnsPerHost:     slackMaxConns,
 			MaxIdleConnsPerHost: slackMaxConns,
@@ -51,6 +51,9 @@ func NewBot(conf *Config) *Bot {
 }
 
 // Post posts request info to Slack with action buttons.
+// exported method Post returns unexported type github.com/gravitational/teleport-plugins/access/slackbot.slackData, which can be annoying to use
+// This data type doesn't need to be exported.
+//nolint(golint)
 func (b *Bot) Post(ctx context.Context, reqID string, reqData requestData) (data slackData, err error) {
 	data.channelID, data.timestamp, err = b.client.PostMessageContext(
 		ctx,
@@ -102,6 +105,7 @@ func (b *Bot) Respond(ctx context.Context, reqID string, reqData requestData, st
 	if err != nil {
 		return trace.Wrap(err, "failed to send update: %v", err)
 	}
+	defer rsp.Body.Close()
 
 	rbody, err := ioutil.ReadAll(rsp.Body)
 	if err != nil {

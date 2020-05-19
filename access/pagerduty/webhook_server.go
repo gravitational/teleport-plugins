@@ -29,7 +29,7 @@ type WebhookMessage struct {
 }
 
 type WebhookAction struct {
-	HttpRequestID string
+	HTTPRequestID string
 
 	MessageID   string
 	Event       string
@@ -89,7 +89,7 @@ func (s *WebhookServer) Shutdown(ctx context.Context) error {
 
 func (s *WebhookServer) processWebhook(actionName string, rw http.ResponseWriter, r *http.Request) {
 	// Custom incident actions are required to respond within 16 seconds.
-	ctx, cancel := context.WithTimeout(r.Context(), time.Second*16-pdHttpTimeout)
+	ctx, cancel := context.WithTimeout(r.Context(), time.Second*16-pdHTTPTimeout)
 	defer cancel()
 
 	webhookID := r.Header.Get("X-Webhook-Id")
@@ -120,7 +120,7 @@ func (s *WebhookServer) processWebhook(actionName string, rw http.ResponseWriter
 		log = log.WithField("pd_msg_id", msg.ID)
 
 		action := WebhookAction{
-			HttpRequestID: httpRequestID,
+			HTTPRequestID: httpRequestID,
 			MessageID:     msg.ID,
 			Event:         msg.Event,
 			Name:          actionName,

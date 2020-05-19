@@ -318,7 +318,7 @@ func (a *App) WatchRequests(ctx context.Context) error {
 }
 
 func (a *App) OnMattermostAction(ctx context.Context, data BotAction) (BotActionResponse, error) {
-	log := log.WithField("mm_http_id", data.HttpRequestID)
+	log := log.WithField("mm_http_id", data.HTTPRequestID)
 
 	action := data.Action
 	reqID := data.ReqID
@@ -425,9 +425,8 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		if trace.IsNotFound(err) {
 			log.WithError(err).Warn("Cannot expire unknown request")
 			return nil
-		} else {
-			return trace.Wrap(err)
 		}
+		return trace.Wrap(err)
 	}
 
 	reqData, mmData := pluginData.RequestData, pluginData.MattermostData

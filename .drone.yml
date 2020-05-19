@@ -1,22 +1,90 @@
 ---
 kind: pipeline
 type: kubernetes
-name: plugins-test
+name: lint
+
+trigger:
+  event:
+    - pull_request
+    - tag
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
 
 clone:
   disable: true
 
-steps: 
+steps:
+- name: Run linter
+  image: golangci/golangci-lint:v1.27.0
+  commands:
+    - git clone https://github.com/gravitational/teleport-plugins.git .
+    - git checkout $DRONE_COMMIT
+    - make lint
+
+---
+kind: pipeline
+type: kubernetes
+name: test
+
+trigger:
+  event:
+    - pull_request
+    - tag
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+clone:
+  disable: true
+
+steps:
 - name: Run tests
   image: golang:1.13.2
   commands:
-    - mkdir -p $GOPATH/src/github.com/gravitational/teleport-plugins
-    - git clone https://github.com/gravitational/teleport-plugins.git $GOPATH/src/github.com/gravitational/teleport-plugins
-    - cd $GOPATH/src/github.com/gravitational/teleport-plugins
+    - git clone https://github.com/gravitational/teleport-plugins.git .
     - git checkout $DRONE_COMMIT
-    - go get -v -t -d ./...
-    - cd access && go test ./...
+    - make test
+
+---
+kind: pipeline
+type: kubernetes
+name: build
+
+depends_on:
+  - lint
+  - test
 
 trigger:
-  branch:
-    - master
+  event:
+    - tag
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+clone:
+  disable: true
+
+steps:
+  - name: Build artifacts
+    image: golang:1.13.2
+    commands:
+      - git clone https://github.com/gravitational/teleport-plugins.git .
+      - git checkout $DRONE_COMMIT
+      - mkdir -p build/
+      - make releases
+      - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
+
+  - name: Upload to S3
+    image: plugins/s3
+    settings:
+      bucket:
+        from_secret: AWS_S3_BUCKET
+      access_key:
+        from_secret: AWS_ACCESS_KEY_ID
+      secret_key:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      region: us-west-2
+      source: /go/src/github.com/gravitational/teleport-plugins/build/*.tar.gz
+      target: plugins/drone/tag/${DRONE_TAG}
+      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build

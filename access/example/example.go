@@ -76,9 +76,8 @@ func run(configPath string) error {
 	})
 	if err := watcher.WaitInit(ctx, 5*time.Second); err != nil {
 		return trace.Wrap(err)
-	} else {
-		eprintln("watcher initialized...")
 	}
+	eprintln("watcher initialized...")
 	defer watcher.Close()
 	for {
 		select {

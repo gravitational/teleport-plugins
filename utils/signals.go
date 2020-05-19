@@ -2,11 +2,12 @@ package utils
 
 import (
 	"context"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Terminable interface {
@@ -45,10 +46,9 @@ func ServeSignals(app Terminable, shutdownTimeout time.Duration) {
 			if alreadyInterrupted {
 				app.Close()
 				return
-			} else {
-				go gracefulShutdown()
-				alreadyInterrupted = true
 			}
+			go gracefulShutdown()
+			alreadyInterrupted = true
 		}
 	}
 }

@@ -24,7 +24,7 @@ import (
 const ActionURL = "/mattermost_action"
 
 type BotAction struct {
-	HttpRequestID string
+	HTTPRequestID string
 
 	UserID    string
 	PostID    string
@@ -138,7 +138,7 @@ func (s *BotServer) OnAction(rw http.ResponseWriter, r *http.Request, _ httprout
 	}
 
 	actionData := BotAction{
-		HttpRequestID: httpRequestID,
+		HTTPRequestID: httpRequestID,
 		UserID:        payload.UserId,
 		PostID:        payload.PostId,
 		ChannelID:     payload.ChannelId,

@@ -18,7 +18,7 @@ import (
 )
 
 type Callback struct {
-	HttpRequestID string
+	HTTPRequestID string
 	slack.InteractionCallback
 }
 type CallbackFunc func(ctx context.Context, callback Callback) error

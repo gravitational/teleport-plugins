@@ -18,10 +18,10 @@ import (
 	mm "github.com/mattermost/mattermost-server/model"
 	log "github.com/sirupsen/logrus"
 
+	"github.com/gravitational/teleport-plugins/utils/nettest"
 	"github.com/gravitational/teleport/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/services"
-	"github.com/gravitational/teleport/lib/utils"
 
 	. "gopkg.in/check.v1"
 )
@@ -35,7 +35,7 @@ const (
 type MattermostSuite struct {
 	app               *App
 	appPort           string
-	webhookUrl        string
+	webhookURL        string
 	me                *user.User
 	fakeMattermostSrv *httptest.Server
 	posts             sync.Map
@@ -53,7 +53,7 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 	log.SetLevel(log.DebugLevel)
 	priv, pub, err := testauthority.New().GenerateKeyPair("")
 	c.Assert(err, IsNil)
-	portList, err := utils.GetFreeTCPPorts(6)
+	portList, err := nettest.GetFreeTCPPortsForTests(6)
 	c.Assert(err, IsNil)
 	ports := portList.PopIntSlice(5)
 	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Ports: ports, Priv: priv, Pub: pub})
@@ -87,7 +87,7 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 	}
 	s.teleport = t
 	s.appPort = portList.Pop()
-	s.webhookUrl = "http://" + Host + ":" + s.appPort + "/"
+	s.webhookURL = "http://" + Host + ":" + s.appPort + "/"
 }
 
 func (s *MattermostSuite) SetUpTest(c *C) {
@@ -97,7 +97,7 @@ func (s *MattermostSuite) SetUpTest(c *C) {
 }
 
 func (s *MattermostSuite) TearDownTest(c *C) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	err := s.app.Shutdown(ctx)
 	c.Assert(err, IsNil)
@@ -269,9 +269,8 @@ func (s *MattermostSuite) getPost(id string) *mm.Post {
 	if obj, ok := s.posts.Load(id); ok {
 		post := obj.(mm.Post)
 		return &post
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (s *MattermostSuite) postWebhook(c *C, post *mm.Post, actionName string) {
@@ -300,6 +299,9 @@ func (s *MattermostSuite) postWebhook(c *C, post *mm.Post, actionName string) {
 	response, err := http.Post(action.Integration.URL, "application/json", &buf)
 	c.Assert(err, IsNil)
 	c.Assert(response.StatusCode, Equals, http.StatusOK)
+
+	err = response.Body.Close()
+	c.Assert(err, IsNil)
 }
 
 func (s *MattermostSuite) TestMattermostMessagePosting(c *C) {

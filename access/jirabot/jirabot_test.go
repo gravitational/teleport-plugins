@@ -18,10 +18,10 @@ import (
 	log "github.com/sirupsen/logrus"
 	jira "gopkg.in/andygrunwald/go-jira.v1"
 
+	"github.com/gravitational/teleport-plugins/utils/nettest"
 	"github.com/gravitational/teleport/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/services"
-	"github.com/gravitational/teleport/lib/utils"
 
 	. "gopkg.in/check.v1"
 )
@@ -35,7 +35,7 @@ const (
 type JirabotSuite struct {
 	app         *App
 	appPort     string
-	webhookUrl  string
+	webhookURL  string
 	me          *user.User
 	fakeJiraSrv *httptest.Server
 	issues      sync.Map
@@ -54,7 +54,7 @@ func (s *JirabotSuite) SetUpSuite(c *C) {
 	log.SetLevel(log.DebugLevel)
 	priv, pub, err := testauthority.New().GenerateKeyPair("")
 	c.Assert(err, IsNil)
-	portList, err := utils.GetFreeTCPPorts(6)
+	portList, err := nettest.GetFreeTCPPortsForTests(6)
 	c.Assert(err, IsNil)
 	ports := portList.PopIntSlice(5)
 	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Ports: ports, Priv: priv, Pub: pub})
@@ -88,7 +88,7 @@ func (s *JirabotSuite) SetUpSuite(c *C) {
 	}
 	s.teleport = t
 	s.appPort = portList.Pop()
-	s.webhookUrl = "http://" + Host + ":" + s.appPort + "/"
+	s.webhookURL = "http://" + Host + ":" + s.appPort + "/"
 }
 
 func (s *JirabotSuite) SetUpTest(c *C) {
@@ -98,7 +98,7 @@ func (s *JirabotSuite) SetUpTest(c *C) {
 }
 
 func (s *JirabotSuite) TearDownTest(c *C) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	err := s.app.Shutdown(ctx)
 	c.Assert(err, IsNil)
@@ -316,9 +316,8 @@ func (s *JirabotSuite) getIssue(idOrKey string) *Issue {
 	if obj, ok := s.issues.Load(idOrKey); ok {
 		issue := obj.(Issue)
 		return &issue
-	} else {
-		return nil
 	}
+	return nil
 }
 
 func (s *JirabotSuite) transitionIssue(c *C, issue *Issue, status string) {
@@ -360,6 +359,9 @@ func (s *JirabotSuite) transitionIssue(c *C, issue *Issue, status string) {
 	})
 	c.Assert(err, IsNil)
 	c.Assert(response.StatusCode, Equals, http.StatusOK)
+
+	err = response.Body.Close()
+	c.Assert(err, IsNil)
 }
 
 func (s *JirabotSuite) postWebhook(c *C, wh *Webhook) (*http.Response, error) {
@@ -367,7 +369,7 @@ func (s *JirabotSuite) postWebhook(c *C, wh *Webhook) (*http.Response, error) {
 	err := json.NewEncoder(&buf).Encode(wh)
 	c.Assert(err, IsNil)
 
-	return http.Post(s.webhookUrl, "application/json", &buf)
+	return http.Post(s.webhookURL, "application/json", &buf)
 }
 
 func (s *JirabotSuite) TestSlackMessagePosting(c *C) {
@@ -381,7 +383,7 @@ func (s *JirabotSuite) TestSlackMessagePosting(c *C) {
 		c.Fatal("issue wasn't created")
 	}
 
-	c.Assert(issue.Properties[RequestIdPropertyKey], Equals, request.GetName())
+	c.Assert(issue.Properties[RequestIDPropertyKey], Equals, request.GetName())
 }
 
 func (s *JirabotSuite) TestApproval(c *C) {

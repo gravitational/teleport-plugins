@@ -2,8 +2,9 @@ package utils
 
 import (
 	"os"
-	log "github.com/sirupsen/logrus"
+
 	"github.com/gravitational/trace"
+	log "github.com/sirupsen/logrus"
 )
 
 // Bail exits with nonzero exit code and prints an error to a log.
