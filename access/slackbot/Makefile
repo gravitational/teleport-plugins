@@ -1,7 +1,7 @@
 VERSION=0.1.0-dev.1
 
 BUILDDIR ?= build
-BINARY = $(BUILDDIR)/teleport-slackbot
+BINARY = $(BUILDDIR)/teleport-slack
 GITTAG=v$(VERSION)
 ADDFLAGS ?=
 BUILDFLAGS ?= $(ADDFLAGS) -ldflags '-w -s'
@@ -9,7 +9,7 @@ CGOFLAG ?= CGO_ENABLED=1
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
-RELEASE_NAME=teleport-access-slackbot
+RELEASE_NAME=teleport-access-slack
 RELEASE=$(RELEASE_NAME)-$(GITTAG)-$(OS)-$(ARCH)-bin
 
 RELEASE_MESSAGE := "Building with GOOS=$(OS) GOARCH=$(ARCH)."

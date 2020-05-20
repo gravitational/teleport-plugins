@@ -39,7 +39,7 @@ const (
 	// ActionDeny uniquely identifies the deny button in events.
 	ActionDeny = "deny_request"
 
-	DefaultDir = "/var/lib/teleport/plugins/slackbot"
+	DefaultDir = "/var/lib/teleport/plugins/slack"
 )
 
 type requestData struct {
@@ -61,14 +61,14 @@ type logFields = log.Fields
 
 func main() {
 	utils.InitLogger()
-	app := kingpin.New("slackbot", "Teleport plugin for access requests approval via Slack.")
+	app := kingpin.New("slack", "Teleport plugin for access requests approval via Slack.")
 
 	app.Command("configure", "Prints an example .TOML configuration file.")
 
 	startCmd := app.Command("start", "Starts a the Teleport Slack plugin.")
 	path := startCmd.Flag("config", "TOML config file path").
 		Short('c').
-		Default("/etc/teleport-slackbot.toml").
+		Default("/etc/teleport-slack.toml").
 		String()
 	debug := startCmd.Flag("debug", "Enable verbose logging to stderr").
 		Short('d').
@@ -171,7 +171,7 @@ func (a *App) Run(ctx context.Context) error {
 
 	a.accessClient, err = access.NewClient(
 		ctx,
-		"slackbot",
+		"slack",
 		a.conf.Teleport.AuthServer,
 		tlsConf,
 	)

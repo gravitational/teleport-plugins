@@ -23,12 +23,12 @@ type Config struct {
 	Log  utils.LogConfig  `toml:"log"`
 }
 
-const exampleConfig = `# example slackbot configuration TOML file
+const exampleConfig = `# example slack plugin configuration TOML file
 [teleport]
 auth-server = "example.com:3025"  # Teleport Auth Server GRPC API address
-client-key = "/var/lib/teleport/plugins/slackbot/auth.key" # Teleport GRPC client secret key
-client-crt = "/var/lib/teleport/plugins/slackbot/auth.crt" # Teleport GRPC client certificate
-root-cas = "/var/lib/teleport/plugins/slackbot/auth.cas"   # Teleport cluster CA certs
+client-key = "/var/lib/teleport/plugins/slack/auth.key" # Teleport GRPC client secret key
+client-crt = "/var/lib/teleport/plugins/slack/auth.crt" # Teleport GRPC client certificate
+root-cas = "/var/lib/teleport/plugins/slack/auth.cas"   # Teleport cluster CA certs
 
 [slack]
 token = "api-token"       # Slack Bot OAuth token
@@ -37,11 +37,11 @@ channel = "channel-name"  # Slack Channel name to post requests to
 
 [http]
 listen = ":8081"          # Slack interaction callback listener
-# https-key-file = "/var/lib/teleport/plugins/slackbot/server.key"  # TLS private key
-# https-cert-file = "/var/lib/teleport/plugins/slackbot/server.crt" # TLS certificate
+# https-key-file = "/var/lib/teleport/plugins/slack/server.key"  # TLS private key
+# https-cert-file = "/var/lib/teleport/plugins/slack/server.crt" # TLS certificate
 
 [log]
-output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/slackbot.log"
+output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/slack.log"
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
 `
 
