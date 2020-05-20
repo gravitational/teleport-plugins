@@ -7,13 +7,13 @@ BINDIR=/usr/local/bin
 
 # the directory where Teleport plugins store their certificates
 # and other data files
-# 
-DATADIR=/var/lib/teleport/plugins/jirabot
+#
+DATADIR=/var/lib/teleport/plugins/jira
 
 [ ! $(id -u) != "0" ] || { echo "ERROR: You must be root"; exit 1; }
 cd $(dirname $0)
 mkdir -p $BINDIR $DATADIR
-cp -f teleport-jirabot $BINDIR/ || exit 1
+cp -f teleport-jira $BINDIR/ || exit 1
 
 echo "Teleport Jira Plugin binaries have been copied to $BINDIR"
-echo "You can run teleport-jirabot configure > /etc/teleport-jirabot.toml to bootstrap your config file."
+echo "You can run teleport-jira configure > /etc/teleport-jira.toml to bootstrap your config file."

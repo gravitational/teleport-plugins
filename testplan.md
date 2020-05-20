@@ -68,7 +68,7 @@ it should be run on plugin release and with each new Teleport Release.
 ### Jira Cloud Plugin
 
 - [ ] Setting up Jira Board and OAuth token instructions are up-to-date.
-- [ ] `teleport-jirabot configure` outputs valid TOML
+- [ ] `teleport-jira configure` outputs valid TOML
 - [ ] Plugin started with TLS
 - [ ] Plugin started --insecure-no-tls
 
@@ -86,7 +86,7 @@ it should be run on plugin release and with each new Teleport Release.
 
 - [ ] Setup has been configured using Jira Server 8+
 - [ ] Setting up Jira Board and OAuth token instructions are up-to-date.
-- [ ] `teleport-jirabot configure` outputs valid TOML
+- [ ] `teleport-jira configure` outputs valid TOML
 - [ ] Plugin started with TLS
 - [ ] Plugin started --insecure-no-tls
 

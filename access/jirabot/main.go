@@ -34,7 +34,7 @@ import (
 )
 
 const (
-	DefaultDir = "/var/lib/teleport/plugins/jirabot"
+	DefaultDir = "/var/lib/teleport/plugins/jira"
 )
 
 type RequestData struct {
@@ -57,14 +57,14 @@ type logFields = log.Fields
 
 func main() {
 	utils.InitLogger()
-	app := kingpin.New("teleport-jirabot", "Teleport plugin for access requests approval via JIRA.")
+	app := kingpin.New("teleport-jira", "Teleport plugin for access requests approval via JIRA.")
 
 	app.Command("configure", "Prints an example .TOML configuration file.")
 
 	startCmd := app.Command("start", "Starts a Teleport JIRA plugin.")
 	path := startCmd.Flag("config", "TOML config file path").
 		Short('c').
-		Default("/etc/teleport-jirabot.toml").
+		Default("/etc/teleport-jira.toml").
 		String()
 	debug := startCmd.Flag("debug", "Enable verbose logging to stderr").
 		Short('d').
@@ -170,7 +170,7 @@ func (a *App) Run(ctx context.Context) error {
 
 	a.accessClient, err = access.NewClient(
 		ctx,
-		"jirabot",
+		"jira",
 		a.conf.Teleport.AuthServer,
 		tlsConf,
 	)
