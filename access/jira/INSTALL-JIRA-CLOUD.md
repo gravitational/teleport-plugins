@@ -113,7 +113,7 @@ You can now run `sudo teleport-jira configure > /etc/teleport-jira.toml`, or cop
 By default, Jira Teleport Plugin will use a config in `/etc/teleport-jira.toml`, and you can override it with `-c config/file/path.toml` flag.
 
 ```toml
-# example jira plugin configuration file
+# example jira plugin configuration TOML file
 [teleport]
 auth-server = "example.com:3025"  # Auth GRPC API address
 client-key = "/var/lib/teleport/plugins/jira/auth.key" # Teleport GRPC client secret key

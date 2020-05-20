@@ -11,7 +11,7 @@ repository root.  The `configure` command will produce an example
 configuration file that looks something like this:
 
 ```toml
-# example slack plugin configuration file
+# example slack plugin configuration TOML file
 [teleport]
 auth-server = "example.com:3025"                  # Auth GRPC API address.
 client-key = "/var/lib/teleport/plugins/slack/auth.key"  # Teleport GRPC client secret key
