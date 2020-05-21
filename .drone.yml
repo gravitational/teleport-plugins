@@ -263,7 +263,7 @@ steps:
         from_secret: AWS_SECRET_ACCESS_KEY
       AWS_REGION: us-west-2
     commands:
-      - aws s3 sync s3://${AWS_S3_BUCKET}/plugins/drone/tag/${DRONE_TAG}/* .
+      - aws s3 sync s3://${AWS_S3_BUCKET}/plugins/drone/tag/${DRONE_TAG}/ .
 
   - name: Upload artifact to production S3 bucket
     image: plugins/s3
@@ -281,6 +281,6 @@ steps:
 
 ---
 kind: signature
-hmac: 91aaa4ca10520b1a1c315c1ca01d541b9e79b5c54fa7f62bc2a567a43d6c461c
+hmac: d69c7ff43c43f0d9d79b1848e79cdd69a8e3cb55984b868c39ece163ea615926
 
 ...
