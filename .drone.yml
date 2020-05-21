@@ -73,6 +73,7 @@ steps:
     image: golang:1.13.2
     commands:
       - git clone https://github.com/gravitational/teleport-plugins.git .
+      - git fetch --all --tags
       - git checkout $DRONE_TAG
       - mkdir -p build/
       - make access-jira
@@ -119,6 +120,7 @@ steps:
     image: golang:1.13.2
     commands:
       - git clone https://github.com/gravitational/teleport-plugins.git .
+      - git fetch --all --tags
       - git checkout $DRONE_TAG
       - mkdir -p build/
       - make access-slack
@@ -165,6 +167,7 @@ steps:
     image: golang:1.13.2
     commands:
       - git clone https://github.com/gravitational/teleport-plugins.git .
+      - git fetch --all --tags
       - git checkout $DRONE_TAG
       - mkdir -p build/
       - make access-mattermost
@@ -211,6 +214,7 @@ steps:
     image: golang:1.13.2
     commands:
       - git clone https://github.com/gravitational/teleport-plugins.git .
+      - git fetch --all --tags
       - git checkout $DRONE_TAG
       - mkdir -p build/
       - make access-pagerduty
@@ -277,6 +281,6 @@ steps:
 
 ---
 kind: signature
-hmac: 86c070c9114ecca75c811baa3ee7b16a4618ca4328ae29b773f28cf4c9854d48
+hmac: 97e94a61bdba7d19066f87484188483daaeb57ae9d732cf60cd02fdd7d628afa
 
 ...
