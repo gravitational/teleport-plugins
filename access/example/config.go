@@ -38,7 +38,7 @@ type Config struct {
 const exampleConfig = `# example configuration file
 auth-server = "example.com:3025"  # Auth GRPC API address
 client-key = "path/to/client.key" # GRPC client secret key
-client-crt = "path/to/client.crt" # GRPC client certificate 
+client-crt = "path/to/client.crt" # GRPC client certificate
 root-cas = "path/to/root.cas"     # cluster CA certs
 # whitelist determines which users' requests will
 # be approved.

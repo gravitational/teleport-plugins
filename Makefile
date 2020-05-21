@@ -1,12 +1,12 @@
 GO_LINTERS ?= "golint,unused,govet,typecheck,deadcode,goimports,varcheck,structcheck,bodyclose,staticcheck,ineffassign,unconvert,misspell"
 
-.PHONY: access-slackbot
-access-slackbot:
-	make -C access/slackbot
+.PHONY: access-slack
+access-slack:
+	make -C access/slack
 
-.PHONY: access-jirabot
-access-jirabot:
-	make -C access/jirabot
+.PHONY: access-jira
+access-jira:
+	make -C access/jira
 
 .PHONY: access-mattermost
 access-mattermost:
@@ -27,13 +27,13 @@ test:
 	go test -count 1 -p=1 ./...
 
 # Individual releases
-.PHONY: release/access-slackbot
-release/access-slackbot:
-	make -C access/slackbot clean release
+.PHONY: release/access-slack
+release/access-slack:
+	make -C access/slack clean release
 
-.PHONY: release/access-jirabot
-release/access-jirabot:
-	make -C access/jirabot clean release
+.PHONY: release/access-jira
+release/access-jira:
+	make -C access/jira clean release
 
 .PHONY: release/access-mattermost
 release/access-mattermost:
@@ -45,7 +45,7 @@ release/access-pagerduty:
 
 # Run all releases
 .PHONY: releases
-releases: release/access-slackbot release/access-jirabot release/access-mattermost release/access-pagerduty
+releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty
 
 #
 # Lint the Go code.

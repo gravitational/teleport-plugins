@@ -2,7 +2,7 @@
 
 If you're using Jira Cloud or Jira Server to manage your projects, you can also use it to monitor, approve, deny, or discuss Teleport permission requests. This quickstart will walk you through the setup.
 
-For the purpose of this quickstart, we assume you've already setup an [Enterprise Teleport Cluster](https://gravitational.com/teleport/docs/enterprise/quickstart-enterprise/). 
+For the purpose of this quickstart, we assume you've already setup an [Enterprise Teleport Cluster](https://gravitational.com/teleport/docs/enterprise/quickstart-enterprise/).
 
 Note: The Approval Workflow only works with Pro and Enterprise version of Teleport
 
@@ -11,10 +11,10 @@ Note: The Approval Workflow only works with Pro and Enterprise version of Telepo
 - Admin Privileges with access and control of [`tctl`](https://gravitational.com/teleport/docs/cli-docs/#tctl)
 - Jira Server or Jira Cloud installation with an owner privileges, specifically to setup webhooks, issue types, and workflows.
 
-### Create an access-plugin role and user within Teleport 
+### Create an access-plugin role and user within Teleport
 First off, using an existing Teleport Cluster, we are going to create a new Teleport User and Role to access Teleport.
 
-#### Create User and Role for access. 
+#### Create User and Role for access.
 Log into Teleport Authentication Server, this is where you normally run `tctl`. Don't change the username and the role name, it should be `access-plugin` for the plugin to work correctly.
 
 _Note: if you're using other plugins, you might want to create different users and roles for different plugins_.
@@ -66,7 +66,7 @@ All new permission requests are going to show up in a project you choose. We rec
 You'll need the project Jira key to configure the plugin.
 
 #### Setting up the status board
-Create a new board for tasks in the permission management project. The board has to have at least these three columns: 
+Create a new board for tasks in the permission management project. The board has to have at least these three columns:
 1. Pending
 2. Approved
 3. Denied
@@ -74,8 +74,8 @@ Create a new board for tasks in the permission management project. The board has
 Teleport Jira Plugin will create a new issue for each new permission request in the first available column on the board. When you drag the request task to Approved column on Jira, the request will be approved. Ditto for Denied column on Jira.
 
 #### Setting up Request ID field on Jira
-Teleport Jira Plugin requires a custom issue field to be created. 
-Go to your Jira Project settings -> Issue Types -> Select type `Task` -> add a new Short Text field named `TeleportAccessRequestId`. 
+Teleport Jira Plugin requires a custom issue field to be created.
+Go to your Jira Project settings -> Issue Types -> Select type `Task` -> add a new Short Text field named `TeleportAccessRequestId`.
 Teleport uses this field to reference it's internal request ID. If anyone changes this field on Jira, or tries to forge the permission request, Teleport will validate it and ignore it.
 
 #### Getting your Jira API token
@@ -88,14 +88,14 @@ For Jira Server, the URL of the API tokens page will be different depending on y
 
 #### Settings up Jira Webhooks
 
-Go to Settings -> General -> System -> Webhooks and create a new Webhook for Jira to tell the Teleport Plugin about updates. 
+Go to Settings -> General -> System -> Webhooks and create a new Webhook for Jira to tell the Teleport Plugin about updates.
 
 For the webhook URL, use the URL that you'll run the plugin on. It needs to be a publicly accessible URL that we'll later setup.
 Jira requires the webhook listener to run over HTTPS.
 
 The Teleport Jira plugin webhook needs to be notified only about new issues being created, issues being updated, or deleted. You can leave all the other boxes empty.
 
-_Note: by default, Jira Webhook will send updates about any issues in any projects in your Jira installation to the webhook. 
+_Note: by default, Jira Webhook will send updates about any issues in any projects in your Jira installation to the webhook.
 We suggest that you use JQL filters to limit which issues are being sent to the plugin._
 
 _Note: by default, the Plugin's web server will run with TLS, but you can disable it with `--insecure-no-tls` to test things out in a dev environment._
@@ -104,21 +104,21 @@ In the webhook settings page, make sure that the webhook will only send Issue Up
 
 ## Installing
 
-To start using Teleport Plugins, you will need the teleport-jirabot executable.  See the [README](README.md) for building the teleport-jiraport executable in the Setup section.  Place the executable in the appropriate /usr/bin or /usr/local/bin on the server installation.
+To start using Teleport Plugins, you will need the teleport-jira executable.  See the [README](README.md) for building the teleport-jiraport executable in the Setup section.  Place the executable in the appropriate /usr/bin or /usr/local/bin on the server installation.
 
 ### Configuration file
 
-You can now run `sudo teleport-jirabot configure > /etc/teleport-jirabot.toml`, or copy and paste the following template. 
+You can now run `sudo teleport-jira configure > /etc/teleport-jira.toml`, or copy and paste the following template.
 
-By default, Jira Teleport Plugin will use a config in `/etc/teleport-jirabot.toml`, and you can override it with `-c config/file/path.toml` flag.
+By default, Jira Teleport Plugin will use a config in `/etc/teleport-jira.toml`, and you can override it with `-c config/file/path.toml` flag.
 
 ```toml
-# example jirabot configuration TOML file
+# example jira plugin configuration TOML file
 [teleport]
 auth-server = "example.com:3025"  # Auth GRPC API address
-client-key = "/var/lib/teleport/plugins/jirabot/auth.key" # Teleport GRPC client secret key
-client-crt = "/var/lib/teleport/plugins/jirabot/auth.crt" # Teleport GRPC client certificate
-root-cas = "/var/lib/teleport/plugins/jirabot/auth.cas"   # Teleport cluster CA certs
+client-key = "/var/lib/teleport/plugins/jira/auth.key" # Teleport GRPC client secret key
+client-crt = "/var/lib/teleport/plugins/jira/auth.crt" # Teleport GRPC client certificate
+root-cas = "/var/lib/teleport/plugins/jira/auth.cas"   # Teleport cluster CA certs
 
 [jira]
 url = "https://example.com/jira"    # JIRA URL. For JIRA Cloud, https://[my-jira].atlassian.net
@@ -129,39 +129,39 @@ project = "MYPROJ"                  # JIRA Project key
 [http]
 listen = ":8081"          # JIRA webhook listener
 # host = "example.com"    # Host name by which bot is accessible
-# https-key-file = "/var/lib/teleport/plugins/jirabot/server.key"  # TLS private key
-# https-cert-file = "/var/lib/teleport/plugins/jirabot/server.crt" # TLS certificate
+# https-key-file = "/var/lib/teleport/plugins/jira/server.key"  # TLS private key
+# https-cert-file = "/var/lib/teleport/plugins/jira/server.crt" # TLS certificate
 
 [log]
-output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/jirabot.log"
+output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/jira.log"
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN"`
 
 ```
 
 The `[teleport]` section describes where is the teleport service running, and what keys should the plugin use to authenticate itself. Use the keys that you've generated [above in exporting your Certificate section](#Export access-plugin Certificate).
 
-The `[jira]` section requires a few things: 
-1. Your Jira Cloud or Jira Server URL. For Jira Cloud, it looks something like yourcompany.atlassian.net. 
+The `[jira]` section requires a few things:
+1. Your Jira Cloud or Jira Server URL. For Jira Cloud, it looks something like yourcompany.atlassian.net.
 2. Your username on Jira, i.e. ben@gravitational.com
-3. Your Jira API token that you've created above. 
-4. And the Jira Project key, available in Project settings. 
+3. Your Jira API token that you've created above.
+4. And the Jira Project key, available in Project settings.
 
-`[http]` setting block describes how the Plugin's HTTP server works. The HTTP server is responsible for listening for updates from Jira, and processing updates, like when someone drags a task from Inbox to Approved column. 
+`[http]` setting block describes how the Plugin's HTTP server works. The HTTP server is responsible for listening for updates from Jira, and processing updates, like when someone drags a task from Inbox to Approved column.
 
-You must provide an address the server should listen on, and a certificate to use, unless you plan on running with `--insecure-no-tls`, which we don't recommend in production. 
+You must provide an address the server should listen on, and a certificate to use, unless you plan on running with `--insecure-no-tls`, which we don't recommend in production.
 
 
 ## Testing
 
-You should be able to run the Teleport plugin now! 
+You should be able to run the Teleport plugin now!
 
 ```bash
-teleport-jirabot start
+teleport-jira start
 ```
 
-The log output should look familiar to what Teleport service logs. You should see that it connected to Teleport, and is listening for new Teleport requests and Jira webhooks. 
+The log output should look familiar to what Teleport service logs. You should see that it connected to Teleport, and is listening for new Teleport requests and Jira webhooks.
 
-Go ahead and test it: 
+Go ahead and test it:
 
 ```bash
 tsh login --request-roles=admin
