@@ -88,3 +88,8 @@ steps:
       source: /go/src/github.com/gravitational/teleport-plugins/build/*.tar.gz
       target: plugins/drone/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
+
+---
+kind: signature
+hmac: 873fe9c707259bc7ceeb273746450433dda17802c571398d13777a41c9451ed7
+
