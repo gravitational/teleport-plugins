@@ -58,8 +58,8 @@ depends_on:
 trigger:
   event:
     - tag
-  include:
-    ref:
+  ref:
+    include:
       - refs/tags/teleport-jira-*
 
 workspace:
@@ -76,7 +76,7 @@ steps:
       - git fetch --all --tags
       - git checkout $DRONE_TAG
       - mkdir -p build/
-      - make access-jira
+      - make release/access-jira
       - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
 
   - name: Upload to S3
@@ -105,8 +105,8 @@ depends_on:
 trigger:
   event:
     - tag
-  include:
-    ref:
+  ref:
+    include:
       - refs/tags/teleport-slack-*
 
 workspace:
@@ -123,7 +123,7 @@ steps:
       - git fetch --all --tags
       - git checkout $DRONE_TAG
       - mkdir -p build/
-      - make access-slack
+      - make release/access-slack
       - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
 
   - name: Upload to S3
@@ -152,8 +152,8 @@ depends_on:
 trigger:
   event:
     - tag
-  include:
-    ref:
+  ref:
+    include:
       - refs/tags/teleport-mattermost-*
 
 workspace:
@@ -170,7 +170,7 @@ steps:
       - git fetch --all --tags
       - git checkout $DRONE_TAG
       - mkdir -p build/
-      - make access-mattermost
+      - make release/access-mattermost
       - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
 
   - name: Upload to S3
@@ -199,8 +199,8 @@ depends_on:
 trigger:
   event:
     - tag
-  include:
-    ref:
+  ref:
+    include:
       - refs/tags/teleport-pagerduty-*
 
 workspace:
@@ -217,7 +217,7 @@ steps:
       - git fetch --all --tags
       - git checkout $DRONE_TAG
       - mkdir -p build/
-      - make access-pagerduty
+      - make release/access-pagerduty
       - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
 
   - name: Upload to S3
@@ -281,6 +281,6 @@ steps:
 
 ---
 kind: signature
-hmac: 97e94a61bdba7d19066f87484188483daaeb57ae9d732cf60cd02fdd7d628afa
+hmac: 91aaa4ca10520b1a1c315c1ca01d541b9e79b5c54fa7f62bc2a567a43d6c461c
 
 ...
