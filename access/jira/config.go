@@ -29,12 +29,12 @@ type Config struct {
 	Log  utils.LogConfig  `toml:"log"`
 }
 
-const exampleConfig = `# example jirabot configuration TOML file
+const exampleConfig = `# example jira plugin configuration TOML file
 [teleport]
 auth-server = "example.com:3025"  # Auth GRPC API address
-client-key = "/var/lib/teleport/plugins/jirabot/auth.key" # Teleport GRPC client secret key
-client-crt = "/var/lib/teleport/plugins/jirabot/auth.crt" # Teleport GRPC client certificate
-root-cas = "/var/lib/teleport/plugins/jirabot/auth.cas"   # Teleport cluster CA certs
+client-key = "/var/lib/teleport/plugins/jira/auth.key" # Teleport GRPC client secret key
+client-crt = "/var/lib/teleport/plugins/jira/auth.crt" # Teleport GRPC client certificate
+root-cas = "/var/lib/teleport/plugins/jira/auth.cas"   # Teleport cluster CA certs
 
 [jira]
 url = "https://example.com/jira"    # JIRA URL. For JIRA Cloud, https://[my-jira].atlassian.net
@@ -45,11 +45,11 @@ project = "MYPROJ"                  # JIRA Project key
 [http]
 listen = ":8081"          # JIRA webhook listener
 # host = "example.com"    # Host name by which bot is accessible
-# https-key-file = "/var/lib/teleport/plugins/jirabot/server.key"  # TLS private key
-# https-cert-file = "/var/lib/teleport/plugins/jirabot/server.crt" # TLS certificate
+# https-key-file = "/var/lib/teleport/plugins/jira/server.key"  # TLS private key
+# https-cert-file = "/var/lib/teleport/plugins/jira/server.crt" # TLS certificate
 
 [log]
-output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/jirabot.log"
+output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/jira.log"
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
 `
 

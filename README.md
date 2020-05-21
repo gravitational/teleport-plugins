@@ -21,21 +21,21 @@ a sample configuration file.
 
 ### Slack Bot
 
-A basic slack plugin (WIP) can be found in [access/slackbot](./access/slackbot).
-The plugin can be built with `make access-slackbot` and instructions for configuring the
-plugin can be found in the plugin's [README](./access/slackbot/README.md).
+A basic slack plugin (WIP) can be found in [access/slack](./access/slack).
+The plugin can be built with `make access-slack` and instructions for configuring the
+plugin can be found in the plugin's [README](./access/slack/README.md).
 
 ### JIRA Bot
 
-A basic Teleport / JIRA integration (WIP) can be found in [access/jirabot](./access/jirabot).
-The plugin can be built with `make access-jirabot` and instructions for configuring the
-plugin can be found in the plugin's [README](./access/jirabot/README.md).
+A basic Teleport / JIRA integration (WIP) can be found in [access/jira](./access/jira).
+The plugin can be built with `make access-jira` and instructions for configuring the
+plugin can be found in the plugin's [README](./access/jira/README.md).
 
 ### Mattermost Bot
 
-Mattermost is a private cloud messaging platform (think Slack for enterprise). Teleport provides a 
+Mattermost is a private cloud messaging platform (think Slack for enterprise). Teleport provides a
 Mattermost integration that supports request flows similar to Slack integration above.
-The plugin can be built with `make access-mattermost`, and instructions for configuring the 
+The plugin can be built with `make access-mattermost`, and instructions for configuring the
 plugin can be found in the plugin's [README](./access/mattermost/README.md).
 
 ### Pagerduty Extension

@@ -34,41 +34,37 @@ import (
 )
 
 const (
-	// ActionApprove uniquely identifies the approve button in events.
-	ActionApprove = "approve_request"
-	// ActionDeny uniquely identifies the deny button in events.
-	ActionDeny = "deny_request"
-
-	DefaultDir = "/var/lib/teleport/plugins/slackbot"
+	DefaultDir = "/var/lib/teleport/plugins/jira"
 )
 
-type requestData struct {
-	user  string
-	roles []string
+type RequestData struct {
+	User    string
+	Roles   []string
+	Created time.Time
 }
 
-type slackData struct {
-	channelID string
-	timestamp string
+type JiraData struct {
+	ID  string
+	Key string
 }
 
-type pluginData struct {
-	requestData
-	slackData
+type PluginData struct {
+	RequestData
+	JiraData
 }
 
 type logFields = log.Fields
 
 func main() {
 	utils.InitLogger()
-	app := kingpin.New("slackbot", "Teleport plugin for access requests approval via Slack.")
+	app := kingpin.New("teleport-jira", "Teleport plugin for access requests approval via JIRA.")
 
 	app.Command("configure", "Prints an example .TOML configuration file.")
 
-	startCmd := app.Command("start", "Starts a the Teleport Slack plugin.")
+	startCmd := app.Command("start", "Starts a Teleport JIRA plugin.")
 	path := startCmd.Flag("config", "TOML config file path").
 		Short('c').
-		Default("/etc/teleport-slackbot.toml").
+		Default("/etc/teleport-jira.toml").
 		String()
 	debug := startCmd.Flag("debug", "Enable verbose logging to stderr").
 		Short('d').
@@ -142,7 +138,7 @@ func NewApp(conf Config) (*App, error) {
 func (a *App) Run(ctx context.Context) error {
 	var err error
 
-	log.Infof("Starting Teleport Access Slackbot %s:%s", Version, Gitref)
+	log.Infof("Starting Teleport Access JIRAbot %s:%s", Version, Gitref)
 
 	tlsConf, err := access.LoadTLSConfig(
 		a.conf.Teleport.ClientCrt,
@@ -161,22 +157,24 @@ func (a *App) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	a.bot = NewBot(&a.conf)
+	a.bot, err = NewBot(&a.conf)
+	if err != nil {
+		return trace.Wrap(err)
+	}
 
-	// Create callback server providing a.OnSlackCallback as a callback function.
-	callbackServer, err := NewCallbackServer(&a.conf, a.OnSlackCallback)
+	// Create webhook server prividing a.OnJIRAWebhook as a callback function
+	webhookServer, err := NewWebhookServer(&a.conf, a.OnJIRAWebhook)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
 	a.accessClient, err = access.NewClient(
 		ctx,
-		"slackbot",
+		"jira",
 		a.conf.Teleport.AuthServer,
 		tlsConf,
 	)
 	if err != nil {
-		cancel()
 		return trace.Wrap(err)
 	}
 
@@ -186,25 +184,32 @@ func (a *App) Run(ctx context.Context) error {
 	var versionErr, httpErr, watcherErr error
 
 	a.Spawn(func(ctx context.Context) {
-		versionErr = trace.Wrap(
-			a.checkTeleportVersion(ctx),
-		)
-		if versionErr != nil {
+		if versionErr = trace.Wrap(a.checkTeleportVersion(ctx)); versionErr != nil {
 			a.Terminate()
 			return
 		}
 
 		a.Spawn(func(ctx context.Context) {
-			defer a.Terminate() // if callback server failed, shutdown everything
+			log.Debug("Starting JIRA API health check...")
+			if err := a.bot.HealthCheck(ctx); err != nil {
+				log.WithError(err).Error("JIRA API health check failed")
+				a.Terminate()
+				return
+			}
+			log.Debug("JIRA API health check finished ok")
+		})
+
+		a.Spawn(func(ctx context.Context) {
+			defer a.Terminate() // if webhook server failed, shutdown everything
 
 			a.OnTerminate(func(ctx context.Context) {
-				if err := callbackServer.Shutdown(ctx); err != nil {
+				if err := webhookServer.Shutdown(ctx); err != nil {
 					log.WithError(err).Error("HTTP server graceful shutdown failed")
 				}
 			})
 
 			httpErr = trace.Wrap(
-				callbackServer.Run(ctx),
+				webhookServer.Run(ctx),
 			)
 		})
 
@@ -319,113 +324,113 @@ func (a *App) WatchRequests(ctx context.Context) error {
 	}
 }
 
-// OnSlackCallback processes Slack actions and updates original Slack message with a new status
-func (a *App) OnSlackCallback(ctx context.Context, cb Callback) error {
-	log := log.WithField("slack_http_id", cb.HTTPRequestID)
+// OnJIRAWebhook processes JIRA webhook and updates the status of an issue
+func (a *App) OnJIRAWebhook(ctx context.Context, webhook Webhook) error {
+	log := log.WithField("jira_http_id", webhook.HTTPRequestID)
 
-	if len(cb.ActionCallback.BlockActions) != 1 {
-		log.WithField("slack_block_actions", cb.ActionCallback.BlockActions).Warn("Received more than one Slack action")
-		return trace.Errorf("expected exactly one block action")
+	if webhook.WebhookEvent != "jira:issue_updated" || webhook.IssueEventTypeName != "issue_generic" {
+		return nil
 	}
 
-	action := cb.ActionCallback.BlockActions[0]
-	reqID := action.Value
-	actionID := action.ActionID
+	if webhook.Issue == nil {
+		return trace.Errorf("got webhook without issue info")
+	}
 
-	var slackStatus string
+	issue, err := a.bot.GetIssue(ctx, webhook.Issue.ID)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	statusName := strings.ToLower(issue.Fields.Status.Name)
+	if statusName == "pending" {
+		log.Info("Issue is pending, ignoring it")
+		return nil
+	}
+
+	reqID, err := issue.GetRequestID()
+	if err != nil {
+		return trace.Wrap(err)
+	}
 
 	req, err := a.accessClient.GetRequest(ctx, reqID)
-	var reqData requestData
 
 	if err != nil {
 		if trace.IsNotFound(err) {
-			// Request wasn't found, need to expire it's post in Slack
-			slackStatus = "EXPIRED"
-
-			// And try to fetch its request data if it exists
-			var pluginData pluginData
-			pluginData, _ = a.getPluginData(ctx, reqID)
-			reqData = pluginData.requestData
-		} else {
-			return trace.Wrap(err)
+			log.WithError(err).WithField("request_id", reqID).Warning("Cannot process expired request")
+			return nil
 		}
-	} else {
-		if req.State != access.StatePending {
-			return trace.Errorf("cannot process not pending request: %+v", req)
-		}
-
-		logger := log.WithFields(logFields{
-			"slack_user":    cb.User.Name,
-			"slack_channel": cb.Channel.Name,
-		})
-
-		userEmail, err := a.bot.GetUserEmail(ctx, cb.User.ID)
-		if err != nil {
-			logger.WithError(err).Warning("Failed to fetch slack user email")
-		}
-
-		logger = logger.WithFields(logFields{
-			"slack_user_email": userEmail,
-			"request_id":       req.ID,
-			"request_user":     req.User,
-			"request_roles":    req.Roles,
-		})
-
-		var (
-			reqState   access.State
-			resolution string
-		)
-
-		switch actionID {
-		case ActionApprove:
-			reqState = access.StateApproved
-			slackStatus = "APPROVED"
-			resolution = "approved"
-		case ActionDeny:
-			reqState = access.StateDenied
-			slackStatus = "DENIED"
-			resolution = "denied"
-		default:
-			return trace.BadParameter("Unknown ActionID: %s", actionID)
-		}
-
-		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
-			return trace.Wrap(err)
-		}
-		logger.Infof("Slack user %s the request", resolution)
-
-		// Simply fill reqData from the request itself.
-		reqData = requestData{user: req.User, roles: req.Roles}
+		return trace.Wrap(err)
+	}
+	if req.State != access.StatePending {
+		return trace.Errorf("cannot process not pending request: %+v", req)
 	}
 
-	// In real world it cannot be empty. This is for tests.
-	if cb.ResponseURL != "" {
-		a.Spawn(func(ctx context.Context) {
-			if err := a.bot.Respond(ctx, req.ID, reqData, slackStatus, cb.ResponseURL); err != nil {
-				log.WithError(err).WithField("request_id", req.ID).Error("Cannot update Slack message")
-				return
-			}
-			log.WithField("request_id", req.ID).Info("Successfully updated Slack message")
-		})
+	pluginData, err := a.getPluginData(ctx, reqID)
+	if err != nil {
+		return trace.Wrap(err)
 	}
+
+	log = log.WithFields(logFields{
+		"jira_issue_id":  issue.ID,
+		"jira_issue_key": issue.Key,
+	})
+
+	if pluginData.JiraData.ID != issue.ID {
+		log.WithField("plugin_data_issue_id", pluginData.JiraData.ID).Debug("plugin_data.issue_id does not match issue.id")
+		return trace.Errorf("issue_id from request's plugin_data does not match")
+	}
+
+	var (
+		reqState   access.State
+		resolution string
+	)
+
+	issueUpdate, err := issue.GetLastUpdate(statusName)
+	if err != nil {
+		log.WithError(err).Error("Cannot determine who updated the issue status")
+	}
+
+	log = log.WithFields(logFields{
+		"jira_user_email": issueUpdate.Author.EmailAddress,
+		"jira_user_name":  issueUpdate.Author.DisplayName,
+		"request_id":      req.ID,
+		"request_user":    req.User,
+		"request_roles":   req.Roles,
+	})
+
+	switch statusName {
+	case "approved":
+		reqState = access.StateApproved
+		resolution = "approved"
+	case "denied":
+		reqState = access.StateDenied
+		resolution = "denied"
+	default:
+		return trace.BadParameter("unknown JIRA status %q", statusName)
+	}
+
+	if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
+		return trace.Wrap(err)
+	}
+	log.Infof("JIRA user %s the request", resolution)
 
 	return nil
 }
 
 func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
-	reqData := requestData{user: req.User, roles: req.Roles}
-	slackData, err := a.bot.Post(ctx, req.ID, reqData)
+	reqData := RequestData{User: req.User, Roles: req.Roles, Created: req.Created}
+	jiraData, err := a.bot.CreateIssue(ctx, req.ID, reqData)
 
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
 	log.WithFields(logFields{
-		"slack_channel":   slackData.channelID,
-		"slack_timestamp": slackData.timestamp,
-	}).Info("Successfully posted to Slack")
+		"jira_issue_id":  jiraData.ID,
+		"jira_issue_key": jiraData.Key,
+	}).Info("JIRA Issue created")
 
-	err = a.setPluginData(ctx, req.ID, pluginData{reqData, slackData})
+	err = a.setPluginData(ctx, req.ID, PluginData{reqData, jiraData})
 
 	return trace.Wrap(err)
 }
@@ -441,12 +446,7 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	reqData, slackData := pluginData.requestData, pluginData.slackData
-	if len(slackData.channelID) == 0 || len(slackData.timestamp) == 0 {
-		return trace.NotFound("plugin data was expired")
-	}
-
-	if err := a.bot.Expire(ctx, reqID, reqData, slackData); err != nil {
+	if err := a.bot.ExpireIssue(ctx, reqID, pluginData.RequestData, pluginData.JiraData); err != nil {
 		return trace.Wrap(err)
 	}
 
@@ -455,23 +455,27 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 	return nil
 }
 
-func (a *App) getPluginData(ctx context.Context, reqID string) (data pluginData, err error) {
+func (a *App) getPluginData(ctx context.Context, reqID string) (data PluginData, err error) {
 	dataMap, err := a.accessClient.GetPluginData(ctx, reqID)
 	if err != nil {
 		return data, trace.Wrap(err)
 	}
-	data.user = dataMap["user"]
-	data.roles = strings.Split(dataMap["roles"], ",")
-	data.channelID = dataMap["channel_id"]
-	data.timestamp = dataMap["timestamp"]
+	data.User = dataMap["user"]
+	data.Roles = strings.Split(dataMap["roles"], ",")
+	var created int64
+	fmt.Sscanf(dataMap["created"], "%d", &created)
+	data.Created = time.Unix(created, 0)
+	data.ID = dataMap["issue_id"]
+	data.Key = dataMap["issue_key"]
 	return
 }
 
-func (a *App) setPluginData(ctx context.Context, reqID string, data pluginData) error {
+func (a *App) setPluginData(ctx context.Context, reqID string, data PluginData) error {
 	return a.accessClient.UpdatePluginData(ctx, reqID, access.PluginData{
-		"user":       data.user,
-		"roles":      strings.Join(data.roles, ","),
-		"channel_id": data.channelID,
-		"timestamp":  data.timestamp,
+		"issue_id":  data.ID,
+		"issue_key": data.Key,
+		"user":      data.User,
+		"roles":     strings.Join(data.Roles, ","),
+		"created":   fmt.Sprintf("%d", data.Created.Unix()),
 	}, nil)
 }

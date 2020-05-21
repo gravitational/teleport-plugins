@@ -42,7 +42,7 @@ service-id = "PIJ90N7"        # PagerDuty service id
 
 [http]
 listen = ":8081"          # PagerDuty webhook listener
-base-url = "https://teleport-pagerduty.infra.yourcorp.com" # The public address of the teleport-pagerduty webhook listener. 
+base-url = "https://teleport-pagerduty.infra.yourcorp.com" # The public address of the teleport-pagerduty webhook listener.
 # host = "example.com"    # Host name by which bot is accessible
 # https-key-file = "/var/lib/teleport/plugins/pagerduty/server.key"  # TLS private key
 # https-cert-file = "/var/lib/teleport/plugins/pagerduty/server.crt" # TLS certificate

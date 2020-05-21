@@ -5,8 +5,8 @@ Below are the items that should be manually tested with each release of Teleport
 These tests should be run on both a fresh install of the version to be released
 as well as an upgrade of the previous version of Teleport Plugin.
 
-This test plan is based on [Teleport's](https://github.com/gravitational/teleport/blob/master/docs/testplan.md), 
-it should be run on plugin release and with each new Teleport Release. 
+This test plan is based on [Teleport's](https://github.com/gravitational/teleport/blob/master/docs/testplan.md),
+it should be run on plugin release and with each new Teleport Release.
 
 ### General Plugin Setup
 
@@ -15,8 +15,8 @@ it should be run on plugin release and with each new Teleport Release.
 
 ### Slack Plugin
 
-- [ ] Creating Slack Plugin and OAuth token instructions are up-to-date. 
-- [ ] `teleport-slackbot configure` outputs valid TOML
+- [ ] Creating Slack Plugin and OAuth token instructions are up-to-date.
+- [ ] `teleport-slack configure` outputs valid TOML
 - [ ] Plugin started with TLS
 - [ ] Plugin started --insecure-no-tls
 
@@ -32,7 +32,7 @@ it should be run on plugin release and with each new Teleport Release.
 
 ### Mattermost Plugin
 
-- [ ] Creating Mattermost Plugin and OAuth token instructions are up-to-date. 
+- [ ] Creating Mattermost Plugin and OAuth token instructions are up-to-date.
 - [ ] `teleport-mattermost configure` outputs valid TOML
 - [ ] Plugin started with TLS
 - [ ] Plugin started --insecure-no-tls
@@ -49,7 +49,7 @@ it should be run on plugin release and with each new Teleport Release.
 
 ### Pagerduty Plugin
 
-- [ ] Creating PagerDuty Plugin and OAuth token instructions are up-to-date. 
+- [ ] Creating PagerDuty Plugin and OAuth token instructions are up-to-date.
 - [ ] `teleport-pagerduty configure` outputs valid TOML
 - [ ] Plugin started with TLS
 - [ ] Plugin started --insecure-no-tls
@@ -67,8 +67,8 @@ it should be run on plugin release and with each new Teleport Release.
 
 ### Jira Cloud Plugin
 
-- [ ] Setting up Jira Board and OAuth token instructions are up-to-date. 
-- [ ] `teleport-jirabot configure` outputs valid TOML
+- [ ] Setting up Jira Board and OAuth token instructions are up-to-date.
+- [ ] `teleport-jira configure` outputs valid TOML
 - [ ] Plugin started with TLS
 - [ ] Plugin started --insecure-no-tls
 
@@ -85,8 +85,8 @@ it should be run on plugin release and with each new Teleport Release.
 ### Jira Server Plugin
 
 - [ ] Setup has been configured using Jira Server 8+
-- [ ] Setting up Jira Board and OAuth token instructions are up-to-date. 
-- [ ] `teleport-jirabot configure` outputs valid TOML
+- [ ] Setting up Jira Board and OAuth token instructions are up-to-date.
+- [ ] `teleport-jira configure` outputs valid TOML
 - [ ] Plugin started with TLS
 - [ ] Plugin started --insecure-no-tls
 
@@ -103,7 +103,7 @@ it should be run on plugin release and with each new Teleport Release.
 ### Gitlab Plugin
 
 - [ ] Setup has been configured using [Gitlab](https://about.gitlab.com/install/)
-- [ ] Setting up Github Board and OAuth token instructions are up-to-date. 
+- [ ] Setting up Github Board and OAuth token instructions are up-to-date.
 - [ ] `teleport-gitlab configure` outputs valid TOML
 - [ ] Plugin started with TLS
 - [ ] Plugin started --insecure-no-tls
