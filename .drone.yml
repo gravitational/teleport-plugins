@@ -49,7 +49,7 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
-name: build
+name: build-jira
 
 depends_on:
   - lint
@@ -58,6 +58,9 @@ depends_on:
 trigger:
   event:
     - tag
+  include:
+    ref:
+      - refs/tags/teleport-jira-*
 
 workspace:
   path: /go/src/github.com/gravitational/teleport-plugins
@@ -70,9 +73,10 @@ steps:
     image: golang:1.13.2
     commands:
       - git clone https://github.com/gravitational/teleport-plugins.git .
-      - git checkout $DRONE_COMMIT
+      - git fetch --all --tags
+      - git checkout $DRONE_TAG
       - mkdir -p build/
-      - make releases
+      - make access-jira
       - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
 
   - name: Upload to S3
@@ -90,6 +94,193 @@ steps:
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
 
 ---
-kind: signature
-hmac: 873fe9c707259bc7ceeb273746450433dda17802c571398d13777a41c9451ed7
+kind: pipeline
+type: kubernetes
+name: build-slack
 
+depends_on:
+  - lint
+  - test
+
+trigger:
+  event:
+    - tag
+  include:
+    ref:
+      - refs/tags/teleport-slack-*
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+clone:
+  disable: true
+
+steps:
+  - name: Build artifacts
+    image: golang:1.13.2
+    commands:
+      - git clone https://github.com/gravitational/teleport-plugins.git .
+      - git fetch --all --tags
+      - git checkout $DRONE_TAG
+      - mkdir -p build/
+      - make access-slack
+      - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
+
+  - name: Upload to S3
+    image: plugins/s3
+    settings:
+      bucket:
+        from_secret: AWS_S3_BUCKET
+      access_key:
+        from_secret: AWS_ACCESS_KEY_ID
+      secret_key:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      region: us-west-2
+      source: /go/src/github.com/gravitational/teleport-plugins/build/*.tar.gz
+      target: plugins/drone/tag/${DRONE_TAG}
+      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
+
+---
+kind: pipeline
+type: kubernetes
+name: build-mattermost
+
+depends_on:
+  - lint
+  - test
+
+trigger:
+  event:
+    - tag
+  include:
+    ref:
+      - refs/tags/teleport-mattermost-*
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+clone:
+  disable: true
+
+steps:
+  - name: Build artifacts
+    image: golang:1.13.2
+    commands:
+      - git clone https://github.com/gravitational/teleport-plugins.git .
+      - git fetch --all --tags
+      - git checkout $DRONE_TAG
+      - mkdir -p build/
+      - make access-mattermost
+      - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
+
+  - name: Upload to S3
+    image: plugins/s3
+    settings:
+      bucket:
+        from_secret: AWS_S3_BUCKET
+      access_key:
+        from_secret: AWS_ACCESS_KEY_ID
+      secret_key:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      region: us-west-2
+      source: /go/src/github.com/gravitational/teleport-plugins/build/*.tar.gz
+      target: plugins/drone/tag/${DRONE_TAG}
+      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
+
+---
+kind: pipeline
+type: kubernetes
+name: build-pagerduty
+
+depends_on:
+  - lint
+  - test
+
+trigger:
+  event:
+    - tag
+  include:
+    ref:
+      - refs/tags/teleport-pagerduty-*
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+clone:
+  disable: true
+
+steps:
+  - name: Build artifacts
+    image: golang:1.13.2
+    commands:
+      - git clone https://github.com/gravitational/teleport-plugins.git .
+      - git fetch --all --tags
+      - git checkout $DRONE_TAG
+      - mkdir -p build/
+      - make access-pagerduty
+      - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
+
+  - name: Upload to S3
+    image: plugins/s3
+    settings:
+      bucket:
+        from_secret: AWS_S3_BUCKET
+      access_key:
+        from_secret: AWS_ACCESS_KEY_ID
+      secret_key:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      region: us-west-2
+      source: /go/src/github.com/gravitational/teleport-plugins/build/*.tar.gz
+      target: plugins/drone/tag/${DRONE_TAG}
+      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
+
+---
+kind: pipeline
+type: kubernetes
+name: promote-artifact
+
+trigger:
+  event:
+    - promote
+  target:
+    - production
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+clone:
+  disable: true
+
+steps:
+  - name: Download artifact from S3 artifact publishing bucket
+    image: amazon/aws-cli
+    environment:
+      AWS_S3_BUCKET:
+        from_secret: AWS_S3_BUCKET
+      AWS_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      AWS_REGION: us-west-2
+    commands:
+      - aws s3 sync s3://${AWS_S3_BUCKET}/plugins/drone/tag/${DRONE_TAG}/* .
+
+  - name: Upload artifact to production S3 bucket
+    image: plugins/s3
+    settings:
+      bucket:
+        from_secret: PRODUCTION_AWS_S3_BUCKET
+      access_key:
+        from_secret: PRODUCTION_AWS_ACCESS_KEY_ID
+      secret_key:
+        from_secret: PRODUCTION_AWS_SECRET_ACCESS_KEY
+      region: us-west-2
+      source: /go/src/github.com/gravitational/teleport-plugins/*
+      target: teleport-plugins/${DRONE_TAG##*-v}/
+      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/
+
+---
+kind: signature
+hmac: 97e94a61bdba7d19066f87484188483daaeb57ae9d732cf60cd02fdd7d628afa
+
+...
