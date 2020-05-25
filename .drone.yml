@@ -78,6 +78,8 @@ steps:
       - mkdir -p build/
       - make release/access-jira
       - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
+      - cd build
+      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.tar.gz.sha256; done
 
   - name: Upload to S3
     image: plugins/s3
@@ -89,7 +91,7 @@ steps:
       secret_key:
         from_secret: AWS_SECRET_ACCESS_KEY
       region: us-west-2
-      source: /go/src/github.com/gravitational/teleport-plugins/build/*.tar.gz
+      source: /go/src/github.com/gravitational/teleport-plugins/build/
       target: plugins/drone/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
 
@@ -281,6 +283,6 @@ steps:
 
 ---
 kind: signature
-hmac: 754be37f9698327ad31e60fd28293144194640a3ef6d0a9e589871fe52b0ffb2
+hmac: c1ea62a7c3b4505c5716b97974d8bd19dfa5365b456461452aa4242945327490
 
 ...
