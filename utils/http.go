@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"fmt"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -153,6 +154,21 @@ func NewHTTP(config HTTPConfig) (*HTTP, error) {
 		router,
 		http.Server{Addr: config.Listen, Handler: handler, TLSConfig: tlsConfig},
 	}, nil
+}
+
+func BuildURLPath(args ...interface{}) string {
+	var pathArgs []string
+	for _, a := range args {
+		var str string
+		switch v := a.(type) {
+		case string:
+			str = v
+		default:
+			str = fmt.Sprint(v)
+		}
+		pathArgs = append(pathArgs, url.PathEscape(str))
+	}
+	return path.Join(pathArgs...)
 }
 
 // ListenAndServe runs a http(s) server on a provided port.

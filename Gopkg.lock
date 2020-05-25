@@ -328,6 +328,14 @@
   revision = "811b1089cde9dad18d4d0c2d09fbdbf28dbd27a5"
 
 [[projects]]
+  digest = "1:0263ae2c9347b747b665889ab7dc5b1117bd978463e2747631038f76d5ee4dd2"
+  name = "github.com/go-resty/resty"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "bcec4e0910e82afff8e1e159e83e734739e9229f"
+  version = "v2.2.0"
+
+[[projects]]
   digest = "1:983cb7d70588854e2706e32c61698bbf0eab4956fca89e86c1c10d7213679a0e"
   name = "github.com/gogo/protobuf"
   packages = [
@@ -1024,6 +1032,14 @@
   revision = "3988ac14d6f66842abf574a0615d2935ef5dab9d"
 
 [[projects]]
+  digest = "1:39b88e09bb30e15e1a016d64dd51c4e0bbe89d4eae615759460649697a976c7c"
+  name = "go.etcd.io/bbolt"
+  packages = ["."]
+  pruneopts = "NUT"
+  revision = "68cc10a767ea1c6b9e8dcb9847317ff192d6d974"
+  version = "v1.3.4"
+
+[[projects]]
   digest = "1:3e41120dcc2ad5e0a56f24e677c4f647bf392a1eadb9533f284af98a041683ac"
   name = "go.etcd.io/etcd"
   packages = [
@@ -1131,7 +1147,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:d90ac66cf4d0ca365969d0484c778cd518310fc21462314a290a685bca722cf3"
+  digest = "1:29c21793954d04a2bb262631f2e9181245a69475c8c9fecc5f48400602236b3d"
   name = "golang.org/x/net"
   packages = [
     "context",
@@ -1143,6 +1159,7 @@
     "http2/hpack",
     "idna",
     "internal/timeseries",
+    "publicsuffix",
     "trace",
     "websocket",
   ]
@@ -1516,6 +1533,7 @@
   analyzer-version = 1
   input-imports = [
     "github.com/PagerDuty/go-pagerduty",
+    "github.com/go-resty/resty",
     "github.com/gravitational/kingpin",
     "github.com/gravitational/teleport/integration",
     "github.com/gravitational/teleport/lib/auth/proto",
@@ -1531,6 +1549,7 @@
     "github.com/nlopes/slack/slacktest",
     "github.com/pelletier/go-toml",
     "github.com/sirupsen/logrus",
+    "go.etcd.io/bbolt",
     "google.golang.org/grpc",
     "google.golang.org/grpc/codes",
     "google.golang.org/grpc/credentials",
