@@ -277,7 +277,7 @@ steps:
     commands:
       - aws s3 sync s3://$AWS_S3_BUCKET/plugins/drone/tag/$DRONE_TAG/ .
 
-  - name: Upload artifact to production S3 bucket
+  - name: Upload artifact to production S3 bucket with public read access
     image: plugins/s3
     settings:
       bucket:
@@ -287,12 +287,13 @@ steps:
       secret_key:
         from_secret: PRODUCTION_AWS_SECRET_ACCESS_KEY
       region: us-east-1
+      acl: public-read
       source: /go/src/github.com/gravitational/teleport-plugins/*
       target: teleport-plugins/${DRONE_TAG##*-v}/
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/
 
 ---
 kind: signature
-hmac: 6244c2d0beb3918765026788b529d4f15afb08c03a55e265ddc9a94bd07f710f
+hmac: e9dc1da5a62aefe5f1c43cd1c55ce267fc28b107adfb3f5b15aeefa7196a3690
 
 ...
