@@ -79,7 +79,7 @@ steps:
       - make release/access-jira
       - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
-      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.tar.gz.sha256; done
+      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
       - ls -l .
 
   - name: Upload to S3
@@ -129,7 +129,7 @@ steps:
       - make release/access-slack
       - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
-      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.tar.gz.sha256; done
+      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
       - ls -l .
 
   - name: Upload to S3
@@ -179,7 +179,7 @@ steps:
       - make release/access-mattermost
       - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
-      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.tar.gz.sha256; done
+      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
       - ls -l .
 
   - name: Upload to S3
@@ -229,7 +229,7 @@ steps:
       - make release/access-pagerduty
       - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
-      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.tar.gz.sha256; done
+      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
       - ls -l .
 
   - name: Upload to S3
@@ -293,6 +293,6 @@ steps:
 
 ---
 kind: signature
-hmac: efd965c134060989e63d9f350470f92e070d5c868c89b17fbcde03d8826ed197
+hmac: 6244c2d0beb3918765026788b529d4f15afb08c03a55e265ddc9a94bd07f710f
 
 ...
