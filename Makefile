@@ -47,9 +47,13 @@ release/access-mattermost:
 release/access-pagerduty:
 	make -C access/pagerduty clean release
 
+.PHONY: release/access-gitlab
+release/access-gitlab:
+	make -C access/gitlab clean release
+
 # Run all releases
 .PHONY: releases
-releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty
+releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-gitlab
 
 #
 # Lint the Go code.
