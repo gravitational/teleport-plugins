@@ -93,7 +93,7 @@ steps:
         from_secret: AWS_SECRET_ACCESS_KEY
       region: us-west-2
       source: /go/src/github.com/gravitational/teleport-plugins/build/*
-      target: plugins/drone/tag/${DRONE_TAG}
+      target: teleport-plugins/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
 
 ---
@@ -143,7 +143,7 @@ steps:
         from_secret: AWS_SECRET_ACCESS_KEY
       region: us-west-2
       source: /go/src/github.com/gravitational/teleport-plugins/build/*
-      target: plugins/drone/tag/${DRONE_TAG}
+      target: teleport-plugins/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
 
 ---
@@ -193,7 +193,7 @@ steps:
         from_secret: AWS_SECRET_ACCESS_KEY
       region: us-west-2
       source: /go/src/github.com/gravitational/teleport-plugins/build/*
-      target: plugins/drone/tag/${DRONE_TAG}
+      target: teleport-plugins/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
 
 ---
@@ -243,7 +243,7 @@ steps:
         from_secret: AWS_SECRET_ACCESS_KEY
       region: us-west-2
       source: /go/src/github.com/gravitational/teleport-plugins/build/*
-      target: plugins/drone/tag/${DRONE_TAG}
+      target: teleport-plugins/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
 
 ---
@@ -275,7 +275,7 @@ steps:
         from_secret: AWS_SECRET_ACCESS_KEY
       AWS_REGION: us-west-2
     commands:
-      - aws s3 sync s3://$AWS_S3_BUCKET/plugins/drone/tag/$DRONE_TAG/ .
+      - aws s3 sync s3://$AWS_S3_BUCKET/teleport-plugins/tag/$DRONE_TAG/ .
 
   - name: Upload artifact to production S3 bucket with public read access
     image: plugins/s3
@@ -294,6 +294,6 @@ steps:
 
 ---
 kind: signature
-hmac: e9dc1da5a62aefe5f1c43cd1c55ce267fc28b107adfb3f5b15aeefa7196a3690
+hmac: 6ccb278f33cb11ef7247a005b0e85c39c12138d750dcef7e3f9e7e1b88355ac6
 
 ...
