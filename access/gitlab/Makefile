@@ -1,4 +1,4 @@
-VERSION=0.1.0-dev.1
+VERSION=0.1.0-alpha.1
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-gitlab

@@ -249,6 +249,56 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
+name: build-gitlab
+
+depends_on:
+  - lint
+  - test
+
+trigger:
+  event:
+    - tag
+  ref:
+    include:
+      - refs/tags/teleport-gitlab-*
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+clone:
+  disable: true
+
+steps:
+  - name: Build artifacts
+    image: golang:1.13.2
+    commands:
+      - git clone https://github.com/gravitational/teleport-plugins.git .
+      - git fetch --all --tags
+      - git checkout $DRONE_TAG
+      - mkdir -p build/
+      - make release/access-gitlab
+      - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
+      - cd build
+      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
+      - ls -l .
+
+  - name: Upload to S3
+    image: plugins/s3
+    settings:
+      bucket:
+        from_secret: AWS_S3_BUCKET
+      access_key:
+        from_secret: AWS_ACCESS_KEY_ID
+      secret_key:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      region: us-west-2
+      source: /go/src/github.com/gravitational/teleport-plugins/build/*
+      target: teleport-plugins/tag/${DRONE_TAG}
+      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
+
+---
+kind: pipeline
+type: kubernetes
 name: promote-artifact
 
 trigger:
@@ -294,6 +344,6 @@ steps:
 
 ---
 kind: signature
-hmac: 6ccb278f33cb11ef7247a005b0e85c39c12138d750dcef7e3f9e7e1b88355ac6
+hmac: 181d0c0705db7a60daf4e5cd6b5aa449eddfe6695e3f66bb694b345d264d3c96
 
 ...
