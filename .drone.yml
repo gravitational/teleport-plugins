@@ -33,7 +33,8 @@ trigger:
     - tag
 
 workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
+  base: /go
+  path: src/github.com/gravitational/teleport-plugins
 
 clone:
   disable: true
@@ -380,6 +381,6 @@ steps:
 
 ---
 kind: signature
-hmac: 7c21ac68658d76e06fdc2c9825c500935ca9453eeb4c94662510a1a2a39a1620
+hmac: ba786b25f6afb51dffcf4e2cc4347de87921d6fabba2ba421a424f95d84e620d
 
 ...
