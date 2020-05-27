@@ -33,8 +33,7 @@ trigger:
     - tag
 
 workspace:
-  base: /go
-  path: src/github.com/gravitational/teleport-plugins
+  path: /go
 
 clone:
   disable: true
@@ -55,13 +54,13 @@ steps:
     region: us-west-2
     mount:
       - /go/cache
-      - /go/pkg/mod
 
 - name: Run tests
   image: golang:1.13.2
   environment:
     GOCACHE: /go/cache
   commands:
+    - cd /go/src/github.com/gravitational/teleport-plugins
     - git clone https://github.com/gravitational/teleport-plugins.git .
     - git checkout $DRONE_COMMIT
     - make test
@@ -381,6 +380,6 @@ steps:
 
 ---
 kind: signature
-hmac: ba786b25f6afb51dffcf4e2cc4347de87921d6fabba2ba421a424f95d84e620d
+hmac: 888ea5c938df62ccce525e0a535bcf678ef10c11be4f4fdcbd01d281f90c7563
 
 ...
