@@ -48,7 +48,6 @@ steps:
       from_secret: AWS_SECRET_ACCESS_KEY
   settings:
     restore: true
-    archive_format: gzip
     bucket:
       from_secret: AWS_S3_BUCKET
     region: us-west-2
@@ -76,7 +75,6 @@ steps:
       from_secret: AWS_SECRET_ACCESS_KEY
   settings:
     rebuild: true
-    archive_format: gzip
     bucket:
       from_secret: AWS_S3_BUCKET
     region: us-west-2
@@ -382,6 +380,6 @@ steps:
 
 ---
 kind: signature
-hmac: d5b362f208a5283e4454be607d94ebe49e53a568cd57acd292d6fa116489ed41
+hmac: cc9c7f65ee2b9e60eb3f28b795f5cec00bd200b904cf3ab5c706bfbda3be69d7
 
 ...
