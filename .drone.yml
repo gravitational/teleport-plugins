@@ -1,36 +1,11 @@
 ---
 kind: pipeline
 type: kubernetes
-name: lint
+name: restore-cache
 
 trigger:
   event:
     - pull_request
-    - tag
-
-workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
-
-clone:
-  disable: true
-
-steps:
-- name: Run linter
-  image: golangci/golangci-lint:v1.27.0
-  commands:
-    - git clone https://github.com/gravitational/teleport-plugins.git .
-    - git checkout $DRONE_COMMIT
-    - make lint
-
----
-kind: pipeline
-type: kubernetes
-name: test
-
-trigger:
-  event:
-    - pull_request
-    - tag
 
 workspace:
   path: /go
@@ -56,6 +31,57 @@ steps:
       - /go/cache
       - /go/pkg/mod
 
+---
+kind: pipeline
+type: kubernetes
+name: lint
+
+depends_on:
+  - restore_cache
+
+trigger:
+  event:
+    - pull_request
+    - tag
+
+workspace:
+  path: /go
+
+clone:
+  disable: true
+
+steps:
+- name: Run linter
+  image: golangci/golangci-lint:v1.27.0
+  environment:
+    GOCACHE: /go/cache
+  commands:
+    - mkdir -p /go/src/github.com/gravitational/teleport-plugins
+    - cd /go/src/github.com/gravitational/teleport-plugins
+    - git clone https://github.com/gravitational/teleport-plugins.git .
+    - git checkout $DRONE_COMMIT
+    - make lint
+
+---
+kind: pipeline
+type: kubernetes
+name: test
+
+depends_on:
+  - restore_cache
+
+trigger:
+  event:
+    - pull_request
+    - tag
+
+workspace:
+  path: /go
+
+clone:
+  disable: true
+
+steps:
 - name: Run tests
   image: golang:1.13.2
   environment:
@@ -67,6 +93,26 @@ steps:
     - git checkout $DRONE_COMMIT
     - make test
 
+---
+kind: pipeline
+type: kubernetes
+name: save-cache
+
+depends_on:
+  - lint
+  - test
+
+trigger:
+  event:
+    - pull_request
+
+workspace:
+  path: /go
+
+clone:
+  disable: true
+
+steps:
 - name: Save cache
   image: meltwater/drone-cache
   environment:
@@ -382,6 +428,6 @@ steps:
 
 ---
 kind: signature
-hmac: d5b362f208a5283e4454be607d94ebe49e53a568cd57acd292d6fa116489ed41
+hmac: 2ae667f6f73e7c41f4128e721f467e102b46f14a83c84cfa196192ff86c65292
 
 ...
