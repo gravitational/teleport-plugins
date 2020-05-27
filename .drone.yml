@@ -54,15 +54,15 @@ steps:
     region: us-west-2
     mount:
       - /go/cache
+      - /go/pkg/mod
 
 - name: Run tests
   image: golang:1.13.2
   environment:
     GOCACHE: /go/cache
-    WORKING_DIRECTORY: /go/src/github.com/gravitational/teleport-plugins
   commands:
-    - mkdir -p $WORKING_DIRECTORY
-    - cd $WORKING_DIRECTORY
+    - mkdir -p /go/src/github.com/gravitational/teleport-plugins
+    - cd /go/src/github.com/gravitational/teleport-plugins
     - git clone https://github.com/gravitational/teleport-plugins.git .
     - git checkout $DRONE_COMMIT
     - make test
@@ -382,6 +382,6 @@ steps:
 
 ---
 kind: signature
-hmac: 8d69fd5ea47f12dfd7b91799acce83b74dd6fa824310f1ae2509d240ae21317b
+hmac: d5b362f208a5283e4454be607d94ebe49e53a568cd57acd292d6fa116489ed41
 
 ...
