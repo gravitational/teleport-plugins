@@ -48,14 +48,18 @@ steps:
       from_secret: AWS_SECRET_ACCESS_KEY
   settings:
     restore: true
+    archive_format: gzip
     bucket:
       from_secret: AWS_S3_BUCKET
     region: us-west-2
     mount:
-      - '/root/.cache/go-build'
+      - /go/cache
+      - /go/pkg/mod
 
 - name: Run tests
   image: golang:1.13.2
+  environment:
+    GOCACHE: /go/cache
   commands:
     - git clone https://github.com/gravitational/teleport-plugins.git .
     - git checkout $DRONE_COMMIT
@@ -70,11 +74,13 @@ steps:
       from_secret: AWS_SECRET_ACCESS_KEY
   settings:
     rebuild: true
+    archive_format: gzip
     bucket:
       from_secret: AWS_S3_BUCKET
     region: us-west-2
     mount:
-      - '/root/.cache/go-build'
+      - /go/cache
+      - /go/pkg/mod
 
 ---
 kind: pipeline
@@ -374,6 +380,6 @@ steps:
 
 ---
 kind: signature
-hmac: 58c6b4d9959178e29e9212b2848bf8df06d58f9c59c18e6dcdabc524d1c7a8b1
+hmac: 7c21ac68658d76e06fdc2c9825c500935ca9453eeb4c94662510a1a2a39a1620
 
 ...
