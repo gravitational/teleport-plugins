@@ -15,12 +15,12 @@ clone:
   disable: true
 
 steps:
-- name: Run linter
-  image: golangci/golangci-lint:v1.27.0
-  commands:
-    - git clone https://github.com/gravitational/teleport-plugins.git .
-    - git checkout $DRONE_COMMIT
-    - make lint
+  - name: Run linter
+    image: golangci/golangci-lint:v1.27.0
+    commands:
+      - git clone https://github.com/gravitational/teleport-plugins.git .
+      - git checkout $DRONE_COMMIT
+      - make lint
 
 ---
 kind: pipeline
@@ -39,48 +39,50 @@ clone:
   disable: true
 
 steps:
-- name: Restore cache
-  image: meltwater/drone-cache
-  environment:
-    AWS_ACCESS_KEY_ID:
-      from_secret: AWS_ACCESS_KEY_ID
-    AWS_SECRET_ACCESS_KEY:
-      from_secret: AWS_SECRET_ACCESS_KEY
-  settings:
-    restore: true
-    bucket:
-      from_secret: AWS_S3_BUCKET
-    region: us-west-2
-    mount:
-      - /go/cache
-      - /go/pkg/mod
+  - name: Restore cache
+    image: meltwater/drone-cache
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+    settings:
+      restore: true
+      bucket:
+        from_secret: AWS_S3_BUCKET
+      archive_format: gzip
+      region: us-west-2
+      mount:
+        - /go/cache
+        - /go/pkg/mod
 
-- name: Run tests
-  image: golang:1.13.2
-  environment:
-    GOCACHE: /go/cache
-  commands:
-    - mkdir -p /go/src/github.com/gravitational/teleport-plugins
-    - cd /go/src/github.com/gravitational/teleport-plugins
-    - git clone https://github.com/gravitational/teleport-plugins.git .
-    - git checkout $DRONE_COMMIT
-    - make test
+  - name: Run tests
+    image: golang:1.13.2
+    environment:
+      GOCACHE: /go/cache
+    commands:
+      - mkdir -p /go/src/github.com/gravitational/teleport-plugins
+      - cd /go/src/github.com/gravitational/teleport-plugins
+      - git clone https://github.com/gravitational/teleport-plugins.git .
+      - git checkout $DRONE_COMMIT
+      - make test
 
-- name: Save cache
-  image: meltwater/drone-cache
-  environment:
-    AWS_ACCESS_KEY_ID:
-      from_secret: AWS_ACCESS_KEY_ID
-    AWS_SECRET_ACCESS_KEY:
-      from_secret: AWS_SECRET_ACCESS_KEY
-  settings:
-    rebuild: true
-    bucket:
-      from_secret: AWS_S3_BUCKET
-    region: us-west-2
-    mount:
-      - /go/cache
-      - /go/pkg/mod
+  - name: Save cache
+    image: meltwater/drone-cache
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+    settings:
+      rebuild: true
+      bucket:
+        from_secret: AWS_S3_BUCKET
+      archive_format: gzip
+      region: us-west-2
+      mount:
+        - /go/cache
+        - /go/pkg/mod
 
 ---
 kind: pipeline
@@ -380,6 +382,6 @@ steps:
 
 ---
 kind: signature
-hmac: cc9c7f65ee2b9e60eb3f28b795f5cec00bd200b904cf3ab5c706bfbda3be69d7
+hmac: cd1d2f44701124de6deb899c7c9db3742dc5ea44b0ee2550e6c814d11d582687
 
 ...
