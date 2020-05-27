@@ -50,7 +50,7 @@ steps:
     restore: true
     bucket:
       from_secret: AWS_S3_BUCKET
-    region: us-east-1
+    region: us-west-2
     mount:
       - '/root/.cache/go-build'
 
@@ -72,7 +72,7 @@ steps:
     rebuild: true
     bucket:
       from_secret: AWS_S3_BUCKET
-    region: us-east-1
+    region: us-west-2
     mount:
       - '/root/.cache/go-build'
 
@@ -374,6 +374,6 @@ steps:
 
 ---
 kind: signature
-hmac: 3d25a62230e63f5352dc499dbb99be987739beea6a88ed50a24bcf8d019e936f
+hmac: 58c6b4d9959178e29e9212b2848bf8df06d58f9c59c18e6dcdabc524d1c7a8b1
 
 ...
