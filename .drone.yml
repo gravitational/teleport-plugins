@@ -41,12 +41,13 @@ clone:
 steps:
 - name: Restore cache
   image: meltwater/drone-cache
+  environment:
+    AWS_ACCESS_KEY_ID:
+      from_secret: AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY:
+      from_secret: AWS_SECRET_ACCESS_KEY
   settings:
     restore: true
-    access-key:
-      from_secret: AWS_ACCESS_KEY_ID
-    secret-key:
-      from_secret: AWS_SECRET_ACCESS_KEY
     bucket:
       from_secret: AWS_S3_BUCKET
     region: us-east-1
@@ -62,12 +63,13 @@ steps:
 
 - name: Save cache
   image: meltwater/drone-cache
+  environment:
+    AWS_ACCESS_KEY_ID:
+      from_secret: AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY:
+      from_secret: AWS_SECRET_ACCESS_KEY
   settings:
     rebuild: true
-    access-key:
-      from_secret: AWS_ACCESS_KEY_ID
-    secret-key:
-      from_secret: AWS_SECRET_ACCESS_KEY
     bucket:
       from_secret: AWS_S3_BUCKET
     region: us-east-1
@@ -372,6 +374,6 @@ steps:
 
 ---
 kind: signature
-hmac: 7854d3dc2ef995350da39f2e848738b01610d64b8c723055e62d7db137887272
+hmac: 3d25a62230e63f5352dc499dbb99be987739beea6a88ed50a24bcf8d019e936f
 
 ...
