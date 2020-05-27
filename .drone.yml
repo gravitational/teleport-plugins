@@ -37,7 +37,7 @@ type: kubernetes
 name: lint
 
 depends_on:
-  - restore_cache
+  - restore-cache
 
 trigger:
   event:
@@ -68,7 +68,7 @@ type: kubernetes
 name: test
 
 depends_on:
-  - restore_cache
+  - restore-cache
 
 trigger:
   event:
@@ -428,6 +428,6 @@ steps:
 
 ---
 kind: signature
-hmac: 2ae667f6f73e7c41f4128e721f467e102b46f14a83c84cfa196192ff86c65292
+hmac: 74d92675dcc4fb9da7568b2942eef3660a9ea0e16dac886ee8b0a8b0b7035315
 
 ...
