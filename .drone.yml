@@ -39,6 +39,11 @@ clone:
   disable: true
 
 steps:
+  - name: Write source branch to file
+    image: busybox
+    commands:
+      - echo $DRONE_SOURCE_BRANCH > .drone_source_branch.txt
+
   - name: Restore cache
     image: meltwater/drone-cache
     environment:
@@ -51,6 +56,7 @@ steps:
       bucket:
         from_secret: AWS_S3_BUCKET
       archive_format: gzip
+      cache_key: '{{checksum ".drone_source_branch.txt"}}'
       region: us-west-2
       mount:
         - /go/cache
@@ -79,6 +85,7 @@ steps:
       bucket:
         from_secret: AWS_S3_BUCKET
       archive_format: gzip
+      cache_key: '{{checksum ".drone_source_branch.txt"}}'
       region: us-west-2
       mount:
         - /go/cache
@@ -382,6 +389,6 @@ steps:
 
 ---
 kind: signature
-hmac: cd1d2f44701124de6deb899c7c9db3742dc5ea44b0ee2550e6c814d11d582687
+hmac: 4208c75d75dc6cb2e2921ab2fade468d697c9f370025a055ea4ae895be5ce431
 
 ...
