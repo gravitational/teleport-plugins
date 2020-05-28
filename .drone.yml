@@ -51,6 +51,7 @@ steps:
       bucket:
         from_secret: AWS_S3_BUCKET
       archive_format: gzip
+      cache_key: "{{.Source.Branch}}"
       region: us-west-2
       mount:
         - /go/cache
@@ -79,6 +80,7 @@ steps:
       bucket:
         from_secret: AWS_S3_BUCKET
       archive_format: gzip
+      cache_key: "{{.Source.Branch}}"
       region: us-west-2
       mount:
         - /go/cache
@@ -382,6 +384,6 @@ steps:
 
 ---
 kind: signature
-hmac: cd1d2f44701124de6deb899c7c9db3742dc5ea44b0ee2550e6c814d11d582687
+hmac: c6f53f2bec5a3930bde4a970c00e221b384a07b394b0c9c77bfb3bd9b163641d
 
 ...
