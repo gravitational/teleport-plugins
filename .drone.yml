@@ -7,6 +7,7 @@ trigger:
   event:
     exclude:
       - promote
+      - rollback
 
 workspace:
   path: /go
@@ -22,21 +23,11 @@ steps:
       - cd /go/src/github.com/gravitational/teleport-plugins
       - git clone https://github.com/gravitational/teleport-plugins.git .
       - git checkout $DRONE_COMMIT
-    when:
-      event:
-        - pull_request
-        - push
-        - tag
 
   - name: Write source branch to file
     image: busybox
     commands:
       - echo $DRONE_SOURCE_BRANCH > .drone_source_branch.txt
-    when:
-      event:
-        - pull_request
-        - push
-        - tag
 
   - name: Restore cache
     image: meltwater/drone-cache
@@ -55,11 +46,6 @@ steps:
       mount:
         - /go/cache
         - /go/pkg/mod
-    when:
-      event:
-        - pull_request
-        - push
-        - tag
 
   - name: Run linter
     image: golangci/golangci-lint:v1.27.0
@@ -68,11 +54,6 @@ steps:
     commands:
       - cd /go/src/github.com/gravitational/teleport-plugins
       - make lint
-    when:
-      event:
-        - pull_request
-        - push
-        - tag
 
   - name: Run tests
     image: golang:1.13.2
@@ -81,11 +62,6 @@ steps:
     commands:
       - cd /go/src/github.com/gravitational/teleport-plugins
       - make test
-    when:
-      event:
-        - pull_request
-        - push
-        - tag
 
   - name: Save cache
     image: meltwater/drone-cache
@@ -104,11 +80,6 @@ steps:
       mount:
         - /go/cache
         - /go/pkg/mod
-    when:
-      event:
-        - pull_request
-        - push
-        - tag
 
 ---
 kind: pipeline
@@ -118,6 +89,9 @@ name: build
 trigger:
   event:
     - tag
+  ref:
+    include:
+      - refs/tags/teleport-*-v*
 
 depends_on:
   - test
@@ -141,10 +115,6 @@ steps:
       - cd build
       - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
       - ls -l .
-    when:
-      ref:
-        include:
-          - refs/tags/teleport-*-v*
 
   - name: Upload to S3
     image: plugins/s3
@@ -159,10 +129,6 @@ steps:
       source: /go/src/github.com/gravitational/teleport-plugins/build/*
       target: teleport-plugins/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
-    when:
-      ref:
-        include:
-          - refs/tags/teleport-*-v*
 
 ---
 kind: pipeline
@@ -212,6 +178,6 @@ steps:
 
 ---
 kind: signature
-hmac: 20cf25ee15b510845577f8f0a3d4febd7c8e5136dc387d500cf571501129416e
+hmac: dc051ebc2e3ea8d4c731ba9aa799120afcdc4dd18a6b934bff52a7cb8854ba9d
 
 ...
