@@ -23,10 +23,6 @@ steps:
       - cd /go/src/github.com/gravitational/teleport-plugins
       - git clone https://github.com/gravitational/teleport-plugins.git .
       - git checkout $DRONE_COMMIT
-
-  - name: Write source branch to file
-    image: busybox
-    commands:
       - echo $DRONE_SOURCE_BRANCH > .drone_source_branch.txt
 
   - name: Restore cache
@@ -178,6 +174,6 @@ steps:
 
 ---
 kind: signature
-hmac: dc051ebc2e3ea8d4c731ba9aa799120afcdc4dd18a6b934bff52a7cb8854ba9d
+hmac: 646bd046a1e9be9fc3d7a651b62f51bee53fe852a6a1d82c6d6db1b7b901befb
 
 ...
