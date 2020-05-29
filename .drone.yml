@@ -66,6 +66,7 @@ steps:
     environment:
       GOCACHE: /go/cache
     commands:
+      - cd /go/src/github.com/gravitational/teleport-plugins
       - make lint
     when:
       event:
@@ -78,6 +79,7 @@ steps:
     environment:
       GOCACHE: /go/cache
     commands:
+      - cd /go/src/github.com/gravitational/teleport-plugins
       - make test
     when:
       event:
@@ -210,6 +212,6 @@ steps:
 
 ---
 kind: signature
-hmac: b244c39e93ae8ef2494123865d5e3c8cd736e76ba7c50b3f8e447d0dc8488442
+hmac: 20cf25ee15b510845577f8f0a3d4febd7c8e5136dc387d500cf571501129416e
 
 ...
