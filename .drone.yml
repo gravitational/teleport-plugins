@@ -115,8 +115,7 @@ name: build
 
 trigger:
   event:
-    exclude:
-      - promote
+    - tag
 
 depends_on:
   - test
@@ -141,8 +140,6 @@ steps:
       - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
       - ls -l .
     when:
-      event:
-        - tag
       ref:
         include:
           - refs/tags/teleport-*-v*
@@ -161,8 +158,6 @@ steps:
       target: teleport-plugins/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
     when:
-      event:
-        - tag
       ref:
         include:
           - refs/tags/teleport-*-v*
@@ -215,6 +210,6 @@ steps:
 
 ---
 kind: signature
-hmac: a139656fd764ef804dd854c5ac9f749a3d98df4743cff43569bf006efeb16f31
+hmac: b244c39e93ae8ef2494123865d5e3c8cd736e76ba7c50b3f8e447d0dc8488442
 
 ...
