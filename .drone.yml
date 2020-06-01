@@ -4,6 +4,8 @@ type: kubernetes
 name: test
 
 trigger:
+  branch:
+    - master
   event:
     exclude:
       - promote
@@ -80,7 +82,7 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
-name: build
+name: build-${DRONE_TAG##*-v}
 
 trigger:
   event:
@@ -174,6 +176,6 @@ steps:
 
 ---
 kind: signature
-hmac: 892186192d8c3e931968d4bd78022b39ca3e69562273830be7fea5915488f850
+hmac: 3bbed19e26bd58aac2dd60a598eae6a5b6a1e0408a7fe7a3f04dd64d56529bbb
 
 ...
