@@ -1,36 +1,15 @@
 ---
 kind: pipeline
 type: kubernetes
-name: lint
-
-trigger:
-  event:
-    - pull_request
-    - tag
-
-workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
-
-clone:
-  disable: true
-
-steps:
-  - name: Run linter
-    image: golangci/golangci-lint:v1.27.0
-    commands:
-      - git clone https://github.com/gravitational/teleport-plugins.git .
-      - git checkout $DRONE_COMMIT
-      - make lint
-
----
-kind: pipeline
-type: kubernetes
 name: test
 
 trigger:
+  branch:
+    - master
   event:
-    - pull_request
-    - tag
+    exclude:
+      - promote
+      - rollback
 
 workspace:
   path: /go
@@ -39,10 +18,14 @@ clone:
   disable: true
 
 steps:
-  - name: Write source branch to file
-    image: busybox
+  - name: Check out code
+    image: golangci/golangci-lint:v1.27.0
     commands:
-      - echo $DRONE_SOURCE_BRANCH > .drone_source_branch.txt
+      - mkdir -p /go/src/github.com/gravitational/teleport-plugins
+      - cd /go/src/github.com/gravitational/teleport-plugins
+      - git clone https://github.com/gravitational/teleport-plugins.git .
+      - git checkout $DRONE_COMMIT
+      - echo $DRONE_SOURCE_BRANCH > /go/.drone_source_branch.txt
 
   - name: Restore cache
     image: meltwater/drone-cache
@@ -62,15 +45,20 @@ steps:
         - /go/cache
         - /go/pkg/mod
 
+  - name: Run linter
+    image: golangci/golangci-lint:v1.27.0
+    environment:
+      GOCACHE: /go/cache
+    commands:
+      - cd /go/src/github.com/gravitational/teleport-plugins
+      - make lint
+
   - name: Run tests
     image: golang:1.13.2
     environment:
       GOCACHE: /go/cache
     commands:
-      - mkdir -p /go/src/github.com/gravitational/teleport-plugins
       - cd /go/src/github.com/gravitational/teleport-plugins
-      - git clone https://github.com/gravitational/teleport-plugins.git .
-      - git checkout $DRONE_COMMIT
       - make test
 
   - name: Save cache
@@ -94,18 +82,17 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
-name: build-jira
-
-depends_on:
-  - lint
-  - test
+name: build-${DRONE_TAG##*-v}
 
 trigger:
   event:
     - tag
   ref:
     include:
-      - refs/tags/teleport-jira-*
+      - refs/tags/teleport-*-v*
+
+depends_on:
+  - test
 
 workspace:
   path: /go/src/github.com/gravitational/teleport-plugins
@@ -121,207 +108,7 @@ steps:
       - git fetch --all --tags
       - git checkout $DRONE_TAG
       - mkdir -p build/
-      - make release/access-jira
-      - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
-      - cd build
-      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
-      - ls -l .
-
-  - name: Upload to S3
-    image: plugins/s3
-    settings:
-      bucket:
-        from_secret: AWS_S3_BUCKET
-      access_key:
-        from_secret: AWS_ACCESS_KEY_ID
-      secret_key:
-        from_secret: AWS_SECRET_ACCESS_KEY
-      region: us-west-2
-      source: /go/src/github.com/gravitational/teleport-plugins/build/*
-      target: teleport-plugins/tag/${DRONE_TAG}
-      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
-
----
-kind: pipeline
-type: kubernetes
-name: build-slack
-
-depends_on:
-  - lint
-  - test
-
-trigger:
-  event:
-    - tag
-  ref:
-    include:
-      - refs/tags/teleport-slack-*
-
-workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
-
-clone:
-  disable: true
-
-steps:
-  - name: Build artifacts
-    image: golang:1.13.2
-    commands:
-      - git clone https://github.com/gravitational/teleport-plugins.git .
-      - git fetch --all --tags
-      - git checkout $DRONE_TAG
-      - mkdir -p build/
-      - make release/access-slack
-      - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
-      - cd build
-      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
-      - ls -l .
-
-  - name: Upload to S3
-    image: plugins/s3
-    settings:
-      bucket:
-        from_secret: AWS_S3_BUCKET
-      access_key:
-        from_secret: AWS_ACCESS_KEY_ID
-      secret_key:
-        from_secret: AWS_SECRET_ACCESS_KEY
-      region: us-west-2
-      source: /go/src/github.com/gravitational/teleport-plugins/build/*
-      target: teleport-plugins/tag/${DRONE_TAG}
-      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
-
----
-kind: pipeline
-type: kubernetes
-name: build-mattermost
-
-depends_on:
-  - lint
-  - test
-
-trigger:
-  event:
-    - tag
-  ref:
-    include:
-      - refs/tags/teleport-mattermost-*
-
-workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
-
-clone:
-  disable: true
-
-steps:
-  - name: Build artifacts
-    image: golang:1.13.2
-    commands:
-      - git clone https://github.com/gravitational/teleport-plugins.git .
-      - git fetch --all --tags
-      - git checkout $DRONE_TAG
-      - mkdir -p build/
-      - make release/access-mattermost
-      - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
-      - cd build
-      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
-      - ls -l .
-
-  - name: Upload to S3
-    image: plugins/s3
-    settings:
-      bucket:
-        from_secret: AWS_S3_BUCKET
-      access_key:
-        from_secret: AWS_ACCESS_KEY_ID
-      secret_key:
-        from_secret: AWS_SECRET_ACCESS_KEY
-      region: us-west-2
-      source: /go/src/github.com/gravitational/teleport-plugins/build/*
-      target: teleport-plugins/tag/${DRONE_TAG}
-      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
-
----
-kind: pipeline
-type: kubernetes
-name: build-pagerduty
-
-depends_on:
-  - lint
-  - test
-
-trigger:
-  event:
-    - tag
-  ref:
-    include:
-      - refs/tags/teleport-pagerduty-*
-
-workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
-
-clone:
-  disable: true
-
-steps:
-  - name: Build artifacts
-    image: golang:1.13.2
-    commands:
-      - git clone https://github.com/gravitational/teleport-plugins.git .
-      - git fetch --all --tags
-      - git checkout $DRONE_TAG
-      - mkdir -p build/
-      - make release/access-pagerduty
-      - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
-      - cd build
-      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
-      - ls -l .
-
-  - name: Upload to S3
-    image: plugins/s3
-    settings:
-      bucket:
-        from_secret: AWS_S3_BUCKET
-      access_key:
-        from_secret: AWS_ACCESS_KEY_ID
-      secret_key:
-        from_secret: AWS_SECRET_ACCESS_KEY
-      region: us-west-2
-      source: /go/src/github.com/gravitational/teleport-plugins/build/*
-      target: teleport-plugins/tag/${DRONE_TAG}
-      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
-
----
-kind: pipeline
-type: kubernetes
-name: build-gitlab
-
-depends_on:
-  - lint
-  - test
-
-trigger:
-  event:
-    - tag
-  ref:
-    include:
-      - refs/tags/teleport-gitlab-*
-
-workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
-
-clone:
-  disable: true
-
-steps:
-  - name: Build artifacts
-    image: golang:1.13.2
-    commands:
-      - git clone https://github.com/gravitational/teleport-plugins.git .
-      - git fetch --all --tags
-      - git checkout $DRONE_TAG
-      - mkdir -p build/
-      - make release/access-gitlab
+      - make release/access-${DRONE_TAG##*-v}
       - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
       - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
@@ -389,6 +176,6 @@ steps:
 
 ---
 kind: signature
-hmac: 4208c75d75dc6cb2e2921ab2fade468d697c9f370025a055ea4ae895be5ce431
+hmac: 3bbed19e26bd58aac2dd60a598eae6a5b6a1e0408a7fe7a3f04dd64d56529bbb
 
 ...
