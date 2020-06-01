@@ -82,7 +82,7 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
-name: build-${DRONE_TAG##*-v}
+name: build
 
 trigger:
   event:
@@ -176,6 +176,6 @@ steps:
 
 ---
 kind: signature
-hmac: 3bbed19e26bd58aac2dd60a598eae6a5b6a1e0408a7fe7a3f04dd64d56529bbb
+hmac: 6bedbdbe74c9df20f91985c86c7b90380846deca33791a3d9a408a0934b679f7
 
 ...
