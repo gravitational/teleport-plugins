@@ -94,10 +94,10 @@ func (issue *BotIssue) GetTransition(status string) (jira.Transition, error) {
 	return jira.Transition{}, trace.Errorf("cannot find a %q status among possible transitions", status)
 }
 
-func NewBot(conf *Config) (*Bot, error) {
+func NewBot(conf JIRAConfig) (*Bot, error) {
 	transport := jira.BasicAuthTransport{
-		Username: conf.JIRA.Username,
-		Password: conf.JIRA.APIToken,
+		Username: conf.Username,
+		Password: conf.APIToken,
 		Transport: &http.Transport{
 			MaxConnsPerHost:     jiraMaxConns,
 			MaxIdleConnsPerHost: jiraMaxConns,
@@ -106,13 +106,13 @@ func NewBot(conf *Config) (*Bot, error) {
 	httpClient := transport.Client()
 	httpClient.Timeout = jiraHTTPTimeout
 
-	client, err := jira.NewClient(httpClient, conf.JIRA.URL)
+	client, err := jira.NewClient(httpClient, conf.URL)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 	return &Bot{
 		client:  JiraClient{client},
-		project: conf.JIRA.Project,
+		project: conf.Project,
 	}, nil
 }
 

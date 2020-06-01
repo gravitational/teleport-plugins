@@ -7,15 +7,19 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func LogError(err error, msg string) {
+	log.WithError(err).Error(msg)
+	log.Debugf("%v", trace.DebugReport(err))
+}
+
 // Bail exits with nonzero exit code and prints an error to a log.
 func Bail(err error) {
 	if agg, ok := trace.Unwrap(err).(trace.Aggregate); ok {
-		for _, aggErr := range agg.Errors() {
-			log.WithError(aggErr).Error("Terminating...")
+		for _, err := range agg.Errors() {
+			LogError(err, "Terminating due to error")
 		}
 	} else {
-		log.WithError(err).Error("Terminating...")
+		LogError(err, "Terminating due to error")
 	}
-	log.Debugf("%v", trace.DebugReport(err))
 	os.Exit(1)
 }

@@ -8,38 +8,41 @@ import (
 
 type Config struct {
 	Teleport struct {
-		AuthServer string `toml:"auth-server"`
-		ClientKey  string `toml:"client-key"`
-		ClientCrt  string `toml:"client-crt"`
-		RootCAs    string `toml:"root-cas"`
+		AuthServer string `toml:"auth_server"`
+		ClientKey  string `toml:"client_key"`
+		ClientCrt  string `toml:"client_crt"`
+		RootCAs    string `toml:"root_cas"`
 	} `toml:"teleport"`
-	Mattermost struct {
-		Token   string `toml:"token"`
-		Secret  string `toml:"secret"`
-		Team    string `toml:"team"`
-		Channel string `toml:"channel"`
-		URL     string `toml:"url"`
-	} `toml:"mattermost"`
-	HTTP utils.HTTPConfig `toml:"http"`
-	Log  utils.LogConfig  `toml:"log"`
+	Mattermost MattermostConfig `toml:"mattermost"`
+	HTTP       utils.HTTPConfig `toml:"http"`
+	Log        utils.LogConfig  `toml:"log"`
+}
+
+type MattermostConfig struct {
+	Token   string `toml:"token"`
+	Secret  string `toml:"secret"`
+	Team    string `toml:"team"`
+	Channel string `toml:"channel"`
+	URL     string `toml:"url"`
 }
 
 const exampleConfig = `# example mattermost configuration TOML file
 [teleport]
-auth-server = "example.com:3025"  # Teleport Auth Server GRPC API address
-client-key = "/var/lib/teleport/plugins/mattermost/auth.key" # Teleport GRPC client secret key
-client-crt = "/var/lib/teleport/plugins/mattermost/auth.crt" # Teleport GRPC client certificate
-root-cas = "/var/lib/teleport/plugins/mattermost/auth.cas"   # Teleport cluster CA certs
+auth_server = "example.com:3025"                             # Teleport Auth Server GRPC API address
+client_key = "/var/lib/teleport/plugins/mattermost/auth.key" # Teleport GRPC client secret key
+client_crt = "/var/lib/teleport/plugins/mattermost/auth.crt" # Teleport GRPC client certificate
+root_cas = "/var/lib/teleport/plugins/mattermost/auth.cas"   # Teleport cluster CA certs
 
 [mattermost]
-token = "api-token"              # Mattermost Bot OAuth token
+token = "api_token"              # Mattermost Bot OAuth token
 secret = "signing-secret-value"  # Mattermost API Signing Secret
 channel = "channel-name"         # Mattermost Channel name to post requests to
 
 [http]
-listen = ":8081"          # Mattermost interaction callback listener
-# https-key-file = "/var/lib/teleport/plugins/mattermost/server.key"  # TLS private key
-# https-cert-file = "/var/lib/teleport/plugins/mattermost/server.crt" # TLS certificate
+public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-mattermost.example.com
+# listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:443
+https_key_file = "/var/lib/teleport/plugins/mattermost/server.key"  # TLS private key
+https_cert_file = "/var/lib/teleport/plugins/mattermost/server.crt" # TLS certificate
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/mattermost.log"
@@ -89,11 +92,11 @@ func (c *Config) CheckAndSetDefaults() error {
 	if c.Mattermost.URL == "" {
 		return trace.BadParameter("missing required value mattermost.url")
 	}
-	if c.HTTP.Listen == "" {
-		c.HTTP.Listen = ":8081"
+	if c.HTTP.PublicAddr == "" {
+		return trace.BadParameter("missing required value http.public_addr")
 	}
-	if c.HTTP.Hostname == "" && c.HTTP.RawBaseURL == "" {
-		return trace.BadParameter("either http.base-url or http.host is required to be set")
+	if c.HTTP.ListenAddr == "" {
+		c.HTTP.ListenAddr = ":8081"
 	}
 	if err := c.HTTP.Check(); err != nil {
 		return trace.Wrap(err)

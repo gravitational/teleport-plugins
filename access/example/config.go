@@ -28,18 +28,18 @@ import (
 )
 
 type Config struct {
-	AuthServer string   `toml:"auth-server"`
-	ClientKey  string   `toml:"client-key"`
-	ClientCrt  string   `toml:"client-crt"`
-	RootCAs    string   `toml:"root-cas"`
+	AuthServer string   `toml:"auth_server"`
+	ClientKey  string   `toml:"client_key"`
+	ClientCrt  string   `toml:"client_crt"`
+	RootCAs    string   `toml:"root_cas"`
 	Whitelist  []string `toml:"whitelist"`
 }
 
 const exampleConfig = `# example configuration file
-auth-server = "example.com:3025"  # Auth GRPC API address
-client-key = "path/to/client.key" # GRPC client secret key
-client-crt = "path/to/client.crt" # GRPC client certificate
-root-cas = "path/to/root.cas"     # cluster CA certs
+auth_server = "example.com:3025"  # Auth GRPC API address
+client_key = "path/to/client.key" # GRPC client secret key
+client_crt = "path/to/client.crt" # GRPC client certificate
+root_cas = "path/to/root.cas"     # cluster CA certs
 # whitelist determines which users' requests will
 # be approved.
 whitelist = [

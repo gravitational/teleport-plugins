@@ -37,8 +37,7 @@ const (
 
 type SlackbotSuite struct {
 	app         *App
-	appPort     string
-	callbackURL string
+	publicURL   string
 	me          *user.User
 	slackServer *slacktest.Server
 	teleport    *integration.TeleInstance
@@ -87,21 +86,15 @@ func (s *SlackbotSuite) SetUpSuite(c *C) {
 		c.Fatalf("Unexpected response from Start: %v", err)
 	}
 	s.teleport = t
-	s.appPort = portList.Pop()
-	s.callbackURL = "http://" + Host + ":" + s.appPort + "/"
 }
 
 func (s *SlackbotSuite) SetUpTest(c *C) {
+	s.publicURL = ""
 	s.startSlack(c)
-	s.startApp(c)
-	time.Sleep(time.Millisecond * 250) // Wait some time for services to start up
 }
 
 func (s *SlackbotSuite) TearDownTest(c *C) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	err := s.app.Shutdown(ctx)
-	c.Assert(err, IsNil)
+	s.shutdownApp(c)
 	s.slackServer.Stop()
 	for _, tmp := range s.tmpFiles {
 		err := os.Remove(tmp.Name())
@@ -157,7 +150,10 @@ func (s *SlackbotSuite) startApp(c *C) {
 	conf.Slack.Token = "000000"
 	conf.Slack.Channel = "test"
 	conf.Slack.APIURL = "http://" + s.slackServer.ServerAddr + "/"
-	conf.HTTP.Listen = ":" + s.appPort
+	conf.HTTP.ListenAddr = ":0"
+	if s.publicURL != "" {
+		conf.HTTP.PublicAddr = s.publicURL
+	}
 	conf.HTTP.Insecure = true
 
 	s.app, err = NewApp(conf)
@@ -167,6 +163,21 @@ func (s *SlackbotSuite) startApp(c *C) {
 		err = s.app.Run(context.TODO())
 		c.Assert(err, IsNil)
 	}()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
+	defer cancel()
+	ok, err := s.app.WaitReady(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(ok, Equals, true)
+	if s.publicURL == "" {
+		s.publicURL = s.app.PublicURL().String()
+	}
+}
+
+func (s *SlackbotSuite) shutdownApp(c *C) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*2000)
+	defer cancel()
+	err := s.app.Shutdown(ctx)
+	c.Assert(err, IsNil)
 }
 
 func (s *SlackbotSuite) createAccessRequest(c *C) services.AccessRequest {
@@ -223,7 +234,7 @@ func (s *SlackbotSuite) postCallback(c *C, actionID, reqID string) {
 
 	signature := hash.Sum(nil)
 
-	req, err := http.NewRequest("POST", s.callbackURL, strings.NewReader(body))
+	req, err := http.NewRequest("POST", s.publicURL, strings.NewReader(body))
 	c.Assert(err, IsNil)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("X-Slack-Request-Timestamp", stimestamp)
@@ -250,6 +261,7 @@ func (s *SlackbotSuite) fetchSlackMessage(c *C) slack.Msg {
 }
 
 func (s *SlackbotSuite) TestSlackMessagePosting(c *C) {
+	s.startApp(c)
 	request := s.createAccessRequest(c)
 	msg := s.fetchSlackMessage(c)
 	var blockAction *slack.ActionBlock
@@ -273,6 +285,7 @@ func (s *SlackbotSuite) TestSlackMessagePosting(c *C) {
 }
 
 func (s *SlackbotSuite) TestApproval(c *C) {
+	s.startApp(c)
 	request := s.createAccessRequest(c)
 
 	s.postCallback(c, "approve_request", request.GetName())
@@ -286,6 +299,7 @@ func (s *SlackbotSuite) TestApproval(c *C) {
 }
 
 func (s *SlackbotSuite) TestDenial(c *C) {
+	s.startApp(c)
 	request := s.createAccessRequest(c)
 
 	s.postCallback(c, "deny_request", request.GetName())
@@ -299,6 +313,7 @@ func (s *SlackbotSuite) TestDenial(c *C) {
 }
 
 func (s *SlackbotSuite) TestApproveExpired(c *C) {
+	s.startApp(c)
 	request := s.createExpiredAccessRequest(c)
 	msg1 := s.fetchSlackMessage(c)
 
@@ -310,6 +325,7 @@ func (s *SlackbotSuite) TestApproveExpired(c *C) {
 }
 
 func (s *SlackbotSuite) TestDenyExpired(c *C) {
+	s.startApp(c)
 	request := s.createExpiredAccessRequest(c)
 	msg1 := s.fetchSlackMessage(c)
 

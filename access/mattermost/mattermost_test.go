@@ -34,8 +34,7 @@ const (
 
 type MattermostSuite struct {
 	app               *App
-	appPort           string
-	webhookURL        string
+	publicURL         string
 	me                *user.User
 	fakeMattermostSrv *httptest.Server
 	posts             sync.Map
@@ -86,21 +85,15 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 		c.Fatalf("Unexpected response from Start: %v", err)
 	}
 	s.teleport = t
-	s.appPort = portList.Pop()
-	s.webhookURL = "http://" + Host + ":" + s.appPort + "/"
 }
 
 func (s *MattermostSuite) SetUpTest(c *C) {
+	s.publicURL = ""
 	s.startFakeMattermost(c)
-	s.startApp(c)
-	time.Sleep(time.Millisecond * 250) // Wait some time for services to start up
 }
 
 func (s *MattermostSuite) TearDownTest(c *C) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	err := s.app.Shutdown(ctx)
-	c.Assert(err, IsNil)
+	s.shutdownApp(c)
 	s.fakeMattermostSrv.Close()
 	close(s.newPosts)
 	for _, tmp := range s.tmpFiles {
@@ -224,8 +217,10 @@ func (s *MattermostSuite) startApp(c *C) {
 	conf.Mattermost.Team = "test-team"
 	conf.Mattermost.Channel = "test-channel"
 	conf.Mattermost.Secret = "1234567812345678123456781234567812345678123456781234567812345678"
-	conf.HTTP.Listen = ":" + s.appPort
-	conf.HTTP.RawBaseURL = "http://" + Host + ":" + s.appPort + "/"
+	conf.HTTP.ListenAddr = ":0"
+	if s.publicURL != "" {
+		conf.HTTP.PublicAddr = s.publicURL
+	}
 	conf.HTTP.Insecure = true
 
 	s.app, err = NewApp(conf)
@@ -235,6 +230,21 @@ func (s *MattermostSuite) startApp(c *C) {
 		err = s.app.Run(context.TODO())
 		c.Assert(err, IsNil)
 	}()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
+	defer cancel()
+	ok, err := s.app.WaitReady(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(ok, Equals, true)
+	if s.publicURL == "" {
+		s.publicURL = s.app.PublicURL().String()
+	}
+}
+
+func (s *MattermostSuite) shutdownApp(c *C) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*2000)
+	defer cancel()
+	err := s.app.Shutdown(ctx)
+	c.Assert(err, IsNil)
 }
 
 func (s *MattermostSuite) createAccessRequest(c *C) services.AccessRequest {
@@ -305,6 +315,7 @@ func (s *MattermostSuite) postWebhook(c *C, post *mm.Post, actionName string) {
 }
 
 func (s *MattermostSuite) TestMattermostMessagePosting(c *C) {
+	s.startApp(c)
 	_ = s.createAccessRequest(c)
 
 	var post *mm.Post
@@ -324,6 +335,7 @@ func (s *MattermostSuite) TestMattermostMessagePosting(c *C) {
 }
 
 func (s *MattermostSuite) TestApproval(c *C) {
+	s.startApp(c)
 	request := s.createAccessRequest(c)
 
 	var post *mm.Post
@@ -345,6 +357,7 @@ func (s *MattermostSuite) TestApproval(c *C) {
 }
 
 func (s *MattermostSuite) TestDenial(c *C) {
+	s.startApp(c)
 	request := s.createAccessRequest(c)
 
 	var post *mm.Post
@@ -366,6 +379,7 @@ func (s *MattermostSuite) TestDenial(c *C) {
 }
 
 func (s *MattermostSuite) TestApproveExpired(c *C) {
+	s.startApp(c)
 	s.createExpiredAccessRequest(c)
 
 	var post *mm.Post
@@ -385,6 +399,7 @@ func (s *MattermostSuite) TestApproveExpired(c *C) {
 }
 
 func (s *MattermostSuite) TestDenyExpired(c *C) {
+	s.startApp(c)
 	s.createExpiredAccessRequest(c)
 
 	var post *mm.Post

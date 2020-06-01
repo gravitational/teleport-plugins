@@ -2,13 +2,12 @@ package main
 
 import (
 	"context"
-	"crypto/hmac"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
+	"net/url"
 	"sync/atomic"
 	"time"
 
@@ -23,7 +22,7 @@ import (
 
 const ActionURL = "/mattermost_action"
 
-type BotAction struct {
+type ActionData struct {
 	HTTPRequestID string
 
 	UserID    string
@@ -33,50 +32,59 @@ type BotAction struct {
 	ReqID     string
 }
 
-type BotActionResponse struct {
-	Status  string
-	ReqData RequestData
-}
+type ActionResponse mm.PostActionIntegrationResponse
 
-type BotActionFunc func(ctx context.Context, action BotAction) (BotActionResponse, error)
+type ActionFunc func(ctx context.Context, action ActionData) (*ActionResponse, error)
 
-type BotServer struct {
-	bot      *Bot
+type ActionServer struct {
+	auth     *ActionAuth
 	http     *utils.HTTP
-	onAction BotActionFunc
+	onAction ActionFunc
 	counter  uint64
 }
 
-func NewBotServer(bot *Bot, onAction BotActionFunc, config utils.HTTPConfig) (*BotServer, error) {
+func NewActionServer(config utils.HTTPConfig, auth *ActionAuth, onAction ActionFunc) (*ActionServer, error) {
 	httpSrv, err := utils.NewHTTP(config)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	server := &BotServer{
-		bot:      bot,
+	server := &ActionServer{
 		http:     httpSrv,
 		onAction: onAction,
+		auth:     auth,
 	}
-	httpSrv.POST(ActionURL, server.OnAction)
+	httpSrv.POST(ActionURL, server.ServeAction)
 	return server, nil
 }
 
-func (s *BotServer) ActionURL() string {
+func (s *ActionServer) ServiceJob() utils.ServiceJob {
+	return s.http.ServiceJob()
+}
+
+func (s *ActionServer) ActionURL() string {
 	return s.http.NewURL(ActionURL, nil).String()
 }
 
-func (s *BotServer) Run(ctx context.Context) error {
+func (s *ActionServer) BaseURL() *url.URL {
+	return s.http.BaseURL()
+}
+
+func (s *ActionServer) EnsureCert() error {
+	return s.http.EnsureCert(DefaultDir + "/server")
+}
+
+func (s *ActionServer) Run(ctx context.Context) error {
 	if err := s.http.EnsureCert(DefaultDir + "/server"); err != nil {
 		return err
 	}
 	return s.http.ListenAndServe(ctx)
 }
 
-func (s *BotServer) Shutdown(ctx context.Context) error {
+func (s *ActionServer) Shutdown(ctx context.Context) error {
 	return s.http.ShutdownWithTimeout(ctx, time.Second*5)
 }
 
-func (s *BotServer) OnAction(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+func (s *ActionServer) ServeAction(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	ctx, cancel := context.WithTimeout(r.Context(), time.Millisecond*2500)
 	defer cancel()
 
@@ -117,27 +125,27 @@ func (s *BotServer) OnAction(rw http.ResponseWriter, r *http.Request, _ httprout
 		http.Error(rw, "", http.StatusBadRequest)
 		return
 	}
-	payloadSignature, err := base64.StdEncoding.DecodeString(encodedSignature)
+	signature, err := base64.StdEncoding.DecodeString(encodedSignature)
 	if err != nil {
 		log.WithError(err).Error(`Failed to decode "signature" value`)
 		http.Error(rw, "", http.StatusBadRequest)
 		return
 	}
 
-	signature, err := s.bot.HMAC(action, reqID)
+	signatureOk, err := s.auth.Verify(action, reqID, signature)
 	if err != nil {
 		log.WithError(err).Errorf(`Failed to calculate HMAC value for %q/%q`, action, reqID)
 		http.Error(rw, "", http.StatusInternalServerError)
 		return
 	}
 
-	if !hmac.Equal(payloadSignature, signature) {
+	if !signatureOk {
 		log.Error(`Failed to validate "signature" value`)
 		http.Error(rw, "", http.StatusUnauthorized)
 		return
 	}
 
-	actionData := BotAction{
+	actionData := ActionData{
 		HTTPRequestID: httpRequestID,
 		UserID:        payload.UserId,
 		PostID:        payload.PostId,
@@ -146,7 +154,8 @@ func (s *BotServer) OnAction(rw http.ResponseWriter, r *http.Request, _ httprout
 		ReqID:         reqID,
 	}
 
-	if actionResponse, err := s.onAction(ctx, actionData); err != nil {
+	actionResponse, err := s.onAction(ctx, actionData)
+	if err != nil {
 		log.WithError(err).Error("Failed to process mattermost action")
 		log.Debugf("%v", trace.DebugReport(err))
 		var code int
@@ -157,34 +166,19 @@ func (s *BotServer) OnAction(rw http.ResponseWriter, r *http.Request, _ httprout
 			code = http.StatusInternalServerError
 		}
 		http.Error(rw, "", code)
-	} else {
-		actionsAttachment, err := s.bot.NewActionsAttachment(reqID, actionResponse.ReqData, actionResponse.Status)
-		if err != nil {
-			log.WithError(err).Error("Failed to build action response")
-			http.Error(rw, "", http.StatusInternalServerError)
-			return
-		}
-		response := &mm.PostActionIntegrationResponse{
-			Update: &mm.Post{
-				Id: payload.PostId,
-				Props: mm.StringInterface{
-					"attachments": []*mm.SlackAttachment{actionsAttachment},
-				},
-			},
-			EphemeralText: fmt.Sprintf("You have **%s** the request %s", strings.ToLower(actionResponse.Status), reqID),
-		}
+		return
+	}
 
-		respBody, err := json.Marshal(response)
-		if err != nil {
-			log.WithError(err).Error("Failed to serialize action response")
-			http.Error(rw, "", http.StatusInternalServerError)
-			return
-		}
-		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
-		_, err = rw.Write(respBody)
-		if err != nil {
-			log.WithError(err).Error("Failed to send action response")
-		}
+	respBody, err := json.Marshal(actionResponse)
+	if err != nil {
+		log.WithError(err).Error("Failed to serialize action response")
+		http.Error(rw, "", http.StatusInternalServerError)
+		return
+	}
+	rw.Header().Add("Content-Type", "application/json")
+	rw.WriteHeader(http.StatusOK)
+	_, err = rw.Write(respBody)
+	if err != nil {
+		log.WithError(err).Error("Failed to send action response")
 	}
 }

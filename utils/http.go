@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/gravitational/teleport/lib/utils"
@@ -20,18 +21,17 @@ import (
 )
 
 type TLSConfig struct {
-	VerifyClientCertificate bool `toml:"verify-client-cert"`
+	VerifyClientCertificate bool `toml:"verify_client_cert"`
 
 	VerifyClientCertificateFunc func(chains [][]*x509.Certificate) error
 }
 
 type HTTPConfig struct {
-	Listen     string              `toml:"listen"`
-	KeyFile    string              `toml:"https-key-file"`
-	CertFile   string              `toml:"https-cert-file"`
-	Hostname   string              `toml:"host"`
-	RawBaseURL string              `toml:"base-url"`
-	BasicAuth  HTTPBasicAuthConfig `toml:"basic-auth"`
+	ListenAddr string              `toml:"listen_addr"`
+	PublicAddr string              `toml:"public_addr"`
+	KeyFile    string              `toml:"https_key_file"`
+	CertFile   string              `toml:"https_cert_file"`
+	BasicAuth  HTTPBasicAuthConfig `toml:"basic_auth"`
 	TLS        TLSConfig           `toml:"tls"`
 
 	Insecure bool
@@ -48,6 +48,8 @@ type HTTPBasicAuthConfig struct {
 // So you are guaranteed that server will be closed when the context is cancelled.
 type HTTP struct {
 	HTTPConfig
+	mu      sync.Mutex
+	addr    net.Addr
 	baseURL *url.URL
 	*httprouter.Router
 	server http.Server
@@ -59,42 +61,57 @@ type HTTPBasicAuth struct {
 	handler http.Handler
 }
 
-// BaseURL builds a base url depending on either "base-url" or "host" setting.
-func (conf *HTTPConfig) BaseURL() (*url.URL, error) {
-	if raw := conf.RawBaseURL; raw != "" {
-		return url.Parse(raw)
-	} else if host := conf.Hostname; host != "" {
-		var scheme string
-		if conf.Insecure {
-			scheme = "http"
-		} else {
-			scheme = "https"
-		}
-		return &url.URL{
-			Scheme: scheme,
-			Host:   host,
-		}, nil
+type httpListenChanKey struct{}
+
+func (conf *HTTPConfig) defaultScheme() (scheme string) {
+	if conf.Insecure {
+		scheme = "http"
 	} else {
-		return &url.URL{}, nil
+		scheme = "https"
 	}
+	return
 }
 
+// BaseURL builds a base url depending on "public_addr" parameter.
+func (conf *HTTPConfig) BaseURL() (*url.URL, error) {
+	if conf.PublicAddr == "" {
+		return &url.URL{Scheme: conf.defaultScheme()}, nil
+	}
+	url, err := url.Parse(conf.PublicAddr)
+	if err != nil {
+		return nil, err
+	}
+
+	scheme := url.Scheme
+	if scheme == "" {
+		scheme = conf.defaultScheme()
+		return url.Parse(fmt.Sprintf("%s://%s", scheme, conf.PublicAddr))
+	}
+
+	if scheme != "http" && scheme != "https" {
+		return nil, trace.BadParameter("wrong scheme in public_addr parameter: %q", scheme)
+	}
+
+	return url, nil
+}
+
+// Check validates the http server configuration.
 func (conf *HTTPConfig) Check() error {
 	baseURL, err := conf.BaseURL()
 	if err != nil {
 		return trace.Wrap(err)
 	}
 	if conf.KeyFile != "" && conf.CertFile == "" {
-		return trace.BadParameter("https-cert-file is required when https-key-file is specified")
+		return trace.BadParameter("https_cert_file is required when https_key_file is specified")
 	}
 	if conf.CertFile != "" && conf.KeyFile == "" {
-		return trace.BadParameter("https-key-file is required when https-cert-file is specified")
+		return trace.BadParameter("https_key_file is required when https_cert_file is specified")
 	}
 	if conf.BasicAuth.Password != "" && conf.BasicAuth.Username == "" {
-		return trace.BadParameter("basic-auth.user is required when basic-auth.password is specified")
+		return trace.BadParameter("basic_auth.user is required when basic_auth.password is specified")
 	}
-	if conf.BasicAuth.Username != "" && baseURL.User != nil {
-		return trace.BadParameter("passing credentials both in basic-auth section and base-url parameter is not supported")
+	if conf.BasicAuth.Username != "" && baseURL != nil && baseURL.User != nil {
+		return trace.BadParameter("passing credentials both in basic_auth section and public_addr parameter is not supported")
 	}
 	return nil
 }
@@ -149,10 +166,10 @@ func NewHTTP(config HTTPConfig) (*HTTP, error) {
 	}
 
 	return &HTTP{
-		config,
-		baseURL,
-		router,
-		http.Server{Addr: config.Listen, Handler: handler, TLSConfig: tlsConfig},
+		HTTPConfig: config,
+		Router:     router,
+		baseURL:    baseURL,
+		server:     http.Server{Handler: handler, TLSConfig: tlsConfig},
 	}, nil
 }
 
@@ -174,6 +191,7 @@ func BuildURLPath(args ...interface{}) string {
 // ListenAndServe runs a http(s) server on a provided port.
 func (h *HTTP) ListenAndServe(ctx context.Context) error {
 	defer log.Debug("HTTP server terminated")
+	var err error
 
 	h.server.BaseContext = func(_ net.Listener) context.Context {
 		return ctx
@@ -183,13 +201,39 @@ func (h *HTTP) ListenAndServe(ctx context.Context) error {
 		h.server.Close()
 	}()
 
-	var err error
+	listen := h.ListenAddr
+	if listen == "" {
+		if h.Insecure {
+			listen = ":http"
+		} else {
+			listen = ":https"
+		}
+	}
+
+	listenCh, _ := ctx.Value(httpListenChanKey{}).(chan<- net.Addr)
+	listener, err := net.Listen("tcp", listen)
+	if err != nil {
+		if listenCh != nil {
+			listenCh <- nil
+		}
+		return trace.Wrap(err)
+	}
+	addr := listener.Addr()
+
+	h.mu.Lock()
+	h.addr = addr
+	h.mu.Unlock()
+
+	if listenCh != nil {
+		listenCh <- addr
+	}
+
 	if h.Insecure {
-		log.Debugf("Starting insecure HTTP server on %s", h.Listen)
-		err = h.server.ListenAndServe()
+		log.Debugf("Starting insecure HTTP server on %s", addr)
+		err = h.server.Serve(listener)
 	} else {
-		log.Debugf("Starting secure HTTPS server on %s", h.Listen)
-		err = h.server.ListenAndServeTLS(h.CertFile, h.KeyFile)
+		log.Debugf("Starting secure HTTPS server on %s", addr)
+		err = h.server.ServeTLS(listener, h.CertFile, h.KeyFile)
 	}
 	if err == http.ErrServerClosed {
 		return nil
@@ -210,9 +254,35 @@ func (h *HTTP) ShutdownWithTimeout(ctx context.Context, duration time.Duration) 
 	return h.Shutdown(ctx)
 }
 
+func (h *HTTP) ServiceJob() ServiceJob {
+	return NewServiceJob(func(ctx context.Context) error {
+		MustGetProcess(ctx).OnTerminate(func(ctx context.Context) error {
+			if err := h.ShutdownWithTimeout(ctx, time.Second*5); err != nil {
+				log.Error("HTTP server graceful shutdown failed")
+				return err
+			}
+			return nil
+		})
+		listenChan := make(chan net.Addr)
+		var outChan chan<- net.Addr = listenChan
+		ctx = context.WithValue(ctx, httpListenChanKey{}, outChan)
+		go func() {
+			addr := <-listenChan
+			close(listenChan)
+			MustGetServiceJob(ctx).SetReady(addr != nil)
+		}()
+		return h.ListenAndServe(ctx)
+	})
+}
+
 // BaseURL returns an url on which the server is accessible externally.
 func (h *HTTP) BaseURL() *url.URL {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	url := *h.baseURL
+	if url.Host == "" && h.addr != nil {
+		url.Host = h.addr.String()
+	}
 	return &url
 }
 
@@ -257,7 +327,7 @@ func (h *HTTP) EnsureCert(defaultPath string) (err error) {
 
 	hostname := h.baseURL.Hostname()
 	if hostname == "" {
-		return trace.BadParameter("no hostname or base-url was provided")
+		return trace.BadParameter("http.public_addr parameter must be provided to generate a self-signed certificate")
 	}
 
 	creds, err := utils.GenerateSelfSignedCert([]string{hostname, "localhost"})

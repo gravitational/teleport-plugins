@@ -14,39 +14,41 @@ import (
 
 type Config struct {
 	Teleport struct {
-		AuthServer string `toml:"auth-server"`
-		ClientKey  string `toml:"client-key"`
-		ClientCrt  string `toml:"client-crt"`
-		RootCAs    string `toml:"root-cas"`
+		AuthServer string `toml:"auth_server"`
+		ClientKey  string `toml:"client_key"`
+		ClientCrt  string `toml:"client_crt"`
+		RootCAs    string `toml:"root_cas"`
 	} `toml:"teleport"`
-	JIRA struct {
-		URL      string `toml:"url"`
-		Username string `toml:"username"`
-		APIToken string `toml:"api-token"`
-		Project  string `toml:"project"`
-	} `toml:"jira"`
+	JIRA JIRAConfig       `toml:"jira"`
 	HTTP utils.HTTPConfig `toml:"http"`
 	Log  utils.LogConfig  `toml:"log"`
 }
 
+type JIRAConfig struct {
+	URL      string `toml:"url"`
+	Username string `toml:"username"`
+	APIToken string `toml:"api_token"`
+	Project  string `toml:"project"`
+}
+
 const exampleConfig = `# example jira plugin configuration TOML file
 [teleport]
-auth-server = "example.com:3025"  # Auth GRPC API address
-client-key = "/var/lib/teleport/plugins/jira/auth.key" # Teleport GRPC client secret key
-client-crt = "/var/lib/teleport/plugins/jira/auth.crt" # Teleport GRPC client certificate
-root-cas = "/var/lib/teleport/plugins/jira/auth.cas"   # Teleport cluster CA certs
+auth_server = "example.com:3025"                       # Teleport Auth Server GRPC API address
+client_key = "/var/lib/teleport/plugins/jira/auth.key" # Teleport GRPC client secret key
+client_crt = "/var/lib/teleport/plugins/jira/auth.crt" # Teleport GRPC client certificate
+root_cas = "/var/lib/teleport/plugins/jira/auth.cas"   # Teleport cluster CA certs
 
 [jira]
 url = "https://example.com/jira"    # JIRA URL. For JIRA Cloud, https://[my-jira].atlassian.net
 username = "bot@example.com"        # JIRA username
-api-token = "token"                 # JIRA API Basic Auth token
+api_token = "token"                 # JIRA API Basic Auth token
 project = "MYPROJ"                  # JIRA Project key
 
 [http]
-listen = ":8081"          # JIRA webhook listener
-# host = "example.com"    # Host name by which bot is accessible
-# https-key-file = "/var/lib/teleport/plugins/jira/server.key"  # TLS private key
-# https-cert-file = "/var/lib/teleport/plugins/jira/server.crt" # TLS certificate
+# listen_addr = ":8081" # Network address in format [addr]:port on which webhook server listens, e.g. 0.0.0.0:443
+# public_addr = "example.com" # URL on which webhook server is accessible externally, e.g. [https://]teleport-jira.example.com
+https_key_file = "/var/lib/teleport/plugins/jira/server.key"  # TLS private key
+https_cert_file = "/var/lib/teleport/plugins/jira/server.crt" # TLS certificate
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/jira.log"
@@ -91,10 +93,10 @@ func (c *Config) CheckAndSetDefaults() error {
 		return trace.BadParameter("missing required value jira.username")
 	}
 	if c.JIRA.APIToken == "" {
-		return trace.BadParameter("missing required value jira.api-token")
+		return trace.BadParameter("missing required value jira.api_token")
 	}
-	if c.HTTP.Listen == "" {
-		c.HTTP.Listen = ":8081"
+	if c.HTTP.ListenAddr == "" {
+		c.HTTP.ListenAddr = ":8081"
 	}
 	if err := c.HTTP.Check(); err != nil {
 		return trace.Wrap(err)

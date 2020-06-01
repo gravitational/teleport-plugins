@@ -33,8 +33,7 @@ const (
 
 type GitlabSuite struct {
 	app        *App
-	appPort    string
-	webhookURL string
+	publicURL  string
 	me         *user.User
 	tmpFiles   []*os.File
 	dbPath     string
@@ -85,11 +84,10 @@ func (s *GitlabSuite) SetUpSuite(c *C) {
 		c.Fatalf("Unexpected response from Start: %v", err)
 	}
 	s.teleport = t
-	s.appPort = portList.Pop()
-	s.webhookURL = "http://" + Host + ":" + s.appPort
 }
 
 func (s *GitlabSuite) SetUpTest(c *C) {
+	s.publicURL = ""
 	dbFile := s.newTmpFile(c, "db.*")
 	s.dbPath = dbFile.Name()
 	dbFile.Close()
@@ -148,8 +146,10 @@ func (s *GitlabSuite) startApp(c *C) {
 	conf.Gitlab.WebhookSecret = WebhookSecret
 	conf.Gitlab.ProjectID = fmt.Sprintf("%d", projectID)
 	conf.DB.Path = s.dbPath
-	conf.HTTP.Listen = ":" + s.appPort
-	conf.HTTP.RawBaseURL = s.webhookURL
+	if s.publicURL != "" {
+		conf.HTTP.PublicAddr = s.publicURL
+	}
+	conf.HTTP.ListenAddr = ":0"
 	conf.HTTP.Insecure = true
 
 	s.app, err = NewApp(conf)
@@ -159,7 +159,14 @@ func (s *GitlabSuite) startApp(c *C) {
 		err = s.app.Run(context.TODO())
 		c.Assert(err, IsNil)
 	}()
-	time.Sleep(time.Millisecond * 250) // Wait some time for services to start up
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
+	defer cancel()
+	ok, err := s.app.WaitReady(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(ok, Equals, true)
+	if s.publicURL == "" {
+		s.publicURL = s.app.PublicURL().String()
+	}
 }
 
 func (s *GitlabSuite) shutdownApp(c *C) {
@@ -175,7 +182,6 @@ func (s *GitlabSuite) createAccessRequest(c *C) services.AccessRequest {
 	c.Assert(err, IsNil)
 	err = auth.CreateAccessRequest(context.TODO(), req)
 	c.Assert(err, IsNil)
-	time.Sleep(time.Millisecond * 250) // Wait some time for watcher to receive a request
 	return req
 }
 
@@ -187,10 +193,19 @@ func (s *GitlabSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
 	req.SetAccessExpiry(time.Now().Add(ttl))
 	err = auth.CreateAccessRequest(context.TODO(), req)
 	c.Assert(err, IsNil)
-	time.Sleep(ttl + time.Millisecond*50)
-	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: req.GetName()})
-	c.Assert(err, IsNil)
-	c.Assert(requests, HasLen, 0)
+
+	time.Sleep(ttl)
+	ctx, cancel := context.WithTimeout(context.Background(), ttl)
+	defer cancel()
+	for {
+		requests, err := auth.GetAccessRequests(ctx, services.AccessRequestFilter{ID: req.GetName()})
+		c.Assert(err, IsNil)
+		if len(requests) == 0 {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+
 	return req
 }
 
@@ -198,7 +213,7 @@ func (s *GitlabSuite) checkPluginData(c *C, reqID string) PluginData {
 	timeout := time.After(time.Millisecond * 250)
 	ticker := time.NewTicker(time.Millisecond * 25)
 	defer ticker.Stop()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
 	defer cancel()
 	for {
 		select {
@@ -234,7 +249,7 @@ func (s *GitlabSuite) postIssueUpdateHook(c *C, oldIssue, newIssue Issue) {
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(&payload)
 	c.Assert(err, IsNil)
-	req, err := http.NewRequest("POST", s.webhookURL+gitlabWebhookPath, &buf)
+	req, err := http.NewRequest("POST", s.publicURL+gitlabWebhookPath, &buf)
 	c.Assert(err, IsNil)
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("X-Gitlab-Token", WebhookSecret)
@@ -261,7 +276,7 @@ func (s *GitlabSuite) TestProjectHookSetup(c *C) {
 	s.shutdownApp(c)
 
 	hook := s.fakeGitLab.checkNewProjectHook(c)
-	c.Assert(hook.URL, Equals, s.webhookURL+gitlabWebhookPath)
+	c.Assert(hook.URL, Equals, s.publicURL+gitlabWebhookPath)
 
 	var dbHookID IntID
 	s.openDB(c, func(db DB) error {
@@ -274,7 +289,8 @@ func (s *GitlabSuite) TestProjectHookSetup(c *C) {
 }
 
 func (s *GitlabSuite) TestProjectHookSetupWhenItExists(c *C) {
-	hook := s.fakeGitLab.storeProjectHook(ProjectHook{URL: s.webhookURL + gitlabWebhookPath})
+	s.publicURL = "http://teleport-gitlab.local"
+	hook := s.fakeGitLab.storeProjectHook(ProjectHook{URL: s.publicURL + gitlabWebhookPath})
 	s.startApp(c)
 	s.shutdownApp(c)
 
@@ -304,7 +320,7 @@ func (s *GitlabSuite) TestProjectHookSetupWhenItExistsInDB(c *C) {
 
 	hook := s.fakeGitLab.checkProjectHookUpdate(c)
 	c.Assert(hook.ID, Equals, existingID)
-	c.Assert(hook.URL, Equals, s.webhookURL+gitlabWebhookPath)
+	c.Assert(hook.URL, Equals, s.publicURL+gitlabWebhookPath)
 
 	var dbHookID IntID
 	s.openDB(c, func(db DB) error {
@@ -369,14 +385,13 @@ func (s *GitlabSuite) TestLabelsSetupWhenSomeExist(c *C) {
 func (s *GitlabSuite) TestIssueCreation(c *C) {
 	s.startApp(c)
 	request := s.createAccessRequest(c)
-	_ = s.checkPluginData(c, request.GetName())
+	pluginData := s.checkPluginData(c, request.GetName())
 	s.shutdownApp(c)
 
 	issue := s.fakeGitLab.checkNewIssue(c)
 	c.Assert(issue.Labels, HasLen, 1)
 	c.Assert(LabelName(issue.Labels[0].Name).Reduced(), Equals, "pending")
 
-	pluginData := s.checkPluginData(c, request.GetName())
 	c.Assert(pluginData.ID, Equals, issue.ID)
 	c.Assert(pluginData.IID, Equals, issue.IID)
 
@@ -395,6 +410,7 @@ func (s *GitlabSuite) TestApproval(c *C) {
 	s.startApp(c)
 	labels := s.fakeGitLab.checkNewLabels(c, 4)
 	request := s.createAccessRequest(c)
+	_ = s.checkPluginData(c, request.GetName()) // when plugin data created, the request must be already served.
 
 	issue := s.fakeGitLab.checkNewIssue(c)
 	c.Assert(issue.Labels, HasLen, 1)
@@ -422,6 +438,7 @@ func (s *GitlabSuite) TestDenial(c *C) {
 	s.startApp(c)
 	labels := s.fakeGitLab.checkNewLabels(c, 4)
 	request := s.createAccessRequest(c)
+	_ = s.checkPluginData(c, request.GetName()) // when plugin data created, the request must be already served.
 
 	issue := s.fakeGitLab.checkNewIssue(c)
 	c.Assert(issue.Labels, HasLen, 1)

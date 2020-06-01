@@ -57,11 +57,7 @@ func (h HTTPClientImpl) Do(req *http.Request) (*http.Response, error) {
 	return h(req)
 }
 
-func NewBot(conf *Config, onAction WebhookFunc) (*Bot, error) {
-	server, err := NewWebhookServer(conf.HTTP, onAction)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
+func NewBot(conf PagerdutyConfig, server *WebhookServer) *Bot {
 	httpClient := &http.Client{
 		Timeout: pdHTTPTimeout,
 		Transport: &http.Transport{
@@ -72,11 +68,11 @@ func NewBot(conf *Config, onAction WebhookFunc) (*Bot, error) {
 	return &Bot{
 		httpClient:  httpClient,
 		server:      server,
-		apiEndpoint: conf.Pagerduty.APIEndpoint,
-		apiKey:      conf.Pagerduty.APIKey,
-		from:        conf.Pagerduty.UserEmail,
-		serviceID:   conf.Pagerduty.ServiceID,
-	}, nil
+		apiEndpoint: conf.APIEndpoint,
+		apiKey:      conf.APIKey,
+		from:        conf.UserEmail,
+		serviceID:   conf.ServiceID,
+	}
 }
 
 func (b *Bot) NewClient(ctx context.Context) *pd.Client {
@@ -90,14 +86,6 @@ func (b *Bot) NewClient(ctx context.Context) *pd.Client {
 		return b.httpClient.Do(r.WithContext(ctx))
 	})
 	return client
-}
-
-func (b *Bot) RunServer(ctx context.Context) error {
-	return b.server.Run(ctx)
-}
-
-func (b *Bot) ShutdownServer(ctx context.Context) error {
-	return b.server.Shutdown(ctx)
 }
 
 func (b *Bot) HealthCheck(ctx context.Context) error {

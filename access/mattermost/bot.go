@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -41,17 +39,16 @@ Status:      {{.StatusEmoji}} {{.Status}}
 // Bot is a wrapper around jira.Client that works with access.Request
 type Bot struct {
 	client      *mm.Client4
-	server      *BotServer
-	secret      string
+	server      *ActionServer
+	auth        *ActionAuth
 	team        string
 	channel     string
 	clusterName string
 }
 
-func NewBot(conf *Config, onAction BotActionFunc) (*Bot, error) {
-	var err error
-	client := mm.NewAPIv4Client(conf.Mattermost.URL)
-	client.SetToken(conf.Mattermost.Token)
+func NewBot(conf MattermostConfig, server *ActionServer, auth *ActionAuth) *Bot {
+	client := mm.NewAPIv4Client(conf.URL)
+	client.SetToken(conf.Token)
 	client.HttpClient = &http.Client{
 		Timeout: mmHTTPTimeout,
 		Transport: &http.Transport{
@@ -59,25 +56,13 @@ func NewBot(conf *Config, onAction BotActionFunc) (*Bot, error) {
 			MaxIdleConnsPerHost: mmMaxConns,
 		},
 	}
-	bot := &Bot{
+	return &Bot{
 		client:  client,
-		secret:  conf.Mattermost.Secret,
-		team:    conf.Mattermost.Team,
-		channel: conf.Mattermost.Channel,
+		server:  server,
+		auth:    auth,
+		team:    conf.Team,
+		channel: conf.Channel,
 	}
-	bot.server, err = NewBotServer(bot, onAction, conf.HTTP)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	return bot, nil
-}
-
-func (b *Bot) RunServer(ctx context.Context) error {
-	return b.server.Run(ctx)
-}
-
-func (b *Bot) ShutdownServer(ctx context.Context) error {
-	return b.server.Shutdown(ctx)
 }
 
 func (b *Bot) HealthCheck() error {
@@ -86,16 +71,6 @@ func (b *Bot) HealthCheck() error {
 		return trace.Wrap(resp.Error)
 	}
 	return nil
-}
-
-func (b *Bot) HMAC(action, reqID string) ([]byte, error) {
-	data := fmt.Sprintf("%s/%s", action, reqID)
-	mac := hmac.New(sha256.New, []byte(b.secret))
-	_, err := mac.Write([]byte(data))
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	return mac.Sum(nil), nil
 }
 
 // Post posts request info to Mattermost with action buttons.
@@ -159,7 +134,7 @@ func (b *Bot) GetUser(ctx context.Context, userID string) (*mm.User, error) {
 }
 
 func (b *Bot) NewPostAction(actionID, actionName, reqID string) (*mm.PostAction, error) {
-	signature, err := b.HMAC(actionID, reqID)
+	signature, err := b.auth.Sign(actionID, reqID)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -201,7 +176,22 @@ func (b *Bot) NewActionsAttachment(reqID string, reqData RequestData, status str
 		Text:    text,
 		Actions: actions,
 	}, nil
+}
 
+func (b *Bot) NewActionResponse(postID string, reqID string, reqData RequestData, status string) (*ActionResponse, error) {
+	actionsAttachment, err := b.NewActionsAttachment(reqID, reqData, status)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	return &ActionResponse{
+		Update: &mm.Post{
+			Id: postID,
+			Props: mm.StringInterface{
+				"attachments": []*mm.SlackAttachment{actionsAttachment},
+			},
+		},
+		EphemeralText: fmt.Sprintf("You have **%s** the request %s", strings.ToLower(status), reqID),
+	}, nil
 }
 
 func (b *Bot) buildPostText(reqID string, reqData RequestData, status string) (string, error) {

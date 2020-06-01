@@ -3,9 +3,31 @@ package utils
 import (
 	"context"
 	"sync"
+
+	"github.com/gravitational/trace"
 )
 
-type Job func(context.Context)
+type Job interface {
+	DoJob(context.Context) error
+}
+
+type ServiceJob interface {
+	Job
+	IsReady() bool
+	SetReady(ready bool)
+	WaitReady(ctx context.Context) (bool, error)
+	Done() <-chan struct{}
+	Err() error
+}
+
+type serviceJob struct {
+	mu      sync.Mutex
+	do      func(context.Context) error
+	ready   bool
+	err     error
+	readyCh chan struct{}
+	doneCh  chan struct{}
+}
 
 type Process struct {
 	sync.Mutex
@@ -13,14 +35,21 @@ type Process struct {
 	doneCh chan struct{}
 	// spawn runs a goroutine in the app's context as a job with waiting for
 	// its completion on shutdown.
-	spawn func(Job)
+	spawn func(Job, bool)
 	// terminate signals the app to terminate gracefully.
 	terminate func()
 	// cancel signals the app to terminate immediately
 	cancel context.CancelFunc
 	// onTerminate is a list of callbacks called on terminate.
-	onTerminate []Job
+	onTerminate []jobFunc
+	// criticalErrors is a list of errors returned by critical jobs.
+	criticalErrors []error
 }
+
+type jobFunc func(context.Context) error
+
+type processKey struct{}
+type jobKey struct{}
 
 var closedChan = make(chan struct{})
 
@@ -34,8 +63,9 @@ func NewProcess(ctx context.Context) *Process {
 	process := &Process{
 		doneCh:      doneCh,
 		cancel:      cancel,
-		onTerminate: make([]Job, 0),
+		onTerminate: make([]jobFunc, 0),
 	}
+	ctx = context.WithValue(ctx, processKey{}, process)
 
 	var jobs sync.WaitGroup
 
@@ -44,11 +74,16 @@ func NewProcess(ctx context.Context) *Process {
 		jobs.Wait()
 		close(doneCh)
 	}()
-	process.spawn = func(f Job) {
+	process.spawn = func(job Job, critical bool) {
 		jobs.Add(1)
+		jctx, jcancel := context.WithCancel(context.WithValue(ctx, jobKey{}, job))
 		go func() {
-			f(ctx)
+			err := job.DoJob(jctx)
+			jcancel()
 			jobs.Done()
+			if err != nil && critical {
+				process.Terminate()
+			}
 		}()
 	}
 
@@ -57,7 +92,7 @@ func NewProcess(ctx context.Context) *Process {
 		once.Do(func() {
 			process.Lock()
 			for _, j := range process.onTerminate {
-				process.spawn(j)
+				process.spawn(j, false)
 			}
 			process.Unlock()
 			jobs.Done() // Stop the main "job".
@@ -67,7 +102,7 @@ func NewProcess(ctx context.Context) *Process {
 	return process
 }
 
-func (p *Process) Spawn(f Job) {
+func (p *Process) SpawnJob(job Job) {
 	if p == nil {
 		panic("spawning a job on a nil process")
 	}
@@ -75,16 +110,36 @@ func (p *Process) Spawn(f Job) {
 	case <-p.doneCh:
 		panic("spawning a job on a finished process")
 	default:
-		p.spawn(f)
+		p.spawn(job, false)
 	}
 }
 
-func (p *Process) OnTerminate(f Job) {
+func (p *Process) SpawnCriticalJob(job Job) {
+	if p == nil {
+		panic("spawning a job on a nil process")
+	}
+	select {
+	case <-p.doneCh:
+		panic("spawning a job on a finished process")
+	default:
+		p.spawn(job, true)
+	}
+}
+
+func (p *Process) Spawn(fn func(ctx context.Context) error) {
+	p.SpawnJob(jobFunc(fn))
+}
+
+func (p *Process) SpawnCritical(fn func(ctx context.Context) error) {
+	p.SpawnCriticalJob(jobFunc(fn))
+}
+
+func (p *Process) OnTerminate(fn func(ctx context.Context) error) {
 	if p == nil {
 		panic("calling OnTerminate a nil process")
 	}
 	p.Lock()
-	p.onTerminate = append(p.onTerminate, f)
+	p.onTerminate = append(p.onTerminate, fn)
 	p.Unlock()
 }
 
@@ -120,7 +175,95 @@ func (p *Process) Close() {
 	if p == nil {
 		return
 	}
-	p.terminate()
 	p.cancel()
 	<-p.doneCh
+}
+
+func (p *Process) CriticalError() error {
+	return trace.NewAggregate(p.criticalErrors...)
+}
+
+func (j jobFunc) DoJob(ctx context.Context) error {
+	return j(ctx)
+}
+
+func MustGetProcess(ctx context.Context) *Process {
+	return ctx.Value(processKey{}).(*Process)
+}
+
+func MustGetJob(ctx context.Context) Job {
+	return ctx.Value(jobKey{}).(Job)
+}
+
+func MustGetServiceJob(ctx context.Context) ServiceJob {
+	return MustGetJob(ctx).(ServiceJob)
+}
+
+func NewServiceJob(fn func(ctx context.Context) error) ServiceJob {
+	job := &serviceJob{
+		readyCh: make(chan struct{}),
+		doneCh:  make(chan struct{}),
+	}
+	job.do = func(ctx context.Context) (err error) {
+		defer job.finish(err)
+		err = fn(ctx)
+		return
+	}
+	return job
+}
+
+func (job *serviceJob) finish(err error) {
+	job.mu.Lock()
+	defer job.mu.Unlock()
+
+	select {
+	case <-job.readyCh:
+	default:
+		close(job.readyCh)
+	}
+	job.err = err
+	close(job.doneCh)
+}
+
+func (job *serviceJob) DoJob(ctx context.Context) error {
+	return job.do(ctx)
+}
+
+func (job *serviceJob) IsReady() bool {
+	job.mu.Lock()
+	defer job.mu.Unlock()
+
+	return job.ready
+}
+
+func (job *serviceJob) SetReady(ready bool) {
+	job.mu.Lock()
+	defer job.mu.Unlock()
+
+	job.ready = ready
+	select {
+	case <-job.readyCh:
+	default:
+		close(job.readyCh)
+	}
+}
+
+func (job *serviceJob) WaitReady(ctx context.Context) (bool, error) {
+	select {
+	case <-job.readyCh:
+		return job.IsReady(), nil
+	case <-ctx.Done():
+		return false, trace.Wrap(ctx.Err())
+	}
+}
+
+func (job *serviceJob) Done() <-chan struct{} {
+	return job.doneCh
+}
+
+func (job *serviceJob) Err() error {
+	job.mu.Lock()
+	defer job.mu.Unlock()
+
+	return job.err
 }

@@ -25,7 +25,7 @@ type Bot struct {
 	clusterName string
 }
 
-func NewBot(conf *Config) *Bot {
+func NewBot(conf SlackConfig) *Bot {
 	httpClient := &http.Client{
 		Timeout: slackHTTPTimeout,
 		Transport: &http.Transport{
@@ -39,23 +39,20 @@ func NewBot(conf *Config) *Bot {
 	}
 
 	// APIURL parameter is set only in tests
-	if conf.Slack.APIURL != "" {
-		slackOptions = append(slackOptions, slack.OptionAPIURL(conf.Slack.APIURL))
+	if conf.APIURL != "" {
+		slackOptions = append(slackOptions, slack.OptionAPIURL(conf.APIURL))
 	}
 
 	return &Bot{
-		client:     slack.New(conf.Slack.Token, slackOptions...),
-		channel:    conf.Slack.Channel,
+		client:     slack.New(conf.Token, slackOptions...),
+		channel:    conf.Channel,
 		respClient: httpClient,
 	}
 }
 
 // Post posts request info to Slack with action buttons.
-// exported method Post returns unexported type github.com/gravitational/teleport-plugins/access/slackbot.slackData, which can be annoying to use
-// This data type doesn't need to be exported.
-//nolint(golint)
-func (b *Bot) Post(ctx context.Context, reqID string, reqData requestData) (data slackData, err error) {
-	data.channelID, data.timestamp, err = b.client.PostMessageContext(
+func (b *Bot) Post(ctx context.Context, reqID string, reqData RequestData) (data SlackData, err error) {
+	data.ChannelID, data.Timestamp, err = b.client.PostMessageContext(
 		ctx,
 		b.channel,
 		slack.MsgOptionBlocks(b.msgSections(reqID, reqData, "PENDING")...),
@@ -66,11 +63,11 @@ func (b *Bot) Post(ctx context.Context, reqID string, reqData requestData) (data
 }
 
 // Expire updates request's Slack post with EXPIRED status and removes action buttons.
-func (b *Bot) Expire(ctx context.Context, reqID string, reqData requestData, slackData slackData) error {
+func (b *Bot) Expire(ctx context.Context, reqID string, reqData RequestData, slackData SlackData) error {
 	_, _, _, err := b.client.UpdateMessageContext(
 		ctx,
-		slackData.channelID,
-		slackData.timestamp,
+		slackData.ChannelID,
+		slackData.Timestamp,
 		slack.MsgOptionBlocks(b.msgSections(reqID, reqData, "EXPIRED")...),
 	)
 
@@ -86,7 +83,7 @@ func (b *Bot) GetUserEmail(ctx context.Context, id string) (string, error) {
 }
 
 // Respond is used to send and updated message to Slack by "response_url" from interaction callback.
-func (b *Bot) Respond(ctx context.Context, reqID string, reqData requestData, status string, responseURL string) error {
+func (b *Bot) Respond(ctx context.Context, reqID string, reqData RequestData, status string, responseURL string) error {
 	var message slack.Message
 	message.Blocks.BlockSet = b.msgSections(reqID, reqData, status)
 	message.ReplaceOriginal = true
@@ -127,18 +124,18 @@ func (b *Bot) Respond(ctx context.Context, reqID string, reqData requestData, st
 }
 
 // msgSection builds a slack message section (obeys markdown).
-func (b *Bot) msgSections(reqID string, reqData requestData, status string) []slack.Block {
+func (b *Bot) msgSections(reqID string, reqData RequestData, status string) []slack.Block {
 	var builder strings.Builder
 	builder.Grow(128)
 
 	msgFieldToBuilder(&builder, "ID", reqID)
 	msgFieldToBuilder(&builder, "Cluster", b.clusterName)
 
-	if len(reqData.user) > 0 {
-		msgFieldToBuilder(&builder, "User", reqData.user)
+	if len(reqData.User) > 0 {
+		msgFieldToBuilder(&builder, "User", reqData.User)
 	}
-	if reqData.roles != nil {
-		msgFieldToBuilder(&builder, "Role(s)", strings.Join(reqData.roles, ","))
+	if reqData.Roles != nil {
+		msgFieldToBuilder(&builder, "Role(s)", strings.Join(reqData.Roles, ","))
 	}
 
 	var statusEmoji string

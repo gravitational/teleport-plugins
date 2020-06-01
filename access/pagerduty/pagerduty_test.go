@@ -35,8 +35,7 @@ const (
 
 type PagerdutySuite struct {
 	app              *App
-	appPort          string
-	webhookURL       string
+	publicURL        string
 	me               *user.User
 	fakePagerdutySrv *httptest.Server
 	extensions       sync.Map
@@ -90,21 +89,15 @@ func (s *PagerdutySuite) SetUpSuite(c *C) {
 		c.Fatalf("Unexpected response from Start: %v", err)
 	}
 	s.teleport = t
-	s.appPort = portList.Pop()
-	s.webhookURL = "http://" + Host + ":" + s.appPort + "/"
 }
 
 func (s *PagerdutySuite) SetUpTest(c *C) {
+	s.publicURL = ""
 	s.startFakePagerduty(c)
-	s.startApp(c)
-	time.Sleep(time.Millisecond * 250) // Wait some time for services to start up
 }
 
 func (s *PagerdutySuite) TearDownTest(c *C) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	err := s.app.Shutdown(ctx)
-	c.Assert(err, IsNil)
+	s.shutdownApp(c)
 	s.fakePagerdutySrv.Close()
 	close(s.newExtensions)
 	close(s.newIncidents)
@@ -345,8 +338,10 @@ func (s *PagerdutySuite) startApp(c *C) {
 	conf.Pagerduty.APIEndpoint = s.fakePagerdutySrv.URL
 	conf.Pagerduty.UserEmail = "bot@example.com"
 	conf.Pagerduty.ServiceID = "1111"
-	conf.HTTP.Listen = ":" + s.appPort
-	conf.HTTP.RawBaseURL = "http://" + Host + ":" + s.appPort + "/"
+	if s.publicURL != "" {
+		conf.HTTP.PublicAddr = s.publicURL
+	}
+	conf.HTTP.ListenAddr = ":0"
 	conf.HTTP.Insecure = true
 
 	s.app, err = NewApp(conf)
@@ -356,6 +351,21 @@ func (s *PagerdutySuite) startApp(c *C) {
 		err = s.app.Run(context.TODO())
 		c.Assert(err, IsNil)
 	}()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
+	defer cancel()
+	ok, err := s.app.WaitReady(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(ok, Equals, true)
+	if s.publicURL == "" {
+		s.publicURL = s.app.PublicURL().String()
+	}
+}
+
+func (s *PagerdutySuite) shutdownApp(c *C) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*2000)
+	defer cancel()
+	err := s.app.Shutdown(ctx)
+	c.Assert(err, IsNil)
 }
 
 func (s *PagerdutySuite) createAccessRequest(c *C) services.AccessRequest {
@@ -408,7 +418,7 @@ func (s *PagerdutySuite) postAction(c *C, incident *pd.Incident, action string) 
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(&payload)
 	c.Assert(err, IsNil)
-	req, err := http.NewRequest("POST", s.webhookURL+action, &buf)
+	req, err := http.NewRequest("POST", s.publicURL+"/"+action, &buf)
 	c.Assert(err, IsNil)
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("X-Webhook-Id", "Webhook-123")
@@ -421,6 +431,8 @@ func (s *PagerdutySuite) postAction(c *C, incident *pd.Incident, action string) 
 }
 
 func (s *PagerdutySuite) TestExtensionCreation(c *C) {
+	s.startApp(c)
+	s.shutdownApp(c)
 	var extension1 *pd.Extension
 	select {
 	case extension1 = <-s.newExtensions:
@@ -444,11 +456,12 @@ func (s *PagerdutySuite) TestExtensionCreation(c *C) {
 
 	extEndpoints := []string{extension1.EndpointURL, extension2.EndpointURL}
 	sort.Strings(extEndpoints)
-	c.Assert(extEndpoints[0], Equals, s.webhookURL+pdApproveAction)
-	c.Assert(extEndpoints[1], Equals, s.webhookURL+pdDenyAction)
+	c.Assert(extEndpoints[0], Equals, s.publicURL+"/"+pdApproveAction)
+	c.Assert(extEndpoints[1], Equals, s.publicURL+"/"+pdDenyAction)
 }
 
 func (s *PagerdutySuite) TestIncidentCreation(c *C) {
+	s.startApp(c)
 	req := s.createAccessRequest(c)
 
 	var incident *pd.Incident
@@ -463,6 +476,7 @@ func (s *PagerdutySuite) TestIncidentCreation(c *C) {
 }
 
 func (s *PagerdutySuite) TestApproval(c *C) {
+	s.startApp(c)
 	request := s.createAccessRequest(c)
 
 	var incident *pd.Incident
@@ -498,6 +512,7 @@ func (s *PagerdutySuite) TestApproval(c *C) {
 }
 
 func (s *PagerdutySuite) TestDenial(c *C) {
+	s.startApp(c)
 	request := s.createAccessRequest(c)
 
 	var incident *pd.Incident
@@ -533,6 +548,7 @@ func (s *PagerdutySuite) TestDenial(c *C) {
 }
 
 func (s *PagerdutySuite) TestApproveExpired(c *C) {
+	s.startApp(c)
 	s.createExpiredAccessRequest(c)
 
 	var incident *pd.Incident
@@ -560,6 +576,7 @@ func (s *PagerdutySuite) TestApproveExpired(c *C) {
 }
 
 func (s *PagerdutySuite) TestDenyExpired(c *C) {
+	s.startApp(c)
 	s.createExpiredAccessRequest(c)
 
 	var incident *pd.Incident

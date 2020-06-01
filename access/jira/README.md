@@ -32,22 +32,21 @@ make access-jira
 
 ```toml
 [teleport]
-auth-server = "example.com:3025"  # Auth GRPC API address
-client-key = "/var/lib/teleport/plugins/jira/auth.key" # Teleport GRPC client secret key
-client-crt = "/var/lib/teleport/plugins/jira/auth.crt" # Teleport GRPC client certificate
-root-cas = "/var/lib/teleport/plugins/jira/auth.cas"   # Teleport cluster CA certs
+auth_server = "example.com:3025"                       # Teleport Auth Server GRPC API address
+clientkey = "/var/lib/teleport/plugins/jira/auth.key"  # Teleport GRPC client secret key
+client_crt = "/var/lib/teleport/plugins/jira/auth.crt" # Teleport GRPC client certificate
+root_cas = "/var/lib/teleport/plugins/jira/auth.cas"   # Teleport cluster CA certs
 
 [jira]
-url = "https://[my-jira].atlassian.net"    # JIRA URL. For JIRA Cloud, https://[my-jira].atlassian.net
+url = "https://example.com/jira"    # JIRA URL. For JIRA Cloud, https://[my-jira].atlassian.net
 username = "bot@example.com"        # JIRA username
-api-token = "token"                 # JIRA API Basic Auth token, or our password in case you're using Jira Server.
+api_token = "token"                 # JIRA API Basic Auth token, or our password in case you're using Jira Server.
 project = "MYPROJ"                  # JIRA Project key
 
 [http]
-listen = ":8081"          # JIRA webhook listener
-# host = "example.com"    # Host name by which bot is accessible
-# https-key-file = "/var/lib/teleport/plugins/jira/server.key"  # TLS private key
-# https-cert-file = "/var/lib/teleport/plugins/jira/server.crt" # TLS certificate
+# listen_addr = ":8081" # Network address in format [addr]:port on which webhook server listens, e.g. 0.0.0.0:443
+https_key_file = "/var/lib/teleport/plugins/jira/server.key"  # TLS private key
+https_cert_file = "/var/lib/teleport/plugins/jira/server.crt" # TLS certificate
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/jira.log"
@@ -59,7 +58,7 @@ severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN"
 This configuration section ensures that the bot can talk to your teleport
 auth server & manage access-requests.  Use `tctl auth sign --format=tls`
 to generate the required PEM files, and make sure that the Auth Server's
-GRPC API is accessible at the address indicated by `auth-server`.
+GRPC API is accessible at the address indicated by `auth_server`.
 
 *NOTE*: The jira plugin must be given a teleport user identity with
 appropriate permissions.  See the [access package README](../README.md#authentication)

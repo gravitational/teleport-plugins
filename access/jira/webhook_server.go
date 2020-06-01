@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"sync/atomic"
 	"time"
 
@@ -46,8 +47,8 @@ type WebhookServer struct {
 	counter   uint64
 }
 
-func NewWebhookServer(conf *Config, onWebhook WebhookFunc) (*WebhookServer, error) {
-	httpSrv, err := utils.NewHTTP(conf.HTTP)
+func NewWebhookServer(conf utils.HTTPConfig, onWebhook WebhookFunc) (*WebhookServer, error) {
+	httpSrv, err := utils.NewHTTP(conf)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -59,15 +60,16 @@ func NewWebhookServer(conf *Config, onWebhook WebhookFunc) (*WebhookServer, erro
 	return srv, nil
 }
 
-func (s *WebhookServer) Run(ctx context.Context) error {
-	if err := s.http.EnsureCert(DefaultDir + "/server"); err != nil {
-		return err
-	}
-	return s.http.ListenAndServe(ctx)
+func (s *WebhookServer) ServiceJob() utils.ServiceJob {
+	return s.http.ServiceJob()
 }
 
-func (s *WebhookServer) Shutdown(ctx context.Context) error {
-	return s.http.ShutdownWithTimeout(ctx, time.Second*5)
+func (s *WebhookServer) BaseURL() *url.URL {
+	return s.http.BaseURL()
+}
+
+func (s *WebhookServer) EnsureCert() error {
+	return s.http.EnsureCert(DefaultDir + "/server")
 }
 
 func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {

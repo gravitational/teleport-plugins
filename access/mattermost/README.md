@@ -118,25 +118,25 @@ Then, edit the config as needed.
 ```TOML
 # example mattermost configuration TOML file
 [teleport]
-auth-server = "example.com:3025"  # Teleport Auth Server GRPC API address
-client-key = "/var/lib/teleport/plugins/mattermost/auth.key" # Teleport GRPC client secret key
-client-crt = "/var/lib/teleport/plugins/mattermost/auth.crt" # Teleport GRPC client certificate
-root-cas = "/var/lib/teleport/plugins/mattermost/auth.cas"   # Teleport cluster CA certs
+auth_server = "example.com:3025"  # Teleport Auth Server GRPC API address
+client_key = "/var/lib/teleport/plugins/mattermost/auth.key" # Teleport GRPC client secret key
+client_crt = "/var/lib/teleport/plugins/mattermost/auth.crt" # Teleport GRPC client certificate
+root_cas = "/var/lib/teleport/plugins/mattermost/auth.cas"   # Teleport cluster CA certs
 
 [mattermost]
-token = "BOT TOKEN"       # Mattermost Bot OAuth token
-secret = "signing-secret-value"   # Mattermost API Signing Secret
-channel = "town-square"  # Mattermost Channel name to post requests to
+token = "api-token"              # Mattermost Bot OAuth token
+secret = "signing-secret-value"  # Mattermost API Signing Secret
+channel = "channel-name"         # Mattermost Channel name to post requests to
 
 [http]
-listen = ":8081"          # Mattermost interaction callback listener
-# https-key-file = "/var/lib/teleport/plugins/mattermost/server.key"  # TLS private key
-# https-cert-file = "/var/lib/teleport/plugins/mattermost/server.crt" # TLS certificate
+public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-mattermost.example.com
+# listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:443
+https_key_file = "/var/lib/teleport/plugins/mattermost/server.key"  # TLS private key
+https_cert_file = "/var/lib/teleport/plugins/mattermost/server.crt" # TLS certificate
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/mattermost.log"
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
-
 ```
 
 ### Running the bot
