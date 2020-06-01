@@ -40,7 +40,7 @@ plugin can be found in the plugin's [README](./access/mattermost/README.md).
 
 ### Pagerduty Extension
 
-A Teleport integartion with Pagerduty that allows your team to treat Teleport permission requests
+A Teleport integration with Pagerduty that allows your team to treat Teleport permission requests
 as Pagerduty incidents, and provides Pagerduty special actions to approve or deny permission requests.
 Run `make teleport-pagerduty` to build it. More docs in the [README](./access/pagerduty/README.md).
 
