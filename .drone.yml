@@ -108,7 +108,8 @@ steps:
       - git fetch --all --tags
       - git checkout $DRONE_TAG
       - mkdir -p build/
-      - make release/access-${DRONE_TAG##*-v}
+      - export PLUGIN_TYPE=$(echo $DRONE_TAG | cut -d- -f2)
+      - make release/$access/$PLUGIN_TYPE
       - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
       - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
@@ -176,6 +177,6 @@ steps:
 
 ---
 kind: signature
-hmac: 6bedbdbe74c9df20f91985c86c7b90380846deca33791a3d9a408a0934b679f7
+hmac: 68a5e930c2579189a182c5703fd8eb51b9453f4f23f68018200a6c4d730a7f78
 
 ...
