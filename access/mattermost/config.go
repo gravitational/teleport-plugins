@@ -19,11 +19,11 @@ type Config struct {
 }
 
 type MattermostConfig struct {
-	Token   string `toml:"token"`
-	Secret  string `toml:"secret"`
+	URL     string `toml:"url"`
 	Team    string `toml:"team"`
 	Channel string `toml:"channel"`
-	URL     string `toml:"url"`
+	Token   string `toml:"token"`
+	Secret  string `toml:"secret"`
 }
 
 const exampleConfig = `# example mattermost configuration TOML file
@@ -34,9 +34,11 @@ client_crt = "/var/lib/teleport/plugins/mattermost/auth.crt" # Teleport GRPC cli
 root_cas = "/var/lib/teleport/plugins/mattermost/auth.cas"   # Teleport cluster CA certs
 
 [mattermost]
-token = "api_token"              # Mattermost Bot OAuth token
-secret = "signing-secret-value"  # Mattermost API Signing Secret
-channel = "channel-name"         # Mattermost Channel name to post requests to
+url = "https://mattermost.example.com" # Mattermost Server URL
+team = "team-name"                     # Mattermsot team in which the channel resides.
+channel = "channel-name"               # Mattermost Channel name to post requests to
+token = "api-token"                    # Mattermost Bot OAuth token
+secret = "signing-secret-value"        # Mattermost API signing Secret
 
 [http]
 public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-mattermost.example.com

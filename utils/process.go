@@ -204,10 +204,10 @@ func NewServiceJob(fn func(ctx context.Context) error) ServiceJob {
 		readyCh: make(chan struct{}),
 		doneCh:  make(chan struct{}),
 	}
-	job.do = func(ctx context.Context) (err error) {
-		defer job.finish(err)
-		err = fn(ctx)
-		return
+	job.do = func(ctx context.Context) error {
+		err := fn(ctx)
+		job.finish(err)
+		return err
 	}
 	return job
 }

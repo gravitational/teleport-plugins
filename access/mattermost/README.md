@@ -124,9 +124,11 @@ client_crt = "/var/lib/teleport/plugins/mattermost/auth.crt" # Teleport GRPC cli
 root_cas = "/var/lib/teleport/plugins/mattermost/auth.cas"   # Teleport cluster CA certs
 
 [mattermost]
-token = "api-token"              # Mattermost Bot OAuth token
-secret = "signing-secret-value"  # Mattermost API Signing Secret
-channel = "channel-name"         # Mattermost Channel name to post requests to
+url = "https://mattermost.example.com" # Mattermost Server URL
+team = "team-name"                     # Mattermsot team in which the channel resides.
+channel = "channel-name"               # Mattermost Channel name to post requests to
+token = "api-token"                    # Mattermost Bot OAuth token
+secret = "signing-secret-value"        # Mattermost API signing Secret
 
 [http]
 public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-mattermost.example.com
