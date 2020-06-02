@@ -34,8 +34,7 @@ const (
 
 type JirabotSuite struct {
 	app         *App
-	appPort     string
-	webhookURL  string
+	publicURL   string
 	me          *user.User
 	fakeJiraSrv *httptest.Server
 	issues      sync.Map
@@ -87,21 +86,15 @@ func (s *JirabotSuite) SetUpSuite(c *C) {
 		c.Fatalf("Unexpected response from Start: %v", err)
 	}
 	s.teleport = t
-	s.appPort = portList.Pop()
-	s.webhookURL = "http://" + Host + ":" + s.appPort + "/"
 }
 
 func (s *JirabotSuite) SetUpTest(c *C) {
+	s.publicURL = ""
 	s.startFakeJira(c)
-	s.startApp(c)
-	time.Sleep(time.Millisecond * 250) // Wait some time for services to start up
 }
 
 func (s *JirabotSuite) TearDownTest(c *C) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	err := s.app.Shutdown(ctx)
-	c.Assert(err, IsNil)
+	s.shutdownApp(c)
 	s.fakeJiraSrv.Close()
 	close(s.newIssues)
 	close(s.transitions)
@@ -267,7 +260,10 @@ func (s *JirabotSuite) startApp(c *C) {
 	conf.JIRA.Username = "bot@example.com"
 	conf.JIRA.APIToken = "xyz"
 	conf.JIRA.Project = "PROJ"
-	conf.HTTP.Listen = ":" + s.appPort
+	conf.HTTP.ListenAddr = ":0"
+	if s.publicURL != "" {
+		conf.HTTP.PublicAddr = s.publicURL
+	}
 	conf.HTTP.Insecure = true
 
 	s.app, err = NewApp(conf)
@@ -277,6 +273,21 @@ func (s *JirabotSuite) startApp(c *C) {
 		err = s.app.Run(context.TODO())
 		c.Assert(err, IsNil)
 	}()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
+	defer cancel()
+	ok, err := s.app.WaitReady(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(ok, Equals, true)
+	if s.publicURL == "" {
+		s.publicURL = s.app.PublicURL().String()
+	}
+}
+
+func (s *JirabotSuite) shutdownApp(c *C) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*2000)
+	defer cancel()
+	err := s.app.Shutdown(ctx)
+	c.Assert(err, IsNil)
 }
 
 func (s *JirabotSuite) createAccessRequest(c *C) services.AccessRequest {
@@ -369,10 +380,11 @@ func (s *JirabotSuite) postWebhook(c *C, wh *Webhook) (*http.Response, error) {
 	err := json.NewEncoder(&buf).Encode(wh)
 	c.Assert(err, IsNil)
 
-	return http.Post(s.webhookURL, "application/json", &buf)
+	return http.Post(s.publicURL, "application/json", &buf)
 }
 
-func (s *JirabotSuite) TestSlackMessagePosting(c *C) {
+func (s *JirabotSuite) TestIssueCreation(c *C) {
+	s.startApp(c)
 	request := s.createAccessRequest(c)
 
 	var issue *Issue
@@ -387,6 +399,7 @@ func (s *JirabotSuite) TestSlackMessagePosting(c *C) {
 }
 
 func (s *JirabotSuite) TestApproval(c *C) {
+	s.startApp(c)
 	request := s.createAccessRequest(c)
 
 	var issue *Issue
@@ -408,6 +421,7 @@ func (s *JirabotSuite) TestApproval(c *C) {
 }
 
 func (s *JirabotSuite) TestDenial(c *C) {
+	s.startApp(c)
 	request := s.createAccessRequest(c)
 
 	var issue *Issue
@@ -429,6 +443,7 @@ func (s *JirabotSuite) TestDenial(c *C) {
 }
 
 func (s *JirabotSuite) TestExpired(c *C) {
+	s.startApp(c)
 	_ = s.createExpiredAccessRequest(c)
 
 	var issue *Issue

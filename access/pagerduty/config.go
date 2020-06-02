@@ -13,44 +13,45 @@ import (
 
 type Config struct {
 	Teleport struct {
-		AuthServer string `toml:"auth-server"`
-		ClientKey  string `toml:"client-key"`
-		ClientCrt  string `toml:"client-crt"`
-		RootCAs    string `toml:"root-cas"`
+		AuthServer string `toml:"auth_server"`
+		ClientKey  string `toml:"client_key"`
+		ClientCrt  string `toml:"client_crt"`
+		RootCAs    string `toml:"root_cas"`
 	} `toml:"teleport"`
-	Pagerduty struct {
-		APIEndpoint string `toml:"-"`
-		APIKey      string `toml:"api-key"`
-		UserEmail   string `toml:"user-email"`
-		ServiceID   string `toml:"service-id"`
-	} `toml:"pagerduty"`
-	HTTP utils.HTTPConfig `toml:"http"`
-	Log  utils.LogConfig  `toml:"log"`
+	Pagerduty PagerdutyConfig  `toml:"pagerduty"`
+	HTTP      utils.HTTPConfig `toml:"http"`
+	Log       utils.LogConfig  `toml:"log"`
+}
+
+type PagerdutyConfig struct {
+	APIEndpoint string `toml:"-"`
+	APIKey      string `toml:"api_key"`
+	UserEmail   string `toml:"user_email"`
+	ServiceID   string `toml:"service_id"`
 }
 
 const exampleConfig = `# example teleport-pagerduty configuration TOML file
 [teleport]
-auth-server = "example.com:3025"  # Auth GRPC API address
-client-key = "/var/lib/teleport/plugins/pagerduty/auth.key" # Teleport GRPC client secret key
-client-crt = "/var/lib/teleport/plugins/pagerduty/auth.crt" # Teleport GRPC client certificate
-root-cas = "/var/lib/teleport/plugins/pagerduty/auth.cas"   # Teleport cluster CA certs
+auth_server = "example.com:3025"                            # Teleport Auth Server GRPC API address
+client_key = "/var/lib/teleport/plugins/pagerduty/auth.key" # Teleport GRPC client secret key
+client_crt = "/var/lib/teleport/plugins/pagerduty/auth.crt" # Teleport GRPC client certificate
+root_cas = "/var/lib/teleport/plugins/pagerduty/auth.cas"   # Teleport cluster CA certs
 
 [pagerduty]
-api-key = "key"               # PagerDuty API Key
-user-email = "me@example.com" # PagerDuty bot user email (Could be admin email)
-service-id = "PIJ90N7"        # PagerDuty service id
+api_key = "key"               # PagerDuty API Key
+user_email = "me@example.com" # PagerDuty bot user email (Could be admin email)
+service_id = "PIJ90N7"        # PagerDuty service id
 
 [http]
-listen = ":8081"          # PagerDuty webhook listener
-base-url = "https://teleport-pagerduty.infra.yourcorp.com" # The public address of the teleport-pagerduty webhook listener.
-# host = "example.com"    # Host name by which bot is accessible
-# https-key-file = "/var/lib/teleport/plugins/pagerduty/server.key"  # TLS private key
-# https-cert-file = "/var/lib/teleport/plugins/pagerduty/server.crt" # TLS certificate
+public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-pagerduty.example.com
+# listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:443
+https_key_file = "/var/lib/teleport/plugins/pagerduty/server.key"  # TLS private key
+https_cert_file = "/var/lib/teleport/plugins/pagerduty/server.crt" # TLS certificate
 
 [http.tls]
-verify-client-cert = true # The preferred way to authenticate webhooks on Pagerduty. See more: https://developer.pagerduty.com/docs/webhooks/webhooks-mutual-tls
+verify_client_cert = true # The preferred way to authenticate webhooks on Pagerduty. See more: https://developer.pagerduty.com/docs/webhooks/webhooks-mutual-tls
 
-[http.basic-auth]
+[http.basic_auth]
 user = "user"
 password = "password" # If you prefer to use basic auth for Pagerduty Webhooks authentication, use this section to store user and password
 
@@ -88,19 +89,19 @@ func (c *Config) CheckAndSetDefaults() error {
 		c.Teleport.RootCAs = "cas.pem"
 	}
 	if c.Pagerduty.APIKey == "" {
-		return trace.BadParameter("missing required value pagerduty.api-key")
+		return trace.BadParameter("missing required value pagerduty.api_key")
 	}
 	if c.Pagerduty.UserEmail == "" {
-		return trace.BadParameter("missing required value pagerduty.user-email")
+		return trace.BadParameter("missing required value pagerduty.user_email")
 	}
 	if c.Pagerduty.ServiceID == "" {
-		return trace.BadParameter("missing required value pagerduty.service-id")
+		return trace.BadParameter("missing required value pagerduty.service_id")
 	}
-	if c.HTTP.Hostname == "" && c.HTTP.RawBaseURL == "" {
-		return trace.BadParameter("either http.base-url or http.host is required to be set")
+	if c.HTTP.PublicAddr == "" {
+		return trace.BadParameter("missing required value http.public_addr")
 	}
-	if c.HTTP.Listen == "" {
-		c.HTTP.Listen = ":8081"
+	if c.HTTP.ListenAddr == "" {
+		c.HTTP.ListenAddr = ":8081"
 	}
 	if err := c.HTTP.Check(); err != nil {
 		return trace.Wrap(err)

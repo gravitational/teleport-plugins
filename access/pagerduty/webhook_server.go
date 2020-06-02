@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"sync/atomic"
 	"time"
 
@@ -72,19 +73,20 @@ func NewWebhookServer(conf utils.HTTPConfig, onAction WebhookFunc) (*WebhookServ
 	return srv, nil
 }
 
+func (s *WebhookServer) ServiceJob() utils.ServiceJob {
+	return s.http.ServiceJob()
+}
+
 func (s *WebhookServer) ActionURL(actionName string) string {
 	return s.http.NewURL(actionName, nil).String()
 }
 
-func (s *WebhookServer) Run(ctx context.Context) error {
-	if err := s.http.EnsureCert(DefaultDir + "/server"); err != nil {
-		return err
-	}
-	return s.http.ListenAndServe(ctx)
+func (s *WebhookServer) BaseURL() *url.URL {
+	return s.http.BaseURL()
 }
 
-func (s *WebhookServer) Shutdown(ctx context.Context) error {
-	return s.http.ShutdownWithTimeout(ctx, time.Second*5)
+func (s *WebhookServer) EnsureCert() error {
+	return s.http.EnsureCert(DefaultDir + "/server")
 }
 
 func (s *WebhookServer) processWebhook(actionName string, rw http.ResponseWriter, r *http.Request) {

@@ -54,7 +54,7 @@ Request ID is {{.ID}}.
 	}
 }
 
-func NewBot(conf *Config, onAction WebhookFunc) (*Bot, error) {
+func NewBot(conf GitlabConfig, server *WebhookServer) (*Bot, error) {
 	var err error
 
 	client := resty.NewWithClient(&http.Client{
@@ -64,14 +64,9 @@ func NewBot(conf *Config, onAction WebhookFunc) (*Bot, error) {
 			MaxIdleConnsPerHost: gitlabMaxConns,
 		},
 	})
-	webhookSecret := conf.Gitlab.WebhookSecret
-	server, err := NewWebhookServer(conf.HTTP, webhookSecret, onAction)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
 
 	var baseURL *url.URL
-	if urlStr := conf.Gitlab.URL; urlStr != "" {
+	if urlStr := conf.URL; urlStr != "" {
 		baseURL, err = url.Parse(urlStr)
 		if err != nil {
 			return nil, trace.Wrap(err)
@@ -86,19 +81,11 @@ func NewBot(conf *Config, onAction WebhookFunc) (*Bot, error) {
 		client:        client,
 		server:        server,
 		baseURL:       baseURL,
-		projectID:     conf.Gitlab.ProjectID,
-		apiToken:      conf.Gitlab.Token,
-		webhookSecret: webhookSecret,
+		projectID:     conf.ProjectID,
+		apiToken:      conf.Token,
+		webhookSecret: conf.WebhookSecret,
 		labels:        map[string]string{},
 	}, nil
-}
-
-func (b *Bot) RunServer(ctx context.Context) error {
-	return b.server.Run(ctx)
-}
-
-func (b *Bot) ShutdownServer(ctx context.Context) error {
-	return b.server.Shutdown(ctx)
 }
 
 func (b *Bot) NewRequest(ctx context.Context) *resty.Request {

@@ -14,30 +14,32 @@ import (
 
 type Config struct {
 	Teleport struct {
-		AuthServer string `toml:"auth-server"`
-		ClientKey  string `toml:"client-key"`
-		ClientCrt  string `toml:"client-crt"`
-		RootCAs    string `toml:"root-cas"`
+		AuthServer string `toml:"auth_server"`
+		ClientKey  string `toml:"client_key"`
+		ClientCrt  string `toml:"client_crt"`
+		RootCAs    string `toml:"root_cas"`
 	} `toml:"teleport"`
 	DB struct {
 		Path string `toml:"path"`
 	} `toml:"db"`
-	Gitlab struct {
-		URL           string `toml:"url"`
-		Token         string `toml:"token"`
-		ProjectID     string `toml:"project-id"`
-		WebhookSecret string `toml:"webhook-secret"`
-	} `toml:"gitlab"`
-	HTTP utils.HTTPConfig `toml:"http"`
-	Log  utils.LogConfig  `toml:"log"`
+	Gitlab GitlabConfig     `toml:"gitlab"`
+	HTTP   utils.HTTPConfig `toml:"http"`
+	Log    utils.LogConfig  `toml:"log"`
+}
+
+type GitlabConfig struct {
+	URL           string `toml:"url"`
+	Token         string `toml:"token"`
+	ProjectID     string `toml:"project_id"`
+	WebhookSecret string `toml:"webhook_secret"`
 }
 
 const exampleConfig = `# example teleport-gitlab configuration TOML file
 [teleport]
-auth-server = "example.com:3025"  # Auth GRPC API address
-client-key = "/var/lib/teleport/plugins/gitlab/auth.key" # Teleport GRPC client secret key
-client-crt = "/var/lib/teleport/plugins/gitlab/auth.crt" # Teleport GRPC client certificate
-root-cas = "/var/lib/teleport/plugins/gitlab/auth.cas"   # Teleport cluster CA certs
+auth_server = "example.com:3025"                         # Teleport Auth Server GRPC API address
+client_key = "/var/lib/teleport/plugins/gitlab/auth.key" # Teleport GRPC API client secret key
+client_crt = "/var/lib/teleport/plugins/gitlab/auth.crt" # Teleport GRPC client certificate
+root_cas = "/var/lib/teleport/plugins/gitlab/auth.cas"   # Teleport cluster CA certs
 
 [db]
 path = "/var/lib/teleport/plugins/gitlab/database" # Path to the database file
@@ -45,14 +47,14 @@ path = "/var/lib/teleport/plugins/gitlab/database" # Path to the database file
 [gitlab]
 url = ""                                   # Leave empty if you are using cloud
 token = "token"                            # GitLab API Token
-project-id = "1812345"                     # GitLab Project ID
-webhook-secret = "your webhook passphrase" # A secret used to encrypt data we use in webhooks. Basically anything you'd like. 
+project_id = "1812345"                     # GitLab Project ID
+webhook_secret = "your webhook passphrase" # A secret used to encrypt data we use in webhooks. Basically anything you'd like.
 
 [http]
-listen = ":8081"                                                  # Webhook listener
-base-url = "https://your-server.example.com/teleport-gitlab"      # URL by which bot is accessible — will be used in Gitlab webhook settings
-# https-key-file = "/var/lib/teleport/plugins/gitlab/server.key"  # TLS private key
-# https-cert-file = "/var/lib/teleport/plugins/gitlab/server.crt" # TLS certificate
+public_addr = "example.com" # URL on which webhook server is accessible externally, e.g. [https://]teleport-gitlab.example.com
+# listen_addr = ":8081" # Network address in format [addr]:port on which webhook server listens, e.g. 0.0.0.0:443
+https_key_file = "/var/lib/teleport/plugins/gitlab/server.key"  # TLS private key
+https_cert_file = "/var/lib/teleport/plugins/gitlab/server.crt" # TLS certificate
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/gitlab.log"
@@ -94,22 +96,19 @@ func (c *Config) CheckAndSetDefaults() error {
 		return trace.BadParameter("missing required value gitlab.token")
 	}
 	if c.Gitlab.ProjectID == "" {
-		return trace.BadParameter("missing required value gitlab.project-id")
+		return trace.BadParameter("missing required value gitlab.project_id")
 	}
 	if c.Gitlab.WebhookSecret == "" {
-		return trace.BadParameter("missing required value gitlab.webhook-secret")
+		return trace.BadParameter("missing required value gitlab.webhook_secret")
 	}
-	if c.HTTP.Hostname == "" && c.HTTP.RawBaseURL == "" {
-		return trace.BadParameter("either http.base-url or http.host is required to be set")
+	if c.HTTP.PublicAddr == "" {
+		return trace.BadParameter("missing required value http.public_addr")
 	}
-	if c.HTTP.Listen == "" {
-		c.HTTP.Listen = ":8081"
+	if c.HTTP.ListenAddr == "" {
+		c.HTTP.ListenAddr = ":8081"
 	}
-	if c.HTTP.KeyFile != "" && c.HTTP.CertFile == "" {
-		return trace.BadParameter("https-cert-file is required when https-key-file is specified")
-	}
-	if c.HTTP.CertFile != "" && c.HTTP.KeyFile == "" {
-		return trace.BadParameter("https-key-file is required when https-cert-file is specified")
+	if err := c.HTTP.Check(); err != nil {
+		return trace.Wrap(err)
 	}
 	if c.Log.Output == "" {
 		c.Log.Output = "stderr"

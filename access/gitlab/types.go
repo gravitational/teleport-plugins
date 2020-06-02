@@ -7,7 +7,10 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
+
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -15,6 +18,25 @@ const (
 	ApproveAction
 	DenyAction
 )
+
+type RequestData struct {
+	User    string
+	Roles   []string
+	Created time.Time
+}
+
+type GitlabData struct {
+	ID        IntID
+	IID       IntID
+	ProjectID IntID
+}
+
+type PluginData struct {
+	RequestData
+	GitlabData
+}
+
+type logFields = log.Fields
 
 type ActionID int
 

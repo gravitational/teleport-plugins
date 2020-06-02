@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"sync/atomic"
 	"time"
 
@@ -32,30 +33,30 @@ type CallbackServer struct {
 	counter    uint64
 }
 
-func NewCallbackServer(conf *Config, onCallback CallbackFunc) (*CallbackServer, error) {
-	httpSrv, err := utils.NewHTTP(conf.HTTP)
+func NewCallbackServer(conf utils.HTTPConfig, secret string, onCallback CallbackFunc) (*CallbackServer, error) {
+	httpSrv, err := utils.NewHTTP(conf)
 	if err != nil {
 		return nil, err
 	}
 	srv := &CallbackServer{
 		http:       httpSrv,
-		secret:     conf.Slack.Secret,
+		secret:     secret,
 		onCallback: onCallback,
 	}
 	httpSrv.POST("/", srv.processCallback)
 	return srv, nil
 }
 
-func (s *CallbackServer) Run(ctx context.Context) error {
-	if err := s.http.EnsureCert(DefaultDir + "/server"); err != nil {
-		return err
-	}
-	return s.http.ListenAndServe(ctx)
+func (s *CallbackServer) ServiceJob() utils.ServiceJob {
+	return s.http.ServiceJob()
 }
 
-func (s *CallbackServer) Shutdown(ctx context.Context) error {
-	// 5 seconds should be enough since every callback is limited to execute within 2500 milliseconds
-	return s.http.ShutdownWithTimeout(ctx, time.Second*5)
+func (s *CallbackServer) BaseURL() *url.URL {
+	return s.http.BaseURL()
+}
+
+func (s *CallbackServer) EnsureCert() error {
+	return s.http.EnsureCert(DefaultDir + "/server")
 }
 
 func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
