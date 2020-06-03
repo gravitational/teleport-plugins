@@ -58,6 +58,17 @@ type Config struct {
 	Clock clockwork.Clock
 	// UIDGenerator is unique ID generator
 	UIDGenerator utils.UID
+	// Endpoint is an optional non-AWS endpoint
+	Endpoint string `json:"endpoint,omitempty"`
+}
+
+// SetFromURL sets values on the Config from the supplied URI
+func (cfg *Config) SetFromURL(in *url.URL) error {
+	if endpoint := in.Query().Get(teleport.Endpoint); endpoint != "" {
+		cfg.Endpoint = endpoint
+	}
+
+	return nil
 }
 
 // CheckAndSetDefaults is a helper returns an error if the supplied configuration
@@ -104,11 +115,6 @@ type event struct {
 	EventNamespace string
 }
 
-type keyLookup struct {
-	HashKey  string
-	FullPath string
-}
-
 const (
 	// keyExpires is a key used for TTL specification
 	keyExpires = "Expires"
@@ -121,9 +127,6 @@ const (
 
 	// keyEventNamespace
 	keyEventNamespace = "EventNamespace"
-
-	// sectionDefault
-	sectionDefault = "default"
 
 	// keyCreatedAt identifies created at key
 	keyCreatedAt = "CreatedAt"
@@ -170,6 +173,12 @@ func New(cfg Config) (*Log, error) {
 	// from the YAML file:
 	if cfg.Region != "" {
 		sess.Config.Region = aws.String(cfg.Region)
+	}
+
+	// Override the service endpoint using the "endpoint" query parameter from
+	// "audit_events_uri". This is for non-AWS DynamoDB-compatible backends.
+	if cfg.Endpoint != "" {
+		sess.Config.Endpoint = aws.String(cfg.Endpoint)
 	}
 
 	// create DynamoDB service:
@@ -341,6 +350,9 @@ func (l *Log) GetSessionEvents(namespace string, sid session.ID, after int, inlc
 		":eventIndex": after,
 	}
 	attributeValues, err := dynamodbattribute.MarshalMap(attributes)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 	input := dynamodb.QueryInput{
 		KeyConditionExpression:    aws.String(query),
 		TableName:                 aws.String(l.Tablename),
@@ -394,6 +406,9 @@ func (l *Log) SearchEvents(fromUTC, toUTC time.Time, filter string, limit int) (
 		":end":            toUTC.Unix(),
 	}
 	attributeValues, err := dynamodbattribute.MarshalMap(attributes)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 	input := dynamodb.QueryInput{
 		KeyConditionExpression:    aws.String(query),
 		TableName:                 aws.String(l.Tablename),
@@ -405,7 +420,7 @@ func (l *Log) SearchEvents(fromUTC, toUTC time.Time, filter string, limit int) (
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	g.WithFields(log.Fields{"duration": time.Now().Sub(start), "items": len(out.Items)}).Debugf("Query completed.")
+	g.WithFields(log.Fields{"duration": time.Since(start), "items": len(out.Items)}).Debugf("Query completed.")
 	var total int
 	for _, item := range out.Items {
 		var e event
@@ -568,53 +583,6 @@ func (b *Log) createTable(tableName string) error {
 	return trace.Wrap(err)
 }
 
-// deleteAllItems deletes all items from the database, used in tests
-func (b *Log) deleteAllItems() error {
-	out, err := b.svc.Scan(&dynamodb.ScanInput{TableName: aws.String(b.Tablename)})
-	if err != nil {
-		return trace.Wrap(err)
-	}
-	var requests []*dynamodb.WriteRequest
-	for _, item := range out.Items {
-		requests = append(requests, &dynamodb.WriteRequest{
-			DeleteRequest: &dynamodb.DeleteRequest{
-				Key: map[string]*dynamodb.AttributeValue{
-					keySessionID:  item[keySessionID],
-					keyEventIndex: item[keyEventIndex],
-				},
-			},
-		})
-	}
-	if len(requests) == 0 {
-		return nil
-	}
-	req, _ := b.svc.BatchWriteItemRequest(&dynamodb.BatchWriteItemInput{
-		RequestItems: map[string][]*dynamodb.WriteRequest{
-			b.Tablename: requests,
-		},
-	})
-	err = req.Send()
-	err = convertError(err)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-	return nil
-}
-
-// deleteTable deletes DynamoDB table with a given name
-func (b *Log) deleteTable(tableName string, wait bool) error {
-	tn := aws.String(tableName)
-	_, err := b.svc.DeleteTable(&dynamodb.DeleteTableInput{TableName: tn})
-	if err != nil {
-		return trace.Wrap(err)
-	}
-	if wait {
-		return trace.Wrap(
-			b.svc.WaitUntilTableNotExists(&dynamodb.DescribeTableInput{TableName: tn}))
-	}
-	return nil
-}
-
 // Close the DynamoDB driver
 func (b *Log) Close() error {
 	return nil
@@ -642,21 +610,4 @@ func convertError(err error) error {
 	default:
 		return err
 	}
-}
-
-type eventlist []event
-
-// Len is part of sort.Interface.
-func (e eventlist) Len() int {
-	return len(e)
-}
-
-// Swap is part of sort.Interface.
-func (e eventlist) Swap(i, j int) {
-	e[i], e[j] = e[j], e[i]
-}
-
-// Less is part of sort.Interface.
-func (e eventlist) Less(i, j int) bool {
-	return e[i].EventIndex < e[j].EventIndex
 }

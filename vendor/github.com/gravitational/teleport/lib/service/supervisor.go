@@ -119,7 +119,6 @@ type LocalSupervisor struct {
 	sync.Mutex
 	wg           *sync.WaitGroup
 	services     []Service
-	errors       []error
 	events       map[string]Event
 	eventsC      chan Event
 	eventWaiters map[string][]*waiter
@@ -146,6 +145,7 @@ func NewSupervisor(id string) Supervisor {
 	reloadContext, signalReload := context.WithCancel(context.TODO())
 
 	srv := &LocalSupervisor{
+		state:        stateCreated,
 		id:           id,
 		services:     []Service{},
 		wg:           &sync.WaitGroup{},
@@ -384,9 +384,7 @@ func (s *LocalSupervisor) getWaiters(name string) []*waiter {
 
 	waiters := s.eventWaiters[name]
 	out := make([]*waiter, len(waiters))
-	for i := range waiters {
-		out[i] = waiters[i]
-	}
+	copy(out, waiters)
 	return out
 }
 
@@ -467,5 +465,5 @@ type ServiceFunc func() error
 
 const (
 	stateCreated = iota
-	stateStarted = iota
+	stateStarted
 )
