@@ -3,8 +3,6 @@ package main
 import (
 	"context"
 	"net/url"
-	"strings"
-	"sync"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
@@ -17,8 +15,6 @@ import (
 
 // App contains global application state.
 type App struct {
-	sync.Mutex
-
 	conf Config
 
 	accessClient access.Client
@@ -54,22 +50,6 @@ func (a *App) PublicURL() *url.URL {
 		panic("app is not running")
 	}
 	return a.actionSrv.BaseURL()
-}
-
-// GetPluginData loads a plugin data for a given request. Used only in tests and can be called only when app is running.
-func (a *App) GetPluginData(ctx context.Context, reqID string) (data PluginData, err error) {
-	if !a.mainJob.IsReady() {
-		panic("app is not running")
-	}
-	return a.getPluginData(ctx, reqID)
-}
-
-// SetPluginData stores a plugin data for a given request. Used only in tests and can be called only when app is running.
-func (a *App) SetPluginData(ctx context.Context, reqID string, data PluginData) error {
-	if !a.mainJob.IsReady() {
-		panic("app is not running")
-	}
-	return a.setPluginData(ctx, reqID, data)
 }
 
 func (a *App) run(ctx context.Context) (err error) {
@@ -320,20 +300,11 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 func (a *App) getPluginData(ctx context.Context, reqID string) (data PluginData, err error) {
 	dataMap, err := a.accessClient.GetPluginData(ctx, reqID)
 	if err != nil {
-		return data, trace.Wrap(err)
+		return PluginData{}, trace.Wrap(err)
 	}
-	data.User = dataMap["user"]
-	data.Roles = strings.Split(dataMap["roles"], ",")
-	data.PostID = dataMap["post_id"]
-	data.ChannelID = dataMap["channel_id"]
-	return
+	return DecodePluginData(dataMap), nil
 }
 
 func (a *App) setPluginData(ctx context.Context, reqID string, data PluginData) error {
-	return a.accessClient.UpdatePluginData(ctx, reqID, access.PluginData{
-		"user":       data.User,
-		"roles":      strings.Join(data.Roles, ","),
-		"post_id":    data.PostID,
-		"channel_id": data.ChannelID,
-	}, nil)
+	return a.accessClient.UpdatePluginData(ctx, reqID, EncodePluginData(data), nil)
 }

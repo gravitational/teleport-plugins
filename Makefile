@@ -25,10 +25,9 @@ access-example:
 	go build -o build/access-example ./access/example
 
 # Run all tests
-# Currently forces testing of only one package at once to prevent any race conditions with CI.
 .PHONY: test
 test:
-	go test -count 1 -p=1 ./...
+	go test -count 1 ./...
 
 # Individual releases
 .PHONY: release/access-slack

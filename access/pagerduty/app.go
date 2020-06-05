@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"strings"
 	"time"
@@ -52,22 +51,6 @@ func (a *App) PublicURL() *url.URL {
 		panic("app is not running")
 	}
 	return a.webhookSrv.BaseURL()
-}
-
-// GetPluginData loads a plugin data for a given request. Used only in tests and can be called only when app is running.
-func (a *App) GetPluginData(ctx context.Context, reqID string) (data PluginData, err error) {
-	if !a.mainJob.IsReady() {
-		panic("app is not running")
-	}
-	return a.getPluginData(ctx, reqID)
-}
-
-// SetPluginData stores a plugin data for a given request. Used only in tests and can be called only when app is running.
-func (a *App) SetPluginData(ctx context.Context, reqID string, data PluginData) error {
-	if !a.mainJob.IsReady() {
-		panic("app is not running")
-	}
-	return a.setPluginData(ctx, reqID, data)
 }
 
 func (a *App) run(ctx context.Context) (err error) {
@@ -304,25 +287,14 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 	return nil
 }
 
-func (a *App) getPluginData(ctx context.Context, reqID string) (data PluginData, err error) {
+func (a *App) getPluginData(ctx context.Context, reqID string) (PluginData, error) {
 	dataMap, err := a.accessClient.GetPluginData(ctx, reqID)
 	if err != nil {
-		return data, trace.Wrap(err)
+		return PluginData{}, trace.Wrap(err)
 	}
-	data.User = dataMap["user"]
-	data.Roles = strings.Split(dataMap["roles"], ",")
-	var created int64
-	fmt.Sscanf(dataMap["created"], "%d", &created)
-	data.Created = time.Unix(created, 0)
-	data.ID = dataMap["incident_id"]
-	return
+	return DecodePluginData(dataMap), nil
 }
 
 func (a *App) setPluginData(ctx context.Context, reqID string, data PluginData) error {
-	return a.accessClient.UpdatePluginData(ctx, reqID, access.PluginData{
-		"incident_id": data.ID,
-		"user":        data.User,
-		"roles":       strings.Join(data.Roles, ","),
-		"created":     fmt.Sprintf("%d", data.Created.Unix()),
-	}, nil)
+	return a.accessClient.UpdatePluginData(ctx, reqID, EncodePluginData(data), nil)
 }

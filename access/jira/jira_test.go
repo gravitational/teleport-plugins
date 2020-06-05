@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	mm "github.com/mattermost/mattermost-server/model"
 	log "github.com/sirupsen/logrus"
+	// jira "gopkg.in/andygrunwald/go-jira.v1"
 
 	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
@@ -27,22 +27,22 @@ const (
 	Site   = "local-site"
 )
 
-type MattermostSuite struct {
-	ctx            context.Context
-	cancel         context.CancelFunc
-	app            *App
-	publicURL      string
-	me             *user.User
-	fakeMattermost *FakeMattermost
-	teleport       *integration.TeleInstance
-	tmpFiles       []*os.File
+type JiraSuite struct {
+	ctx       context.Context
+	cancel    context.CancelFunc
+	app       *App
+	publicURL string
+	me        *user.User
+	fakeJira  *FakeJIRA
+	teleport  *integration.TeleInstance
+	tmpFiles  []*os.File
 }
 
-var _ = Suite(&MattermostSuite{})
+var _ = Suite(&JiraSuite{})
 
-func TestMattermost(t *testing.T) { TestingT(t) }
+func TestJirabot(t *testing.T) { TestingT(t) }
 
-func (s *MattermostSuite) SetUpSuite(c *C) {
+func (s *JiraSuite) SetUpSuite(c *C) {
 	var err error
 	log.SetLevel(log.DebugLevel)
 	priv, pub, err := testauthority.New().GenerateKeyPair("")
@@ -79,15 +79,15 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 	s.teleport = t
 }
 
-func (s *MattermostSuite) SetUpTest(c *C) {
+func (s *JiraSuite) SetUpTest(c *C) {
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), time.Second)
 	s.publicURL = ""
-	s.fakeMattermost = NewFakeMattermost()
+	s.fakeJira = NewFakeJIRA()
 }
 
-func (s *MattermostSuite) TearDownTest(c *C) {
+func (s *JiraSuite) TearDownTest(c *C) {
 	s.shutdownApp(c)
-	s.fakeMattermost.Close()
+	s.fakeJira.Close()
 	s.cancel()
 	for _, tmp := range s.tmpFiles {
 		err := os.Remove(tmp.Name())
@@ -96,14 +96,14 @@ func (s *MattermostSuite) TearDownTest(c *C) {
 	s.tmpFiles = []*os.File{}
 }
 
-func (s *MattermostSuite) newTmpFile(c *C, pattern string) (file *os.File) {
+func (s *JiraSuite) newTmpFile(c *C, pattern string) (file *os.File) {
 	file, err := ioutil.TempFile("", pattern)
 	c.Assert(err, IsNil)
 	s.tmpFiles = append(s.tmpFiles, file)
 	return
 }
 
-func (s *MattermostSuite) startApp(c *C) {
+func (s *JiraSuite) startApp(c *C) {
 	auth := s.teleport.Process.GetAuthServer()
 	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
 	c.Assert(err, IsNil)
@@ -136,10 +136,10 @@ func (s *MattermostSuite) startApp(c *C) {
 	conf.Teleport.ClientCrt = certFile.Name()
 	conf.Teleport.ClientKey = keyFile.Name()
 	conf.Teleport.RootCAs = casFile.Name()
-	conf.Mattermost.URL = s.fakeMattermost.URL()
-	conf.Mattermost.Team = "test-team"
-	conf.Mattermost.Channel = "test-channel"
-	conf.Mattermost.Secret = "1234567812345678123456781234567812345678123456781234567812345678"
+	conf.JIRA.URL = s.fakeJira.URL()
+	conf.JIRA.Username = "bot@example.com"
+	conf.JIRA.APIToken = "xyz"
+	conf.JIRA.Project = "PROJ"
 	conf.HTTP.ListenAddr = ":0"
 	if s.publicURL != "" {
 		conf.HTTP.PublicAddr = s.publicURL
@@ -163,118 +163,95 @@ func (s *MattermostSuite) startApp(c *C) {
 	}
 }
 
-func (s *MattermostSuite) shutdownApp(c *C) {
+func (s *JiraSuite) shutdownApp(c *C) {
 	err := s.app.Shutdown(s.ctx)
 	c.Assert(err, IsNil)
 }
 
-func (s *MattermostSuite) createAccessRequest(c *C) services.AccessRequest {
+func (s *JiraSuite) createAccessRequest(c *C) services.AccessRequest {
 	req, err := s.teleport.CreateAccessRequest(s.ctx, s.me.Username, "admin")
 	c.Assert(err, IsNil)
 	return req
 }
 
-func (s *MattermostSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
+func (s *JiraSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
 	req, err := s.teleport.CreateExpiredAccessRequest(s.ctx, s.me.Username, "admin")
 	c.Assert(err, IsNil)
 	return req
 }
 
-func (s *MattermostSuite) checkPluginData(c *C, reqID string) PluginData {
-	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "mattermost", reqID, time.Millisecond*250)
+func (s *JiraSuite) checkPluginData(c *C, reqID string) PluginData {
+	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "jira", reqID, time.Millisecond*250)
 	c.Assert(err, IsNil)
 	return DecodePluginData(rawData)
 }
 
-func (s *MattermostSuite) postWebhook(c *C, post mm.Post, actionName string) {
-	attachments := post.Attachments()
-	c.Assert(attachments, HasLen, 1)
-	var action *mm.PostAction
-	for _, a := range attachments[0].Actions {
-		if a.Name == actionName {
-			action = a
-			break
-		}
-	}
-	c.Assert(action, NotNil)
-
-	payload := mm.PostActionIntegrationRequest{
-		PostId:    post.Id,
-		TeamId:    "1111",
-		ChannelId: "2222",
-		UserId:    "3333",
-		Context:   action.Integration.Context,
-	}
-
+func (s *JiraSuite) postWebhook(c *C, issueID string) {
 	var buf bytes.Buffer
-	err := json.NewEncoder(&buf).Encode(&payload)
+	wh := Webhook{
+		WebhookEvent:       "jira:issue_updated",
+		IssueEventTypeName: "issue_generic",
+		Issue:              &WebhookIssue{ID: issueID},
+	}
+	err := json.NewEncoder(&buf).Encode(&wh)
 	c.Assert(err, IsNil)
-	response, err := http.Post(action.Integration.URL, "application/json", &buf)
+	resp, err := http.Post(s.publicURL, "application/json", &buf)
 	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, http.StatusOK)
-
-	err = response.Body.Close()
+	c.Assert(resp.StatusCode, Equals, http.StatusOK)
+	err = resp.Body.Close()
 	c.Assert(err, IsNil)
 }
 
-func (s *MattermostSuite) TestMattermostMessagePosting(c *C) {
+func (s *JiraSuite) TestIssueCreation(c *C) {
 	s.startApp(c)
 	request := s.createAccessRequest(c)
-	post, err := s.fakeMattermost.CheckNewPost(s.ctx, 250*time.Millisecond)
-	c.Assert(err, IsNil, Commentf("no new messages posted"))
-
 	pluginData := s.checkPluginData(c, request.GetName())
-	c.Assert(pluginData.PostID, Equals, post.Id)
 
-	attachments := post.Attachments()
-	c.Assert(attachments, HasLen, 1)
-	attachment := attachments[0]
-	c.Assert(attachment.Actions, HasLen, 2)
-	c.Assert(attachment.Actions[0].Name, Equals, "Approve")
-	c.Assert(attachment.Actions[1].Name, Equals, "Deny")
+	issue, err := s.fakeJira.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no new issue stored"))
+	c.Assert(issue.Properties[RequestIDPropertyKey], Equals, request.GetName())
+	c.Assert(pluginData.ID, Equals, issue.ID)
 }
 
-func (s *MattermostSuite) TestApproval(c *C) {
+func (s *JiraSuite) TestApproval(c *C) {
 	s.startApp(c)
 	request := s.createAccessRequest(c)
 	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
-	post, err := s.fakeMattermost.CheckNewPost(s.ctx, 250*time.Millisecond)
-	c.Assert(err, IsNil, Commentf("no new messages posted"))
-	s.postWebhook(c, post, "Approve")
+	issue, err := s.fakeJira.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no new issue stored"))
+	s.fakeJira.TransitionIssue(issue, "Approved")
+	s.postWebhook(c, issue.ID)
 
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
 }
 
-func (s *MattermostSuite) TestDenial(c *C) {
+func (s *JiraSuite) TestDenial(c *C) {
 	s.startApp(c)
 	request := s.createAccessRequest(c)
 	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
-	post, err := s.fakeMattermost.CheckNewPost(s.ctx, 250*time.Millisecond)
-	c.Assert(err, IsNil, Commentf("no new messages posted"))
-	s.postWebhook(c, post, "Deny")
+	issue, err := s.fakeJira.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no new issue stored"))
+	s.fakeJira.TransitionIssue(issue, "Denied")
+	s.postWebhook(c, issue.ID)
 
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
 }
 
-func (s *MattermostSuite) TestExpiration(c *C) {
+func (s *JiraSuite) TestExpiration(c *C) {
 	s.startApp(c)
 	s.createExpiredAccessRequest(c)
 
-	post, err := s.fakeMattermost.CheckNewPost(s.ctx, 250*time.Millisecond)
-	c.Assert(err, IsNil, Commentf("no new messages posted"))
-	s.postWebhook(c, post, "Approve")
-	postID := post.Id
-
-	post, err = s.fakeMattermost.CheckPostUpdate(s.ctx, 250*time.Millisecond)
-	c.Assert(err, IsNil, Commentf("no messages updated"))
-	c.Assert(post.Id, Equals, postID)
-	attachments := post.Attachments()
-	c.Assert(attachments, HasLen, 1)
-	c.Assert(attachments[0].Actions, HasLen, 0)
+	issue, err := s.fakeJira.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no new issue stored"))
+	issueID := issue.ID
+	issue, err = s.fakeJira.CheckIssueTransition(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no issue transition detected"))
+	c.Assert(issue.ID, Equals, issueID)
+	c.Assert(issue.Fields.Status.Name, Equals, "Expired")
 }

@@ -18,8 +18,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/gravitational/teleport-plugins/utils/nettest"
-	"github.com/gravitational/teleport/integration"
+	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/services"
 	"github.com/nlopes/slack"
@@ -35,7 +34,9 @@ const (
 	SlackSecret = "f9e77a2814566fe23d33dee5b853955b"
 )
 
-type SlackbotSuite struct {
+type SlackSuite struct {
+	ctx         context.Context
+	cancel      context.CancelFunc
 	app         *App
 	publicURL   string
 	me          *user.User
@@ -44,19 +45,16 @@ type SlackbotSuite struct {
 	tmpFiles    []*os.File
 }
 
-var _ = Suite(&SlackbotSuite{})
+var _ = Suite(&SlackSuite{})
 
 func TestSlackbot(t *testing.T) { TestingT(t) }
 
-func (s *SlackbotSuite) SetUpSuite(c *C) {
+func (s *SlackSuite) SetUpSuite(c *C) {
 	var err error
 	log.SetLevel(log.DebugLevel)
 	priv, pub, err := testauthority.New().GenerateKeyPair("")
 	c.Assert(err, IsNil)
-	portList, err := nettest.GetFreeTCPPortsForTests(6)
-	c.Assert(err, IsNil)
-	ports := portList.PopIntSlice(5)
-	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Ports: ports, Priv: priv, Pub: pub})
+	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Priv: priv, Pub: pub})
 
 	s.me, err = user.Current()
 	c.Assert(err, IsNil)
@@ -80,7 +78,7 @@ func (s *SlackbotSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 	t.AddUserWithRole("plugin", accessPluginRole)
 
-	err = t.Create(nil, true, nil)
+	err = t.Create(nil, nil)
 	c.Assert(err, IsNil)
 	if err := t.Start(); err != nil {
 		c.Fatalf("Unexpected response from Start: %v", err)
@@ -88,14 +86,16 @@ func (s *SlackbotSuite) SetUpSuite(c *C) {
 	s.teleport = t
 }
 
-func (s *SlackbotSuite) SetUpTest(c *C) {
+func (s *SlackSuite) SetUpTest(c *C) {
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), time.Second)
 	s.publicURL = ""
 	s.startSlack(c)
 }
 
-func (s *SlackbotSuite) TearDownTest(c *C) {
+func (s *SlackSuite) TearDownTest(c *C) {
 	s.shutdownApp(c)
 	s.slackServer.Stop()
+	s.cancel()
 	for _, tmp := range s.tmpFiles {
 		err := os.Remove(tmp.Name())
 		c.Assert(err, IsNil)
@@ -103,20 +103,20 @@ func (s *SlackbotSuite) TearDownTest(c *C) {
 	s.tmpFiles = []*os.File{}
 }
 
-func (s *SlackbotSuite) newTmpFile(c *C, pattern string) (file *os.File) {
+func (s *SlackSuite) newTmpFile(c *C, pattern string) (file *os.File) {
 	file, err := ioutil.TempFile("", pattern)
 	c.Assert(err, IsNil)
 	s.tmpFiles = append(s.tmpFiles, file)
 	return
 }
 
-func (s *SlackbotSuite) startSlack(c *C) {
+func (s *SlackSuite) startSlack(c *C) {
 	s.slackServer = slacktest.NewTestServer()
 	s.slackServer.SetBotName("access_bot")
 	go s.slackServer.Start()
 }
 
-func (s *SlackbotSuite) startApp(c *C) {
+func (s *SlackSuite) startApp(c *C) {
 	auth := s.teleport.Process.GetAuthServer()
 	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
 	c.Assert(err, IsNil)
@@ -141,8 +141,11 @@ func (s *SlackbotSuite) startApp(c *C) {
 	}
 	casFile.Close()
 
+	authAddr, err := s.teleport.Process.AuthSSHAddr()
+	c.Assert(err, IsNil)
+
 	var conf Config
-	conf.Teleport.AuthServer = s.teleport.Config.Auth.SSHAddr.Addr
+	conf.Teleport.AuthServer = authAddr.Addr
 	conf.Teleport.ClientCrt = certFile.Name()
 	conf.Teleport.ClientKey = keyFile.Name()
 	conf.Teleport.RootCAs = casFile.Name()
@@ -160,7 +163,7 @@ func (s *SlackbotSuite) startApp(c *C) {
 	c.Assert(err, IsNil)
 
 	go func() {
-		err = s.app.Run(context.TODO())
+		err = s.app.Run(s.ctx)
 		c.Assert(err, IsNil)
 	}()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
@@ -173,42 +176,30 @@ func (s *SlackbotSuite) startApp(c *C) {
 	}
 }
 
-func (s *SlackbotSuite) shutdownApp(c *C) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*2000)
-	defer cancel()
-	err := s.app.Shutdown(ctx)
+func (s *SlackSuite) shutdownApp(c *C) {
+	err := s.app.Shutdown(s.ctx)
 	c.Assert(err, IsNil)
 }
 
-func (s *SlackbotSuite) createAccessRequest(c *C) services.AccessRequest {
-	client, err := s.teleport.NewClient(integration.ClientConfig{Login: s.me.Username})
+func (s *SlackSuite) createAccessRequest(c *C) services.AccessRequest {
+	req, err := s.teleport.CreateAccessRequest(s.ctx, s.me.Username, "admin")
 	c.Assert(err, IsNil)
-	req, err := services.NewAccessRequest(s.me.Username, "admin")
-	c.Assert(err, IsNil)
-	err = client.CreateAccessRequest(context.TODO(), req)
-	c.Assert(err, IsNil)
-	time.Sleep(time.Millisecond * 250) // Wait some time for watcher to receive a request
 	return req
 }
 
-func (s *SlackbotSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
-	client, err := s.teleport.NewClient(integration.ClientConfig{Login: s.me.Username})
+func (s *SlackSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
+	req, err := s.teleport.CreateExpiredAccessRequest(s.ctx, s.me.Username, "admin")
 	c.Assert(err, IsNil)
-	req, err := services.NewAccessRequest(s.me.Username, "admin")
-	c.Assert(err, IsNil)
-	ttl := time.Millisecond * 250
-	req.SetAccessExpiry(time.Now().Add(ttl))
-	err = client.CreateAccessRequest(context.TODO(), req)
-	c.Assert(err, IsNil)
-	time.Sleep(ttl + time.Millisecond*50)
-	auth := s.teleport.Process.GetAuthServer()
-	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: req.GetName()})
-	c.Assert(err, IsNil)
-	c.Assert(requests, HasLen, 0)
 	return req
 }
 
-func (s *SlackbotSuite) postCallback(c *C, actionID, reqID string) {
+func (s *SlackSuite) checkPluginData(c *C, reqID string) PluginData {
+	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "slack", reqID, time.Millisecond*250)
+	c.Assert(err, IsNil)
+	return DecodePluginData(rawData)
+}
+
+func (s *SlackSuite) postCallback(c *C, actionID, reqID string) {
 	cb := &slack.InteractionCallback{
 		ActionCallback: slack.ActionCallbacks{
 			BlockActions: []*slack.BlockAction{
@@ -248,7 +239,7 @@ func (s *SlackbotSuite) postCallback(c *C, actionID, reqID string) {
 }
 
 // fetchSlackMessage and all the tests using it heavily rely on changes in slacktest package, see 13c57c4 commit.
-func (s *SlackbotSuite) fetchSlackMessage(c *C) slack.Msg {
+func (s *SlackSuite) fetchSlackMessage(c *C) slack.Msg {
 	var msg slack.Msg
 	select {
 	case data := <-s.slackServer.SeenFeed:
@@ -260,10 +251,13 @@ func (s *SlackbotSuite) fetchSlackMessage(c *C) slack.Msg {
 	return msg
 }
 
-func (s *SlackbotSuite) TestSlackMessagePosting(c *C) {
+func (s *SlackSuite) TestSlackMessagePosting(c *C) {
 	s.startApp(c)
 	request := s.createAccessRequest(c)
+	pluginData := s.checkPluginData(c, request.GetName())
 	msg := s.fetchSlackMessage(c)
+	c.Assert(pluginData.Timestamp, Equals, msg.Timestamp)
+	c.Assert(pluginData.ChannelID, Equals, msg.Channel)
 	var blockAction *slack.ActionBlock
 	for _, blk := range msg.Blocks.BlockSet {
 		if a, ok := blk.(*slack.ActionBlock); ok && a.BlockID == "approve_or_deny" {
@@ -284,35 +278,31 @@ func (s *SlackbotSuite) TestSlackMessagePosting(c *C) {
 	c.Assert(denyButton.Value, Equals, request.GetName())
 }
 
-func (s *SlackbotSuite) TestApproval(c *C) {
+func (s *SlackSuite) TestApproval(c *C) {
 	s.startApp(c)
 	request := s.createAccessRequest(c)
+	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
 	s.postCallback(c, "approve_request", request.GetName())
 
-	auth := s.teleport.Process.GetAuthServer()
-	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: request.GetName()})
+	request, err := s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
-	c.Assert(requests, HasLen, 1)
-	request = requests[0]
 	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
 }
 
-func (s *SlackbotSuite) TestDenial(c *C) {
+func (s *SlackSuite) TestDenial(c *C) {
 	s.startApp(c)
 	request := s.createAccessRequest(c)
+	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
 	s.postCallback(c, "deny_request", request.GetName())
 
-	auth := s.teleport.Process.GetAuthServer()
-	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: request.GetName()})
+	request, err := s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
-	c.Assert(requests, HasLen, 1)
-	request = requests[0]
 	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
 }
 
-func (s *SlackbotSuite) TestApproveExpired(c *C) {
+func (s *SlackSuite) TestApproveExpired(c *C) {
 	s.startApp(c)
 	request := s.createExpiredAccessRequest(c)
 	msg1 := s.fetchSlackMessage(c)
@@ -324,7 +314,7 @@ func (s *SlackbotSuite) TestApproveExpired(c *C) {
 	c.Assert(msg1.Timestamp, Equals, msg2.Timestamp)
 }
 
-func (s *SlackbotSuite) TestDenyExpired(c *C) {
+func (s *SlackSuite) TestDenyExpired(c *C) {
 	s.startApp(c)
 	request := s.createExpiredAccessRequest(c)
 	msg1 := s.fetchSlackMessage(c)
