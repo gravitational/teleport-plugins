@@ -241,6 +241,16 @@ func (b *Bot) ResolveIncident(ctx context.Context, reqID string, pdData Pagerdut
 	return trace.Wrap(err)
 }
 
+func (b *Bot) GetUserInfo(ctx context.Context, userID string) (*pd.User, error) {
+	client := b.NewClient(ctx)
+
+	user, err := client.GetUser(userID, pd.GetUserOptions{})
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	return user, nil
+}
+
 func (b *Bot) buildIncidentBody(reqID string, reqData RequestData) (string, error) {
 	var builder strings.Builder
 	err := incidentBodyTemplate.Execute(&builder, struct {

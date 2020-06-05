@@ -193,6 +193,14 @@ func (s *PagerdutySuite) postAction(c *C, incident pd.Incident, action string) {
 				ID:       "MSG1",
 				Event:    "incident.custom",
 				Incident: &incident,
+				LogEntries: []WebhookLogEntry{
+					WebhookLogEntry{
+						Type: "custom_log_entry",
+						Agent: pd.APIObject{
+							ID: "foo",
+						},
+					},
+				},
 			},
 		},
 	}

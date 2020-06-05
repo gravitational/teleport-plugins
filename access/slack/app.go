@@ -232,7 +232,7 @@ func (a *App) onSlackCallback(ctx context.Context, cb Callback) error {
 			return trace.BadParameter("Unknown ActionID: %s", actionID)
 		}
 
-		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
+		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState, userEmail); err != nil {
 			return trace.Wrap(err)
 		}
 		logger.Infof("Slack user %s the request", resolution)

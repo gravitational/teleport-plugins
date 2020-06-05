@@ -19,6 +19,7 @@ package access
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"sync"
 	"time"
 
@@ -119,7 +120,7 @@ type Client interface {
 	// GetRequest loads a request matching ID.
 	GetRequest(ctx context.Context, reqID string) (Request, error)
 	// SetRequestState updates the state of a request.
-	SetRequestState(ctx context.Context, reqID string, state State) error
+	SetRequestState(ctx context.Context, reqID string, state State, delegator string) error
 	// GetPluginData fetches plugin data of the specific request.
 	GetPluginData(ctx context.Context, reqID string) (PluginDataMap, error)
 	// UpdatePluginData updates plugin data of the specific request comparing it with a previous value.
@@ -210,10 +211,11 @@ func (c *clt) GetRequest(ctx context.Context, reqID string) (Request, error) {
 	return reqs[0], nil
 }
 
-func (c *clt) SetRequestState(ctx context.Context, reqID string, state State) error {
+func (c *clt) SetRequestState(ctx context.Context, reqID string, state State, delegator string) error {
 	_, err := c.clt.SetAccessRequestState(ctx, &proto.RequestStateSetter{
-		ID:    reqID,
-		State: state,
+		ID:        reqID,
+		State:     state,
+		Delegator: fmt.Sprintf("%s:%s", c.plugin, delegator),
 	})
 	return utils.FromGRPC(err)
 }

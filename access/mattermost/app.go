@@ -245,7 +245,7 @@ func (a *App) onMattermostAction(ctx context.Context, data ActionData) (*ActionR
 			return nil, trace.BadParameter("Unknown Action: %s", action)
 		}
 
-		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
+		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState, user.Email); err != nil {
 			return nil, trace.Wrap(err)
 		}
 		log.Infof("Mattermost user %s the request", resolution)

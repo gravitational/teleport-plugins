@@ -317,7 +317,7 @@ func (a *App) onWebhookEvent(ctx context.Context, hook Webhook) error {
 		return trace.BadParameter("unknown action: %v", action)
 	}
 
-	if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
+	if err := a.accessClient.SetRequestState(ctx, req.ID, reqState, event.User.Email); err != nil {
 		return trace.Wrap(err)
 	}
 	log.Infof("GitLab user %s the request", resolution)

@@ -133,6 +133,23 @@ func NewFakePagerduty() *FakePagerduty {
 		err = json.NewEncoder(rw).Encode(&resp)
 		fatalIf(err)
 	})
+	router.GET("/users/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		rw.Header().Add("Content-Type", "application/json")
+
+		id := ps.ByName("id")
+
+		user := pd.User{
+			APIObject: pd.APIObject{
+				ID: id,
+			},
+			Name:  "Test User",
+			Email: "test-user@example.com",
+		}
+		rw.WriteHeader(http.StatusOK)
+		resp := map[string]pd.User{"user": user}
+		err := json.NewEncoder(rw).Encode(&resp)
+		fatalIf(err)
+	})
 	router.POST("/incidents", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusCreated)

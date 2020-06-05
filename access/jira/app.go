@@ -260,7 +260,7 @@ func (a *App) onJIRAWebhook(ctx context.Context, webhook Webhook) error {
 		return trace.BadParameter("unknown JIRA status %q", statusName)
 	}
 
-	if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
+	if err := a.accessClient.SetRequestState(ctx, req.ID, reqState, issueUpdate.Author.EmailAddress); err != nil {
 		return trace.Wrap(err)
 	}
 	log.Infof("JIRA user %s the request", resolution)

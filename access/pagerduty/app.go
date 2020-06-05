@@ -183,14 +183,9 @@ func (a *App) onPagerdutyAction(ctx context.Context, action WebhookAction) error
 		"pd_msg_id":  action.MessageID,
 	})
 
-	if action.Event != "incident.custom" {
-		log.Debugf("Got %q event, ignoring", action.Event)
-		return nil
-	}
-
 	keyParts := strings.Split(action.IncidentKey, "/")
 	if len(keyParts) != 2 || keyParts[0] != pdIncidentKeyPrefix {
-		log.Debugf("Got unsupported incident key %q, ignoring", action.IncidentKey)
+		log.Warningf("Got unsupported incident key %q, ignoring", action.IncidentKey)
 		return nil
 	}
 
@@ -220,6 +215,21 @@ func (a *App) onPagerdutyAction(ctx context.Context, action WebhookAction) error
 		return trace.Errorf("incident_id from request's plugin_data does not match")
 	}
 
+	var userEmail, userName string
+	if userID := action.Agent.ID; userID != "" {
+		agent, err := a.bot.GetUserInfo(ctx, userID)
+		if err != nil {
+			log.WithError(err).Errorf("Cannot get user info by id %q", userID)
+		} else {
+			userEmail = agent.Email
+			userName = agent.Name
+		}
+	}
+	log = log.WithFields(logFields{
+		"pd_user_email": userEmail,
+		"pd_user_name":  userName,
+	})
+
 	var (
 		reqState   access.State
 		resolution string
@@ -236,7 +246,7 @@ func (a *App) onPagerdutyAction(ctx context.Context, action WebhookAction) error
 		return trace.BadParameter("unknown action: %q", action.Name)
 	}
 
-	if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
+	if err := a.accessClient.SetRequestState(ctx, req.ID, reqState, userEmail); err != nil {
 		return trace.Wrap(err)
 	}
 	log.Infof("PagerDuty user %s the request", resolution)
