@@ -17,4 +17,4 @@ mkdir -p $BINDIR $DATADIR || exit 1
 cp -f teleport-slack $BINDIR/ || exit 1
 
 echo "Teleport Slack binaries have been copied to $BINDIR"
-echo "You can run slack configure > /etc/teleport-slack.toml to bootstrap your config file"
+echo "You can run teleport-slack configure > /etc/teleport-slack.toml to bootstrap your config file"
