@@ -1,0 +1,22 @@
+# example slack plugin configuration TOML file
+[teleport]
+# Auth server address from `docker-compose.yml`
+auth_server = "teleport.cluster.local:3025"
+client_key = "/mnt/shared/certs/access-plugin/plug.key" # Teleport GRPC client secret key
+client_crt = "/mnt/shared/certs/access-plugin/plug.crt" # Teleport GRPC client certificate
+root_cas = "/mnt/shared/certs/access-plugin/plug.cas"   # Teleport cluster CA certs
+
+[slack]
+token = "api_token"             # Slack Bot OAuth token
+secret = "signing-secret-value" # Slack API Signing Secret
+channel = "channel-name"        # Slack Channel name to post requests to
+
+[http]
+listen_addr = ":8041" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:443
+public_addr = "teleport-slack.cluster.local" # Hostname on which callback server is accessible externally
+# https_key_file = "/var/lib/teleport/plugins/slack/server.key"  # TLS private key
+# https_cert_file = "/var/lib/teleport/plugins/slack/server.crt" # TLS certificate
+
+[log]
+output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/slack.log"
+severity = "DEBUG" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".

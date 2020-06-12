@@ -1,0 +1,8 @@
+# data dir should contain /var/lib/teleport and is mounted to
+# the containers. It usually contains test data, and should not
+# be committed to git.
+data
+
+# ngrok configs contain ngrok auth keys, don't commit those.
+ngrok.yaml
+ngrok-insecure.yaml

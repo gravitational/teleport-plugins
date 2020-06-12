@@ -1,0 +1,132 @@
+version: "2"
+
+x-plugin: &plugin
+  image: teleport-plugins:latest
+  env_file:
+    - teleport.env
+  mem_limit: 300M
+  volumes:
+    - ./data/var/lib/teleport:/var/lib/teleport
+    - ../../teleport:/root/go/src/github.com/gravitational/teleport
+    - ..:/root/go/src/github.com/gravitational/teleport-plugins
+    - certs:/mnt/shared/certs
+
+services:
+  # Teleport is a single-node Teleport cluster running all 3 services (Auth, Proxy, and Web).
+  # It assumes that teleport source code is in the same parent dir as teleport-plugins, i.e.
+  # ../../teleport.
+  # It uses image `teleport-ent:latest` and runs enterprise version of Teleport.
+  # Put the license.pem file in data/var/lib/teleport/ before starting.
+  #
+  teleport:
+    image: teleport-ent:latest
+    env_file:
+      - teleport.env
+    container_name: teleport
+    command: |
+      ${CONTAINERHOME}/build/teleport start
+      -c ${PLUGINSHOME}/docker/teleport/teleport.yaml
+      ${TELEPORT_FLAGS}
+    mem_limit: 300M
+    ports:
+      - "3080:3080"
+      - "3023:3023"
+      - "3025:3025"
+    volumes:
+      - ./data/var/lib/teleport:/var/lib/teleport
+      - ../../teleport:/root/go/src/github.com/gravitational/teleport
+      - ..:/root/go/src/github.com/gravitational/teleport-plugins
+      - certs:/mnt/shared/certs
+    networks:
+      teleport-network:
+        ipv4_address: 172.10.1.1
+        aliases:
+          - "teleport.cluster.local"
+
+  teleport-slack:
+    <<: *plugin
+    container_name: teleport-slack
+    command: |
+      ${PLUGINSHOME}/access/slack/build/teleport-slack start
+      -c ${PLUGINSHOME}/docker/plugins/teleport-slack.toml
+      ${PLUGIN_FLAGS}
+    ports:
+      - "8041:8041"
+    networks:
+      teleport-network:
+        ipv4_address: 172.10.1.41
+        aliases:
+          - "teleport-slack.cluster.local"
+
+  teleport-mattermost:
+    <<: *plugin
+    container_name: teleport-mattermost
+    command: |
+      ${PLUGINSHOME}/access/mattermost/build/teleport-mattermost start
+      -c ${PLUGINSHOME}/docker/plugins/teleport-mattermost.toml
+      ${PLUGIN_FLAGS}
+    ports:
+      - "8042:8042"
+    networks:
+      teleport-network:
+        ipv4_address: 172.10.1.42
+        aliases:
+          - "teleport-mattermost.cluster.local"
+
+  teleport-pagerduty:
+    <<: *plugin
+    container_name: teleport-pagerduty
+    command: |
+      ${PLUGINSHOME}/access/pagerduty/build/teleport-pagerduty start
+      -c ${PLUGINSHOME}/docker/plugins/teleport-pagerduty.toml
+      ${PLUGIN_FLAGS}
+    ports:
+      - "8043:8043"
+    networks:
+      teleport-network:
+        ipv4_address: 172.10.1.43
+        aliases:
+          - "teleport-pagerduty.cluster.local"
+
+  teleport-gitlab:
+    <<: *plugin
+    container_name: teleport-gitlab
+    command: |
+      ${PLUGINSHOME}/access/gitlab/build/teleport-gitlab start
+      -c ${PLUGINSHOME}/docker/plugins/teleport-gitlab.toml
+      ${PLUGIN_FLAGS}
+    ports:
+      - "8044:8044"
+    networks:
+      teleport-network:
+        ipv4_address: 172.10.1.44
+        aliases:
+          - "teleport-gitlab.cluster.local"
+
+  teleport-jira-cloud:
+    <<: *plugin
+    container_name: teleport-jira-cloud
+    command: |
+      ${PLUGINSHOME}/access/jira/build/teleport-jira start
+      -c ${PLUGINSHOME}/docker/plugins/teleport-jira-cloud.toml
+      ${PLUGIN_FLAGS}
+    ports:
+      - "8045:8045"
+    networks:
+      teleport-network:
+        ipv4_address: 172.10.1.45
+        aliases:
+          - "teleport-jira-cloud.cluster.local"
+
+networks:
+  teleport-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.10.1.0/16
+        ip_range: 172.10.1.0/24
+        gateway: 172.10.1.254
+
+volumes:
+  certs:

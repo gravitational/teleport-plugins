@@ -1,0 +1,19 @@
+kind: user
+metadata:
+  name: access-plugin
+spec:
+  roles: ["access-plugin"]
+version: v2
+---
+kind: role
+metadata:
+  name: access-plugin
+spec:
+  allow:
+    rules:
+      - resources: ["access_request"]
+        verbs: ["list", "read", "update"]
+    # teleport currently refuses to issue certs for a user with 0 logins,
+    # this restriction may be lifted in future versions.
+    logins: ["access-plugin"]
+version: v3
