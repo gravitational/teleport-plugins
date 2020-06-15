@@ -79,16 +79,15 @@ steps:
         - /go/cache
         - /go/pkg/mod
 
-  - name: Send Slack notification on failure
+  - name: Send Slack notification
     image: plugins/slack
     settings:
       webhook:
         from_secret: SLACK_WEBHOOK
       channel: teleport-builds
-      icon_url: https://avatars2.githubusercontent.com/u/2181346?s=256
+      username: drone
     when:
-      status:
-        - failure
+      status: [success, failure]
 
 ---
 kind: pipeline
@@ -188,6 +187,6 @@ steps:
 
 ---
 kind: signature
-hmac: b71145086cbb4dc590be0a5a0ccf466ff13eecae756de92288ca869598188f4a
+hmac: 9243d90a72e62f8077f18f742722a8909681db95fbede396693f06395b4a2409
 
 ...
