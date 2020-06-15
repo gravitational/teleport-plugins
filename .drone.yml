@@ -97,7 +97,7 @@ steps:
         Author: {{ build.author }}
         <{{ build.link }}|Visit build page ↗>
     when:
-      event: [push, tag, promote]
+      event: [push]
       status: [success, failure]
 
 ---
@@ -198,6 +198,6 @@ steps:
 
 ---
 kind: signature
-hmac: 99c155d3e199158f351c4922342dba68dad5b7292135594b809bbbbf24f5b08d
+hmac: 8678baca961aa783b1b0c4f0e29b2f6d2ac9153a4812fedf9774db6038520371
 
 ...
