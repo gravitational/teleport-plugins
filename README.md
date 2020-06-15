@@ -2,6 +2,7 @@
 
 Set of plugins for Teleport
 
+[![Build Status](https://drone.gravitational.io/api/badges/gravitational/teleport-plugins/status.svg)](https://drone.gravitational.io/gravitational/teleport-plugins)
 
 ## Access API
 
