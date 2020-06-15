@@ -79,6 +79,27 @@ steps:
         - /go/cache
         - /go/pkg/mod
 
+  - name: Send Slack notification
+    image: plugins/slack
+    settings:
+      webhook:
+        from_secret: SLACK_WEBHOOK
+      channel: teleport-builds
+      username: drone
+      template: >
+        {{#if build.pull }}
+          *{{#success build.status}}✔{{ else }}✘{{/success}} {{ uppercasefirst build.status }}*: <https://github.com/{{ repo.owner }}/{{ repo.name }}/pull/{{ build.pull }}|Pull Request #{{ build.pull }}>
+        {{else}}
+          *{{#success build.status}}✔{{ else }}✘{{/success}} {{ uppercasefirst build.status }}: Build #{{ build.number }}* (type: `{{ build.event }}`)
+        {{/if}}
+        Commit: <https://github.com/{{ repo.owner }}/{{ repo.name }}/commit/{{ build.commit }}|{{ truncate build.commit 8 }}>
+        Branch: <https://github.com/{{ repo.owner }}/{{ repo.name }}/commits/{{ build.branch }}|{{ build.branch }}>
+        Author: {{ build.author }}
+        <{{ build.link }}|Visit build page ↗>
+    when:
+      event: [push, tag, promote]
+      status: [success, failure]
+
 ---
 kind: pipeline
 type: kubernetes
@@ -177,6 +198,6 @@ steps:
 
 ---
 kind: signature
-hmac: 7f632f952f715e13fe94d61a086940f94e319bd5f0084ebfa46468ffc1f7ce90
+hmac: 99c155d3e199158f351c4922342dba68dad5b7292135594b809bbbbf24f5b08d
 
 ...
