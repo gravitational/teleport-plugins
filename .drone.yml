@@ -86,7 +86,7 @@ steps:
         from_secret: SLACK_WEBHOOK
       channel: teleport-builds
       username: drone
-      template: >
+      template: |
         {{#if build.pull }}
           *{{#success build.status}}✔{{ else }}✘{{/success}} {{ uppercasefirst build.status }}*: <https://github.com/{{ repo.owner }}/{{ repo.name }}/pull/{{ build.pull }}|Pull Request #{{ build.pull }}>
         {{else}}
@@ -198,6 +198,6 @@ steps:
 
 ---
 kind: signature
-hmac: 8678baca961aa783b1b0c4f0e29b2f6d2ac9153a4812fedf9774db6038520371
+hmac: d2bb99fdbeecd30b82f90c60af74784e5fb81411b9ce47573c8c40e59321dbca
 
 ...
