@@ -97,7 +97,7 @@ steps:
         <{{ build.link }}|Visit build page ↗>
     when:
       event: [push]
-      status: [success, failure]
+      status: [failure]
 
 ---
 kind: pipeline
@@ -197,6 +197,6 @@ steps:
 
 ---
 kind: signature
-hmac: 5ff5ff710f98f7cb7f0e1e56ba357dc81f06d8b043a8016b0cd1f7574f276779
+hmac: b44c2e5e894edb551338356590c7e6953b3f09bd40f5b073001a48a063b47616
 
 ...
