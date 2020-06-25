@@ -43,10 +43,10 @@ user_email = "me@example.com" # PagerDuty bot user email (Could be admin email)
 service_id = "PIJ90N7"        # PagerDuty service id
 
 [http]
-public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-pagerduty.example.com
-# listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:443
-https_key_file = "/var/lib/teleport/plugins/pagerduty/server.key"  # TLS private key
-https_cert_file = "/var/lib/teleport/plugins/pagerduty/server.crt" # TLS certificate
+public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com
+# listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:8081
+https_key_file = "/var/lib/teleport/webproxy_key.pem"  # TLS private key
+https_cert_file = "/var/lib/teleport/webproxy_cert.pem" # TLS certificate
 
 [http.tls]
 verify_client_cert = true # The preferred way to authenticate webhooks on Pagerduty. See more: https://developer.pagerduty.com/docs/webhooks/webhooks-mutual-tls
