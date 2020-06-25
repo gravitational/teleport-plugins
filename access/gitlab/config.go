@@ -51,10 +51,10 @@ project_id = "1812345"                     # GitLab Project ID
 webhook_secret = "your webhook passphrase" # A secret used to encrypt data we use in webhooks. Basically anything you'd like.
 
 [http]
-public_addr = "example.com" # URL on which webhook server is accessible externally, e.g. [https://]teleport-gitlab.example.com
-# listen_addr = ":8081" # Network address in format [addr]:port on which webhook server listens, e.g. 0.0.0.0:443
-https_key_file = "/var/lib/teleport/plugins/gitlab/server.key"  # TLS private key
-https_cert_file = "/var/lib/teleport/plugins/gitlab/server.crt" # TLS certificate
+public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com
+# listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:8081
+https_key_file = "/var/lib/teleport/webproxy_key.pem"  # TLS private key
+https_cert_file = "/var/lib/teleport/webproxy_cert.pem" # TLS certificate
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/gitlab.log"

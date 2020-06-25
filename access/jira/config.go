@@ -40,15 +40,15 @@ root_cas = "/var/lib/teleport/plugins/jira/auth.cas"   # Teleport cluster CA cer
 
 [jira]
 url = "https://example.com/jira"    # JIRA URL. For JIRA Cloud, https://[my-jira].atlassian.net
-username = "bot@example.com"        # JIRA username
-api_token = "token"                 # JIRA API Basic Auth token
+username = "jira-bot"               # JIRA username
+api_token = "token"                 # JIRA API Basic Auth token, or our password in case you're using Jira Server.
 project = "MYPROJ"                  # JIRA Project key
 
 [http]
-# listen_addr = ":8081" # Network address in format [addr]:port on which webhook server listens, e.g. 0.0.0.0:443
-# public_addr = "example.com" # URL on which webhook server is accessible externally, e.g. [https://]teleport-jira.example.com
-https_key_file = "/var/lib/teleport/plugins/jira/server.key"  # TLS private key
-https_cert_file = "/var/lib/teleport/plugins/jira/server.crt" # TLS certificate
+public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com
+# listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:8081
+https_key_file = "/var/lib/teleport/webproxy_key.pem"  # TLS private key
+https_cert_file = "/var/lib/teleport/webproxy_cert.pem" # TLS certificate
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/jira.log"

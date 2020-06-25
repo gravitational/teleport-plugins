@@ -38,10 +38,10 @@ secret = "signing-secret-value" # Slack API Signing Secret
 channel = "channel-name"        # Slack Channel name to post requests to
 
 [http]
-# listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:443
-# public_addr = "example.com" # Hostname on which callback server is accessible externally
-https_key_file = "/var/lib/teleport/plugins/slack/server.key"  # TLS private key
-https_cert_file = "/var/lib/teleport/plugins/slack/server.crt" # TLS certificate
+public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com
+# listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:8081
+https_key_file = "/var/lib/teleport/webproxy_key.pem"  # TLS private key
+https_cert_file = "/var/lib/teleport/webproxy_cert.pem" # TLS certificate
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/slack.log"
