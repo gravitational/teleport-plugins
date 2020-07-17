@@ -26,7 +26,6 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"github.com/gravitational/teleport"
 	"github.com/gravitational/teleport/lib/auth"
 	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/teleport/lib/utils"
@@ -53,7 +52,7 @@ type remoteConn struct {
 	// be made on it.
 	invalid int32
 
-	// lastError is the last error that occured before this connection became
+	// lastError is the last error that occurred before this connection became
 	// invalid.
 	lastError error
 
@@ -165,7 +164,7 @@ func (c *remoteConn) markInvalid(err error) {
 
 	atomic.StoreInt32(&c.invalid, 1)
 	c.lastError = err
-	c.log.Errorf("Disconnecting connection to %v %v: %v.", c.clusterName, c.conn.RemoteAddr(), err)
+	c.log.Debugf("Disconnecting connection to %v %v: %v.", c.clusterName, c.conn.RemoteAddr(), err)
 }
 
 func (c *remoteConn) isInvalid() bool {
@@ -174,14 +173,6 @@ func (c *remoteConn) isInvalid() bool {
 
 func (c *remoteConn) setLastHeartbeat(tm time.Time) {
 	atomic.StoreInt64(&c.lastHeartbeat, tm.UnixNano())
-}
-
-func (c *remoteConn) getLastHeartbeat() time.Time {
-	unixNano := atomic.LoadInt64(&c.lastHeartbeat)
-	if unixNano == 0 {
-		return time.Time{}
-	}
-	return time.Unix(0, unixNano)
 }
 
 // isReady returns true when connection is ready to be tried,
@@ -213,15 +204,13 @@ func (c *remoteConn) openDiscoveryChannel() (ssh.Channel, error) {
 // updateProxies is a non-blocking call that puts the new proxies
 // list so that remote connection can notify the remote agent
 // about the list update
-func (c *remoteConn) updateProxies(proxies []services.Server) error {
+func (c *remoteConn) updateProxies(proxies []services.Server) {
 	select {
 	case c.newProxiesC <- proxies:
-		return nil
 	default:
 		// Missing proxies update is no longer critical with more permissive
 		// discovery protocol that tolerates conflicting, stale or missing updates
 		c.log.Warnf("Discovery channel overflow at %v.", len(c.newProxiesC))
-		return nil
 	}
 }
 
@@ -256,9 +245,4 @@ func (c *remoteConn) sendDiscoveryRequest(req discoveryRequest) error {
 	}
 
 	return nil
-}
-
-func (c *remoteConn) isOnline(conn services.TunnelConnection) bool {
-	tunnelStatus := services.TunnelConnectionStatus(c.clock, conn, c.offlineThreshold)
-	return tunnelStatus == teleport.RemoteClusterStatusOnline
 }

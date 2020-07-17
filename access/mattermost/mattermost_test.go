@@ -4,22 +4,17 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"os/user"
-	"sync"
 	"testing"
 	"time"
 
-	"github.com/julienschmidt/httprouter"
 	mm "github.com/mattermost/mattermost-server/model"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/gravitational/teleport-plugins/utils/nettest"
-	"github.com/gravitational/teleport/integration"
+	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/services"
 
@@ -33,14 +28,14 @@ const (
 )
 
 type MattermostSuite struct {
-	app               *App
-	publicURL         string
-	me                *user.User
-	fakeMattermostSrv *httptest.Server
-	posts             sync.Map
-	newPosts          chan *mm.Post
-	teleport          *integration.TeleInstance
-	tmpFiles          []*os.File
+	ctx            context.Context
+	cancel         context.CancelFunc
+	app            *App
+	publicURL      string
+	me             *user.User
+	fakeMattermost *FakeMattermost
+	teleport       *integration.TeleInstance
+	tmpFiles       []*os.File
 }
 
 var _ = Suite(&MattermostSuite{})
@@ -52,10 +47,7 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 	log.SetLevel(log.DebugLevel)
 	priv, pub, err := testauthority.New().GenerateKeyPair("")
 	c.Assert(err, IsNil)
-	portList, err := nettest.GetFreeTCPPortsForTests(6)
-	c.Assert(err, IsNil)
-	ports := portList.PopIntSlice(5)
-	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Ports: ports, Priv: priv, Pub: pub})
+	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Priv: priv, Pub: pub})
 
 	s.me, err = user.Current()
 	c.Assert(err, IsNil)
@@ -79,7 +71,7 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 	t.AddUserWithRole("plugin", accessPluginRole)
 
-	err = t.Create(nil, true, nil)
+	err = t.Create(nil, nil)
 	c.Assert(err, IsNil)
 	if err := t.Start(); err != nil {
 		c.Fatalf("Unexpected response from Start: %v", err)
@@ -88,14 +80,15 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 }
 
 func (s *MattermostSuite) SetUpTest(c *C) {
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), time.Second)
 	s.publicURL = ""
-	s.startFakeMattermost(c)
+	s.fakeMattermost = NewFakeMattermost()
 }
 
 func (s *MattermostSuite) TearDownTest(c *C) {
 	s.shutdownApp(c)
-	s.fakeMattermostSrv.Close()
-	close(s.newPosts)
+	s.fakeMattermost.Close()
+	s.cancel()
 	for _, tmp := range s.tmpFiles {
 		err := os.Remove(tmp.Name())
 		c.Assert(err, IsNil)
@@ -108,79 +101,6 @@ func (s *MattermostSuite) newTmpFile(c *C, pattern string) (file *os.File) {
 	c.Assert(err, IsNil)
 	s.tmpFiles = append(s.tmpFiles, file)
 	return
-}
-
-func (s *MattermostSuite) startFakeMattermost(c *C) {
-	s.newPosts = make(chan *mm.Post, 1)
-
-	fakeMattermost := httprouter.New()
-	fakeMattermost.GET("/api/v4/teams/name/test-team", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
-		team := mm.Team{
-			Id:   "1111",
-			Name: "test-team",
-		}
-		err := json.NewEncoder(rw).Encode(&team)
-		c.Assert(err, IsNil)
-	})
-	fakeMattermost.GET("/api/v4/teams/1111/channels/name/test-channel", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
-		channel := mm.Channel{
-			Id:     "2222",
-			TeamId: "1111",
-			Name:   "test-channel",
-		}
-		err := json.NewEncoder(rw).Encode(&channel)
-		c.Assert(err, IsNil)
-	})
-	fakeMattermost.POST("/api/v4/posts", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		rw.Header().Add("Content-Type", "application/json")
-
-		post := &mm.Post{}
-		err := json.NewDecoder(r.Body).Decode(post)
-		c.Assert(err, IsNil)
-
-		if post.ChannelId != "2222" {
-			http.Error(rw, `{}`, http.StatusNotFound)
-			return
-		}
-
-		post.Id = fmt.Sprintf("%v", time.Now().UnixNano())
-		s.posts.Store(post.Id, *post)
-		s.newPosts <- post
-
-		rw.WriteHeader(http.StatusCreated)
-		err = json.NewEncoder(rw).Encode(post)
-		c.Assert(err, IsNil)
-
-	})
-	fakeMattermost.PUT("/api/v4/posts/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		rw.Header().Add("Content-Type", "application/json")
-
-		id := ps.ByName("id")
-		post := s.getPost(id)
-		if post == nil {
-			fmt.Printf("Not found %s", id)
-			http.Error(rw, `{}`, http.StatusNotFound)
-			return
-		}
-
-		var newPost mm.Post
-		err := json.NewDecoder(r.Body).Decode(&newPost)
-		c.Assert(err, IsNil)
-
-		post.Message = newPost.Message
-		post.Props = newPost.Props
-		s.posts.Store(post.Id, *post)
-
-		rw.WriteHeader(http.StatusOK)
-		err = json.NewEncoder(rw).Encode(post)
-		c.Assert(err, IsNil)
-	})
-
-	s.fakeMattermostSrv = httptest.NewServer(fakeMattermost)
 }
 
 func (s *MattermostSuite) startApp(c *C) {
@@ -208,12 +128,15 @@ func (s *MattermostSuite) startApp(c *C) {
 	}
 	casFile.Close()
 
+	authAddr, err := s.teleport.Process.AuthSSHAddr()
+	c.Assert(err, IsNil)
+
 	var conf Config
-	conf.Teleport.AuthServer = s.teleport.Config.Auth.SSHAddr.Addr
+	conf.Teleport.AuthServer = authAddr.Addr
 	conf.Teleport.ClientCrt = certFile.Name()
 	conf.Teleport.ClientKey = keyFile.Name()
 	conf.Teleport.RootCAs = casFile.Name()
-	conf.Mattermost.URL = s.fakeMattermostSrv.URL
+	conf.Mattermost.URL = s.fakeMattermost.URL()
 	conf.Mattermost.Team = "test-team"
 	conf.Mattermost.Channel = "test-channel"
 	conf.Mattermost.Secret = "1234567812345678123456781234567812345678123456781234567812345678"
@@ -227,10 +150,10 @@ func (s *MattermostSuite) startApp(c *C) {
 	c.Assert(err, IsNil)
 
 	go func() {
-		err = s.app.Run(context.TODO())
+		err = s.app.Run(s.ctx)
 		c.Assert(err, IsNil)
 	}()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
+	ctx, cancel := context.WithTimeout(s.ctx, time.Millisecond*250)
 	defer cancel()
 	ok, err := s.app.WaitReady(ctx)
 	c.Assert(err, IsNil)
@@ -241,49 +164,29 @@ func (s *MattermostSuite) startApp(c *C) {
 }
 
 func (s *MattermostSuite) shutdownApp(c *C) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*2000)
-	defer cancel()
-	err := s.app.Shutdown(ctx)
+	err := s.app.Shutdown(s.ctx)
 	c.Assert(err, IsNil)
 }
 
 func (s *MattermostSuite) createAccessRequest(c *C) services.AccessRequest {
-	client, err := s.teleport.NewClient(integration.ClientConfig{Login: s.me.Username})
+	req, err := s.teleport.CreateAccessRequest(s.ctx, s.me.Username, "admin")
 	c.Assert(err, IsNil)
-	req, err := services.NewAccessRequest(s.me.Username, "admin")
-	c.Assert(err, IsNil)
-	err = client.CreateAccessRequest(context.TODO(), req)
-	c.Assert(err, IsNil)
-	time.Sleep(time.Millisecond * 250) // Wait some time for watcher to receive a request
 	return req
 }
 
 func (s *MattermostSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
-	client, err := s.teleport.NewClient(integration.ClientConfig{Login: s.me.Username})
+	req, err := s.teleport.CreateExpiredAccessRequest(s.ctx, s.me.Username, "admin")
 	c.Assert(err, IsNil)
-	req, err := services.NewAccessRequest(s.me.Username, "admin")
-	c.Assert(err, IsNil)
-	ttl := time.Millisecond * 250
-	req.SetAccessExpiry(time.Now().Add(ttl))
-	err = client.CreateAccessRequest(context.TODO(), req)
-	c.Assert(err, IsNil)
-	time.Sleep(ttl + time.Millisecond*50)
-	auth := s.teleport.Process.GetAuthServer()
-	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: req.GetName()})
-	c.Assert(err, IsNil)
-	c.Assert(requests, HasLen, 0)
 	return req
 }
 
-func (s *MattermostSuite) getPost(id string) *mm.Post {
-	if obj, ok := s.posts.Load(id); ok {
-		post := obj.(mm.Post)
-		return &post
-	}
-	return nil
+func (s *MattermostSuite) checkPluginData(c *C, reqID string) PluginData {
+	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "mattermost", reqID, time.Millisecond*250)
+	c.Assert(err, IsNil)
+	return DecodePluginData(rawData)
 }
 
-func (s *MattermostSuite) postWebhook(c *C, post *mm.Post, actionName string) {
+func (s *MattermostSuite) postWebhook(c *C, post mm.Post, actionName string) {
 	attachments := post.Attachments()
 	c.Assert(attachments, HasLen, 1)
 	var action *mm.PostAction
@@ -316,15 +219,12 @@ func (s *MattermostSuite) postWebhook(c *C, post *mm.Post, actionName string) {
 
 func (s *MattermostSuite) TestMattermostMessagePosting(c *C) {
 	s.startApp(c)
-	_ = s.createAccessRequest(c)
+	request := s.createAccessRequest(c)
+	post, err := s.fakeMattermost.CheckNewPost(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no new messages posted"))
 
-	var post *mm.Post
-	select {
-	case post = <-s.newPosts:
-		c.Assert(post, NotNil)
-	case <-time.After(time.Millisecond * 250):
-		c.Fatal("post wasn't created")
-	}
+	pluginData := s.checkPluginData(c, request.GetName())
+	c.Assert(pluginData.PostID, Equals, post.Id)
 
 	attachments := post.Attachments()
 	c.Assert(attachments, HasLen, 1)
@@ -337,82 +237,43 @@ func (s *MattermostSuite) TestMattermostMessagePosting(c *C) {
 func (s *MattermostSuite) TestApproval(c *C) {
 	s.startApp(c)
 	request := s.createAccessRequest(c)
+	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
-	var post *mm.Post
-	select {
-	case post = <-s.newPosts:
-		c.Assert(post, NotNil)
-	case <-time.After(time.Millisecond * 250):
-		c.Fatal("post wasn't created")
-	}
-
+	post, err := s.fakeMattermost.CheckNewPost(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no new messages posted"))
 	s.postWebhook(c, post, "Approve")
 
-	auth := s.teleport.Process.GetAuthServer()
-	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: request.GetName()})
+	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
-	c.Assert(requests, HasLen, 1)
-	request = requests[0]
 	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
 }
 
 func (s *MattermostSuite) TestDenial(c *C) {
 	s.startApp(c)
 	request := s.createAccessRequest(c)
+	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
-	var post *mm.Post
-	select {
-	case post = <-s.newPosts:
-		c.Assert(post, NotNil)
-	case <-time.After(time.Millisecond * 250):
-		c.Fatal("post wasn't created")
-	}
-
+	post, err := s.fakeMattermost.CheckNewPost(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no new messages posted"))
 	s.postWebhook(c, post, "Deny")
 
-	auth := s.teleport.Process.GetAuthServer()
-	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: request.GetName()})
+	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
-	c.Assert(requests, HasLen, 1)
-	request = requests[0]
 	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
 }
 
-func (s *MattermostSuite) TestApproveExpired(c *C) {
+func (s *MattermostSuite) TestExpiration(c *C) {
 	s.startApp(c)
 	s.createExpiredAccessRequest(c)
 
-	var post *mm.Post
-	select {
-	case post = <-s.newPosts:
-		c.Assert(post, NotNil)
-	case <-time.After(time.Millisecond * 250):
-		c.Fatal("post wasn't created")
-	}
-
+	post, err := s.fakeMattermost.CheckNewPost(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no new messages posted"))
 	s.postWebhook(c, post, "Approve")
+	postID := post.Id
 
-	post = s.getPost(post.Id)
-	attachments := post.Attachments()
-	c.Assert(attachments, HasLen, 1)
-	c.Assert(attachments[0].Actions, HasLen, 0)
-}
-
-func (s *MattermostSuite) TestDenyExpired(c *C) {
-	s.startApp(c)
-	s.createExpiredAccessRequest(c)
-
-	var post *mm.Post
-	select {
-	case post = <-s.newPosts:
-		c.Assert(post, NotNil)
-	case <-time.After(time.Millisecond * 250):
-		c.Fatal("post wasn't created")
-	}
-
-	s.postWebhook(c, post, "Deny")
-
-	post = s.getPost(post.Id)
+	post, err = s.fakeMattermost.CheckPostUpdate(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no messages updated"))
+	c.Assert(post.Id, Equals, postID)
 	attachments := post.Attachments()
 	c.Assert(attachments, HasLen, 1)
 	c.Assert(attachments[0].Actions, HasLen, 0)

@@ -19,6 +19,7 @@ package access
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"sync"
 	"time"
 
@@ -34,7 +35,7 @@ import (
 	"github.com/gravitational/trace"
 )
 
-const MinServerVersion = "4.2.3"
+const MinServerVersion = "4.3.0"
 
 // State represents the state of an access request.
 type State = services.RequestState
@@ -94,8 +95,8 @@ type Pong struct {
 	ClusterName   string
 }
 
-// PluginData is a custom user data associated with access request.
-type PluginData map[string]string
+// PluginDataMap is a custom user data associated with access request.
+type PluginDataMap map[string]string
 
 // Watcher is used to monitor access requests.
 type Watcher interface {
@@ -119,11 +120,11 @@ type Client interface {
 	// GetRequest loads a request matching ID.
 	GetRequest(ctx context.Context, reqID string) (Request, error)
 	// SetRequestState updates the state of a request.
-	SetRequestState(ctx context.Context, reqID string, state State) error
+	SetRequestState(ctx context.Context, reqID string, state State, delegator string) error
 	// GetPluginData fetches plugin data of the specific request.
-	GetPluginData(ctx context.Context, reqID string) (PluginData, error)
+	GetPluginData(ctx context.Context, reqID string) (PluginDataMap, error)
 	// UpdatePluginData updates plugin data of the specific request comparing it with a previous value.
-	UpdatePluginData(ctx context.Context, reqID string, set PluginData, expect PluginData) error
+	UpdatePluginData(ctx context.Context, reqID string, set PluginDataMap, expect PluginDataMap) error
 }
 
 // clt is a thin wrapper around the raw GRPC types that implements the
@@ -210,15 +211,16 @@ func (c *clt) GetRequest(ctx context.Context, reqID string) (Request, error) {
 	return reqs[0], nil
 }
 
-func (c *clt) SetRequestState(ctx context.Context, reqID string, state State) error {
+func (c *clt) SetRequestState(ctx context.Context, reqID string, state State, delegator string) error {
 	_, err := c.clt.SetAccessRequestState(ctx, &proto.RequestStateSetter{
-		ID:    reqID,
-		State: state,
+		ID:        reqID,
+		State:     state,
+		Delegator: fmt.Sprintf("%s:%s", c.plugin, delegator),
 	})
 	return utils.FromGRPC(err)
 }
 
-func (c *clt) GetPluginData(ctx context.Context, reqID string) (PluginData, error) {
+func (c *clt) GetPluginData(ctx context.Context, reqID string) (PluginDataMap, error) {
 	dataSeq, err := c.clt.GetPluginData(ctx, &services.PluginDataFilter{
 		Kind:     services.KindAccessRequest,
 		Resource: reqID,
@@ -229,18 +231,18 @@ func (c *clt) GetPluginData(ctx context.Context, reqID string) (PluginData, erro
 	}
 	pluginDatas := dataSeq.GetPluginData()
 	if len(pluginDatas) == 0 {
-		return PluginData{}, nil
+		return PluginDataMap{}, nil
 	}
 
 	var pluginData services.PluginData = pluginDatas[0]
 	entry := pluginData.Entries()[c.plugin]
 	if entry == nil {
-		return PluginData{}, nil
+		return PluginDataMap{}, nil
 	}
 	return entry.Data, nil
 }
 
-func (c *clt) UpdatePluginData(ctx context.Context, reqID string, set PluginData, expect PluginData) (err error) {
+func (c *clt) UpdatePluginData(ctx context.Context, reqID string, set PluginDataMap, expect PluginDataMap) (err error) {
 	_, err = c.clt.UpdatePluginData(ctx, &services.PluginDataUpdateParams{
 		Kind:     services.KindAccessRequest,
 		Resource: reqID,

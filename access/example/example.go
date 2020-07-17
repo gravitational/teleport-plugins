@@ -104,7 +104,7 @@ func run(configPath string) error {
 					eprintln("User %q not in whitelist, denying request...", req.User)
 					state = access.StateDenied
 				}
-				if err := client.SetRequestState(ctx, req.ID, state); err != nil {
+				if err := client.SetRequestState(ctx, req.ID, state, "example"); err != nil {
 					return trace.Wrap(err)
 				}
 				eprintln("ok.")

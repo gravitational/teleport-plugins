@@ -387,6 +387,8 @@ const (
 )
 
 const (
+	// CertExtensionPermitX11Forwarding allows X11 forwarding for certificate
+	CertExtensionPermitX11Forwarding = "permit-X11-forwarding"
 	// CertExtensionPermitAgentForwarding allows agent forwarding for certificate
 	CertExtensionPermitAgentForwarding = "permit-agent-forwarding"
 	// CertExtensionPermitPTY allows user to request PTY
@@ -424,7 +426,7 @@ const (
 const MaxEnvironmentFileLines = 1000
 
 // MaxResourceSize is the maximum size (in bytes) of a serialized resource.  This limit is
-// typically only enforced aginst resources that are likely to arbitrarily grow (e.g. PluginData).
+// typically only enforced against resources that are likely to arbitrarily grow (e.g. PluginData).
 const MaxResourceSize = 1000000
 
 const (
@@ -468,6 +470,10 @@ const (
 	// TraitInternalKubeGroupsVariable is the variable used to store allowed
 	// kubernetes groups for local accounts.
 	TraitInternalKubeGroupsVariable = "{{internal.kubernetes_groups}}"
+
+	// TraitInternalKubeUsersVariable is the variable used to store allowed
+	// kubernetes users for local accounts.
+	TraitInternalKubeUsersVariable = "{{internal.kubernetes_users}}"
 )
 
 const (
@@ -544,9 +550,6 @@ const (
 	// EnvUserProfile is the home directory environment variable on Windows.
 	EnvUserProfile = "USERPROFILE"
 
-	// KubeServiceAddr is an address for kubernetes endpoint service
-	KubeServiceAddr = "kubernetes.default.svc.cluster.local:443"
-
 	// KubeCAPath is a hardcode of mounted CA inside every pod of K8s
 	KubeCAPath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 
@@ -597,6 +600,10 @@ const (
 
 	// OpenBrowserWindows is the command used to open a web browser on Windows.
 	OpenBrowserWindows = "rundll32.exe"
+
+	// BrowserNone is the string used to suppress the opening of a browser in
+	// response to 'tsh login' commands.
+	BrowserNone = "none"
 )
 
 const (
@@ -636,3 +643,21 @@ const (
 
 // RSAKeySize is the size of the RSA key.
 const RSAKeySize = 2048
+
+// A principal name for use in SSH certificates.
+type Principal string
+
+const (
+	// The localhost domain, for talking to a proxy or node on the same
+	// machine.
+	PrincipalLocalhost Principal = "localhost"
+	// The IPv4 loopback address, for talking to a proxy or node on the same
+	// machine.
+	PrincipalLoopbackV4 Principal = "127.0.0.1"
+	// The IPv6 loopback address, for talking to a proxy or node on the same
+	// machine.
+	PrincipalLoopbackV6 Principal = "::1"
+)
+
+// UserSystem defines a user as system.
+const UserSystem = "system"

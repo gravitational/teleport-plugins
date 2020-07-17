@@ -224,65 +224,6 @@ func DialAddrFromListenAddr(listenAddr NetAddr) NetAddr {
 	return NetAddr{Addr: ReplaceLocalhost(listenAddr.Addr, "127.0.0.1")}
 }
 
-func NewNetAddrVal(defaultVal NetAddr, val *NetAddr) *NetAddrVal {
-	*val = defaultVal
-	return (*NetAddrVal)(val)
-}
-
-// NetAddrVal can be used with flag package
-type NetAddrVal NetAddr
-
-func (a *NetAddrVal) Set(s string) error {
-	v, err := ParseAddr(s)
-	if err != nil {
-		return err
-	}
-	a.Addr = v.Addr
-	a.AddrNetwork = v.AddrNetwork
-	return nil
-}
-
-func (a *NetAddrVal) String() string {
-	return ((*NetAddr)(a)).FullAddress()
-}
-
-func (a *NetAddrVal) Get() interface{} {
-	return NetAddr(*a)
-}
-
-// NetAddrList is a list of NetAddrs that supports
-// helper methods for parsing from CLI tools
-type NetAddrList []NetAddr
-
-// Addresses returns a slice of strings converted from the addresses
-func (nl *NetAddrList) Addresses() []string {
-	var ns []string
-	for _, n := range *nl {
-		ns = append(ns, n.FullAddress())
-	}
-	return ns
-}
-
-// Set is called by CLI tools
-func (nl *NetAddrList) Set(s string) error {
-	v, err := ParseAddr(s)
-	if err != nil {
-		return err
-	}
-
-	*nl = append(*nl, *v)
-	return nil
-}
-
-// String returns debug-friendly representation of the tool
-func (nl *NetAddrList) String() string {
-	var ns []string
-	for _, n := range *nl {
-		ns = append(ns, n.FullAddress())
-	}
-	return strings.Join(ns, " ")
-}
-
 // ReplaceLocalhost checks if a given address is link-local (like 0.0.0.0 or 127.0.0.1)
 // and replaces it with the IP taken from replaceWith, preserving the original port
 //
@@ -310,39 +251,6 @@ func IsLocalhost(host string) bool {
 	}
 	ip := net.ParseIP(host)
 	return ip.IsLoopback() || ip.IsUnspecified()
-}
-
-// ForceLoopback converts `0.0.0.0` and `localhost` addresses to `127.0.0.1`,
-// preserving suffix (e.g. `localhost:22` -> `127.0.0.1:22`).  This function is
-// used to normalize local proxy connections since we allow proxy certificates
-// to contain `127.0.0.1`, but not `0.0.0.0` or `localhost`.
-func ForceLoopback(addr string) string {
-	// split host and port if appropriate
-	var host, port string
-	if ip := net.ParseIP(addr); ip != nil {
-		host = ip.String()
-	} else if h, p, err := net.SplitHostPort(addr); err == nil {
-		host, port = h, p
-	} else {
-		host = addr
-	}
-
-	// apply host substitutions
-	switch host {
-	case `localhost`, `0.0.0.0`:
-		host = `127.0.0.1`
-	case `::`:
-		host = `::1`
-	default:
-		// return original unmodified address
-		return addr
-	}
-
-	// re-join port if it exists
-	if port != "" {
-		return net.JoinHostPort(host, port)
-	}
-	return host
 }
 
 // IsLoopback returns 'true' if a given hostname resolves to local

@@ -165,8 +165,11 @@ const (
 	// to proxy
 	KindRemoteCluster = "remote_cluster"
 
-	// KindInviteToken is a local user invite token
-	KindInviteToken = "invite_token"
+	// KindResetPasswordToken is a token used to change user passwords
+	KindResetPasswordToken = "user_token"
+
+	// KindResetPasswordTokenSecrets is reset password token secrets
+	KindResetPasswordTokenSecrets = "reset_password_token_secrets"
 
 	// KindIdentity is local on disk identity resource
 	KindIdentity = "identity"
@@ -333,7 +336,7 @@ func GetResourceMarshalerKinds() []string {
 	marshalerMutex.Lock()
 	defer marshalerMutex.Unlock()
 	kinds := make([]string, 0, len(resourceMarshalers))
-	for kind, _ := range resourceMarshalers {
+	for kind := range resourceMarshalers {
 		kinds = append(kinds, kind)
 	}
 	return kinds
@@ -637,6 +640,16 @@ type Resource interface {
 	GetResourceID() int64
 	// SetResourceID sets resource ID
 	SetResourceID(int64)
+}
+
+// ResourceWithSecrets includes additional properties which must
+// be provided by resources which *may* contain secrets.
+type ResourceWithSecrets interface {
+	Resource
+	// WithoutSecrets returns an instance of the resource which
+	// has had all secrets removed.  If the current resource has
+	// already had its secrets removed, this may be a no-op.
+	WithoutSecrets() Resource
 }
 
 // GetID returns resource ID

@@ -184,10 +184,8 @@ func NewWithConfig(ctx context.Context, cfg Config) (*LiteBackend, error) {
 type LiteBackend struct {
 	Config
 	*log.Entry
+	backend.NoMigrations
 	db *sql.DB
-	// tx stores the current transaction if this backend instance
-	// is bound to transaction
-	tx *sql.Tx
 	// clock is used to generate time,
 	// could be swapped in tests for fixed time
 	clock clockwork.Clock
@@ -317,7 +315,7 @@ func (l *LiteBackend) CompareAndSwap(ctx context.Context, expected backend.Item,
 	if len(replaceWith.Key) == 0 {
 		return nil, trace.BadParameter("missing parameter Key")
 	}
-	if bytes.Compare(expected.Key, replaceWith.Key) != 0 {
+	if !bytes.Equal(expected.Key, replaceWith.Key) {
 		return nil, trace.BadParameter("expected and replaceWith keys should match")
 	}
 	now := l.clock.Now().UTC()
@@ -336,7 +334,7 @@ func (l *LiteBackend) CompareAndSwap(ctx context.Context, expected backend.Item,
 			return trace.Wrap(err)
 		}
 
-		if bytes.Compare(value, expected.Value) != 0 {
+		if !bytes.Equal(value, expected.Value) {
 			return trace.CompareFailed("current value does not match expected for %v", string(expected.Key))
 		}
 
@@ -814,7 +812,7 @@ func (l *LiteBackend) closeDatabase() error {
 func (l *LiteBackend) inTransaction(ctx context.Context, f func(tx *sql.Tx) error) (err error) {
 	start := time.Now()
 	defer func() {
-		diff := time.Now().Sub(start)
+		diff := time.Since(start)
 		if diff > slowTransactionThreshold {
 			l.Warningf("SLOW TRANSACTION: %v, %v.", diff, string(debug.Stack()))
 		}
@@ -865,7 +863,6 @@ func (l *LiteBackend) inTransaction(ctx context.Context, f func(tx *sql.Tx) erro
 		if err2 := commit(); err2 != nil {
 			err = trace.Wrap(err2)
 		}
-		return
 	}()
 	err = f(tx)
 	return
@@ -876,10 +873,6 @@ func expires(t time.Time) interface{} {
 		return nil
 	}
 	return t.UTC()
-}
-
-func nop() error {
-	return nil
 }
 
 func convertError(err error) error {
@@ -916,14 +909,6 @@ func isInterrupt(err error) bool {
 		return false
 	}
 	return e.Code == sqlite3.ErrInterrupt
-}
-
-func isRetryError(err error) bool {
-	e, ok := trace.Unwrap(err).(sqlite3.Error)
-	if !ok {
-		return false
-	}
-	return e.Code == sqlite3.ErrBusy || e.Code == sqlite3.ErrLocked
 }
 
 func isReadonlyError(err error) bool {

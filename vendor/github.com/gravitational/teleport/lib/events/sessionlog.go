@@ -128,7 +128,6 @@ type DiskSessionLogger struct {
 
 	sync.Mutex
 
-	sid        session.ID
 	sessionDir string
 
 	indexFile  *os.File
@@ -633,39 +632,8 @@ func newGzipWriter(file *os.File) *gzipWriter {
 	}
 }
 
-// gzipReader wraps file, on close close both gzip writer and file
-type gzipReader struct {
-	io.ReadCloser
-	file io.Closer
-}
-
-// Close closes file and gzip writer
-func (f *gzipReader) Close() error {
-	var errors []error
-	if f.ReadCloser != nil {
-		errors = append(errors, f.ReadCloser.Close())
-		f.ReadCloser = nil
-	}
-	if f.file != nil {
-		errors = append(errors, f.file.Close())
-		f.file = nil
-	}
-	return trace.NewAggregate(errors...)
-}
-
-func newGzipReader(file *os.File) (*gzipReader, error) {
-	reader, err := gzip.NewReader(file)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	return &gzipReader{
-		ReadCloser: reader,
-		file:       file,
-	}, nil
-}
-
 const (
-	// eventsSuffix is the suffix of the archive that contians session events.
+	// eventsSuffix is the suffix of the archive that contains session events.
 	eventsSuffix = "events.gz"
 
 	// chunksSuffix is the suffix of the archive that contains session chunks.
