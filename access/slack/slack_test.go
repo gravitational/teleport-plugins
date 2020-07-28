@@ -194,7 +194,7 @@ func (s *SlackSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
 }
 
 func (s *SlackSuite) checkPluginData(c *C, reqID string) PluginData {
-	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "slack", reqID, time.Millisecond*250)
+	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "slack", reqID)
 	c.Assert(err, IsNil)
 	return DecodePluginData(rawData)
 }

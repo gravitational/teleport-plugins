@@ -28,6 +28,7 @@ type PagerdutyConfig struct {
 	APIKey      string `toml:"api_key"`
 	UserEmail   string `toml:"user_email"`
 	ServiceID   string `toml:"service_id"`
+	AutoApprove bool   `toml:"auto_approve"`
 }
 
 const exampleConfig = `# example teleport-pagerduty configuration TOML file
@@ -41,6 +42,7 @@ root_cas = "/var/lib/teleport/plugins/pagerduty/auth.cas"   # Teleport cluster C
 api_key = "key"               # PagerDuty API Key
 user_email = "me@example.com" # PagerDuty bot user email (Could be admin email)
 service_id = "PIJ90N7"        # PagerDuty service id
+auto_approve = true           # Automatically approve access requests if requestor is on-call
 
 [http]
 public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com

@@ -181,7 +181,7 @@ func (s *MattermostSuite) createExpiredAccessRequest(c *C) services.AccessReques
 }
 
 func (s *MattermostSuite) checkPluginData(c *C, reqID string) PluginData {
-	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "mattermost", reqID, time.Millisecond*250)
+	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "mattermost", reqID)
 	c.Assert(err, IsNil)
 	return DecodePluginData(rawData)
 }

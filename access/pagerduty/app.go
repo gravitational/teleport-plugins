@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -32,6 +33,8 @@ func NewApp(conf Config) (*App, error) {
 	return app, nil
 }
 
+var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+
 // Run initializes and runs a watcher and a callback server
 func (a *App) Run(ctx context.Context) error {
 	// Initialize the process.
@@ -53,12 +56,13 @@ func (a *App) PublicURL() *url.URL {
 	return a.webhookSrv.BaseURL()
 }
 
-func (a *App) run(ctx context.Context) (err error) {
+func (a *App) run(ctx context.Context) error {
+	var err error
 	log.Infof("Starting Teleport Access PagerDuty extension %s:%s", Version, Gitref)
 
 	a.webhookSrv, err = NewWebhookServer(a.conf.HTTP, a.onPagerdutyAction)
 	if err != nil {
-		return
+		return trace.Wrap(err)
 	}
 
 	a.bot = NewBot(a.conf.Pagerduty, a.webhookSrv)
@@ -71,7 +75,7 @@ func (a *App) run(ctx context.Context) (err error) {
 	if trace.Unwrap(err) == access.ErrInvalidCertificate {
 		log.WithError(err).Warning("Auth client TLS configuration error")
 	} else if err != nil {
-		return
+		return trace.Wrap(err)
 	}
 
 	a.accessClient, err = access.NewClient(
@@ -81,34 +85,34 @@ func (a *App) run(ctx context.Context) (err error) {
 		tlsConf,
 	)
 	if err != nil {
-		return
+		return trace.Wrap(err)
 	}
 	if err = a.checkTeleportVersion(ctx); err != nil {
-		return
+		return trace.Wrap(err)
 	}
 
 	log.Debug("Starting PagerDuty API health check...")
 	if err = a.bot.HealthCheck(ctx); err != nil {
 		log.WithError(err).Error("PagerDuty API health check failed")
-		return
+		return trace.Wrap(err)
 	}
 	log.Debug("PagerDuty API health check finished ok")
 
 	err = a.webhookSrv.EnsureCert()
 	if err != nil {
-		return
+		return trace.Wrap(err)
 	}
 	httpJob := a.webhookSrv.ServiceJob()
 	a.SpawnCriticalJob(httpJob)
 	httpOk, err := httpJob.WaitReady(ctx)
 	if err != nil {
-		return
+		return trace.Wrap(err)
 	}
 
 	log.Debug("Setting up the webhook extensions")
 	if err = a.bot.Setup(ctx); err != nil {
 		log.WithError(err).Error("Failed to set up webhook extensions")
-		return
+		return trace.Wrap(err)
 	}
 	log.Debug("PagerDuty webhook extensions setup finished ok")
 
@@ -120,7 +124,7 @@ func (a *App) run(ctx context.Context) (err error) {
 	a.SpawnCriticalJob(watcherJob)
 	watcherOk, err := watcherJob.WaitReady(ctx)
 	if err != nil {
-		return
+		return trace.Wrap(err)
 	}
 
 	a.mainJob.SetReady(httpOk && watcherOk)
@@ -178,10 +182,7 @@ func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 }
 
 func (a *App) onPagerdutyAction(ctx context.Context, action WebhookAction) error {
-	log := log.WithFields(logFields{
-		"pd_http_id": action.HTTPRequestID,
-		"pd_msg_id":  action.MessageID,
-	})
+	log := utils.GetLogger(ctx)
 
 	keyParts := strings.Split(action.IncidentKey, "/")
 	if len(keyParts) != 2 || keyParts[0] != pdIncidentKeyPrefix {
@@ -208,7 +209,7 @@ func (a *App) onPagerdutyAction(ctx context.Context, action WebhookAction) error
 		return trace.Wrap(err)
 	}
 
-	log = log.WithField("pd_incident_id", action.IncidentID)
+	ctx, log = utils.WithLogField(ctx, "pd_incident_id", action.IncidentID)
 
 	if pluginData.PagerdutyData.ID != action.IncidentID {
 		log.WithField("plugin_data_incident_id", pluginData.PagerdutyData.ID).Debug("plugin_data.incident_id does not match incident.id")
@@ -225,41 +226,25 @@ func (a *App) onPagerdutyAction(ctx context.Context, action WebhookAction) error
 			userName = agent.Name
 		}
 	}
-	log = log.WithFields(logFields{
+
+	ctx, _ = utils.WithLogFields(ctx, logFields{
 		"pd_user_email": userEmail,
 		"pd_user_name":  userName,
 	})
 
-	var (
-		reqState   access.State
-		resolution string
-	)
-
 	switch action.Name {
 	case pdApproveAction:
-		reqState = access.StateApproved
-		resolution = "approved"
+		return a.setRequestState(ctx, req.ID, action.IncidentID, userEmail, access.StateApproved)
 	case pdDenyAction:
-		reqState = access.StateDenied
-		resolution = "denied"
+		return a.setRequestState(ctx, req.ID, action.IncidentID, userEmail, access.StateDenied)
 	default:
 		return trace.BadParameter("unknown action: %q", action.Name)
 	}
-
-	if err := a.accessClient.SetRequestState(ctx, req.ID, reqState, userEmail); err != nil {
-		return trace.Wrap(err)
-	}
-	log.Infof("PagerDuty user %s the request", resolution)
-
-	if err := a.bot.ResolveIncident(ctx, reqID, pluginData.PagerdutyData, resolution); err != nil {
-		return trace.Wrap(err)
-	}
-	log.Infof("Incident %q has been resolved", action.IncidentID)
-
-	return nil
 }
 
 func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
+	ctx, _ = utils.WithLogField(ctx, "request_id", req.ID)
+
 	reqData := RequestData{User: req.User, Roles: req.Roles, Created: req.Created}
 
 	pdData, err := a.bot.CreateIncident(ctx, req.ID, reqData)
@@ -267,18 +252,26 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	log.WithFields(logFields{
-		"request_id":     req.ID,
-		"pd_incident_id": pdData.ID,
-	}).Info("PagerDuty incident created")
+	ctx, log := utils.WithLogField(ctx, "pd_incident_id", pdData.ID)
+
+	log.Info("PagerDuty incident created")
 
 	err = a.setPluginData(ctx, req.ID, PluginData{reqData, pdData})
+	if err != nil {
+		return trace.Wrap(err)
+	}
 
-	return trace.Wrap(err)
+	if a.conf.Pagerduty.AutoApprove {
+		return a.tryAutoApproveRequest(ctx, req, pdData.ID)
+	}
+
+	return nil
 }
 
 func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 	reqID := req.ID // This is the only available field
+	ctx, log := utils.WithLogField(ctx, "request_id", reqID)
+
 	pluginData, err := a.getPluginData(ctx, reqID)
 	if err != nil {
 		if trace.IsNotFound(err) {
@@ -288,12 +281,71 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	if err := a.bot.ResolveIncident(ctx, reqID, pluginData.PagerdutyData, "expired"); err != nil {
+	if err := a.bot.ResolveIncident(ctx, reqID, pluginData.PagerdutyData.ID, "expired"); err != nil {
 		return trace.Wrap(err)
 	}
 
-	log.WithField("request_id", reqID).Info("Successfully marked request as expired")
+	log.Info("Successfully marked request as expired")
 
+	return nil
+}
+
+func (a *App) setRequestState(ctx context.Context, reqID, incidentID, userEmail string, state access.State) error {
+	log := utils.GetLogger(ctx)
+	var resolution string
+
+	switch state {
+	case access.StateApproved:
+		resolution = "approved"
+	case access.StateDenied:
+		resolution = "denied"
+	default:
+		return trace.Errorf("unable to set state to %v", state)
+	}
+
+	if err := a.accessClient.SetRequestState(ctx, reqID, state, userEmail); err != nil {
+		return trace.Wrap(err)
+	}
+	log.Infof("PagerDuty user %s the request", resolution)
+
+	if err := a.bot.ResolveIncident(ctx, reqID, incidentID, resolution); err != nil {
+		return trace.Wrap(err)
+	}
+	log.Infof("Incident %q has been resolved", incidentID)
+
+	return nil
+}
+
+func (a *App) tryAutoApproveRequest(ctx context.Context, req access.Request, incidentID string) error {
+	if !emailRegex.MatchString(req.User) {
+		utils.GetLogger(ctx).Warningf("Failed to auto-approve the request: %q does not look like a valid email", req.User)
+		return nil
+	}
+
+	user, err := a.bot.GetUserByEmail(ctx, req.User)
+	if err != nil {
+		if trace.IsNotFound(err) {
+			log.WithError(err).Debugf("Failed to auto-approve the request")
+			return nil
+		}
+		return err
+	}
+
+	ctx, log := utils.WithLogFields(ctx, logFields{
+		"pd_user_email": user.Email,
+		"pd_user_name":  user.Name,
+	})
+
+	isOnCall, err := a.bot.IsUserOnCall(ctx, user.ID)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	if isOnCall {
+		log.Infof("User is now on-call, auto-approving the request")
+		return a.setRequestState(ctx, req.ID, incidentID, user.Email, access.StateApproved)
+	}
+
+	log.Debug("User is not on call")
 	return nil
 }
 
