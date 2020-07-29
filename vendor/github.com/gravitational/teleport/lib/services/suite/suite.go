@@ -113,26 +113,6 @@ func (s *ServicesTestSuite) Users() services.UsersService {
 	return s.UsersS
 }
 
-func (s *ServicesTestSuite) collectChanges(c *check.C, expected int) []interface{} {
-	changes := make([]interface{}, expected)
-	for i := range changes {
-		select {
-		case changes[i] = <-s.ChangesC:
-			// successfully collected changes
-		case <-time.After(2 * time.Second):
-			c.Fatalf("Timeout occurred waiting for events")
-		}
-	}
-	return changes
-}
-
-func (s *ServicesTestSuite) expectChanges(c *check.C, expected ...interface{}) {
-	changes := s.collectChanges(c, len(expected))
-	for i, ch := range changes {
-		c.Assert(ch, check.DeepEquals, expected[i])
-	}
-}
-
 func userSlicesEqual(c *check.C, a []services.User, b []services.User) {
 	comment := check.Commentf("a: %#v b: %#v", a, b)
 	c.Assert(len(a), check.Equals, len(b), comment)
@@ -175,6 +155,7 @@ func (s *ServicesTestSuite) UsersCRUD(c *check.C) {
 	userSlicesEqual(c, u, []services.User{newUser("user1", nil), newUser("user2", nil)})
 
 	out, err := s.WebS.GetUser("user1", false)
+	c.Assert(err, check.IsNil)
 	usersEqual(c, out, u[0])
 
 	user := newUser("user1", []string{"admin", "user"})
@@ -188,13 +169,13 @@ func (s *ServicesTestSuite) UsersCRUD(c *check.C) {
 	c.Assert(err, check.IsNil)
 	usersEqual(c, out, user)
 
-	c.Assert(s.WebS.DeleteUser("user1"), check.IsNil)
+	c.Assert(s.WebS.DeleteUser(context.TODO(), "user1"), check.IsNil)
 
 	u, err = s.WebS.GetUsers(false)
 	c.Assert(err, check.IsNil)
 	userSlicesEqual(c, u, []services.User{newUser("user2", nil)})
 
-	err = s.WebS.DeleteUser("user1")
+	err = s.WebS.DeleteUser(context.TODO(), "user1")
 	fixtures.ExpectNotFound(c, err)
 
 	// bad username
@@ -225,7 +206,7 @@ func (s *ServicesTestSuite) UsersExpiry(c *check.C) {
 	s.Clock.Advance(2 * time.Minute)
 
 	// Make sure the user is now gone.
-	u, err = s.WebS.GetUser("foo", false)
+	_, err = s.WebS.GetUser("foo", false)
 	c.Assert(err, check.NotNil)
 }
 
@@ -295,6 +276,7 @@ func (s *ServicesTestSuite) CertAuthCRUD(c *check.C) {
 	newCA.SetRotation(rotation)
 
 	err = s.CAS.CompareAndSwapCertAuthority(&newCA, ca)
+	c.Assert(err, check.IsNil)
 
 	out, err = s.CAS.GetCertAuthority(ca.GetID(), true)
 	c.Assert(err, check.IsNil)
@@ -357,6 +339,7 @@ func (s *ServicesTestSuite) ServerCRUD(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	out, err = s.PresenceS.GetProxies()
+	c.Assert(err, check.IsNil)
 	c.Assert(out, check.HasLen, 0)
 
 	out, err = s.PresenceS.GetAuthServers()
@@ -570,7 +553,8 @@ func (s *ServicesTestSuite) RolesCRUD(c *check.C) {
 			},
 		},
 	}
-	err = s.Access.UpsertRole(&role)
+	ctx := context.Background()
+	err = s.Access.UpsertRole(ctx, &role)
 	c.Assert(err, check.IsNil)
 	rout, err := s.Access.GetRole(role.Metadata.Name)
 	c.Assert(err, check.IsNil)
@@ -578,14 +562,14 @@ func (s *ServicesTestSuite) RolesCRUD(c *check.C) {
 	fixtures.DeepCompare(c, rout, &role)
 
 	role.Spec.Allow.Logins = []string{"bob"}
-	err = s.Access.UpsertRole(&role)
+	err = s.Access.UpsertRole(ctx, &role)
 	c.Assert(err, check.IsNil)
 	rout, err = s.Access.GetRole(role.Metadata.Name)
 	c.Assert(err, check.IsNil)
 	role.SetResourceID(rout.GetResourceID())
 	c.Assert(rout, check.DeepEquals, &role)
 
-	err = s.Access.DeleteRole(role.Metadata.Name)
+	err = s.Access.DeleteRole(ctx, role.Metadata.Name)
 	c.Assert(err, check.IsNil)
 
 	_, err = s.Access.GetRole(role.Metadata.Name)
@@ -1029,6 +1013,7 @@ func (s *ServicesTestSuite) ClusterConfig(c *check.C, opts ...SuiteOption) {
 
 // Events tests various events variations
 func (s *ServicesTestSuite) Events(c *check.C) {
+	ctx := context.Background()
 	testCases := []eventTest{
 		{
 			name: "Cert authority with secrets",
@@ -1163,14 +1148,15 @@ func (s *ServicesTestSuite) Events(c *check.C) {
 					},
 					Deny: services.RoleConditions{},
 				})
+				c.Assert(err, check.IsNil)
 
-				err = s.Access.UpsertRole(role)
+				err = s.Access.UpsertRole(ctx, role)
 				c.Assert(err, check.IsNil)
 
 				out, err := s.Access.GetRole(role.GetName())
 				c.Assert(err, check.IsNil)
 
-				err = s.Access.DeleteRole(role.GetName())
+				err = s.Access.DeleteRole(ctx, role.GetName())
 				c.Assert(err, check.IsNil)
 
 				return out
@@ -1184,11 +1170,12 @@ func (s *ServicesTestSuite) Events(c *check.C) {
 			crud: func() services.Resource {
 				user := newUser("user1", []string{"admin"})
 				err := s.Users().UpsertUser(user)
+				c.Assert(err, check.IsNil)
 
 				out, err := s.Users().GetUser(user.GetName(), false)
 				c.Assert(err, check.IsNil)
 
-				c.Assert(s.Users().DeleteUser(user.GetName()), check.IsNil)
+				c.Assert(s.Users().DeleteUser(context.TODO(), user.GetName()), check.IsNil)
 				return out
 			},
 		},
@@ -1446,6 +1433,7 @@ skiploop:
 	}
 
 	for _, tc := range testCases {
+		c.Logf("test case %q", tc.name)
 		resource := tc.crud()
 
 		ExpectResource(c, w, 3*time.Second, resource)

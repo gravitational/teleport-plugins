@@ -29,12 +29,12 @@ import (
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/agent"
 
-	"github.com/gravitational/teleport"
 	"github.com/gravitational/teleport/lib/auth"
+	"github.com/gravitational/teleport/lib/auth/proto"
 	"github.com/gravitational/teleport/lib/client"
 	"github.com/gravitational/teleport/lib/reversetunnel"
 	"github.com/gravitational/teleport/lib/services"
-	"github.com/gravitational/teleport/lib/sshutils"
+	"github.com/gravitational/teleport/lib/tlsca"
 	"github.com/gravitational/teleport/lib/utils"
 
 	"github.com/gravitational/trace"
@@ -184,15 +184,19 @@ func (c *SessionContext) tryRemoteTLSClient(cluster reversetunnel.RemoteSite) (a
 	return clt, nil
 }
 
-// getCertAuthorities gets all certificate authorities, or the certificate authorities for
-// a specific cluster if clusterName is supplied.
-func (c *SessionContext) getCertAuthorities(clusterName ...string) ([]services.CertAuthority, error) {
+// ClientTLSConfig returns client TLS authentication associated
+// with the web session context
+func (c *SessionContext) ClientTLSConfig(clusterName ...string) (*tls.Config, error) {
+	var certPool *x509.CertPool
 	if len(clusterName) == 0 {
 		certAuthorities, err := c.parent.proxyClient.GetCertAuthorities(services.HostCA, false)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
-		return certAuthorities, nil
+		certPool, err = services.CertPoolFromCertAuthorities(certAuthorities)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
 	} else {
 		certAuthority, err := c.parent.proxyClient.GetCertAuthority(services.CertAuthID{
 			Type:       services.HostCA,
@@ -201,26 +205,12 @@ func (c *SessionContext) getCertAuthorities(clusterName ...string) ([]services.C
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
-		return []services.CertAuthority{certAuthority}, nil
+		certPool, err = services.CertPool(certAuthority)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
 	}
-}
 
-// ClientTLSConfig returns client TLS authentication associated
-// with the web session context
-func (c *SessionContext) ClientTLSConfig(clusterName ...string) (*tls.Config, error) {
-	cas, err := c.getCertAuthorities(clusterName...)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	var certPool *x509.CertPool
-	if len(cas) == 1 {
-		certPool, err = services.CertPool(cas[0])
-	} else {
-		certPool, err = services.CertPoolFromCertAuthorities(cas)
-	}
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
 	tlsConfig := utils.TLSConfig(c.parent.cipherSuites)
 	tlsCert, err := tls.X509KeyPair(c.sess.GetTLSCert(), c.sess.GetPriv())
 	if err != nil {
@@ -230,22 +220,6 @@ func (c *SessionContext) ClientTLSConfig(clusterName ...string) (*tls.Config, er
 	tlsConfig.RootCAs = certPool
 	tlsConfig.ServerName = auth.EncodeClusterName(c.parent.clusterName)
 	return tlsConfig, nil
-}
-
-func (c *SessionContext) HostKeyCallback(clusterName ...string) (ssh.HostKeyCallback, error) {
-	cas, err := c.getCertAuthorities(clusterName...)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	var pubKeys []ssh.PublicKey
-	for _, ca := range cas {
-		checkers, err := ca.Checkers()
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-		pubKeys = append(pubKeys, checkers...)
-	}
-	return sshutils.NewHostKeyCallback(pubKeys), nil
 }
 
 func (c *SessionContext) newRemoteTLSClient(cluster reversetunnel.RemoteSite) (auth.ClientI, error) {
@@ -317,7 +291,7 @@ func (c *SessionContext) GetCertificates() (*ssh.Certificate, *x509.Certificate,
 	if !ok {
 		return nil, nil, trace.BadParameter("not certificate")
 	}
-	tlscert, err := utils.ParseCertificatePEM(c.sess.GetTLSCert())
+	tlscert, err := tlsca.ParseCertificatePEM(c.sess.GetTLSCert())
 	if err != nil {
 		return nil, nil, trace.Wrap(err)
 	}
@@ -463,6 +437,7 @@ func (s *sessionCache) GetCertificateWithoutOTP(c client.CreateSSHCertReq) (*aut
 		PublicKey:         c.PubKey,
 		CompatibilityMode: c.Compatibility,
 		TTL:               c.TTL,
+		RouteToCluster:    c.RouteToCluster,
 	})
 }
 
@@ -478,6 +453,7 @@ func (s *sessionCache) GetCertificateWithOTP(c client.CreateSSHCertReq) (*auth.S
 		PublicKey:         c.PubKey,
 		CompatibilityMode: c.Compatibility,
 		TTL:               c.TTL,
+		RouteToCluster:    c.RouteToCluster,
 	})
 
 }
@@ -493,40 +469,17 @@ func (s *sessionCache) GetCertificateWithU2F(c client.CreateSSHCertWithU2FReq) (
 		PublicKey:         c.PubKey,
 		CompatibilityMode: c.Compatibility,
 		TTL:               c.TTL,
+		RouteToCluster:    c.RouteToCluster,
 	})
 }
 
-func (s *sessionCache) GetUserInviteInfo(token string) (user string, otpQRCode []byte, err error) {
-	return s.proxyClient.GetSignupTokenData(token)
+// Ping gets basic info about the auth server.
+func (s *sessionCache) Ping(ctx context.Context) (proto.PingResponse, error) {
+	return s.proxyClient.Ping(ctx)
 }
 
 func (s *sessionCache) GetUserInviteU2FRegisterRequest(token string) (*u2f.RegisterRequest, error) {
 	return s.proxyClient.GetSignupU2FRegisterRequest(token)
-}
-
-func (s *sessionCache) CreateNewUser(token, password, otpToken string) (services.WebSession, error) {
-	cap, err := s.proxyClient.GetAuthPreference()
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	var webSession services.WebSession
-
-	switch cap.GetSecondFactor() {
-	case teleport.OFF:
-		webSession, err = s.proxyClient.CreateUserWithoutOTP(token, password)
-	case teleport.OTP, teleport.TOTP, teleport.HOTP:
-		webSession, err = s.proxyClient.CreateUserWithOTP(token, password, otpToken)
-	}
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	return webSession, nil
-}
-
-func (s *sessionCache) CreateNewU2FUser(token string, password string, u2fRegisterResponse u2f.RegisterResponse) (services.WebSession, error) {
-	return s.proxyClient.CreateUserWithU2FToken(token, password, u2fRegisterResponse)
 }
 
 func (s *sessionCache) ValidateTrustedCluster(validateRequest *auth.ValidateTrustedClusterRequest) (*auth.ValidateTrustedClusterResponse, error) {

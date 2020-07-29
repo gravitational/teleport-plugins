@@ -3,12 +3,15 @@ package main
 import (
 	"context"
 	"encoding/binary"
+	"fmt"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/gravitational/teleport-plugins/access"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -135,6 +138,29 @@ func init() {
 	issueDescriptionRegex, err = regexp.Compile(`(?i)request\s+id\s+is\s+([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})`)
 	if err != nil {
 		panic(err)
+	}
+}
+
+func DecodePluginData(dataMap access.PluginDataMap) (data PluginData) {
+	var created int64
+	data.User = dataMap["user"]
+	data.Roles = strings.Split(dataMap["roles"], ",")
+	fmt.Sscanf(dataMap["created"], "%d", &created)
+	data.Created = time.Unix(created, 0)
+	fmt.Sscanf(dataMap["issue_id"], "%d", &data.ID)
+	fmt.Sscanf(dataMap["issue_iid"], "%d", &data.IID)
+	fmt.Sscanf(dataMap["project_id"], "%d", &data.ProjectID)
+	return
+}
+
+func EncodePluginData(data PluginData) access.PluginDataMap {
+	return access.PluginDataMap{
+		"issue_id":   fmt.Sprintf("%d", data.ID),
+		"issue_iid":  fmt.Sprintf("%d", data.IID),
+		"project_id": fmt.Sprintf("%d", data.ProjectID),
+		"user":       data.User,
+		"roles":      strings.Join(data.Roles, ","),
+		"created":    fmt.Sprintf("%d", data.Created.Unix()),
 	}
 }
 

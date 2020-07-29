@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"net/url"
-	"strings"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
@@ -51,22 +50,6 @@ func (a *App) PublicURL() *url.URL {
 		panic("app is not running")
 	}
 	return a.callbackSrv.BaseURL()
-}
-
-// GetPluginData loads a plugin data for a given request. Used only in tests and can be called only when app is running.
-func (a *App) GetPluginData(ctx context.Context, reqID string) (data PluginData, err error) {
-	if !a.mainJob.IsReady() {
-		panic("app is not running")
-	}
-	return a.getPluginData(ctx, reqID)
-}
-
-// SetPluginData stores a plugin data for a given request. Used only in tests and can be called only when app is running.
-func (a *App) SetPluginData(ctx context.Context, reqID string, data PluginData) error {
-	if !a.mainJob.IsReady() {
-		panic("app is not running")
-	}
-	return a.setPluginData(ctx, reqID, data)
 }
 
 func (a *App) run(ctx context.Context) (err error) {
@@ -249,7 +232,7 @@ func (a *App) onSlackCallback(ctx context.Context, cb Callback) error {
 			return trace.BadParameter("Unknown ActionID: %s", actionID)
 		}
 
-		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState); err != nil {
+		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState, userEmail); err != nil {
 			return trace.Wrap(err)
 		}
 		logger.Infof("Slack user %s the request", resolution)
@@ -316,23 +299,14 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 	return nil
 }
 
-func (a *App) getPluginData(ctx context.Context, reqID string) (data PluginData, err error) {
+func (a *App) getPluginData(ctx context.Context, reqID string) (PluginData, error) {
 	dataMap, err := a.accessClient.GetPluginData(ctx, reqID)
 	if err != nil {
-		return data, trace.Wrap(err)
+		return PluginData{}, trace.Wrap(err)
 	}
-	data.User = dataMap["user"]
-	data.Roles = strings.Split(dataMap["roles"], ",")
-	data.ChannelID = dataMap["channel_id"]
-	data.Timestamp = dataMap["timestamp"]
-	return
+	return DecodePluginData(dataMap), nil
 }
 
 func (a *App) setPluginData(ctx context.Context, reqID string, data PluginData) error {
-	return a.accessClient.UpdatePluginData(ctx, reqID, access.PluginData{
-		"user":       data.User,
-		"roles":      strings.Join(data.Roles, ","),
-		"channel_id": data.ChannelID,
-		"timestamp":  data.Timestamp,
-	}, nil)
+	return a.accessClient.UpdatePluginData(ctx, reqID, EncodePluginData(data), nil)
 }

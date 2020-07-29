@@ -15,8 +15,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/gravitational/teleport-plugins/utils/nettest"
-	"github.com/gravitational/teleport/integration"
+	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/services"
 
@@ -32,6 +31,8 @@ const (
 )
 
 type GitlabSuite struct {
+	ctx        context.Context
+	cancel     context.CancelFunc
 	app        *App
 	publicURL  string
 	me         *user.User
@@ -51,10 +52,7 @@ func (s *GitlabSuite) SetUpSuite(c *C) {
 	log.SetLevel(log.DebugLevel)
 	priv, pub, err := testauthority.New().GenerateKeyPair("")
 	c.Assert(err, IsNil)
-	portList, err := nettest.GetFreeTCPPortsForTests(6)
-	c.Assert(err, IsNil)
-	ports := portList.PopIntSlice(5)
-	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Ports: ports, Priv: priv, Pub: pub})
+	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Priv: priv, Pub: pub})
 
 	s.me, err = user.Current()
 	c.Assert(err, IsNil)
@@ -78,7 +76,7 @@ func (s *GitlabSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 	t.AddUserWithRole("plugin", accessPluginRole)
 
-	err = t.Create(nil, true, nil)
+	err = t.Create(nil, nil)
 	c.Assert(err, IsNil)
 	if err := t.Start(); err != nil {
 		c.Fatalf("Unexpected response from Start: %v", err)
@@ -87,17 +85,19 @@ func (s *GitlabSuite) SetUpSuite(c *C) {
 }
 
 func (s *GitlabSuite) SetUpTest(c *C) {
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), time.Second)
 	s.publicURL = ""
 	dbFile := s.newTmpFile(c, "db.*")
 	s.dbPath = dbFile.Name()
 	dbFile.Close()
 
-	s.fakeGitLab = NewFakeGitLab(c, projectID)
+	s.fakeGitLab = NewFakeGitLab(projectID)
 }
 
 func (s *GitlabSuite) TearDownTest(c *C) {
 	s.shutdownApp(c)
 	s.fakeGitLab.Close()
+	s.cancel()
 	for _, tmp := range s.tmpFiles {
 		err := os.Remove(tmp.Name())
 		c.Assert(err, IsNil)
@@ -137,8 +137,11 @@ func (s *GitlabSuite) startApp(c *C) {
 	}
 	casFile.Close()
 
+	authAddr, err := s.teleport.Process.AuthSSHAddr()
+	c.Assert(err, IsNil)
+
 	var conf Config
-	conf.Teleport.AuthServer = s.teleport.Config.Auth.SSHAddr.Addr
+	conf.Teleport.AuthServer = authAddr.Addr
 	conf.Teleport.ClientCrt = certFile.Name()
 	conf.Teleport.ClientKey = keyFile.Name()
 	conf.Teleport.RootCAs = casFile.Name()
@@ -156,10 +159,10 @@ func (s *GitlabSuite) startApp(c *C) {
 	c.Assert(err, IsNil)
 
 	go func() {
-		err = s.app.Run(context.TODO())
+		err = s.app.Run(s.ctx)
 		c.Assert(err, IsNil)
 	}()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*250)
+	ctx, cancel := context.WithTimeout(s.ctx, time.Millisecond*250)
 	defer cancel()
 	ok, err := s.app.WaitReady(ctx)
 	c.Assert(err, IsNil)
@@ -170,64 +173,37 @@ func (s *GitlabSuite) startApp(c *C) {
 }
 
 func (s *GitlabSuite) shutdownApp(c *C) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*2000)
-	defer cancel()
-	err := s.app.Shutdown(ctx)
+	err := s.app.Shutdown(s.ctx)
 	c.Assert(err, IsNil)
 }
 
 func (s *GitlabSuite) createAccessRequest(c *C) services.AccessRequest {
-	auth := s.teleport.Process.GetAuthServer()
-	req, err := services.NewAccessRequest(s.me.Username, "admin")
-	c.Assert(err, IsNil)
-	err = auth.CreateAccessRequest(context.TODO(), req)
+	req, err := s.teleport.CreateAccessRequest(s.ctx, s.me.Username, "admin")
 	c.Assert(err, IsNil)
 	return req
 }
 
 func (s *GitlabSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
-	auth := s.teleport.Process.GetAuthServer()
-	req, err := services.NewAccessRequest(s.me.Username, "admin")
+	req, err := s.teleport.CreateExpiredAccessRequest(s.ctx, s.me.Username, "admin")
 	c.Assert(err, IsNil)
-	ttl := time.Millisecond * 250
-	req.SetAccessExpiry(time.Now().Add(ttl))
-	err = auth.CreateAccessRequest(context.TODO(), req)
-	c.Assert(err, IsNil)
-
-	time.Sleep(ttl)
-	ctx, cancel := context.WithTimeout(context.Background(), ttl)
-	defer cancel()
-	for {
-		requests, err := auth.GetAccessRequests(ctx, services.AccessRequestFilter{ID: req.GetName()})
-		c.Assert(err, IsNil)
-		if len(requests) == 0 {
-			break
-		}
-		time.Sleep(25 * time.Millisecond)
-	}
-
 	return req
 }
 
 func (s *GitlabSuite) checkPluginData(c *C, reqID string) PluginData {
-	timeout := time.After(time.Millisecond * 250)
-	ticker := time.NewTicker(time.Millisecond * 25)
-	defer ticker.Stop()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
-	defer cancel()
-	for {
-		select {
-		case <-ticker.C:
-			data, err := s.app.GetPluginData(ctx, reqID)
-			c.Assert(err, IsNil)
-			if data.ID != 0 {
-				return data
-			}
-		case <-timeout:
-			c.Fatal("no plugin data saved")
-			return PluginData{}
-		}
+	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "gitlab", reqID, time.Millisecond*250)
+	c.Assert(err, IsNil)
+	return DecodePluginData(rawData)
+}
+
+func (s *GitlabSuite) assertNewLabels(c *C, expected int) map[string]Label {
+	newLabels := s.fakeGitLab.GetAllNewLabels()
+	actual := len(newLabels)
+	if actual > expected {
+		c.Fatalf("expected %d labels but extra %d labels was stored", expected, actual-expected)
+	} else if actual < expected {
+		c.Fatalf("expected %d labels but %d labels are missing", expected, expected-actual)
 	}
+	return newLabels
 }
 
 func (s *GitlabSuite) postIssueUpdateHook(c *C, oldIssue, newIssue Issue) {
@@ -273,10 +249,12 @@ func (s *GitlabSuite) openDB(c *C, fn func(db DB) error) {
 
 func (s *GitlabSuite) TestProjectHookSetup(c *C) {
 	s.startApp(c)
-	s.shutdownApp(c)
 
-	hook := s.fakeGitLab.checkNewProjectHook(c)
+	hook, err := s.fakeGitLab.CheckNewProjectHook(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no new project hooks stored"))
 	c.Assert(hook.URL, Equals, s.publicURL+gitlabWebhookPath)
+
+	s.shutdownApp(c)
 
 	var dbHookID IntID
 	s.openDB(c, func(db DB) error {
@@ -290,11 +268,12 @@ func (s *GitlabSuite) TestProjectHookSetup(c *C) {
 
 func (s *GitlabSuite) TestProjectHookSetupWhenItExists(c *C) {
 	s.publicURL = "http://teleport-gitlab.local"
-	hook := s.fakeGitLab.storeProjectHook(ProjectHook{URL: s.publicURL + gitlabWebhookPath})
+	hook := s.fakeGitLab.StoreProjectHook(ProjectHook{URL: s.publicURL + gitlabWebhookPath})
+
 	s.startApp(c)
 	s.shutdownApp(c)
 
-	s.fakeGitLab.checkNoNewProjectHooks(c)
+	c.Assert(s.fakeGitLab.CheckNoNewProjectHooks(), Equals, true)
 
 	var dbHookID IntID
 	s.openDB(c, func(db DB) error {
@@ -307,7 +286,7 @@ func (s *GitlabSuite) TestProjectHookSetupWhenItExists(c *C) {
 }
 
 func (s *GitlabSuite) TestProjectHookSetupWhenItExistsInDB(c *C) {
-	existingID := s.fakeGitLab.storeProjectHook(ProjectHook{URL: "http://fooo"}).ID
+	existingID := s.fakeGitLab.StoreProjectHook(ProjectHook{URL: "http://fooo"}).ID
 
 	s.openDB(c, func(db DB) error {
 		return db.UpdateSettings(func(settings Settings) error {
@@ -316,11 +295,13 @@ func (s *GitlabSuite) TestProjectHookSetupWhenItExistsInDB(c *C) {
 	})
 
 	s.startApp(c)
-	s.shutdownApp(c)
 
-	hook := s.fakeGitLab.checkProjectHookUpdate(c)
+	hook, err := s.fakeGitLab.CheckProjectHookUpdate(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no project hooks updated"))
 	c.Assert(hook.ID, Equals, existingID)
 	c.Assert(hook.URL, Equals, s.publicURL+gitlabWebhookPath)
+
+	s.shutdownApp(c)
 
 	var dbHookID IntID
 	s.openDB(c, func(db DB) error {
@@ -334,13 +315,14 @@ func (s *GitlabSuite) TestProjectHookSetupWhenItExistsInDB(c *C) {
 
 func (s *GitlabSuite) TestLabelsSetup(c *C) {
 	s.startApp(c)
-	s.shutdownApp(c)
 
-	newLabels := s.fakeGitLab.checkNewLabels(c, 4)
+	newLabels := s.assertNewLabels(c, 4)
 	c.Assert(newLabels["pending"].Name, Equals, "Teleport: Pending")
 	c.Assert(newLabels["approved"].Name, Equals, "Teleport: Approved")
 	c.Assert(newLabels["denied"].Name, Equals, "Teleport: Denied")
 	c.Assert(newLabels["expired"].Name, Equals, "Teleport: Expired")
+
+	s.shutdownApp(c)
 
 	var dbLabels map[string]string
 	s.openDB(c, func(db DB) error {
@@ -357,16 +339,17 @@ func (s *GitlabSuite) TestLabelsSetup(c *C) {
 
 func (s *GitlabSuite) TestLabelsSetupWhenSomeExist(c *C) {
 	labels := map[string]Label{
-		"pending": s.fakeGitLab.storeLabel(Label{Name: "teleport:pending"}),
-		"expired": s.fakeGitLab.storeLabel(Label{Name: "teleport:expired"}),
+		"pending": s.fakeGitLab.StoreLabel(Label{Name: "teleport:pending"}),
+		"expired": s.fakeGitLab.StoreLabel(Label{Name: "teleport:expired"}),
 	}
 
 	s.startApp(c)
-	s.shutdownApp(c)
 
-	newLabels := s.fakeGitLab.checkNewLabels(c, 2)
+	newLabels := s.assertNewLabels(c, 2)
 	c.Assert(newLabels["approved"].Name, Equals, "Teleport: Approved")
 	c.Assert(newLabels["denied"].Name, Equals, "Teleport: Denied")
+
+	s.shutdownApp(c)
 
 	var dbLabels map[string]string
 	s.openDB(c, func(db DB) error {
@@ -384,16 +367,19 @@ func (s *GitlabSuite) TestLabelsSetupWhenSomeExist(c *C) {
 
 func (s *GitlabSuite) TestIssueCreation(c *C) {
 	s.startApp(c)
+
 	request := s.createAccessRequest(c)
 	pluginData := s.checkPluginData(c, request.GetName())
-	s.shutdownApp(c)
 
-	issue := s.fakeGitLab.checkNewIssue(c)
+	issue, err := s.fakeGitLab.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no new issues stored"))
 	c.Assert(issue.Labels, HasLen, 1)
 	c.Assert(LabelName(issue.Labels[0].Name).Reduced(), Equals, "pending")
 
 	c.Assert(pluginData.ID, Equals, issue.ID)
 	c.Assert(pluginData.IID, Equals, issue.IID)
+
+	s.shutdownApp(c)
 
 	var reqID string
 	s.openDB(c, func(db DB) error {
@@ -408,70 +394,73 @@ func (s *GitlabSuite) TestIssueCreation(c *C) {
 
 func (s *GitlabSuite) TestApproval(c *C) {
 	s.startApp(c)
-	labels := s.fakeGitLab.checkNewLabels(c, 4)
-	request := s.createAccessRequest(c)
-	_ = s.checkPluginData(c, request.GetName()) // when plugin data created, the request must be already served.
 
-	issue := s.fakeGitLab.checkNewIssue(c)
+	labels := s.assertNewLabels(c, 4)
+	request := s.createAccessRequest(c)
+	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
+
+	issue, err := s.fakeGitLab.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no new issues stored"))
 	c.Assert(issue.Labels, HasLen, 1)
 	c.Assert(LabelName(issue.Labels[0].Name).Reduced(), Equals, "pending")
 	issueID := issue.ID
 
 	oldIssue := issue
 	issue.Labels = []Label{labels["approved"]}
-	s.fakeGitLab.storeIssue(issue)
+	s.fakeGitLab.StoreIssue(issue)
 	s.postIssueUpdateHook(c, oldIssue, issue)
 
-	issue = s.fakeGitLab.checkIssueUpdate(c)
+	issue, err = s.fakeGitLab.CheckIssueUpdate(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no issues updated"))
 	c.Assert(issue.ID, Equals, issueID)
 	c.Assert(issue.State, Equals, "closed")
 
-	auth := s.teleport.Process.GetAuthServer()
-	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: request.GetName()})
+	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
-	c.Assert(requests, HasLen, 1)
-	request = requests[0]
 	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
 }
 
 func (s *GitlabSuite) TestDenial(c *C) {
 	s.startApp(c)
-	labels := s.fakeGitLab.checkNewLabels(c, 4)
-	request := s.createAccessRequest(c)
-	_ = s.checkPluginData(c, request.GetName()) // when plugin data created, the request must be already served.
 
-	issue := s.fakeGitLab.checkNewIssue(c)
+	labels := s.assertNewLabels(c, 4)
+	request := s.createAccessRequest(c)
+	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
+
+	issue, err := s.fakeGitLab.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no new issues stored"))
 	c.Assert(issue.Labels, HasLen, 1)
 	c.Assert(LabelName(issue.Labels[0].Name).Reduced(), Equals, "pending")
 	issueID := issue.ID
 
 	oldIssue := issue
 	issue.Labels = []Label{labels["denied"]}
-	s.fakeGitLab.storeIssue(issue)
+	s.fakeGitLab.StoreIssue(issue)
 	s.postIssueUpdateHook(c, oldIssue, issue)
 
-	issue = s.fakeGitLab.checkIssueUpdate(c)
+	issue, err = s.fakeGitLab.CheckIssueUpdate(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no issues updated"))
 	c.Assert(issue.ID, Equals, issueID)
 	c.Assert(issue.State, Equals, "closed")
 
-	auth := s.teleport.Process.GetAuthServer()
-	requests, err := auth.GetAccessRequests(context.TODO(), services.AccessRequestFilter{ID: request.GetName()})
+	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
-	c.Assert(requests, HasLen, 1)
-	request = requests[0]
 	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
 }
 
 func (s *GitlabSuite) TestExpiration(c *C) {
 	s.startApp(c)
-	_ = s.createExpiredAccessRequest(c)
 
-	issue := s.fakeGitLab.checkNewIssue(c)
+	s.createExpiredAccessRequest(c)
+
+	issue, err := s.fakeGitLab.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no new issues stored"))
 	c.Assert(issue.Labels, HasLen, 1)
 	c.Assert(LabelName(issue.Labels[0].Name).Reduced(), Equals, "pending")
 	issueID := issue.ID
 
-	issue = s.fakeGitLab.checkIssueUpdate(c)
+	issue, err = s.fakeGitLab.CheckIssueUpdate(s.ctx, 250*time.Millisecond)
+	c.Assert(err, IsNil, Commentf("no issues updated"))
 	c.Assert(issue.ID, Equals, issueID)
 	c.Assert(issue.Labels, HasLen, 1)
 	c.Assert(LabelName(issue.Labels[0].Name).Reduced(), Equals, "expired")

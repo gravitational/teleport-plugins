@@ -17,11 +17,9 @@ limitations under the License.
 package services
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/url"
-	"text/template"
 	"time"
 
 	"github.com/gravitational/teleport"
@@ -37,8 +35,8 @@ import (
 // OIDCConnector specifies configuration for Open ID Connect compatible external
 // identity provider, e.g. google in some organisation
 type OIDCConnector interface {
-	// Resource provides common methods for objects
-	Resource
+	// ResourceWithSecrets provides common methods for objects
+	ResourceWithSecrets
 	// Issuer URL is the endpoint of the provider, e.g. https://accounts.google.com
 	GetIssuerURL() string
 	// ClientID is id for authentication client (in our case it's our Auth server)
@@ -299,6 +297,16 @@ func (o *OIDCConnectorV2) SetResourceID(id int64) {
 	o.Metadata.ID = id
 }
 
+// WithoutSecrets returns an instance of resource without secrets.
+func (o *OIDCConnectorV2) WithoutSecrets() Resource {
+	if o.GetClientSecret() == "" {
+		return o
+	}
+	o2 := *o
+	o2.SetClientSecret("")
+	return &o2
+}
+
 // V2 returns V2 version of the resource
 func (o *OIDCConnectorV2) V2() *OIDCConnectorV2 {
 	return o
@@ -489,40 +497,6 @@ func (o *OIDCConnectorV2) MapClaims(claims jose.Claims) []string {
 		}
 	}
 	return utils.Deduplicate(roles)
-}
-
-func executeStringTemplate(raw string, claims jose.Claims) (string, error) {
-	tmpl, err := template.New("dynamic-roles").Parse(raw)
-	if err != nil {
-		return "", trace.Wrap(err)
-	}
-	var buf bytes.Buffer
-	err = tmpl.Execute(&buf, claims)
-	if err != nil {
-		return "", trace.Wrap(err)
-	}
-
-	return buf.String(), nil
-}
-
-func executeSliceTemplate(raw []string, claims jose.Claims) ([]string, error) {
-	var sl []string
-
-	for _, v := range raw {
-		tmpl, err := template.New("dynamic-roles").Parse(v)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-		var buf bytes.Buffer
-		err = tmpl.Execute(&buf, claims)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-
-		sl = append(sl, buf.String())
-	}
-
-	return sl, nil
 }
 
 // Check returns nil if all parameters are great, err otherwise

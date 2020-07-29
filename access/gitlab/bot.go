@@ -194,7 +194,6 @@ func (b *Bot) findProjectHook(ctx context.Context, webhookURL string) (IntID, er
 	var result IntID
 	err := b.listPages(ctx, b.APIV4URL("projects", b.projectID, "hooks"), []ProjectHook(nil), func(page interface{}) bool {
 		for _, hook := range *page.(*[]ProjectHook) {
-			log.Debugf("HOOK_URL: %s", hook.URL)
 			if hook.URL == webhookURL {
 				result = hook.ID
 				return false
