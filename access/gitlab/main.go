@@ -23,6 +23,7 @@ func main() {
 	app := kingpin.New("teleport-gitlab", "Teleport plugin for access requests approval via GitLab.")
 
 	app.Command("configure", "Prints an example .TOML configuration file.")
+	app.Command("version", "Prints teleport-gitlab version and exits.")
 
 	startCmd := app.Command("start", "Starts a Teleport GitLab plugin.")
 	path := startCmd.Flag("config", "TOML config file path").
@@ -44,6 +45,8 @@ func main() {
 	switch selectedCmd {
 	case "configure":
 		fmt.Print(exampleConfig)
+	case "version":
+		utils.PrintVersion(app.Name, Version, Gitref)
 	case "start":
 		if err := run(*path, *insecure, *debug); err != nil {
 			utils.Bail(err)

@@ -39,6 +39,7 @@ func main() {
 	app := kingpin.New("teleport-jira", "Teleport plugin for access requests approval via JIRA.")
 
 	app.Command("configure", "Prints an example .TOML configuration file.")
+	app.Command("version", "Prints teleport-jira version and exits.")
 
 	startCmd := app.Command("start", "Starts a Teleport JIRA plugin.")
 	path := startCmd.Flag("config", "TOML config file path").
@@ -60,6 +61,8 @@ func main() {
 	switch selectedCmd {
 	case "configure":
 		fmt.Print(exampleConfig)
+	case "version":
+		utils.PrintVersion(app.Name, Version, Gitref)
 	case "start":
 		if err := run(*path, *insecure, *debug); err != nil {
 			utils.Bail(err)
