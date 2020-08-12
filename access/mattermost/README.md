@@ -5,6 +5,8 @@ approve or deny Teleport access requests using Mattermost.
 
 ## Setup
 
+[See setup instructions on Teleport's website](https://gravitational.com/teleport/docs/enterprise/workflow/ssh_approval_mattermost/)
+
 ### Prerequisites
 
 This guide assumes that you have:

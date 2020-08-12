@@ -6,6 +6,8 @@ interactive Slack messages.
 
 ## Setup
 
+[See setup instructions on Teleport's website](https://gravitational.com/teleport/docs/enterprise/workflow/ssh_approval_slack/)
+
 Run `make access-slack && ./access/slack/build/teleport-slack configure` from
 the repository root. The `configure` command will produce an example
 configuration file that looks something like this:

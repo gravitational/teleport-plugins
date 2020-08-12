@@ -6,6 +6,9 @@ and Jira Server 8.
 
 ## Setup
 
+- [See detailed setup instructions for Jira Cloud on the website](https://gravitational.com/teleport/docs/enterprise/workflow/ssh_approval_jira_cloud/)
+- [See detailed setup instructions for Jira Server on the website](https://gravitational.com/teleport/docs/enterprise/workflow/ssh_approval_jira_server/)
+
 Setup process is different for the Jira Cloud and Jira Server editions:
 
 - Please refer to [INSTALL-JIRA-CLOUD.md](./INSTALL-JIRA-CLOUD.md) for a
