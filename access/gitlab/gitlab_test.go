@@ -190,7 +190,7 @@ func (s *GitlabSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
 }
 
 func (s *GitlabSuite) checkPluginData(c *C, reqID string) PluginData {
-	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "gitlab", reqID, time.Millisecond*250)
+	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "gitlab", reqID)
 	c.Assert(err, IsNil)
 	return DecodePluginData(rawData)
 }

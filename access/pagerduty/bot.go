@@ -8,16 +8,17 @@ import (
 	"text/template"
 	"time"
 
-	pd "github.com/PagerDuty/go-pagerduty"
+	"github.com/go-resty/resty"
+	"github.com/google/go-querystring/query"
 
+	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/gravitational/trace"
-	// log "github.com/sirupsen/logrus"
 )
 
 const (
 	pdMaxConns    = 100
 	pdHTTPTimeout = 10 * time.Second
-	pdListLimit   = uint(60)
+	pdListLimit   = uint(100)
 
 	pdIncidentKeyPrefix  = "teleport-access-request"
 	pdApproveAction      = "approve"
@@ -39,90 +40,115 @@ func init() {
 	}
 }
 
-// Bot is a wrapper around pd.Client that works with access.Request
+// Bot is a wrapper around resty.Client.
 type Bot struct {
-	httpClient  *http.Client
-	apiEndpoint string
-	apiKey      string
-	server      *WebhookServer
-	from        string
-	serviceID   string
+	client    *resty.Client
+	server    *WebhookServer
+	from      string
+	serviceID string
 
 	clusterName string
 }
 
-type HTTPClientImpl func(*http.Request) (*http.Response, error)
-
-func (h HTTPClientImpl) Do(req *http.Request) (*http.Response, error) {
-	return h(req)
-}
-
 func NewBot(conf PagerdutyConfig, server *WebhookServer) *Bot {
-	httpClient := &http.Client{
+	client := resty.NewWithClient(&http.Client{
 		Timeout: pdHTTPTimeout,
 		Transport: &http.Transport{
 			MaxConnsPerHost:     pdMaxConns,
 			MaxIdleConnsPerHost: pdMaxConns,
 		},
-	}
-	return &Bot{
-		httpClient:  httpClient,
-		server:      server,
-		apiEndpoint: conf.APIEndpoint,
-		apiKey:      conf.APIKey,
-		from:        conf.UserEmail,
-		serviceID:   conf.ServiceID,
-	}
-}
-
-func (b *Bot) NewClient(ctx context.Context) *pd.Client {
-	clientOpts := []pd.ClientOptions{}
-	// apiEndpoint parameter is set only in tests
-	if b.apiEndpoint != "" {
-		clientOpts = append(clientOpts, pd.WithAPIEndpoint(b.apiEndpoint))
-	}
-	client := pd.NewClient(b.apiKey, clientOpts...)
-	client.HTTPClient = HTTPClientImpl(func(r *http.Request) (*http.Response, error) {
-		return b.httpClient.Do(r.WithContext(ctx))
 	})
-	return client
+	// APIEndpoint parameter is set only in tests
+	if conf.APIEndpoint != "" {
+		client.SetHostURL(conf.APIEndpoint)
+	} else {
+		client.SetHostURL("https://api.pagerduty.com")
+	}
+	client.SetHeader("Accept", "application/vnd.pagerduty+json;version=2")
+	client.SetHeader("Content-Type", "application/json")
+	client.SetHeader("Authorization", "Token token="+conf.APIKey)
+	client.OnBeforeRequest(func(_ *resty.Client, req *resty.Request) error {
+		req.SetError(&ErrorResult{})
+		return nil
+	})
+	client.OnAfterResponse(func(_ *resty.Client, resp *resty.Response) error {
+		if resp.IsError() {
+			result := resp.Error()
+			if result, ok := result.(*ErrorResult); ok {
+				return trace.Errorf("http error code=%v, err_code=%v, message=%v, errors=[%v]", resp.StatusCode(), result.Code, result.Message, strings.Join(result.Errors, ", "))
+			}
+			return trace.Errorf("unknown error result %#v", result)
+		}
+		return nil
+	})
+	return &Bot{
+		client:    client,
+		server:    server,
+		from:      conf.UserEmail,
+		serviceID: conf.ServiceID,
+	}
 }
 
 func (b *Bot) HealthCheck(ctx context.Context) error {
-	client := b.NewClient(ctx)
-
-	if _, err := client.GetService(b.serviceID, nil); err != nil {
-		return trace.Wrap(err, "failed to fetch pagerduty service info: %v", err)
+	var result ServiceResult
+	resp, err := b.client.NewRequest().
+		SetContext(ctx).
+		SetResult(&result).
+		Get(utils.BuildURLPath("services", b.serviceID))
+	// We have to check `resp.IsError()` before the `err != nil` check because we set `err` in OnAfterResponse middleware.
+	if resp != nil && resp.IsError() {
+		// Check Content-Type first to ensure that this is actually looks like an API endpoint.
+		if contentType := resp.Header().Get("Content-Type"); contentType != "application/json" {
+			return trace.Errorf("wrong Content-Type in PagerDuty response: %q", contentType)
+		}
+		// Check for 401 http code. Other codes > 399 result in non-nil `err` and will be checked afterwards.
+		if code := resp.StatusCode(); code == http.StatusUnauthorized {
+			return trace.Errorf("got %v from API endpoint, perhaps PagerDuty credentials are not configured well", code)
+		}
+	}
+	if err != nil {
+		return trace.Wrap(err, "failed to fetch PagerDuty service info: %v", err)
+	}
+	if result.Service.ID != b.serviceID {
+		utils.GetLogger(ctx).Debugf("Got wrong response from services API: %s", resp)
+		return trace.Errorf("got wrong response from services API")
 	}
 
 	return nil
 }
 
 func (b *Bot) Setup(ctx context.Context) error {
-	client := b.NewClient(ctx)
-
 	var more bool
 	var offset uint
 
 	var webhookSchemaID string
 	for offset, more = 0, true; webhookSchemaID == "" && more; {
-		schemaResp, err := client.ListExtensionSchemas(pd.ListExtensionSchemaOptions{
-			APIListObject: pd.APIListObject{
-				Offset: offset,
-				Limit:  pdListLimit,
-			},
+		queryValues, err := query.Values(PaginationQuery{
+			Offset: offset,
+			Limit:  pdListLimit,
 		})
 		if err != nil {
 			return trace.Wrap(err)
 		}
 
-		for _, schema := range schemaResp.ExtensionSchemas {
+		var result ListExtensionSchemasResult
+
+		_, err = b.client.NewRequest().
+			SetContext(ctx).
+			SetResult(&result).
+			SetQueryParamsFromValues(queryValues).
+			Get("extension_schemas")
+		if err != nil {
+			return trace.Wrap(err)
+		}
+
+		for _, schema := range result.ExtensionSchemas {
 			if schema.Key == "custom_webhook" {
 				webhookSchemaID = schema.ID
 			}
 		}
 
-		more = schemaResp.More
+		more = result.More
 		offset += pdListLimit
 	}
 	if webhookSchemaID == "" {
@@ -131,8 +157,8 @@ func (b *Bot) Setup(ctx context.Context) error {
 
 	var approveExtID, denyExtID string
 	for offset, more = 0, true; (approveExtID == "" || denyExtID == "") && more; {
-		extResp, err := client.ListExtensions(pd.ListExtensionOptions{
-			APIListObject: pd.APIListObject{
+		queryValues, err := query.Values(ListExtensionsQuery{
+			PaginationQuery: PaginationQuery{
 				Offset: offset,
 				Limit:  pdListLimit,
 			},
@@ -143,7 +169,18 @@ func (b *Bot) Setup(ctx context.Context) error {
 			return trace.Wrap(err)
 		}
 
-		for _, ext := range extResp.Extensions {
+		var result ListExtensionsResult
+
+		_, err = b.client.NewRequest().
+			SetContext(ctx).
+			SetResult(&result).
+			SetQueryParamsFromValues(queryValues).
+			Get("extensions")
+		if err != nil {
+			return trace.Wrap(err)
+		}
+
+		for _, ext := range result.Extensions {
 			if ext.Name == pdApproveActionLabel {
 				approveExtID = ext.ID
 			}
@@ -152,103 +189,212 @@ func (b *Bot) Setup(ctx context.Context) error {
 			}
 		}
 
-		more = extResp.More
+		more = result.More
 		offset += pdListLimit
 	}
 
-	if err := b.setupCustomAction(client, approveExtID, webhookSchemaID, pdApproveAction, pdApproveActionLabel); err != nil {
+	if err := b.setupCustomAction(ctx, approveExtID, webhookSchemaID, pdApproveAction, pdApproveActionLabel); err != nil {
 		return err
 	}
-	if err := b.setupCustomAction(client, denyExtID, webhookSchemaID, pdDenyAction, pdDenyActionLabel); err != nil {
+	if err := b.setupCustomAction(ctx, denyExtID, webhookSchemaID, pdDenyAction, pdDenyActionLabel); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (b *Bot) setupCustomAction(client *pd.Client, extensionID, schemaID, actionName, actionLabel string) error {
+func (b *Bot) setupCustomAction(ctx context.Context, extensionID, schemaID, actionName, actionLabel string) error {
 	actionURL := b.server.ActionURL(actionName)
-	ext := &pd.Extension{
+	body := ExtensionBody{
 		Name:        actionLabel,
 		EndpointURL: actionURL,
-		ExtensionSchema: pd.APIObject{
+		ExtensionSchema: Reference{
 			Type: "extension_schema_reference",
 			ID:   schemaID,
 		},
-		ExtensionObjects: []pd.APIObject{
-			pd.APIObject{
+		ExtensionObjects: []Reference{
+			Reference{
 				Type: "service_reference",
 				ID:   b.serviceID,
 			},
 		},
 	}
+
 	if extensionID == "" {
-		_, err := client.CreateExtension(ext)
+		_, err := b.client.NewRequest().
+			SetContext(ctx).
+			SetBody(&ExtensionBodyWrap{body}).
+			Post("extensions")
+		if err != nil {
+			return trace.Wrap(err)
+		}
+		return nil
+	}
+	_, err := b.client.NewRequest().
+		SetContext(ctx).
+		SetBody(&ExtensionBodyWrap{body}).
+		Put(utils.BuildURLPath("extensions", extensionID))
+	if err != nil {
 		return trace.Wrap(err)
 	}
-	_, err := client.UpdateExtension(extensionID, ext)
-	return trace.Wrap(err)
+	return nil
 }
 
 func (b *Bot) CreateIncident(ctx context.Context, reqID string, reqData RequestData) (PagerdutyData, error) {
-	client := b.NewClient(ctx)
-
-	body, err := b.buildIncidentBody(reqID, reqData)
+	bodyDetails, err := b.buildIncidentBody(reqID, reqData)
 	if err != nil {
 		return PagerdutyData{}, trace.Wrap(err)
 	}
-
-	incident, err := client.CreateIncident(b.from, &pd.CreateIncidentOptions{
+	body := IncidentBody{
 		Title:       fmt.Sprintf("Access request from %s", reqData.User),
 		IncidentKey: fmt.Sprintf("%s/%s", pdIncidentKeyPrefix, reqID),
-		Service: &pd.APIReference{
+		Service: Reference{
 			Type: "service_reference",
 			ID:   b.serviceID,
 		},
-		Body: &pd.APIDetails{
+		Body: Details{
 			Type:    "incident_body",
-			Details: body,
+			Details: bodyDetails,
 		},
-	})
+	}
+	var result IncidentResult
+
+	_, err = b.client.NewRequest().
+		SetContext(ctx).
+		SetHeader("From", b.from).
+		SetBody(&IncidentBodyWrap{body}).
+		SetResult(&result).
+		Post("incidents")
 	if err != nil {
 		return PagerdutyData{}, trace.Wrap(err)
 	}
 
 	return PagerdutyData{
-		ID: incident.Id, // Yes, due to strange implementation, it's called `Id` which overrides `APIObject.ID`.
+		ID: result.Incident.ID,
 	}, nil
 }
 
-func (b *Bot) ResolveIncident(ctx context.Context, reqID string, pdData PagerdutyData, status string) error {
-	client := b.NewClient(ctx)
-
-	err := client.CreateIncidentNote(pdData.ID, pd.IncidentNote{
-		User: pd.APIObject{
-			Summary: b.from,
-		},
-		Content: fmt.Sprintf("Access request has been %s", status),
-	})
+func (b *Bot) ResolveIncident(ctx context.Context, reqID, incidentID, resolution string) error {
+	noteBody := IncidentNoteBody{
+		Content: fmt.Sprintf("Access request has been %s", resolution),
+	}
+	_, err := b.client.NewRequest().
+		SetContext(ctx).
+		SetHeader("From", b.from).
+		SetBody(&IncidentNoteBodyWrap{noteBody}).
+		Post(utils.BuildURLPath("incidents", incidentID, "notes"))
 	if err != nil {
 		return trace.Wrap(err)
 	}
-	_, err = client.ManageIncidents(b.from, []pd.ManageIncidentsOptions{
-		pd.ManageIncidentsOptions{
-			ID:     pdData.ID,
-			Type:   "incident_reference",
-			Status: "resolved",
-		},
-	})
-	return trace.Wrap(err)
+
+	incidentBody := IncidentBody{
+		Type:   "incident_reference",
+		Status: "resolved",
+	}
+	_, err = b.client.NewRequest().
+		SetContext(ctx).
+		SetHeader("From", b.from).
+		SetBody(&IncidentBodyWrap{incidentBody}).
+		Put(utils.BuildURLPath("incidents", incidentID))
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	return nil
 }
 
-func (b *Bot) GetUserInfo(ctx context.Context, userID string) (*pd.User, error) {
-	client := b.NewClient(ctx)
+func (b *Bot) GetUserInfo(ctx context.Context, userID string) (User, error) {
+	var result UserResult
 
-	user, err := client.GetUser(userID, pd.GetUserOptions{})
+	_, err := b.client.NewRequest().
+		SetContext(ctx).
+		SetResult(result).
+		Get(utils.BuildURLPath("users", userID))
 	if err != nil {
-		return nil, trace.Wrap(err)
+		return User{}, trace.Wrap(err)
 	}
-	return user, nil
+
+	return result.User, nil
+}
+
+func (b *Bot) GetUserByEmail(ctx context.Context, userEmail string) (User, error) {
+	usersQuery, err := query.Values(ListUsersQuery{
+		Query: userEmail,
+		PaginationQuery: PaginationQuery{
+			Limit: pdListLimit,
+		},
+	})
+	if err != nil {
+		return User{}, trace.Wrap(err)
+	}
+
+	var result ListUsersResult
+	_, err = b.client.NewRequest().
+		SetContext(ctx).
+		SetQueryParamsFromValues(usersQuery).
+		SetResult(&result).
+		Get("users")
+	if err != nil {
+		return User{}, trace.Wrap(err)
+	}
+
+	for _, user := range result.Users {
+		if user.Email == userEmail {
+			return user, nil
+		}
+	}
+
+	if len(result.Users) > 0 && result.More {
+		utils.GetLogger(ctx).Warningf("PagerDuty returned too many results when querying by email %q", userEmail)
+	}
+
+	return User{}, trace.NotFound("failed to find pagerduty user by email %q", userEmail)
+}
+
+func (b *Bot) IsUserOnCall(ctx context.Context, userID string) (bool, error) {
+	var result ServiceResult
+	_, err := b.client.NewRequest().
+		SetContext(ctx).
+		SetResult(&result).
+		Get(utils.BuildURLPath("services", b.serviceID))
+	if err != nil {
+		return false, trace.Wrap(err)
+	}
+	escalationPolicyID := result.Service.EscalationPolicy.ID
+
+	onCallsQuery, err := query.Values(ListOnCallsQuery{
+		UserIDs:             []string{userID},
+		EscalationPolicyIDs: []string{escalationPolicyID},
+	})
+	if err != nil {
+		return false, trace.Wrap(err)
+	}
+
+	var onCallsResult ListOnCallsResult
+
+	_, err = b.client.NewRequest().
+		SetContext(ctx).
+		SetQueryParamsFromValues(onCallsQuery).
+		SetResult(&onCallsResult).
+		Get("oncalls")
+	if err != nil {
+		return false, trace.Wrap(err)
+	}
+
+	for _, onCall := range onCallsResult.OnCalls {
+		if onCall.EscalationPolicy.ID == escalationPolicyID && onCall.User.ID == userID {
+			return true, nil
+		}
+	}
+
+	if len(onCallsResult.OnCalls) > 0 {
+		utils.GetLogger(ctx).WithFields(logFields{
+			"pd_user_id":              userID,
+			"pd_escalation_policy_id": escalationPolicyID,
+		}).Warningf("PagerDuty returned some oncalls array but none of them matched the query")
+	}
+
+	return false, nil
 }
 
 func (b *Bot) buildIncidentBody(reqID string, reqData RequestData) (string, error) {

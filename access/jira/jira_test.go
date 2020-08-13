@@ -181,7 +181,7 @@ func (s *JiraSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
 }
 
 func (s *JiraSuite) checkPluginData(c *C, reqID string) PluginData {
-	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "jira", reqID, time.Millisecond*250)
+	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "jira", reqID)
 	c.Assert(err, IsNil)
 	return DecodePluginData(rawData)
 }

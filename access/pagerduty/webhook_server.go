@@ -11,9 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	pd "github.com/PagerDuty/go-pagerduty"
 	"github.com/julienschmidt/httprouter"
-	log "github.com/sirupsen/logrus"
 
 	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/gravitational/trace"
@@ -26,21 +24,18 @@ type WebhookPayload struct {
 type WebhookMessage struct {
 	ID         string            `json:"id"`
 	Event      string            `json:"event"`
-	Incident   *pd.Incident      `json:"incident"`
+	Incident   *Incident         `json:"incident"`
 	LogEntries []WebhookLogEntry `json:"log_entries"`
 }
 
 type WebhookLogEntry struct {
-	ID    string       `json:"id"`
-	Type  string       `json:"type"`
-	Agent pd.APIObject `json:"agent"`
+	ID    string    `json:"id"`
+	Type  string    `json:"type"`
+	Agent Reference `json:"agent"`
 }
 
 type WebhookAction struct {
-	HTTPRequestID string
-
-	Agent       pd.APIObject
-	MessageID   string
+	Agent       Reference
 	Name        string
 	IncidentID  string
 	IncidentKey string
@@ -103,7 +98,7 @@ func (s *WebhookServer) processWebhook(actionName string, rw http.ResponseWriter
 
 	webhookID := r.Header.Get("X-Webhook-Id")
 	httpRequestID := fmt.Sprintf("%v-%v", webhookID, atomic.AddUint64(&s.counter, 1))
-	log := log.WithField("pd_http_id", httpRequestID)
+	ctx, log := utils.WithLogField(ctx, "pd_http_id", httpRequestID)
 
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
 		log.Errorf(`Invalid "Content-Type" header %q`, contentType)
@@ -126,14 +121,14 @@ func (s *WebhookServer) processWebhook(actionName string, rw http.ResponseWriter
 	}
 
 	for _, msg := range payload.Messages {
-		log = log.WithField("pd_msg_id", msg.ID)
+		mCtx, log := utils.WithLogField(ctx, "pd_msg_id", msg.ID)
 
 		if msg.Event != "incident.custom" {
 			log.Warningf("Got %q event, ignoring", msg.Event)
 			continue
 		}
 
-		var agent pd.APIObject
+		var agent Reference
 		for _, logEntry := range msg.LogEntries {
 			if logEntry.Type == "custom_log_entry" {
 				agent = logEntry.Agent
@@ -142,14 +137,12 @@ func (s *WebhookServer) processWebhook(actionName string, rw http.ResponseWriter
 		}
 
 		action := WebhookAction{
-			HTTPRequestID: httpRequestID,
-			MessageID:     msg.ID,
-			Agent:         agent,
-			Name:          actionName,
-			IncidentID:    msg.Incident.Id,
-			IncidentKey:   msg.Incident.IncidentKey,
+			Agent:       agent,
+			Name:        actionName,
+			IncidentID:  msg.Incident.ID,
+			IncidentKey: msg.Incident.IncidentKey,
 		}
-		if err := s.onAction(ctx, action); err != nil {
+		if err := s.onAction(mCtx, action); err != nil {
 			log.WithError(err).Error("Failed to process webhook")
 			log.Debugf("%v", trace.DebugReport(err))
 			var code int

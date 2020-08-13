@@ -12,12 +12,13 @@ import (
 	"testing"
 	"time"
 
-	pd "github.com/PagerDuty/go-pagerduty"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
+	"github.com/gravitational/teleport/lib/backend"
 	"github.com/gravitational/teleport/lib/services"
+	"github.com/gravitational/trace"
 
 	. "gopkg.in/check.v1"
 )
@@ -26,15 +27,21 @@ const (
 	Host   = "localhost"
 	HostID = "00000000-0000-0000-0000-000000000000"
 	Site   = "local-site"
+
+	EscalationPolicyID = "escalation_policy-1"
 )
 
 type PagerdutySuite struct {
 	ctx           context.Context
 	cancel        context.CancelFunc
+	appConfig     Config
 	app           *App
 	publicURL     string
+	userName      string
 	me            *user.User
 	fakePagerduty *FakePagerduty
+	pdService     Service
+	pdUser        User
 	teleport      *integration.TeleInstance
 	tmpFiles      []*os.File
 }
@@ -60,6 +67,7 @@ func (s *PagerdutySuite) SetUpSuite(c *C) {
 	})
 	c.Assert(err, IsNil)
 	t.AddUserWithRole(s.me.Username, userRole)
+	t.AddUserWithRole(s.me.Username+"@example.com", userRole) // For testing auto-approve
 
 	accessPluginRole, err := services.NewRole("access-plugin", services.RoleSpecV3{
 		Allow: services.RoleConditions{
@@ -83,28 +91,18 @@ func (s *PagerdutySuite) SetUpSuite(c *C) {
 func (s *PagerdutySuite) SetUpTest(c *C) {
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), time.Second)
 	s.publicURL = ""
-	s.fakePagerduty = NewFakePagerduty()
-}
+	s.fakePagerduty = NewFakePagerduty(20)
+	s.pdService = s.fakePagerduty.StoreService(Service{
+		Name: "Test service",
+		EscalationPolicy: Reference{
+			ID: EscalationPolicyID,
+		},
+	})
+	s.pdUser = s.fakePagerduty.StoreUser(User{
+		Name:  "Test User",
+		Email: s.me.Username + "@example.com",
+	})
 
-func (s *PagerdutySuite) TearDownTest(c *C) {
-	s.shutdownApp(c)
-	s.fakePagerduty.Close()
-	s.cancel()
-	for _, tmp := range s.tmpFiles {
-		err := os.Remove(tmp.Name())
-		c.Assert(err, IsNil)
-	}
-	s.tmpFiles = []*os.File{}
-}
-
-func (s *PagerdutySuite) newTmpFile(c *C, pattern string) (file *os.File) {
-	file, err := ioutil.TempFile("", pattern)
-	c.Assert(err, IsNil)
-	s.tmpFiles = append(s.tmpFiles, file)
-	return
-}
-
-func (s *PagerdutySuite) startApp(c *C) {
 	auth := s.teleport.Process.GetAuthServer()
 	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
 	c.Assert(err, IsNil)
@@ -139,14 +137,39 @@ func (s *PagerdutySuite) startApp(c *C) {
 	conf.Teleport.RootCAs = casFile.Name()
 	conf.Pagerduty.APIEndpoint = s.fakePagerduty.URL()
 	conf.Pagerduty.UserEmail = "bot@example.com"
-	conf.Pagerduty.ServiceID = "1111"
+	conf.Pagerduty.ServiceID = s.pdService.ID
 	if s.publicURL != "" {
 		conf.HTTP.PublicAddr = s.publicURL
 	}
 	conf.HTTP.ListenAddr = ":0"
 	conf.HTTP.Insecure = true
 
-	s.app, err = NewApp(conf)
+	s.appConfig = conf
+	s.userName = s.me.Username
+}
+
+func (s *PagerdutySuite) TearDownTest(c *C) {
+	s.shutdownApp(c)
+	s.fakePagerduty.Close()
+	s.cancel()
+	for _, tmp := range s.tmpFiles {
+		err := os.Remove(tmp.Name())
+		c.Assert(err, IsNil)
+	}
+	s.tmpFiles = []*os.File{}
+}
+
+func (s *PagerdutySuite) newTmpFile(c *C, pattern string) (file *os.File) {
+	file, err := ioutil.TempFile("", pattern)
+	c.Assert(err, IsNil)
+	s.tmpFiles = append(s.tmpFiles, file)
+	return
+}
+
+func (s *PagerdutySuite) startApp(c *C) {
+	var err error
+
+	s.app, err = NewApp(s.appConfig)
 	c.Assert(err, IsNil)
 
 	go func() {
@@ -169,24 +192,31 @@ func (s *PagerdutySuite) shutdownApp(c *C) {
 }
 
 func (s *PagerdutySuite) createAccessRequest(c *C) services.AccessRequest {
-	req, err := s.teleport.CreateAccessRequest(s.ctx, s.me.Username, "admin")
+	req, err := s.teleport.CreateAccessRequest(s.ctx, s.userName, "admin")
 	c.Assert(err, IsNil)
 	return req
 }
 
 func (s *PagerdutySuite) createExpiredAccessRequest(c *C) services.AccessRequest {
-	req, err := s.teleport.CreateExpiredAccessRequest(s.ctx, s.me.Username, "admin")
+	req, err := s.teleport.CreateExpiredAccessRequest(s.ctx, s.userName, "admin")
 	c.Assert(err, IsNil)
 	return req
 }
 
 func (s *PagerdutySuite) checkPluginData(c *C, reqID string) PluginData {
-	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "pagerduty", reqID, time.Millisecond*250)
+	rawData, err := s.teleport.PollAccessRequestPluginData(s.ctx, "pagerduty", reqID)
 	c.Assert(err, IsNil)
 	return DecodePluginData(rawData)
 }
 
-func (s *PagerdutySuite) postAction(c *C, incident pd.Incident, action string) {
+func (s *PagerdutySuite) postActionAndCheck(c *C, incident Incident, action string) {
+	response, err := s.postAction(incident, action)
+	c.Assert(err, IsNil)
+	c.Assert(response.Body.Close(), IsNil)
+	c.Assert(response.StatusCode, Equals, http.StatusNoContent)
+}
+
+func (s *PagerdutySuite) postAction(incident Incident, action string) (*http.Response, error) {
 	payload := WebhookPayload{
 		Messages: []WebhookMessage{
 			WebhookMessage{
@@ -196,8 +226,8 @@ func (s *PagerdutySuite) postAction(c *C, incident pd.Incident, action string) {
 				LogEntries: []WebhookLogEntry{
 					WebhookLogEntry{
 						Type: "custom_log_entry",
-						Agent: pd.APIObject{
-							ID: "foo",
+						Agent: Reference{
+							ID: s.pdUser.ID,
 						},
 					},
 				},
@@ -207,25 +237,31 @@ func (s *PagerdutySuite) postAction(c *C, incident pd.Incident, action string) {
 
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(&payload)
-	c.Assert(err, IsNil)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
 	req, err := http.NewRequest("POST", s.publicURL+"/"+action, &buf)
-	c.Assert(err, IsNil)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("X-Webhook-Id", "Webhook-123")
-	response, err := http.DefaultClient.Do(req)
-	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, http.StatusNoContent)
 
-	err = response.Body.Close()
-	c.Assert(err, IsNil)
+	response, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return response, nil
 }
 
 func (s *PagerdutySuite) TestExtensionCreation(c *C) {
 	s.startApp(c)
 	s.shutdownApp(c)
-	extension1, err := s.fakePagerduty.CheckNewExtension(s.ctx, 250*time.Millisecond)
+	extension1, err := s.fakePagerduty.CheckNewExtension(s.ctx)
 	c.Assert(err, IsNil, Commentf("first extension wasn't created"))
-	extension2, err := s.fakePagerduty.CheckNewExtension(s.ctx, 250*time.Millisecond)
+	extension2, err := s.fakePagerduty.CheckNewExtension(s.ctx)
 	c.Assert(err, IsNil, Commentf("second extension wasn't created"))
 
 	extTitles := []string{extension1.Name, extension2.Name}
@@ -244,10 +280,10 @@ func (s *PagerdutySuite) TestIncidentCreation(c *C) {
 	req := s.createAccessRequest(c)
 	pluginData := s.checkPluginData(c, req.GetName())
 
-	incident, err := s.fakePagerduty.CheckNewIncident(s.ctx, 250*time.Millisecond)
+	incident, err := s.fakePagerduty.CheckNewIncident(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new incidents stored"))
 
-	c.Assert(pluginData.ID, Equals, incident.Id)
+	c.Assert(pluginData.ID, Equals, incident.ID)
 	c.Assert(incident.IncidentKey, Equals, pdIncidentKeyPrefix+"/"+req.GetName())
 }
 
@@ -256,19 +292,19 @@ func (s *PagerdutySuite) TestApproval(c *C) {
 	request := s.createAccessRequest(c)
 	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
-	incident, err := s.fakePagerduty.CheckNewIncident(s.ctx, 250*time.Millisecond)
+	incident, err := s.fakePagerduty.CheckNewIncident(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new incidents stored"))
 	c.Assert(incident.Status, Equals, "triggered")
-	incidentID := incident.Id
+	incidentID := incident.ID
 
-	s.postAction(c, incident, pdApproveAction)
+	s.postActionAndCheck(c, incident, pdApproveAction)
 
-	incident, err = s.fakePagerduty.CheckIncidentUpdate(s.ctx, 250*time.Millisecond)
+	incident, err = s.fakePagerduty.CheckIncidentUpdate(s.ctx)
 	c.Assert(err, IsNil, Commentf("no incidents updated"))
-	c.Assert(incident.Id, Equals, incidentID)
+	c.Assert(incident.ID, Equals, incidentID)
 	c.Assert(incident.Status, Equals, "resolved")
 
-	note, err := s.fakePagerduty.CheckNewIncidentNote(s.ctx, 250*time.Millisecond)
+	note, err := s.fakePagerduty.CheckNewIncidentNote(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new notes stored"))
 	c.Assert(note.Content, Equals, "Access request has been approved")
 
@@ -282,19 +318,19 @@ func (s *PagerdutySuite) TestDenial(c *C) {
 	request := s.createAccessRequest(c)
 	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
-	incident, err := s.fakePagerduty.CheckNewIncident(s.ctx, 250*time.Millisecond)
+	incident, err := s.fakePagerduty.CheckNewIncident(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new incidents stored"))
 	c.Assert(incident.Status, Equals, "triggered")
-	incidentID := incident.Id
+	incidentID := incident.ID
 
-	s.postAction(c, incident, pdDenyAction)
+	s.postActionAndCheck(c, incident, pdDenyAction)
 
-	incident, err = s.fakePagerduty.CheckIncidentUpdate(s.ctx, 250*time.Millisecond)
+	incident, err = s.fakePagerduty.CheckIncidentUpdate(s.ctx)
 	c.Assert(err, IsNil, Commentf("no incidents updated"))
-	c.Assert(incident.Id, Equals, incidentID)
+	c.Assert(incident.ID, Equals, incidentID)
 	c.Assert(incident.Status, Equals, "resolved")
 
-	note, err := s.fakePagerduty.CheckNewIncidentNote(s.ctx, 250*time.Millisecond)
+	note, err := s.fakePagerduty.CheckNewIncidentNote(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new notes stored"))
 	c.Assert(note.Content, Equals, "Access request has been denied")
 
@@ -303,21 +339,80 @@ func (s *PagerdutySuite) TestDenial(c *C) {
 	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
 }
 
+func (s *PagerdutySuite) TestAutoApprovalWhenOnCall(c *C) {
+	s.fakePagerduty.StoreOnCall(OnCall{
+		EscalationPolicy: s.pdService.EscalationPolicy,
+		User:             Reference{ID: s.pdUser.ID, Type: "user_reference"},
+	})
+
+	s.appConfig.Pagerduty.AutoApprove = true
+	s.userName = s.pdUser.Email // Current user name matches pagerduty user email
+	s.startApp(c)
+	watcher, err := s.teleport.Process.GetAuthServer().NewWatcher(s.ctx, services.Watch{
+		Kinds: []services.WatchKind{
+			services.WatchKind{
+				Kind: services.KindAccessRequest,
+			},
+		},
+	})
+	c.Assert(err, IsNil)
+	defer watcher.Close()
+
+	ev := <-watcher.Events()
+	c.Assert(ev.Type, Equals, backend.OpInit)
+
+	request := s.createAccessRequest(c)
+
+	ev = <-watcher.Events()
+	c.Assert(ev.Type, Equals, backend.OpPut)
+	c.Assert(ev.Resource.GetName(), Equals, request.GetName())
+
+	ev = <-watcher.Events()
+	c.Assert(ev.Type, Equals, backend.OpPut)
+	c.Assert(ev.Resource.GetName(), Equals, request.GetName())
+	request, ok := ev.Resource.(services.AccessRequest)
+	c.Assert(ok, Equals, true)
+	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
+}
+
+func (s *PagerdutySuite) TestAutoApprovalWhenNotOnCall(c *C) {
+	// Store another user in pagerduty and put him on-call
+	pdUser2 := s.fakePagerduty.StoreUser(User{
+		Name:  "Test User",
+		Email: s.me.Username + "2@example.com",
+	})
+	s.fakePagerduty.StoreOnCall(OnCall{
+		EscalationPolicy: s.pdService.EscalationPolicy,
+		User:             Reference{ID: pdUser2.ID, Type: "user_reference"},
+	})
+
+	s.appConfig.Pagerduty.AutoApprove = true
+	s.userName = s.pdUser.Email // Current user name matches pagerduty user email
+	s.startApp(c)
+	request := s.createAccessRequest(c)
+	s.checkPluginData(c, request.GetName())
+
+	time.Sleep(250 * time.Millisecond)
+	request, err := s.teleport.GetAccessRequest(s.ctx, request.GetName())
+	c.Assert(err, IsNil)
+	c.Assert(request.GetState(), Equals, services.RequestState_PENDING) // still pending
+}
+
 func (s *PagerdutySuite) TestExpiration(c *C) {
 	s.startApp(c)
 	s.createExpiredAccessRequest(c)
 
-	incident, err := s.fakePagerduty.CheckNewIncident(s.ctx, 250*time.Millisecond)
+	incident, err := s.fakePagerduty.CheckNewIncident(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new incidents stored"))
 	c.Assert(incident.Status, Equals, "triggered")
-	incidentID := incident.Id
+	incidentID := incident.ID
 
-	incident, err = s.fakePagerduty.CheckIncidentUpdate(s.ctx, 250*time.Millisecond)
+	incident, err = s.fakePagerduty.CheckIncidentUpdate(s.ctx)
 	c.Assert(err, IsNil, Commentf("no incidents updated"))
-	c.Assert(incident.Id, Equals, incidentID)
+	c.Assert(incident.ID, Equals, incidentID)
 	c.Assert(incident.Status, Equals, "resolved")
 
-	note, err := s.fakePagerduty.CheckNewIncidentNote(s.ctx, 250*time.Millisecond)
+	note, err := s.fakePagerduty.CheckNewIncidentNote(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new notes stored"))
 	c.Assert(note.Content, Equals, "Access request has been expired")
 }

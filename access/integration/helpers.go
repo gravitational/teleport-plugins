@@ -495,9 +495,7 @@ func (i *TeleInstance) GetAccessRequest(ctx context.Context, reqID string) (serv
 	return requests[0], nil
 }
 
-func (i *TeleInstance) PollAccessRequestPluginData(ctx context.Context, plugin, reqID string, timeout time.Duration) (map[string]string, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+func (i *TeleInstance) PollAccessRequestPluginData(ctx context.Context, plugin, reqID string) (map[string]string, error) {
 	auth := i.Process.GetAuthServer()
 	filter := services.PluginDataFilter{
 		Kind:     services.KindAccessRequest,
