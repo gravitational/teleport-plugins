@@ -41,9 +41,10 @@ const (
 
 func main() {
 	utils.InitLogger()
-	app := kingpin.New("slack", "Teleport plugin for access requests approval via Slack.")
+	app := kingpin.New("teleport-slack", "Teleport plugin for access requests approval via Slack.")
 
 	app.Command("configure", "Prints an example .TOML configuration file.")
+	app.Command("version", "Prints teleport-slack version and exits.")
 
 	startCmd := app.Command("start", "Starts a the Teleport Slack plugin.")
 	path := startCmd.Flag("config", "TOML config file path").
@@ -65,6 +66,8 @@ func main() {
 	switch selectedCmd {
 	case "configure":
 		fmt.Print(exampleConfig)
+	case "version":
+		utils.PrintVersion(app.Name, Version, Gitref)
 	case "start":
 		if err := run(*path, *insecure, *debug); err != nil {
 			utils.Bail(err)
