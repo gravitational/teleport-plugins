@@ -7,15 +7,10 @@ import (
 )
 
 type Config struct {
-	Teleport struct {
-		AuthServer string `toml:"auth_server"`
-		ClientKey  string `toml:"client_key"`
-		ClientCrt  string `toml:"client_crt"`
-		RootCAs    string `toml:"root_cas"`
-	} `toml:"teleport"`
-	Mattermost MattermostConfig `toml:"mattermost"`
-	HTTP       utils.HTTPConfig `toml:"http"`
-	Log        utils.LogConfig  `toml:"log"`
+	Teleport   utils.TeleportConfig `toml:"teleport"`
+	Mattermost MattermostConfig     `toml:"mattermost"`
+	HTTP       utils.HTTPConfig     `toml:"http"`
+	Log        utils.LogConfig      `toml:"log"`
 }
 
 type MattermostConfig struct {
