@@ -20,12 +20,17 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// TLSConfig stores TLS configuration for a http service
 type TLSConfig struct {
 	VerifyClientCertificate bool `toml:"verify_client_cert"`
 
 	VerifyClientCertificateFunc func(chains [][]*x509.Certificate) error
 }
 
+// HTTPConfig stores configuration of an HTTP service
+// including it's public address, listen host and port,
+// TLS certificate and key path, and extra TLS configuration
+// options, represented as TLSConfig.
 type HTTPConfig struct {
 	ListenAddr string              `toml:"listen_addr"`
 	PublicAddr string              `toml:"public_addr"`
@@ -37,6 +42,8 @@ type HTTPConfig struct {
 	Insecure bool
 }
 
+// HTTPBasicAuthConfig stores configuration for
+// HTTP Basic Authentication
 type HTTPBasicAuthConfig struct {
 	Username string `toml:"user"`
 	Password string `toml:"password"`
@@ -173,6 +180,9 @@ func NewHTTP(config HTTPConfig) (*HTTP, error) {
 	}, nil
 }
 
+// BuildURLPath returns a URI with args represented as query params
+// If any supplied argument is not a string, BuildURLPath will use
+// fmt.Sprintf(value) to stringify it.
 func BuildURLPath(args ...interface{}) string {
 	var pathArgs []string
 	for _, a := range args {
@@ -254,6 +264,9 @@ func (h *HTTP) ShutdownWithTimeout(ctx context.Context, duration time.Duration) 
 	return h.Shutdown(ctx)
 }
 
+// ServiceJob creates a service job for the HTTP service,
+// wraps it with a termination handler so it shuts down and
+// logs when it quits.
 func (h *HTTP) ServiceJob() ServiceJob {
 	return NewServiceJob(func(ctx context.Context) error {
 		MustGetProcess(ctx).OnTerminate(func(ctx context.Context) error {
@@ -298,25 +311,36 @@ func (h *HTTP) NewURL(subpath string, values url.Values) *url.URL {
 	return url
 }
 
-// EnsureCert checks cert and key files consistency. It also generates a self-signed cert if it was not specified.
-func (h *HTTP) EnsureCert(defaultPath string) (err error) {
+// EnsureCert checks cert and key files consistency.
+// If the certificate path is not provided in the config,
+// but --insecure-no-tls is not invoked, it'll automatically
+// generaate a self-signed ceritificate and store it in the
+// provided default certificate path.
+func (h *HTTP) EnsureCert(defaultCertPath string) (err error) {
 	if h.Insecure {
 		return nil
 	}
-	// If files are specified by user then they should exist and possess right structure
+	// If files are specified by user then they should exist and have correct structure
 	if h.CertFile != "" {
 		_, err = tls.LoadX509KeyPair(h.CertFile, h.KeyFile)
 		return err
 	}
 
+	return h.GenerateSelfSignedCert(defaultCertPath)
+}
+
+// GenerateSelfSignedCert crates a self-signed certificate pair
+// and save it to the provided path.
+// It uses Teleport's utils.GenerateSelfSignedCert under the hood.
+func (h *HTTP) GenerateSelfSignedCert(defaultCertPath string) (err error) {
 	log.Warningf("No TLS Keys provided, using self signed certificate.")
 
 	// If files are not specified, try to fall back on self signed certificate.
-	h.CertFile = defaultPath + ".crt"
-	h.KeyFile = defaultPath + ".key"
+	h.CertFile = defaultCertPath + ".crt"
+	h.KeyFile = defaultCertPath + ".key"
 	_, err = tls.LoadX509KeyPair(h.CertFile, h.KeyFile)
 	if err == nil {
-		// self-signed cert was generated previously
+		// self-signed or another cert is already y ,the path,d th
 		return nil
 	}
 	if !os.IsNotExist(err) {
@@ -324,6 +348,17 @@ func (h *HTTP) EnsureCert(defaultPath string) (err error) {
 	}
 
 	log.Warningf("Generating self signed key and cert to %v %v.", h.KeyFile, h.CertFile)
+
+	certDir := path.Dir(defaultCertPath)
+	if _, err = os.Stat(certDir); os.IsNotExist(err) {
+		log.Warningf("Self-signed TLS certs directory %v doesn't exist, creating it now", certDir)
+
+		err := os.MkdirAll(certDir, 0644)
+
+		if err != nil {
+			log.Errorf("Error while creating directory %v to store self-signed TLS certs", certDir)
+		}
+	}
 
 	hostname := h.baseURL.Hostname()
 	if hostname == "" {

@@ -35,6 +35,7 @@ import (
 	"github.com/gravitational/trace"
 )
 
+// Minimal Teleport version the plugin supports.
 const MinServerVersion = "4.3.0"
 
 // State represents the state of an access request.

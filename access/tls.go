@@ -36,8 +36,8 @@ func LoadTLSConfig(certPath, keyPath, rootCAsPath string) (conf *tls.Config, err
 	return
 }
 
-// LoadTLSCert loads a X.509 keypair from file paths and retains parsed form of
-// the certificate.
+// LoadTLSCert loads a X.509 keypair from file paths and
+// retains parsed form of the certificate.
 func LoadX509Cert(certPath, keyPath string) (tls.Certificate, error) {
 	cert, err := tls.LoadX509KeyPair(certPath, keyPath)
 	if err != nil {
