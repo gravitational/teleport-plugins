@@ -1,17 +1,22 @@
 # Teleport / Gitlab plugin
 
-The plugin allows teams to setup permissions workflow over their existing or new Gitlab projects. 
-When someone requests new permissions, an issue will be opened, and the team members can assign approval or denied label to the issue to approve or deny the request.
-
+The plugin allows teams to setup permissions workflow over their existing or new
+Gitlab projects. When someone requests new permissions, an issue will be opened,
+and the team members can assign approval or denied label to the issue to approve
+or deny the request.
 
 ## Quick setup
 
 To get things up & running quickly:
 
-
-1. On Gitlab, go "User Settings" -> "Access Tokens". Create a token with api scope, remember the token.
-2. Create a project, get its numeric "Project ID" from "Project Overview" -> "Details" page.
-3. You might want to create the Board with lists: `Teleport: Pending`, `Teleport: Approved`, and `Teleport: Denied`. The plugin will work if you just change labels on issues, but with a Board you can just drag the issue into a status-column you want.
+1. On Gitlab, go "User Settings" -> "Access Tokens". Create a token with api
+   scope, remember the token.
+2. Create a project, get its numeric "Project ID" from "Project Overview" ->
+   "Details" page.
+3. You might want to create the Board with lists: `Teleport: Pending`,
+   `Teleport: Approved`, and `Teleport: Denied`. The plugin will work if you
+   just change labels on issues, but with a Board you can just drag the issue
+   into a status-column you want.
 4. Create an /etc/teleport-gitlab.yml
 
 ```toml
@@ -42,4 +47,6 @@ output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/tele
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
 ```
 
-The plugin creates labels on Gitlab automatically if they don't exist yet. You don't have to set anything up on Gitlab, except for the project (create new, or grab project ID from an existing one), and the Board.
+The plugin creates labels on Gitlab automatically if they don't exist yet. You
+don't have to set anything up on Gitlab, except for the project (create new, or
+grab project ID from an existing one), and the Board.
