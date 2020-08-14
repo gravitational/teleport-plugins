@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"context"
 	"os"
 	"strings"
 
@@ -13,6 +14,8 @@ type LogConfig struct {
 	Output   string `toml:"output"`
 	Severity string `toml:"severity"`
 }
+
+type loggerKey struct{}
 
 // InitLogger sets up logger for a typical daemon scenario until configuration
 // file is parsed
@@ -54,4 +57,26 @@ func SetupLogger(conf LogConfig) error {
 	}
 
 	return nil
+}
+
+func WithLogger(ctx context.Context, logger *log.Entry) context.Context {
+	return context.WithValue(ctx, loggerKey{}, logger)
+}
+
+func WithLogField(ctx context.Context, key string, value interface{}) (context.Context, *log.Entry) {
+	logger := GetLogger(ctx).WithField(key, value)
+	return context.WithValue(ctx, loggerKey{}, logger), logger
+}
+
+func WithLogFields(ctx context.Context, logFields log.Fields) (context.Context, *log.Entry) {
+	logger := GetLogger(ctx).WithFields(logFields)
+	return context.WithValue(ctx, loggerKey{}, logger), logger
+}
+
+func GetLogger(ctx context.Context) *log.Entry {
+	if logger, ok := ctx.Value(loggerKey{}).(*log.Entry); ok && logger != nil {
+		return logger
+	}
+
+	return log.NewEntry(log.StandardLogger())
 }
