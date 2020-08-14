@@ -35,7 +35,7 @@ type Bot struct {
 }
 
 var descriptionTemplate *template.Template
-var nextLinkHeaderRegex *regexp.Regexp
+var nextLinkHeaderRegex = regexp.MustCompile(`<([^>]+)>;\s+rel="next"`)
 
 func init() {
 	var err error
@@ -44,11 +44,6 @@ func init() {
 
 Request ID is {{.ID}}.
 `)
-	if err != nil {
-		panic(err)
-	}
-
-	nextLinkHeaderRegex, err = regexp.Compile(`<([^>]+)>;\s+rel="next"`)
 	if err != nil {
 		panic(err)
 	}
