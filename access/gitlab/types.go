@@ -131,15 +131,7 @@ type ErrorResult struct {
 	Message interface{} `json:"message,omitempty"`
 }
 
-var issueDescriptionRegex *regexp.Regexp
-
-func init() {
-	var err error
-	issueDescriptionRegex, err = regexp.Compile(`(?i)request\s+id\s+is\s+([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})`)
-	if err != nil {
-		panic(err)
-	}
-}
+var issueDescriptionRegex = regexp.MustCompile(`(?i)request\s+id\s+is\s+([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})`)
 
 func DecodePluginData(dataMap access.PluginDataMap) (data PluginData) {
 	var created int64
