@@ -123,6 +123,7 @@ func (conf *HTTPConfig) Check() error {
 	return nil
 }
 
+// ServeHTTP processes one http request.
 func (auth *HTTPBasicAuth) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	username, password, ok := r.BasicAuth()
 
@@ -316,7 +317,7 @@ func (h *HTTP) NewURL(subpath string, values url.Values) *url.URL {
 // but --insecure-no-tls is not invoked, it'll automatically
 // generaate a self-signed ceritificate and store it in the
 // provided default certificate path.
-func (h *HTTP) EnsureCert(defaultCertPath string) (err error) {
+func (h *HTTP) EnsureCert(defaultPath string) (err error) {
 	if h.Insecure {
 		return nil
 	}
@@ -326,32 +327,33 @@ func (h *HTTP) EnsureCert(defaultCertPath string) (err error) {
 		return err
 	}
 
-	return h.GenerateSelfSignedCert(defaultCertPath)
+	return h.GenerateSelfSignedCert(defaultPath)
 }
 
 // GenerateSelfSignedCert crates a self-signed certificate pair
 // and save it to the provided path.
 // It uses Teleport's utils.GenerateSelfSignedCert under the hood.
-func (h *HTTP) GenerateSelfSignedCert(defaultCertPath string) (err error) {
+func (h *HTTP) GenerateSelfSignedCert(defaultPath string) (err error) {
 	log.Warningf("No TLS Keys provided, using self signed certificate.")
 
 	// If files are not specified, try to fall back on self signed certificate.
-	h.CertFile = defaultCertPath + ".crt"
-	h.KeyFile = defaultCertPath + ".key"
+	h.CertFile = defaultPath + ".crt"
+	h.KeyFile = defaultPath + ".key"
 	_, err = tls.LoadX509KeyPair(h.CertFile, h.KeyFile)
 	if err == nil {
-		// self-signed or another cert is already y ,the path,d th
+		// self-signed or another cert is already in the defaault self-signed
+		// cert path, safe to quit.
 		return nil
 	}
 	if !os.IsNotExist(err) {
-		return trace.Wrap(err, "unrecognized error reading certs")
+		return trace.Wrap(err, "unrecognized error reading self-signed certs")
 	}
 
 	log.Warningf("Generating self signed key and cert to %v %v.", h.KeyFile, h.CertFile)
 
-	certDir := path.Dir(defaultCertPath)
+	certDir := path.Dir(defaultPath)
 	if _, err = os.Stat(certDir); os.IsNotExist(err) {
-		log.Warningf("Self-signed TLS certs directory %v doesn't exist, creating it now", certDir)
+		log.Debugf("Self-signed TLS certs directory %v doesn't exist, creating it now", certDir)
 
 		err := os.MkdirAll(certDir, 0644)
 
@@ -371,10 +373,14 @@ func (h *HTTP) GenerateSelfSignedCert(defaultCertPath string) (err error) {
 	}
 
 	if err := ioutil.WriteFile(h.KeyFile, creds.PrivateKey, 0600); err != nil {
-		return trace.Wrap(err, "error writing key PEM")
+		return trace.Wrap(err, makeCertErrorMessage(defaultPath, "key"))
 	}
 	if err := ioutil.WriteFile(h.CertFile, creds.Cert, 0600); err != nil {
-		return trace.Wrap(err, "error writing cert PEM")
+		return trace.Wrap(err, makeCertErrorMessage(defaultPath, "cert"))
 	}
 	return nil
+}
+
+func makeCertErrorMessage(defaultPath, file string) string {
+	return fmt.Sprintf("Error writing pem %v, please check that the directory %v exists and you have write permissions.", file, defaultPath)
 }
