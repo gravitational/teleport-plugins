@@ -18,13 +18,19 @@ const slackMaxConns = 100
 const slackHTTPTimeout = 10 * time.Second
 
 // Bot is a wrapper around slack.Client that works with access.Request.
+// It's responsible for formatting and posting a message on Slack when an
+// action occurs with an access request: a new request popped up, or a
+// request is processed/updated.
 type Bot struct {
 	client      *slack.Client
 	respClient  *http.Client
 	channel     string
 	clusterName string
+	readOnly    bool
 }
 
+// NewBot initializes the new Slack message generator (Bot)
+// takes SlackConfig as an argument.
 func NewBot(conf SlackConfig) *Bot {
 	httpClient := &http.Client{
 		Timeout: slackHTTPTimeout,
@@ -47,6 +53,7 @@ func NewBot(conf SlackConfig) *Bot {
 		client:     slack.New(conf.Token, slackOptions...),
 		channel:    conf.Channel,
 		respClient: httpClient,
+		readOnly:   conf.ReadOnly,
 	}
 }
 
@@ -74,6 +81,10 @@ func (b *Bot) Expire(ctx context.Context, reqID string, reqData RequestData, sla
 	return trace.Wrap(err)
 }
 
+// GetUserEmail takes a Slack User ID as input, and returns their
+// email address.
+// It might return an error if the Slack client can't fetch the user
+// email for any reason.
 func (b *Bot) GetUserEmail(ctx context.Context, id string) (string, error) {
 	user, err := b.client.GetUserInfoContext(ctx, id)
 	if err != nil {
@@ -82,7 +93,7 @@ func (b *Bot) GetUserEmail(ctx context.Context, id string) (string, error) {
 	return user.Profile.Email, nil
 }
 
-// Respond is used to send and updated message to Slack by "response_url" from interaction callback.
+// Respond is used to send an updated message to Slack by "response_url" from interaction callback.
 func (b *Bot) Respond(ctx context.Context, reqID string, reqData RequestData, status string, responseURL string) error {
 	var message slack.Message
 	message.Blocks.BlockSet = b.msgSections(reqID, reqData, status)
@@ -178,7 +189,9 @@ func (b *Bot) msgSections(reqID string, reqData RequestData, status string) []sl
 		},
 	}
 
-	if status == "PENDING" {
+	// Only show buttons for pending requests, and if the plugin is
+	// working in interactive mode (i.e. not readonly)
+	if status == "PENDING" && !b.readOnly {
 		sections = append(sections, slack.NewActionBlock(
 			"approve_or_deny",
 			&slack.ButtonBlockElement{
