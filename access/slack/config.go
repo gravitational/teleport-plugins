@@ -34,7 +34,7 @@ root_cas = "/var/lib/teleport/plugins/slack/auth.cas"   # Teleport cluster CA ce
 token = "api_token"             # Slack Bot OAuth token
 secret = "signing-secret-value" # Slack API Signing Secret
 channel = "channel-name"        # Slack Channel name to post requests to
-readonly = false				# Allow Approval / Denial actions on Slack, or use it as notification only
+readonly = false                # Allow Approval / Denial actions on Slack, or use it as notification only
 
 [http]
 public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com
