@@ -40,7 +40,7 @@ api_token = "token"                 # JIRA API Basic Auth token, or our password
 project = "MYPROJ"                  # JIRA Project key
 
 [http]
-public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com
+public_addr = "example.com:8081" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com:8081
 # listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:8081
 https_key_file = "/var/lib/teleport/webproxy_key.pem"  # TLS private key
 https_cert_file = "/var/lib/teleport/webproxy_cert.pem" # TLS certificate
