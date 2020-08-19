@@ -36,7 +36,7 @@ const (
 	// ActionDeny uniquely identifies the deny button in events.
 	ActionDeny = "deny_request"
 	// DefaultDir is the directory to be used in various configurations.
-	// It's used accross the files in main package, and in utils.
+	// It's used across the files in main package, and in utils.
 	DefaultDir = "/var/lib/teleport/plugins/slack"
 )
 
