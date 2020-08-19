@@ -38,7 +38,6 @@ const (
 type SlackSuite struct {
 	ctx         context.Context
 	cancel      context.CancelFunc
-	conf        *Config
 	app         *App
 	publicURL   string
 	me          *user.User
