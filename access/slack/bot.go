@@ -22,11 +22,11 @@ const slackHTTPTimeout = 10 * time.Second
 // action occurs with an access request: a new request popped up, or a
 // request is processed/updated.
 type Bot struct {
-	client      *slack.Client
-	respClient  *http.Client
-	channel     string
-	clusterName string
-	readOnly    bool
+	client           *slack.Client
+	respClient       *http.Client
+	channel          string
+	clusterName      string
+	notificationOnly bool
 }
 
 // NewBot initializes the new Slack message generator (Bot)
@@ -50,10 +50,10 @@ func NewBot(conf SlackConfig) *Bot {
 	}
 
 	return &Bot{
-		client:     slack.New(conf.Token, slackOptions...),
-		channel:    conf.Channel,
-		respClient: httpClient,
-		readOnly:   conf.ReadOnly,
+		client:           slack.New(conf.Token, slackOptions...),
+		channel:          conf.Channel,
+		respClient:       httpClient,
+		notificationOnly: conf.NotificationOnly,
 	}
 }
 
@@ -190,8 +190,8 @@ func (b *Bot) msgSections(reqID string, reqData RequestData, status string) []sl
 	}
 
 	// Only show buttons for pending requests, and if the plugin is
-	// working in interactive mode (i.e. not readonly)
-	if status == "PENDING" && !b.readOnly {
+	// working in interactive mode (i.e. not notification-only)
+	if status == "PENDING" && !b.notificationOnly {
 		sections = append(sections, slack.NewActionBlock(
 			"approve_or_deny",
 			&slack.ButtonBlockElement{
