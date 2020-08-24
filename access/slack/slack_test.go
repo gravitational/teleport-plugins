@@ -117,7 +117,7 @@ func (s *SlackSuite) startSlack(c *C) {
 	go s.slackServer.Start()
 }
 
-func (s *SlackSuite) startApp(c *C, readonly bool) {
+func (s *SlackSuite) startApp(c *C, notificationOnly bool) {
 	auth := s.teleport.Process.GetAuthServer()
 	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
 	c.Assert(err, IsNil)
@@ -153,7 +153,7 @@ func (s *SlackSuite) startApp(c *C, readonly bool) {
 	conf.Slack.Secret = SlackSecret
 	conf.Slack.Token = "000000"
 	conf.Slack.Channel = "test"
-	conf.Slack.ReadOnly = readonly
+	conf.Slack.NotificationOnly = notificationOnly
 	conf.Slack.APIURL = "http://" + s.slackServer.ServerAddr + "/"
 	conf.HTTP.ListenAddr = ":0"
 	if s.publicURL != "" {
