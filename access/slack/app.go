@@ -7,6 +7,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/access"
 	"github.com/gravitational/teleport-plugins/utils"
+	"google.golang.org/grpc"
 
 	"github.com/gravitational/trace"
 
@@ -78,6 +79,8 @@ func (a *App) run(ctx context.Context) (err error) {
 		"slack",
 		a.conf.Teleport.AuthServer,
 		tlsConf,
+		grpc.WithBackoffMaxDelay(time.Second*2),
+		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
 	)
 	if err != nil {
 		return

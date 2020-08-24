@@ -35,7 +35,7 @@ import (
 	"github.com/gravitational/trace"
 )
 
-// Minimal Teleport version the plugin supports.
+// MinServerVersion is the minimal teleport version the plugin supports.
 const MinServerVersion = "4.3.0"
 
 // State represents the state of an access request.
@@ -136,13 +136,14 @@ type clt struct {
 	cancel context.CancelFunc
 }
 
-func NewClient(ctx context.Context, plugin string, addr string, tc *tls.Config) (Client, error) {
+// NewClient creates a new Teleport GRPC API client and returns it.
+//
+// TODO: Nate've removed the 2 seconds back-off time,
+// should re-run all test to see if that still works.
+func NewClient(ctx context.Context, plugin string, addr string, tc *tls.Config, dialOptions ...grpc.DialOption) (Client, error) {
+	dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewTLS(tc)))
 	ctx, cancel := context.WithCancel(ctx)
-	conn, err := grpc.DialContext(ctx, addr,
-		grpc.WithTransportCredentials(credentials.NewTLS(tc)),
-		grpc.WithBackoffMaxDelay(time.Second*2),
-		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
-	)
+	conn, err := grpc.DialContext(ctx, addr, dialOptions...)
 	if err != nil {
 		cancel()
 		return nil, utils.FromGRPC(err)
