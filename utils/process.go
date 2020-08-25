@@ -42,6 +42,8 @@ type Process struct {
 	cancel context.CancelFunc
 	// onTerminate is a list of callbacks called on terminate.
 	onTerminate []jobFunc
+	// terminated flags out that process has been signaled for termination.
+	terminated bool
 	// criticalErrors is a list of errors returned by critical jobs.
 	criticalErrors []error
 }
@@ -91,9 +93,11 @@ func NewProcess(ctx context.Context) *Process {
 	process.terminate = func() {
 		once.Do(func() {
 			process.Lock()
+			process.terminated = true
 			for _, j := range process.onTerminate {
 				process.spawn(j, false)
 			}
+			process.onTerminate = nil
 			process.Unlock()
 			jobs.Done() // Stop the main "job".
 		})
@@ -139,8 +143,12 @@ func (p *Process) OnTerminate(fn func(ctx context.Context) error) {
 		panic("calling OnTerminate a nil process")
 	}
 	p.Lock()
-	p.onTerminate = append(p.onTerminate, fn)
-	p.Unlock()
+	defer p.Unlock()
+	if p.terminated {
+		p.Spawn(fn)
+	} else {
+		p.onTerminate = append(p.onTerminate, fn)
+	}
 }
 
 // Done channel is used to wait for jobs completion.
