@@ -1,0 +1,21 @@
+[teleport]
+auth_server = "teleport.cluster.local:3025"                  # Teleport Auth Server GRPC API address
+client_key = "/mnt/shared/certs/access-plugin/plug.key" # Teleport GRPC client secret key
+client_crt = "/mnt/shared/certs/access-plugin/plug.crt" # Teleport GRPC client certificate
+root_cas = "/mnt/shared/certs/access-plugin/plug.cas"   # Teleport cluster CA certs
+
+[jira]
+url = "https://example.com/jira"    # JIRA URL. For JIRA Cloud, https://[my-jira].atlassian.net
+username = "jira-bot"               # JIRA username
+api_token = "token"                 # JIRA API Basic Auth token, or our password in case you're using Jira Server.
+project = "MYPROJ"                  # JIRA Project key
+
+[http]
+public_addr = "teleport-jira.cluster.local" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com
+listen_addr = ":8045" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:8081
+# https_key_file = "/var/lib/teleport/webproxy_key.pem"  # TLS private key
+# https_cert_file = "/var/lib/teleport/webproxy_cert.pem" # TLS certificate
+
+[log]
+output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/jira.log"
+severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".

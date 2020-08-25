@@ -54,6 +54,9 @@ release/access-gitlab:
 .PHONY: releases
 releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-gitlab
 
+.PHONY: build-all
+build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab
+
 #
 # Lint the Go code.
 # By default lint scans the entire repo. Pass FLAGS='--new' to only scan local

@@ -1,0 +1,25 @@
+---
+kind: user
+metadata:
+  name: foo
+spec:
+  roles:
+    - foo
+  traits:
+    logins: ["foo"]
+version: v2
+---
+kind: role
+metadata:
+  name: foo
+spec:
+  allow:
+    request:
+      roles: ["admin"]
+    rules:
+      - resources: ["access_request"]
+        verbs: ["list", "read", "update"]
+    # teleport currently refuses to issue certs for a user with 0 logins,
+    # this restriction may be lifted in future versions.
+    logins: ["root"]
+version: v3

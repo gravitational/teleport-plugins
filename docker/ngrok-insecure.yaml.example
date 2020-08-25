@@ -1,0 +1,34 @@
+authtoken: INSERT_YOUR_NGROK_TOKEN_HERE #Get your token on https://dashboard.ngrok.com
+tunnels:
+  # Each Ngrok tunnel corresponds to one plugin.
+  # See docker-compose.yaml to see which host and port each plugin
+  # is running on.
+  # The config below uses localhost and relies on docker-compose
+  # port forwarding to get all of the plugins exposed.
+  #
+  # For each of the plugins, make sure that the port and it's
+  # hostname matches it's settings:
+  # - addr: {PORT} should match the port forwarded in docker-compose
+  # - addr: {PORT} should match the port in teleport-{plugin}.toml
+  #   listen: key.
+  # - host_header: should match the plugin config's public host.
+  teleport-slack:
+    addr: 8041 # See docker-compose.yaml for details.
+    proto: http # --insecure-no-tls
+    host_header: teleport-slack.cluster.local # should match the plugin config
+  teleport-mattermost:
+    addr: 8042
+    proto: http
+    host_header: teleport-mattermost.cluster.local
+  teleport-gitlab:
+    addr: 8044
+    proto: http
+    host_header: teleport-gitlab.cluster.local
+  teleport-jira:
+    addr: 8045
+    proto: http
+    host_header: teleport-jira.cluster.local
+  teleport-pagerduty:
+    addr: 8043
+    proto: http
+    host_header: teleport-pagerduty.cluster.local
