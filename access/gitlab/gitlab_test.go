@@ -17,6 +17,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
+	"github.com/gravitational/teleport/lib/events"
 	"github.com/gravitational/teleport/lib/services"
 
 	. "gopkg.in/check.v1"
@@ -36,6 +37,7 @@ type GitlabSuite struct {
 	app        *App
 	publicURL  string
 	me         *user.User
+	userEmail  string
 	tmpFiles   []*os.File
 	dbPath     string
 	fakeGitLab *FakeGitlab
@@ -56,6 +58,7 @@ func (s *GitlabSuite) SetUpSuite(c *C) {
 
 	s.me, err = user.Current()
 	c.Assert(err, IsNil)
+	s.userEmail = s.me.Username + "@example.com"
 	userRole, err := services.NewRole("foo", services.RoleSpecV3{
 		Allow: services.RoleConditions{
 			Logins:  []string{s.me.Username}, // cannot be empty
@@ -213,6 +216,10 @@ func (s *GitlabSuite) postIssueUpdateHook(c *C, oldIssue, newIssue Issue) {
 	}
 	payload := IssueEvent{
 		Project: Project{ID: projectID},
+		User: User{
+			Name:  "Test User",
+			Email: s.userEmail,
+		},
 		ObjectAttributes: IssueObjectAttributes{
 			Action: "update",
 			Issue:  oldIssue,
@@ -418,6 +425,12 @@ func (s *GitlabSuite) TestApproval(c *C) {
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
+
+	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdated.Name, "id": request.GetName()})
+	c.Assert(err, IsNil)
+	c.Assert(auditLog, HasLen, 1)
+	c.Assert(auditLog[0].GetString("state"), Equals, "APPROVED")
+	c.Assert(auditLog[0].GetString("delegator"), Equals, "gitlab:"+s.userEmail)
 }
 
 func (s *GitlabSuite) TestDenial(c *C) {
@@ -446,6 +459,12 @@ func (s *GitlabSuite) TestDenial(c *C) {
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
+
+	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdated.Name, "id": request.GetName()})
+	c.Assert(err, IsNil)
+	c.Assert(auditLog, HasLen, 1)
+	c.Assert(auditLog[0].GetString("state"), Equals, "DENIED")
+	c.Assert(auditLog[0].GetString("delegator"), Equals, "gitlab:"+s.userEmail)
 }
 
 func (s *GitlabSuite) TestExpiration(c *C) {

@@ -16,6 +16,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
+	"github.com/gravitational/teleport/lib/events"
 	"github.com/gravitational/teleport/lib/services"
 
 	. "gopkg.in/check.v1"
@@ -34,6 +35,7 @@ type MattermostSuite struct {
 	publicURL      string
 	me             *user.User
 	fakeMattermost *FakeMattermost
+	mmUser         mm.User
 	teleport       *integration.TeleInstance
 	tmpFiles       []*os.File
 }
@@ -83,6 +85,12 @@ func (s *MattermostSuite) SetUpTest(c *C) {
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), time.Second)
 	s.publicURL = ""
 	s.fakeMattermost = NewFakeMattermost()
+	s.mmUser = s.fakeMattermost.StoreUser(mm.User{
+		FirstName: "User",
+		LastName:  "Test",
+		Username:  s.me.Username,
+		Email:     s.me.Username + "@example.com",
+	})
 }
 
 func (s *MattermostSuite) TearDownTest(c *C) {
@@ -202,7 +210,7 @@ func (s *MattermostSuite) postWebhook(c *C, post mm.Post, actionName string) {
 		PostId:    post.Id,
 		TeamId:    "1111",
 		ChannelId: "2222",
-		UserId:    "3333",
+		UserId:    s.mmUser.Id,
 		Context:   action.Integration.Context,
 	}
 
@@ -246,6 +254,12 @@ func (s *MattermostSuite) TestApproval(c *C) {
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
+
+	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdated.Name, "id": request.GetName()})
+	c.Assert(err, IsNil)
+	c.Assert(auditLog, HasLen, 1)
+	c.Assert(auditLog[0].GetString("state"), Equals, "APPROVED")
+	c.Assert(auditLog[0].GetString("delegator"), Equals, "mattermost:"+s.mmUser.Email)
 }
 
 func (s *MattermostSuite) TestDenial(c *C) {
@@ -260,6 +274,12 @@ func (s *MattermostSuite) TestDenial(c *C) {
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
+
+	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdated.Name, "id": request.GetName()})
+	c.Assert(err, IsNil)
+	c.Assert(auditLog, HasLen, 1)
+	c.Assert(auditLog[0].GetString("state"), Equals, "DENIED")
+	c.Assert(auditLog[0].GetString("delegator"), Equals, "mattermost:"+s.mmUser.Email)
 }
 
 func (s *MattermostSuite) TestExpiration(c *C) {

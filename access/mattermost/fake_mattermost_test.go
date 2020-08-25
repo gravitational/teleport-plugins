@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"runtime/debug"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gravitational/trace"
@@ -19,9 +20,12 @@ import (
 
 type FakeMattermost struct {
 	srv         *httptest.Server
-	posts       sync.Map
+	objects     sync.Map
 	newPosts    chan mm.Post
 	postUpdates chan mm.Post
+
+	postIDCounter uint64
+	userIDCounter uint64
 }
 
 func NewFakeMattermost() *FakeMattermost {
@@ -43,6 +47,20 @@ func NewFakeMattermost() *FakeMattermost {
 		err := json.NewEncoder(rw).Encode(&team)
 		fatalIf(err)
 	})
+	router.GET("/api/v4/users/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		rw.Header().Add("Content-Type", "application/json")
+
+		id := ps.ByName("id")
+		user, found := mattermost.GetUser(id)
+		if !found {
+			rw.WriteHeader(http.StatusNotFound)
+			err := json.NewEncoder(rw).Encode(&mm.AppError{Message: "User not found"})
+			fatalIf(err)
+			return
+		}
+		err := json.NewEncoder(rw).Encode(&user)
+		fatalIf(err)
+	})
 	router.GET("/api/v4/teams/1111/channels/name/test-channel", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusOK)
@@ -57,7 +75,7 @@ func NewFakeMattermost() *FakeMattermost {
 	router.POST("/api/v4/posts", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
 
-		post := mm.Post{}
+		var post mm.Post
 		err := json.NewDecoder(r.Body).Decode(&post)
 		fatalIf(err)
 
@@ -66,8 +84,7 @@ func NewFakeMattermost() *FakeMattermost {
 			return
 		}
 
-		post.Id = fmt.Sprintf("%v", time.Now().UnixNano())
-		mattermost.posts.Store(post.Id, post)
+		post = mattermost.StorePost(post)
 		mattermost.newPosts <- post
 
 		rw.WriteHeader(http.StatusCreated)
@@ -92,7 +109,7 @@ func NewFakeMattermost() *FakeMattermost {
 
 		post.Message = newPost.Message
 		post.Props = newPost.Props
-		mattermost.posts.Store(post.Id, post)
+		post = mattermost.StorePost(post)
 		mattermost.postUpdates <- post
 
 		rw.WriteHeader(http.StatusOK)
@@ -114,10 +131,35 @@ func (s *FakeMattermost) Close() {
 }
 
 func (s *FakeMattermost) GetPost(id string) (mm.Post, bool) {
-	if obj, ok := s.posts.Load(id); ok {
-		return obj.(mm.Post), true
+	if obj, ok := s.objects.Load(id); ok {
+		post, ok := obj.(mm.Post)
+		return post, ok
 	}
 	return mm.Post{}, false
+}
+
+func (s *FakeMattermost) StorePost(post mm.Post) mm.Post {
+	if post.Id == "" {
+		post.Id = fmt.Sprintf("post-%v", atomic.AddUint64(&s.postIDCounter, 1))
+	}
+	s.objects.Store(post.Id, post)
+	return post
+}
+
+func (s *FakeMattermost) GetUser(id string) (mm.User, bool) {
+	if obj, ok := s.objects.Load(id); ok {
+		user, ok := obj.(mm.User)
+		return user, ok
+	}
+	return mm.User{}, false
+}
+
+func (s *FakeMattermost) StoreUser(user mm.User) mm.User {
+	if user.Id == "" {
+		user.Id = fmt.Sprintf("user-%v", atomic.AddUint64(&s.userIDCounter, 1))
+	}
+	s.objects.Store(user.Id, user)
+	return user
 }
 
 func (s *FakeMattermost) CheckNewPost(ctx context.Context, timeout time.Duration) (mm.Post, error) {

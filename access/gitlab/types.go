@@ -108,12 +108,14 @@ type IssueChanges struct {
 	Labels *LabelsChange `json:"labels,omitempty"`
 }
 
+type User struct {
+	Name     string `json:"name,omitempty"`
+	Username string `json:"username,omitempty"`
+	Email    string `json:"email,omitempty"`
+}
+
 type IssueEvent struct {
-	User struct {
-		Name     string `json:"name,omitempty"`
-		Username string `json:"username,omitempty"`
-		Email    string `json:"email,omitempty"`
-	} `json:"user"`
+	User             User                  `json:"user"`
 	Project          Project               `json:"project"`
 	ObjectAttributes IssueObjectAttributes `json:"object_attributes"`
 	Changes          IssueChanges          `json:"changes"`
