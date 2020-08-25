@@ -18,8 +18,9 @@ const (
 
 func main() {
 	utils.InitLogger()
-	runner := utils.NewPluginApp(PluginName, exampleConfig, Version, Gitref)
-	runner.ParseCommand(os.Args[1:], run)
+
+	plugin := utils.NewPlugin(PluginName, exampleConfig, Version, Gitref)
+	plugin.ParseCommand(os.Args[1:], run)
 }
 
 func run(configPath string, insecure bool, debug bool) error {

@@ -34,7 +34,7 @@ const (
 
 func main() {
 	utils.InitLogger()
-	runner := utils.NewPluginApp(PluginName, exampleConfig, Version, Gitref)
+	runner := utils.NewPlugin(PluginName, exampleConfig, Version, Gitref)
 	runner.ParseCommand(os.Args[1:], run)
 }
 

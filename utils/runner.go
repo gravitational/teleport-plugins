@@ -10,44 +10,42 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// PrintVersion prints the specified app version to STDOUT
-func PrintVersion(appName string, version string, gitref string) {
-	if gitref != "" {
-		fmt.Printf("%v v%v git:%v %v\n", appName, version, gitref, runtime.Version())
-	} else {
-		fmt.Printf("%v v%v %v\n", appName, version, runtime.Version())
-	}
-}
-
-// PluginApp struct contains the plugin name, and the CLI Kingpin
+// Plugin struct contains the plugin name, and the CLI Kingpin
 // wrapper around the plugin application.
-type PluginApp struct {
-	Name          string
-	ExampleConfig string
-	Version       string
-	Gitref        string
-	KingpinApp    *kingpin.Application
-	Path          string
-	Insecure      bool
-	Debug         bool
+type Plugin struct {
+	name          string
+	exampleConfig string
+	version       string
+	gitref        string
+	app           *kingpin.Application
+	path          string
+	insecure      bool
+	debug         bool
 }
 
-// TODO: Maybe extract app runner arguments into a separate struct
-// that can be defined by the client application / plugin.
-// Build that struct from command line parameters, and then pass that struct
-// to the handler function in ParseCommand.
-// That way, the util will be more general and flexible.
-type AppRunnerFunc func(string, bool, bool) error
+// AppRunner describes a function that takes
+// configPath:string, insecure: bool, debug: bool
+// and launches the plugin app.
+//
+// This function has to:
+// 1. Load the config `LoadConfig()`
+// 2. Instantiate `NewApp()` and run it.
+//
+// It's tied to the plugin implementation too much,
+// so it's on the plugin designer to define it.
+type AppRunner func(string, bool, bool) error
 
-// Initializes and returns a new instance of
-// PluginApp.
-func NewPluginApp(name, exampleConfig, version, gitref string) *PluginApp {
+// NewPlugin initializes and returns a new Plugin wrapper struct.
+func NewPlugin(name, exampleConfig, version, gitref string) *Plugin {
+	// Create the CLI app
 	app := kingpin.New(name, "Teleport plugin for access requst approval workflows.")
 
+	// Commands
 	app.Command("configure", "Prints an example .TOML configuration file.")
 	app.Command("version", fmt.Sprintf("Prints %s version and exits.", name))
-
 	startCmd := app.Command("start", fmt.Sprintf("Starts a %s plugin.", name))
+
+	// Flags for the start command
 	path := startCmd.Flag("config", "TOML config file path").
 		Short('c').
 		Default(fmt.Sprintf("/etc/%s.toml", name)).
@@ -59,46 +57,49 @@ func NewPluginApp(name, exampleConfig, version, gitref string) *PluginApp {
 		Default("false").
 		Bool()
 
-	plugin := &PluginApp{
-		Name:          name,
-		ExampleConfig: exampleConfig,
-		Version:       version,
-		Gitref:        gitref,
-		KingpinApp:    app,
-		Path:          *path,
-		Insecure:      *insecure,
-		Debug:         *debug,
+	// Create the Plugin structure and return
+	plugin := &Plugin{
+		name:          name,
+		exampleConfig: exampleConfig,
+		version:       version,
+		gitref:        gitref,
+		app:           app,
+		path:          *path,
+		insecure:      *insecure,
+		debug:         *debug,
 	}
 
 	return plugin
 }
 
-// Parses the CLI command and starts the required command.
-func (p *PluginApp) ParseCommand(args []string, run AppRunnerFunc) {
-	selectedCmd, err := p.KingpinApp.Parse(args)
+// ParseCommand parses the CLI command and starts the invoked command.
+// ParseCommand expects command line arguments, and a plugin-specific
+// implementation of `run` that takes config arguments and runs the plugin.
+func (p *Plugin) ParseCommand(args []string, run AppRunner) {
+	selectedCmd, err := p.app.Parse(args)
 	if err != nil {
 		Bail(err)
 	}
 
-	// TODO: This assumes three specific commands, while the client
-	// app might want to define more.
-	// We can make this more generic by storing commangs in an
-	// map, and switching it's keys here.
-	//
-	// Additionally, we can provide common command handlers
-	// in the util, but let the client app define the mapping
-	// between the commands and the specific handler funcs that
-	// will be invoked to handle the commands.
 	switch selectedCmd {
 	case "configure":
-		fmt.Print(p.ExampleConfig)
+		fmt.Print(p.exampleConfig)
 	case "version":
-		PrintVersion(p.Name, p.Version, p.Gitref)
+		p.versionCmd()
 	case "start":
-		if err := run(p.Path, p.Insecure, p.Debug); err != nil {
+		if err := run(p.path, p.insecure, p.debug); err != nil {
 			Bail(err)
 		} else {
-			log.Info("Successfully shut down")
+			log.Infof("Successfully shut down %v", p.name)
 		}
+	}
+}
+
+// PrintVersion prints the specified app version to STDOUT
+func (p *Plugin) versionCmd() {
+	if p.gitref != "" {
+		fmt.Printf("%v v%v git:%v %v\n", p.name, p.version, p.gitref, runtime.Version())
+	} else {
+		fmt.Printf("%v v%v %v\n", p.name, p.version, runtime.Version())
 	}
 }
