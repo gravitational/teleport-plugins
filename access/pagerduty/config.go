@@ -40,7 +40,7 @@ service_id = "PIJ90N7"        # PagerDuty service id
 auto_approve = true           # Automatically approve access requests if requestor is on-call
 
 [http]
-public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com
+public_addr = "example.com:8081" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com:8081
 # listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:8081
 https_key_file = "/var/lib/teleport/webproxy_key.pem"  # TLS private key
 https_cert_file = "/var/lib/teleport/webproxy_cert.pem" # TLS certificate
@@ -48,9 +48,9 @@ https_cert_file = "/var/lib/teleport/webproxy_cert.pem" # TLS certificate
 [http.tls]
 verify_client_cert = true # The preferred way to authenticate webhooks on Pagerduty. See more: https://developer.pagerduty.com/docs/webhooks/webhooks-mutual-tls
 
-[http.basic_auth]
-user = "user"
-password = "password" # If you prefer to use basic auth for Pagerduty Webhooks authentication, use this section to store user and password
+#[http.basic_auth]
+#user = "user"
+#password = "password" # If you prefer to use basic auth for Pagerduty Webhooks authentication, use this section to store user and password
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/pagerduty.log"
