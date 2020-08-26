@@ -17,6 +17,7 @@ import (
 	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/backend"
+	"github.com/gravitational/teleport/lib/events"
 	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/trace"
 
@@ -311,6 +312,12 @@ func (s *PagerdutySuite) TestApproval(c *C) {
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
+
+	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdated.Name, "id": request.GetName()})
+	c.Assert(err, IsNil)
+	c.Assert(auditLog, HasLen, 1)
+	c.Assert(auditLog[0].GetString("state"), Equals, "APPROVED")
+	c.Assert(auditLog[0].GetString("delegator"), Equals, "pagerduty:"+s.pdUser.Email)
 }
 
 func (s *PagerdutySuite) TestDenial(c *C) {
@@ -337,6 +344,12 @@ func (s *PagerdutySuite) TestDenial(c *C) {
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
+
+	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdated.Name, "id": request.GetName()})
+	c.Assert(err, IsNil)
+	c.Assert(auditLog, HasLen, 1)
+	c.Assert(auditLog[0].GetString("state"), Equals, "DENIED")
+	c.Assert(auditLog[0].GetString("delegator"), Equals, "pagerduty:"+s.pdUser.Email)
 }
 
 func (s *PagerdutySuite) TestAutoApprovalWhenOnCall(c *C) {

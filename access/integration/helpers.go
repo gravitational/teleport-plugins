@@ -39,6 +39,7 @@ import (
 	"github.com/gravitational/teleport/lib/backend/lite"
 	"github.com/gravitational/teleport/lib/client"
 	"github.com/gravitational/teleport/lib/defaults"
+	"github.com/gravitational/teleport/lib/events"
 	"github.com/gravitational/teleport/lib/service"
 	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/teleport/lib/sshutils"
@@ -516,6 +517,39 @@ func (i *TeleInstance) PollAccessRequestPluginData(ctx context.Context, plugin, 
 		}
 		time.Sleep(25 * time.Millisecond)
 	}
+}
+
+func (i *TeleInstance) SearchAuditEvents(query string) ([]events.EventFields, error) {
+	result, err := i.Process.GetAuditLog().SearchEvents(time.Now().UTC().AddDate(0, -1, 0), time.Now().UTC(), query, 0)
+	return result, trace.Wrap(err)
+}
+
+func (i *TeleInstance) FilterAuditEvents(query string, filter events.EventFields) ([]events.EventFields, error) {
+	searchResult, err := i.SearchAuditEvents(query)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	var result []events.EventFields
+	for _, event := range searchResult {
+		ok := true
+		for key, obj := range filter {
+			switch value := obj.(type) {
+			case int:
+				ok = ok && event.GetInt(key) == value
+			case string:
+				ok = ok && event.GetString(key) == value
+			default:
+				return nil, trace.Fatalf("unsupported filter type %T", value)
+			}
+			if !ok {
+				break
+			}
+		}
+		if ok {
+			result = append(result, event)
+		}
+	}
+	return result, nil
 }
 
 // Start will start the TeleInstance and then block until it is ready to

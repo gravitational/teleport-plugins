@@ -12,10 +12,11 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
-	// jira "gopkg.in/andygrunwald/go-jira.v1"
+	jira "gopkg.in/andygrunwald/go-jira.v1"
 
 	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
+	"github.com/gravitational/teleport/lib/events"
 	"github.com/gravitational/teleport/lib/services"
 
 	. "gopkg.in/check.v1"
@@ -82,7 +83,10 @@ func (s *JiraSuite) SetUpSuite(c *C) {
 func (s *JiraSuite) SetUpTest(c *C) {
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), time.Second)
 	s.publicURL = ""
-	s.fakeJira = NewFakeJIRA()
+	s.fakeJira = NewFakeJIRA(jira.User{
+		Name:         "Test User",
+		EmailAddress: s.me.Username + "@example.com",
+	})
 }
 
 func (s *JiraSuite) TearDownTest(c *C) {
@@ -226,6 +230,12 @@ func (s *JiraSuite) TestApproval(c *C) {
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
+
+	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdated.Name, "id": request.GetName()})
+	c.Assert(err, IsNil)
+	c.Assert(auditLog, HasLen, 1)
+	c.Assert(auditLog[0].GetString("state"), Equals, "APPROVED")
+	c.Assert(auditLog[0].GetString("delegator"), Equals, "jira:"+s.fakeJira.GetAuthor().EmailAddress)
 }
 
 func (s *JiraSuite) TestDenial(c *C) {
@@ -241,6 +251,12 @@ func (s *JiraSuite) TestDenial(c *C) {
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
+
+	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdated.Name, "id": request.GetName()})
+	c.Assert(err, IsNil)
+	c.Assert(auditLog, HasLen, 1)
+	c.Assert(auditLog[0].GetString("state"), Equals, "DENIED")
+	c.Assert(auditLog[0].GetString("delegator"), Equals, "jira:"+s.fakeJira.GetAuthor().EmailAddress)
 }
 
 func (s *JiraSuite) TestExpiration(c *C) {

@@ -308,7 +308,7 @@ func (b *Bot) GetUserInfo(ctx context.Context, userID string) (User, error) {
 
 	_, err := b.client.NewRequest().
 		SetContext(ctx).
-		SetResult(result).
+		SetResult(&result).
 		Get(utils.BuildURLPath("users", userID))
 	if err != nil {
 		return User{}, trace.Wrap(err)

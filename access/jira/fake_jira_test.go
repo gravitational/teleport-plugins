@@ -22,15 +22,17 @@ type FakeJIRA struct {
 	issues           sync.Map
 	newIssues        chan Issue
 	issueTransitions chan Issue
+	author           jira.User
 }
 
-func NewFakeJIRA() *FakeJIRA {
+func NewFakeJIRA(author jira.User) *FakeJIRA {
 	router := httprouter.New()
 
 	self := &FakeJIRA{
 		newIssues:        make(chan Issue, 20),
 		issueTransitions: make(chan Issue, 20),
 		srv:              httptest.NewServer(router),
+		author:           author,
 	}
 
 	router.GET("/rest/api/2/myself", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -151,6 +153,10 @@ func (s *FakeJIRA) Close() {
 	close(s.issueTransitions)
 }
 
+func (s *FakeJIRA) GetAuthor() jira.User {
+	return s.author
+}
+
 func (s *FakeJIRA) PutIssue(issue Issue) {
 	s.issues.Store(issue.ID, issue)
 	s.issues.Store(issue.Key, issue)
@@ -179,10 +185,7 @@ func (s *FakeJIRA) TransitionIssue(issue Issue, status string) Issue {
 	}
 
 	history := jira.ChangelogHistory{
-		Author: jira.User{
-			Name:         "Robert Smith",
-			EmailAddress: "robert@example.com",
-		},
+		Author: s.author,
 		Items: []jira.ChangelogItems{
 			jira.ChangelogItems{
 				FieldType: "jira",
