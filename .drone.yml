@@ -112,7 +112,7 @@ steps:
       - git fetch --all --tags
       - git checkout ${DRONE_TAG}
       - mkdir -p build/
-      - export PLUGIN_TYPE=$(echo {DRONE_TAG} | cut -d- -f2)
+      - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
       - make release/access-$PLUGIN_TYPE
       - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
@@ -181,6 +181,6 @@ steps:
 
 ---
 kind: signature
-hmac: 9004ed4d717270951c14bbcafb96567b0f52dbd8a555a052019b36dd3e314a0d
+hmac: 9f98e09eba5b29877ae002614d6b7fb65414068e17be6b08d065ed6de9f702fa
 
 ...
