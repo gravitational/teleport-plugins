@@ -62,6 +62,9 @@ const OpPut = proto.Operation_PUT
 // OpDelete indicates deletion or expiry.
 const OpDelete = proto.Operation_DELETE
 
+type DialOption = grpc.DialOption
+type CallOption = grpc.CallOption
+
 // Filter encodes request filtering parameters.
 type Filter = services.AccessRequestFilter
 
@@ -110,6 +113,7 @@ type Watcher interface {
 
 // Client is an access request management client.
 type Client interface {
+	WithCallOptions(...CallOption) Client
 	// Ping loads basic information about Teleport version and cluster name
 	Ping(ctx context.Context) (Pong, error)
 	// WatchRequests registers a new watcher for pending access requests.
@@ -131,16 +135,14 @@ type Client interface {
 // clt is a thin wrapper around the raw GRPC types that implements the
 // access.Client interface.
 type clt struct {
-	plugin string
-	clt    proto.AuthServiceClient
-	cancel context.CancelFunc
+	plugin   string
+	clt      proto.AuthServiceClient
+	cancel   context.CancelFunc
+	callOpts []grpc.CallOption
 }
 
 // NewClient creates a new Teleport GRPC API client and returns it.
-//
-// TODO: Nate've removed the 2 seconds back-off time,
-// should re-run all test to see if that still works.
-func NewClient(ctx context.Context, plugin string, addr string, tc *tls.Config, dialOptions ...grpc.DialOption) (Client, error) {
+func NewClient(ctx context.Context, plugin string, addr string, tc *tls.Config, dialOptions ...DialOption) (Client, error) {
 	dialOptions = append(dialOptions, grpc.WithTransportCredentials(credentials.NewTLS(tc)))
 	ctx, cancel := context.WithCancel(ctx)
 	conn, err := grpc.DialContext(ctx, addr, dialOptions...)
@@ -156,8 +158,14 @@ func NewClient(ctx context.Context, plugin string, addr string, tc *tls.Config, 
 	}, nil
 }
 
+func (c *clt) WithCallOptions(options ...CallOption) Client {
+	newClient := *c
+	newClient.callOpts = append(newClient.callOpts, options...)
+	return &newClient
+}
+
 func (c *clt) Ping(ctx context.Context) (Pong, error) {
-	rsp, err := c.clt.Ping(ctx, &proto.PingRequest{})
+	rsp, err := c.clt.Ping(ctx, &proto.PingRequest{}, c.callOpts...)
 	if err != nil {
 		return Pong{}, utils.FromGRPC(err)
 	}
@@ -168,11 +176,11 @@ func (c *clt) Ping(ctx context.Context) (Pong, error) {
 }
 
 func (c *clt) WatchRequests(ctx context.Context, fltr Filter) Watcher {
-	return newWatcher(ctx, c.clt, fltr)
+	return newWatcher(ctx, c.clt, c.callOpts, fltr)
 }
 
 func (c *clt) GetRequests(ctx context.Context, fltr Filter) ([]Request, error) {
-	rsp, err := c.clt.GetAccessRequests(ctx, &fltr)
+	rsp, err := c.clt.GetAccessRequests(ctx, &fltr, c.callOpts...)
 	if err != nil {
 		return nil, utils.FromGRPC(err)
 	}
@@ -268,7 +276,7 @@ type watcher struct {
 	cancel context.CancelFunc
 }
 
-func newWatcher(ctx context.Context, clt proto.AuthServiceClient, fltr Filter) *watcher {
+func newWatcher(ctx context.Context, clt proto.AuthServiceClient, callOpts []CallOption, fltr Filter) *watcher {
 	ctx, cancel := context.WithCancel(ctx)
 	w := &watcher{
 		eventC: make(chan Event),
@@ -276,11 +284,11 @@ func newWatcher(ctx context.Context, clt proto.AuthServiceClient, fltr Filter) *
 		doneC:  make(chan struct{}),
 		cancel: cancel,
 	}
-	go w.run(ctx, clt, fltr)
+	go w.run(ctx, clt, callOpts, fltr)
 	return w
 }
 
-func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, fltr Filter) {
+func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, callOpts []CallOption, fltr Filter) {
 	defer w.Close()
 	defer close(w.doneC)
 
@@ -291,7 +299,7 @@ func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, fltr Fil
 				Filter: fltr.IntoMap(),
 			},
 		},
-	})
+	}, callOpts...)
 	if err != nil {
 		w.setError(utils.FromGRPC(err))
 		return

@@ -85,7 +85,6 @@ func (a *App) run(ctx context.Context) (err error) {
 		a.conf.Teleport.AuthServer,
 		tlsConf,
 		grpc.WithBackoffMaxDelay(time.Second*2),
-		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
 	)
 	if err != nil {
 		return
