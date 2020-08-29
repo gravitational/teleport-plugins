@@ -24,6 +24,7 @@ root_cas = "/var/lib/teleport/plugins/slack/auth.cas"    # Teleport cluster CA c
 token = "api-token"         # Slack Bot OAuth token
 secret = "secret-value"     # Slack API Signing Secret
 channel = "channel-name"    # Message delivery channel
+notify_only = false         # Whether run the plugin in notification only mode (Don't allow approval/denial via a Slack button)
 
 [http]
 # listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:443
@@ -48,6 +49,19 @@ accessible at the address indicated by `auth_server`.
 _NOTE_: The slack plugin must be given a teleport user identity with appropriate
 permissions. See the [acccess package README](../README.md#authentication) for
 an example of how to configure an appropriate user & role.
+
+If you want to the plugin to only post notifications on Slack, without the
+ability to approve or deny requests from Slack, you can enforce read-only
+behavior by not adding the `update` verb to the plugin user permissions, like
+this:.
+
+```
+  # in the teleport user / role resource yaml
+  allow:
+    rules:
+      - resources: ['access_request']
+        verbs: ['list','read']
+```
 
 ### `[slack]`
 

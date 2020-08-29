@@ -26,6 +26,7 @@ type App struct {
 	*utils.Process
 }
 
+// NewApp initializes a new teleport-slack app and returns it.
 func NewApp(conf Config) (*App, error) {
 	app := &App{conf: conf}
 	app.mainJob = utils.NewServiceJob(app.run)
@@ -46,6 +47,8 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 	return a.mainJob.WaitReady(ctx)
 }
 
+// PublicURL checks if the app is running, and if it is —
+// returns the public callback URL for Slack.
 func (a *App) PublicURL() *url.URL {
 	if !a.mainJob.IsReady() {
 		panic("app is not running")
@@ -119,6 +122,8 @@ func (a *App) run(ctx context.Context) (err error) {
 	return trace.NewAggregate(httpJob.Err(), watcherJob.Err())
 }
 
+// checkTeleportVersion checks if the Teleport Auth server
+// is compatible with this plugin version.
 func (a *App) checkTeleportVersion(ctx context.Context) error {
 	log.Debug("Checking Teleport server version")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -168,6 +173,12 @@ func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 // OnSlackCallback processes Slack actions and updates original Slack message with a new status
 func (a *App) onSlackCallback(ctx context.Context, cb Callback) error {
 	log := log.WithField("slack_http_id", cb.HTTPRequestID)
+
+	// If the plugin is working in read-only mode, do not process any
+	// callbacks from Slack, and return an error.
+	if a.conf.Slack.NotifyOnly {
+		return trace.Errorf("Received a Slack Webhook while in notify-only mode.")
+	}
 
 	if len(cb.ActionCallback.BlockActions) != 1 {
 		log.WithField("slack_block_actions", cb.ActionCallback.BlockActions).Warn("Received more than one Slack action")

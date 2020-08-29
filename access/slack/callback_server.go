@@ -18,10 +18,15 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// Callback struct represents an HTTP request that is a callback from Slack,
+// and wraps around slack client's InteractionCallback.
 type Callback struct {
 	HTTPRequestID string
 	slack.InteractionCallback
 }
+
+// CallbackFunc type represents a callback handler that takes a context and
+// a callback in, handles it, and optionally returns an error.
 type CallbackFunc func(ctx context.Context, callback Callback) error
 
 // CallbackServer is a wrapper around http.Server that processes Slack interaction events.
@@ -33,6 +38,7 @@ type CallbackServer struct {
 	counter    uint64
 }
 
+// NewCallbackServer initializes and returns an HTTP server that handles Slack callback (webhook) requests.
 func NewCallbackServer(conf utils.HTTPConfig, secret string, onCallback CallbackFunc) (*CallbackServer, error) {
 	httpSrv, err := utils.NewHTTP(conf)
 	if err != nil {
@@ -47,14 +53,21 @@ func NewCallbackServer(conf utils.HTTPConfig, secret string, onCallback Callback
 	return srv, nil
 }
 
+// ServiceJob returns a service job object from the Callback HTTP server.
 func (s *CallbackServer) ServiceJob() utils.ServiceJob {
 	return s.http.ServiceJob()
 }
 
+// BaseURL returns Slack Webhook (callback) HTTP server base URL.
 func (s *CallbackServer) BaseURL() *url.URL {
 	return s.http.BaseURL()
 }
 
+// EnsureCert uses http util's EnsureCert to make sure that TLS certificates
+// are there and are accessible and valid.
+// If using self-signed certs, this will also generate self-signed TLS certificates if they're missing.
+// Please note that self-signed certs would not work by default, since Slack won't respect / validate
+// the self-signed certs.
 func (s *CallbackServer) EnsureCert() error {
 	return s.http.EnsureCert(DefaultDir + "/server")
 }

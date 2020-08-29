@@ -117,7 +117,7 @@ func (s *SlackSuite) startSlack(c *C) {
 	go s.slackServer.Start()
 }
 
-func (s *SlackSuite) startApp(c *C) {
+func (s *SlackSuite) startApp(c *C, notifyOnly bool) {
 	auth := s.teleport.Process.GetAuthServer()
 	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
 	c.Assert(err, IsNil)
@@ -153,6 +153,7 @@ func (s *SlackSuite) startApp(c *C) {
 	conf.Slack.Secret = SlackSecret
 	conf.Slack.Token = "000000"
 	conf.Slack.Channel = "test"
+	conf.Slack.NotifyOnly = notifyOnly
 	conf.Slack.APIURL = "http://" + s.slackServer.ServerAddr + "/"
 	conf.HTTP.ListenAddr = ":0"
 	if s.publicURL != "" {
@@ -252,8 +253,9 @@ func (s *SlackSuite) fetchSlackMessage(c *C) slack.Msg {
 	return msg
 }
 
-func (s *SlackSuite) TestSlackMessagePosting(c *C) {
-	s.startApp(c)
+// Tests if Interactive Mode posts Slack message with buttons correctly
+func (s *SlackSuite) TestSlackMessagePostingWithButtons(c *C) {
+	s.startApp(c, false)
 	request := s.createAccessRequest(c)
 	pluginData := s.checkPluginData(c, request.GetName())
 	msg := s.fetchSlackMessage(c)
@@ -279,8 +281,26 @@ func (s *SlackSuite) TestSlackMessagePosting(c *C) {
 	c.Assert(denyButton.Value, Equals, request.GetName())
 }
 
+// Tests if Interactive Mode posts Slack message with buttons correctly
+func (s *SlackSuite) TestSlackMessagePostingReadonly(c *C) {
+	s.startApp(c, true)
+	request := s.createAccessRequest(c)
+	pluginData := s.checkPluginData(c, request.GetName())
+	msg := s.fetchSlackMessage(c)
+	c.Assert(pluginData.Timestamp, Equals, msg.Timestamp)
+	c.Assert(pluginData.ChannelID, Equals, msg.Channel)
+	var blockAction *slack.ActionBlock
+	for _, blk := range msg.Blocks.BlockSet {
+		if a, ok := blk.(*slack.ActionBlock); ok && a.BlockID == "approve_or_deny" {
+			blockAction = a
+		}
+	}
+	// There should be no buttons block in readonly mode.
+	c.Assert(blockAction, IsNil)
+}
+
 func (s *SlackSuite) TestApproval(c *C) {
-	s.startApp(c)
+	s.startApp(c, false)
 	request := s.createAccessRequest(c)
 	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
@@ -298,7 +318,7 @@ func (s *SlackSuite) TestApproval(c *C) {
 }
 
 func (s *SlackSuite) TestDenial(c *C) {
-	s.startApp(c)
+	s.startApp(c, false)
 	request := s.createAccessRequest(c)
 	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
@@ -316,7 +336,7 @@ func (s *SlackSuite) TestDenial(c *C) {
 }
 
 func (s *SlackSuite) TestApproveExpired(c *C) {
-	s.startApp(c)
+	s.startApp(c, false)
 	request := s.createExpiredAccessRequest(c)
 	msg1 := s.fetchSlackMessage(c)
 
@@ -328,7 +348,7 @@ func (s *SlackSuite) TestApproveExpired(c *C) {
 }
 
 func (s *SlackSuite) TestDenyExpired(c *C) {
-	s.startApp(c)
+	s.startApp(c, false)
 	request := s.createExpiredAccessRequest(c)
 	msg1 := s.fetchSlackMessage(c)
 
