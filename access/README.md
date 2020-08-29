@@ -43,7 +43,7 @@ spec:
   allow:
     rules:
       - resources: ['access_request']
-        verbs: ['list','read','update'] # Note that you can not provide the update permission to the Slack plugin in notification_only mode.
+        verbs: ['list','read','update'] # Note that you can not provide the update permission to the Slack plugin in notify_only mode.
     # teleport currently refuses to issue certs for a user with 0 logins,
     # this restriction may be lifted in future versions.
     logins: ['access-plugin']

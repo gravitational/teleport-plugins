@@ -16,11 +16,11 @@ type Config struct {
 
 // SlackConfig holds Slack-specific configuration options.
 type SlackConfig struct {
-	Token            string `toml:"token"`
-	Secret           string `toml:"secret"`
-	Channel          string `toml:"channel"`
-	NotificationOnly bool   `toml:"notification_only"`
-	APIURL           string
+	Token      string `toml:"token"`
+	Secret     string `toml:"secret"`
+	Channel    string `toml:"channel"`
+	NotifyOnly bool   `toml:"notify_only"`
+	APIURL     string
 }
 
 const exampleConfig = `# example slack plugin configuration TOML file
@@ -34,7 +34,7 @@ root_cas = "/var/lib/teleport/plugins/slack/auth.cas"   # Teleport cluster CA ce
 token = "api_token"             # Slack Bot OAuth token
 secret = "signing-secret-value" # Slack API Signing Secret
 channel = "channel-name"        # Slack Channel name to post requests to
-notification_only = false                # Allow Approval / Denial actions on Slack, or use it as notification only
+notify_only = false                # Allow Approval / Denial actions on Slack, or use it as notification only
 
 [http]
 public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com

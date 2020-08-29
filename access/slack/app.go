@@ -176,8 +176,8 @@ func (a *App) onSlackCallback(ctx context.Context, cb Callback) error {
 
 	// If the plugin is working in read-only mode, do not process any
 	// callbacks from Slack, and return an error.
-	if a.conf.Slack.NotificationOnly {
-		return trace.Errorf("Received a Slack Webhook while in notification-only mode.")
+	if a.conf.Slack.NotifyOnly {
+		return trace.Errorf("Received a Slack Webhook while in notify-only mode.")
 	}
 
 	if len(cb.ActionCallback.BlockActions) != 1 {

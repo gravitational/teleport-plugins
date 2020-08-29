@@ -24,7 +24,7 @@ root_cas = "/var/lib/teleport/plugins/slack/auth.cas"    # Teleport cluster CA c
 token = "api-token"         # Slack Bot OAuth token
 secret = "secret-value"     # Slack API Signing Secret
 channel = "channel-name"    # Message delivery channel
-notification_only = false   # Whether run the plugin in notification only mode (Don't allow approval/denial via a Slack button)
+notify_only = false         # Whether run the plugin in notification only mode (Don't allow approval/denial via a Slack button)
 
 [http]
 # listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:443
