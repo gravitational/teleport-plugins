@@ -213,7 +213,7 @@ func (b *Bot) setupCustomAction(ctx context.Context, extensionID, schemaID, acti
 			ID:   schemaID,
 		},
 		ExtensionObjects: []Reference{
-			Reference{
+			{
 				Type: "service_reference",
 				ID:   b.serviceID,
 			},

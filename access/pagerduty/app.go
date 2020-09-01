@@ -43,6 +43,11 @@ func (a *App) Run(ctx context.Context) error {
 	a.Process = utils.NewProcess(ctx)
 	a.SpawnCriticalJob(a.mainJob)
 	<-a.Process.Done()
+	return a.Err()
+}
+
+// Err returns the error app finished with.
+func (a *App) Err() error {
 	return trace.Wrap(a.mainJob.Err())
 }
 
@@ -198,11 +203,12 @@ func (a *App) onPagerdutyAction(ctx context.Context, action WebhookAction) error
 	}
 
 	reqID := keyParts[1]
-	req, err := a.accessClient.GetRequest(ctx, reqID)
+	ctx, log = utils.WithLogField(ctx, "request_id", reqID)
 
+	req, err := a.accessClient.GetRequest(ctx, reqID)
 	if err != nil {
 		if trace.IsNotFound(err) {
-			log.WithError(err).WithField("request_id", reqID).Warning("Cannot process expired request")
+			log.WithError(err).Warning("Cannot process expired request")
 			return nil
 		}
 		return trace.Wrap(err)
@@ -217,6 +223,10 @@ func (a *App) onPagerdutyAction(ctx context.Context, action WebhookAction) error
 	}
 
 	ctx, log = utils.WithLogField(ctx, "pd_incident_id", action.IncidentID)
+
+	if pluginData.PagerdutyData.ID == "" {
+		return trace.Errorf("plugin data is empty")
+	}
 
 	if pluginData.PagerdutyData.ID != action.IncidentID {
 		log.WithField("plugin_data_incident_id", pluginData.PagerdutyData.ID).Debug("plugin_data.incident_id does not match incident.id")

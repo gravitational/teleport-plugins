@@ -73,7 +73,7 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 				Total: 1,
 			},
 			ExtensionSchemas: []ExtensionSchema{
-				ExtensionSchema{
+				{
 					ID:  "11",
 					Key: "custom_webhook",
 				},
