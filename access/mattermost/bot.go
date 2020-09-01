@@ -183,6 +183,12 @@ func (b *Bot) NewActionResponse(postID string, reqID string, reqData RequestData
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
+	var ephemeralText string
+	if lStatus := strings.ToLower(status); lStatus != "expired" {
+		ephemeralText = fmt.Sprintf("You have **%s** the request %s", lStatus, reqID)
+	} else {
+		ephemeralText = fmt.Sprintf("Request %s had been **%s**", reqID, lStatus)
+	}
 	return &ActionResponse{
 		Update: &mm.Post{
 			Id: postID,
@@ -190,7 +196,7 @@ func (b *Bot) NewActionResponse(postID string, reqID string, reqData RequestData
 				"attachments": []*mm.SlackAttachment{actionsAttachment},
 			},
 		},
-		EphemeralText: fmt.Sprintf("You have **%s** the request %s", strings.ToLower(status), reqID),
+		EphemeralText: ephemeralText,
 	}, nil
 }
 

@@ -9,7 +9,6 @@ import (
 	"runtime/debug"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
@@ -28,12 +27,12 @@ type FakeMattermost struct {
 	userIDCounter uint64
 }
 
-func NewFakeMattermost() *FakeMattermost {
+func NewFakeMattermost(concurrency int) *FakeMattermost {
 	router := httprouter.New()
 
 	mattermost := &FakeMattermost{
-		newPosts:    make(chan *mm.Post, 20),
-		postUpdates: make(chan *mm.Post, 20),
+		newPosts:    make(chan *mm.Post, concurrency),
+		postUpdates: make(chan *mm.Post, concurrency),
 		srv:         httptest.NewServer(router),
 	}
 
@@ -109,8 +108,7 @@ func NewFakeMattermost() *FakeMattermost {
 
 		post.Message = newPost.Message
 		post.Props = newPost.Props
-		post = mattermost.StorePost(post)
-		mattermost.postUpdates <- post
+		post = mattermost.UpdatePost(post)
 
 		rw.WriteHeader(http.StatusOK)
 		err = json.NewEncoder(rw).Encode(post)
@@ -146,6 +144,12 @@ func (s *FakeMattermost) StorePost(post *mm.Post) *mm.Post {
 	return post
 }
 
+func (s *FakeMattermost) UpdatePost(post *mm.Post) *mm.Post {
+	post = s.StorePost(post)
+	s.postUpdates <- post
+	return post
+}
+
 func (s *FakeMattermost) GetUser(id string) (mm.User, bool) {
 	if obj, ok := s.objects.Load(id); ok {
 		user, ok := obj.(mm.User)
@@ -162,9 +166,7 @@ func (s *FakeMattermost) StoreUser(user mm.User) mm.User {
 	return user
 }
 
-func (s *FakeMattermost) CheckNewPost(ctx context.Context, timeout time.Duration) (*mm.Post, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+func (s *FakeMattermost) CheckNewPost(ctx context.Context) (*mm.Post, error) {
 	select {
 	case post := <-s.newPosts:
 		return post, nil
@@ -173,9 +175,7 @@ func (s *FakeMattermost) CheckNewPost(ctx context.Context, timeout time.Duration
 	}
 }
 
-func (s *FakeMattermost) CheckPostUpdate(ctx context.Context, timeout time.Duration) (*mm.Post, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+func (s *FakeMattermost) CheckPostUpdate(ctx context.Context) (*mm.Post, error) {
 	select {
 	case post := <-s.postUpdates:
 		return post, nil
