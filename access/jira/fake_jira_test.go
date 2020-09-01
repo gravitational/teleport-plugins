@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"runtime/debug"
 	"sync"
-	"time"
+	"sync/atomic"
 
 	"github.com/andygrunwald/go-jira"
 	"github.com/gravitational/trace"
@@ -23,14 +23,15 @@ type FakeJIRA struct {
 	newIssues        chan Issue
 	issueTransitions chan Issue
 	author           jira.User
+	issueIDCounter   uint64
 }
 
-func NewFakeJIRA(author jira.User) *FakeJIRA {
+func NewFakeJIRA(author jira.User, concurrency int) *FakeJIRA {
 	router := httprouter.New()
 
 	self := &FakeJIRA{
-		newIssues:        make(chan Issue, 20),
-		issueTransitions: make(chan Issue, 20),
+		newIssues:        make(chan Issue, concurrency),
+		issueTransitions: make(chan Issue, concurrency),
 		srv:              httptest.NewServer(router),
 		author:           author,
 	}
@@ -51,16 +52,15 @@ func NewFakeJIRA(author jira.User) *FakeJIRA {
 	router.GET("/rest/api/2/mypermissions", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		permissions := Permissions{
 			Permissions: map[string]Permission{
-				"BROWSE_PROJECTS": Permission{
+				"BROWSE_PROJECTS": {
 					HavePermission: true,
 				},
-				"CREATE_ISSUES": Permission{
+				"CREATE_ISSUES": {
 					HavePermission: true,
 				},
 			},
 		}
 		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
 		err := json.NewEncoder(rw).Encode(&permissions)
 		fatalIf(err)
 	})
@@ -70,10 +70,7 @@ func NewFakeJIRA(author jira.User) *FakeJIRA {
 		err := json.NewDecoder(r.Body).Decode(&issueInput)
 		fatalIf(err)
 
-		id := fmt.Sprintf("%v", time.Now().UnixNano())
 		issue := Issue{
-			ID:         id,
-			Key:        "ISSUE-" + id,
 			Fields:     issueInput.Fields,
 			Properties: make(map[string]interface{}),
 		}
@@ -85,17 +82,17 @@ func NewFakeJIRA(author jira.User) *FakeJIRA {
 		}
 		issue.Fields.Status = &jira.Status{Name: "Pending"}
 		issue.Transitions = []jira.Transition{
-			jira.Transition{
+			{
 				ID: "100001", To: jira.Status{Name: "Approved"},
 			},
-			jira.Transition{
+			{
 				ID: "100002", To: jira.Status{Name: "Denied"},
 			},
-			jira.Transition{
+			{
 				ID: "100003", To: jira.Status{Name: "Expired"},
 			},
 		}
-		self.PutIssue(issue)
+		issue = self.StoreIssue(issue)
 		self.newIssues <- issue
 
 		rw.Header().Add("Content-Type", "application/json")
@@ -111,7 +108,6 @@ func NewFakeJIRA(author jira.User) *FakeJIRA {
 		}
 
 		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
 		err := json.NewEncoder(rw).Encode(issue)
 		fatalIf(err)
 	})
@@ -157,9 +153,15 @@ func (s *FakeJIRA) GetAuthor() jira.User {
 	return s.author
 }
 
-func (s *FakeJIRA) PutIssue(issue Issue) {
+func (s *FakeJIRA) StoreIssue(issue Issue) Issue {
+	if issue.ID == "" {
+		id := atomic.AddUint64(&s.issueIDCounter, 1)
+		issue.ID = fmt.Sprintf("%v", id)
+		issue.Key = fmt.Sprintf("ISSUE-%v", id)
+	}
 	s.issues.Store(issue.ID, issue)
 	s.issues.Store(issue.Key, issue)
+	return issue
 }
 
 func (s *FakeJIRA) GetIssue(idOrKey string) (Issue, bool) {
@@ -187,7 +189,7 @@ func (s *FakeJIRA) TransitionIssue(issue Issue, status string) Issue {
 	history := jira.ChangelogHistory{
 		Author: s.author,
 		Items: []jira.ChangelogItems{
-			jira.ChangelogItems{
+			{
 				FieldType: "jira",
 				Field:     "status",
 				ToString:  status,
@@ -195,14 +197,12 @@ func (s *FakeJIRA) TransitionIssue(issue Issue, status string) Issue {
 		},
 	}
 	issue.Changelog.Histories = append([]jira.ChangelogHistory{history}, issue.Changelog.Histories...)
-	s.PutIssue(issue)
+	issue = s.StoreIssue(issue)
 	s.issueTransitions <- issue
 	return issue
 }
 
-func (s *FakeJIRA) CheckNewIssue(ctx context.Context, timeout time.Duration) (Issue, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+func (s *FakeJIRA) CheckNewIssue(ctx context.Context) (Issue, error) {
 	select {
 	case issue := <-s.newIssues:
 		return issue, nil
@@ -211,9 +211,7 @@ func (s *FakeJIRA) CheckNewIssue(ctx context.Context, timeout time.Duration) (Is
 	}
 }
 
-func (s *FakeJIRA) CheckIssueTransition(ctx context.Context, timeout time.Duration) (Issue, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+func (s *FakeJIRA) CheckIssueTransition(ctx context.Context) (Issue, error) {
 	select {
 	case issue := <-s.issueTransitions:
 		return issue, nil

@@ -117,7 +117,7 @@ func NewBot(conf JIRAConfig) (*Bot, error) {
 }
 
 func (b *Bot) HealthCheck(ctx context.Context) error {
-	req, err := b.client.NewRequest(ctx, "GET", "rest/api/2/myself", nil)
+	req, err := b.client.NewRequest(ctx, http.MethodGet, "rest/api/2/myself", nil)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -176,7 +176,7 @@ func (b *Bot) CreateIssue(ctx context.Context, reqID string, reqData RequestData
 
 	issue, err := b.client.CreateIssue(ctx, &IssueInput{
 		Properties: []jira.EntityProperty{
-			jira.EntityProperty{
+			{
 				Key:   RequestIDPropertyKey,
 				Value: reqID,
 			},

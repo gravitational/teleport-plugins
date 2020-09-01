@@ -8,6 +8,9 @@ import (
 	"net/http"
 	"os"
 	"os/user"
+	"runtime"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -15,9 +18,12 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gravitational/teleport-plugins/access/integration"
+	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
+	"github.com/gravitational/teleport/lib/backend"
 	"github.com/gravitational/teleport/lib/events"
 	"github.com/gravitational/teleport/lib/services"
+	"github.com/gravitational/trace"
 
 	. "gopkg.in/check.v1"
 )
@@ -29,14 +35,15 @@ const (
 )
 
 type JiraSuite struct {
-	ctx       context.Context
-	cancel    context.CancelFunc
-	app       *App
-	publicURL string
-	me        *user.User
-	fakeJira  *FakeJIRA
-	teleport  *integration.TeleInstance
-	tmpFiles  []*os.File
+	ctx        context.Context
+	cancel     context.CancelFunc
+	app        *App
+	publicURL  string
+	raceNumber int
+	me         *user.User
+	fakeJira   *FakeJIRA
+	teleport   *integration.TeleInstance
+	tmpFiles   []*os.File
 }
 
 var _ = Suite(&JiraSuite{})
@@ -50,6 +57,7 @@ func (s *JiraSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Priv: priv, Pub: pub})
 
+	s.raceNumber = runtime.GOMAXPROCS(0)
 	s.me, err = user.Current()
 	c.Assert(err, IsNil)
 	userRole, err := services.NewRole("foo", services.RoleSpecV3{
@@ -81,12 +89,9 @@ func (s *JiraSuite) SetUpSuite(c *C) {
 }
 
 func (s *JiraSuite) SetUpTest(c *C) {
-	s.ctx, s.cancel = context.WithTimeout(context.Background(), 2*time.Second)
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	s.publicURL = ""
-	s.fakeJira = NewFakeJIRA(jira.User{
-		Name:         "Test User",
-		EmailAddress: s.me.Username + "@example.com",
-	})
+	s.fakeJira = NewFakeJIRA(jira.User{Name: "Test User", EmailAddress: s.me.Username + "@example.com"}, s.raceNumber)
 }
 
 func (s *JiraSuite) TearDownTest(c *C) {
@@ -153,13 +158,8 @@ func (s *JiraSuite) startApp(c *C) {
 	s.app, err = NewApp(conf)
 	c.Assert(err, IsNil)
 
-	go func() {
-		err = s.app.Run(s.ctx)
-		c.Assert(err, IsNil)
-	}()
-	ctx, cancel := context.WithTimeout(s.ctx, time.Millisecond*250)
-	defer cancel()
-	ok, err := s.app.WaitReady(ctx)
+	go s.app.Run(s.ctx)
+	ok, err := s.app.WaitReady(s.ctx)
 	c.Assert(err, IsNil)
 	c.Assert(ok, Equals, true)
 	if s.publicURL == "" {
@@ -170,6 +170,7 @@ func (s *JiraSuite) startApp(c *C) {
 func (s *JiraSuite) shutdownApp(c *C) {
 	err := s.app.Shutdown(s.ctx)
 	c.Assert(err, IsNil)
+	c.Assert(s.app.Err(), IsNil)
 }
 
 func (s *JiraSuite) createAccessRequest(c *C) services.AccessRequest {
@@ -190,7 +191,7 @@ func (s *JiraSuite) checkPluginData(c *C, reqID string) PluginData {
 	return DecodePluginData(rawData)
 }
 
-func (s *JiraSuite) postWebhook(c *C, issueID string) {
+func (s *JiraSuite) postWebhook(ctx context.Context, issueID string) (*http.Response, error) {
 	var buf bytes.Buffer
 	wh := Webhook{
 		WebhookEvent:       "jira:issue_updated",
@@ -198,12 +199,25 @@ func (s *JiraSuite) postWebhook(c *C, issueID string) {
 		Issue:              &WebhookIssue{ID: issueID},
 	}
 	err := json.NewEncoder(&buf).Encode(&wh)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, s.publicURL, &buf)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	request.Header.Add("Content-Type", "application/json")
+
+	response, err := http.DefaultClient.Do(request)
+	return response, trace.Wrap(err)
+}
+
+func (s *JiraSuite) postWebhookAndCheck(c *C, issueID string) {
+	resp, err := s.postWebhook(s.ctx, issueID)
 	c.Assert(err, IsNil)
-	resp, err := http.Post(s.publicURL, "application/json", &buf)
-	c.Assert(err, IsNil)
+	c.Assert(resp.Body.Close(), IsNil)
 	c.Assert(resp.StatusCode, Equals, http.StatusOK)
-	err = resp.Body.Close()
-	c.Assert(err, IsNil)
 }
 
 func (s *JiraSuite) TestIssueCreation(c *C) {
@@ -211,7 +225,7 @@ func (s *JiraSuite) TestIssueCreation(c *C) {
 	request := s.createAccessRequest(c)
 	pluginData := s.checkPluginData(c, request.GetName())
 
-	issue, err := s.fakeJira.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	issue, err := s.fakeJira.CheckNewIssue(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new issue stored"))
 	c.Assert(issue.Properties[RequestIDPropertyKey], Equals, request.GetName())
 	c.Assert(pluginData.ID, Equals, issue.ID)
@@ -222,10 +236,10 @@ func (s *JiraSuite) TestApproval(c *C) {
 	request := s.createAccessRequest(c)
 	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
-	issue, err := s.fakeJira.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	issue, err := s.fakeJira.CheckNewIssue(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new issue stored"))
 	s.fakeJira.TransitionIssue(issue, "Approved")
-	s.postWebhook(c, issue.ID)
+	s.postWebhookAndCheck(c, issue.ID)
 
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
@@ -243,10 +257,10 @@ func (s *JiraSuite) TestDenial(c *C) {
 	request := s.createAccessRequest(c)
 	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
-	issue, err := s.fakeJira.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	issue, err := s.fakeJira.CheckNewIssue(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new issue stored"))
 	s.fakeJira.TransitionIssue(issue, "Denied")
-	s.postWebhook(c, issue.ID)
+	s.postWebhookAndCheck(c, issue.ID)
 
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
@@ -263,11 +277,131 @@ func (s *JiraSuite) TestExpiration(c *C) {
 	s.startApp(c)
 	s.createExpiredAccessRequest(c)
 
-	issue, err := s.fakeJira.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	issue, err := s.fakeJira.CheckNewIssue(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new issue stored"))
 	issueID := issue.ID
-	issue, err = s.fakeJira.CheckIssueTransition(s.ctx, 250*time.Millisecond)
+	issue, err = s.fakeJira.CheckIssueTransition(s.ctx)
 	c.Assert(err, IsNil, Commentf("no issue transition detected"))
 	c.Assert(issue.ID, Equals, issueID)
 	c.Assert(issue.Fields.Status.Name, Equals, "Expired")
+}
+
+func (s *JiraSuite) TestRace(c *C) {
+	prevLogLevel := log.GetLevel()
+	log.SetLevel(log.InfoLevel) // Turn off noisy debug logging
+	defer log.SetLevel(prevLogLevel)
+
+	s.startApp(c)
+
+	var (
+		raceErr     error
+		raceErrOnce sync.Once
+		requests    sync.Map
+	)
+	setRaceErr := func(err error) error {
+		raceErrOnce.Do(func() {
+			raceErr = err
+		})
+		return err
+	}
+
+	watcher, err := s.teleport.Process.GetAuthServer().NewWatcher(s.ctx, services.Watch{
+		Kinds: []services.WatchKind{
+			{
+				Kind: services.KindAccessRequest,
+			},
+		},
+	})
+	c.Assert(err, IsNil)
+	defer watcher.Close()
+	c.Assert((<-watcher.Events()).Type, Equals, backend.OpInit)
+
+	process := utils.NewProcess(s.ctx)
+	for i := 0; i < s.raceNumber; i++ {
+		process.SpawnCritical(func(ctx context.Context) error {
+			_, err := s.teleport.CreateAccessRequest(ctx, s.me.Username, "admin")
+			if err := trace.Wrap(err); err != nil {
+				return setRaceErr(err)
+			}
+			return nil
+		})
+		process.SpawnCritical(func(ctx context.Context) error {
+			issue, err := s.fakeJira.CheckNewIssue(ctx)
+			if err := trace.Wrap(err); err != nil {
+				return setRaceErr(err)
+			}
+			if obtained, expected := issue.Fields.Status.Name, "Pending"; obtained != expected {
+				return setRaceErr(trace.Errorf("wrong issue status. expected %q, obtained %q", expected, obtained))
+			}
+			s.fakeJira.TransitionIssue(issue, "Approved")
+
+			ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			defer cancel()
+			var lastErr error
+			for {
+				log.Infof("Trying to approve issue %q", issue.Key)
+				resp, err := s.postWebhook(ctx, issue.ID)
+				if err != nil {
+					if utils.IsDeadline(err) {
+						return setRaceErr(lastErr)
+					}
+					return setRaceErr(trace.Wrap(err))
+				}
+				if err := resp.Body.Close(); err != nil {
+					return setRaceErr(trace.Wrap(err))
+				}
+				if status := resp.StatusCode; status != http.StatusOK {
+					lastErr = trace.Errorf("got %v http code from webhook server", status)
+				} else {
+					return nil
+				}
+			}
+		})
+		process.SpawnCritical(func(ctx context.Context) error {
+			issue, err := s.fakeJira.CheckIssueTransition(ctx)
+			if err := trace.Wrap(err); err != nil {
+				return setRaceErr(err)
+			}
+			if obtained, expected := issue.Fields.Status.Name, "Approved"; obtained != expected {
+				return setRaceErr(trace.Errorf("wrong issue status. expected %q, obtained %q", expected, obtained))
+			}
+			return nil
+		})
+	}
+	for i := 0; i < 2*s.raceNumber; i++ {
+		process.SpawnCritical(func(ctx context.Context) error {
+			var event services.Event
+			select {
+			case event = <-watcher.Events():
+			case <-ctx.Done():
+				return setRaceErr(trace.Wrap(ctx.Err()))
+			}
+			if obtained, expected := event.Type, backend.OpPut; obtained != expected {
+				return setRaceErr(trace.Errorf("wrong event type. expected %v, obtained %v", expected, obtained))
+			}
+			req := event.Resource.(services.AccessRequest)
+			var newCounter int64
+			val, _ := requests.LoadOrStore(req.GetName(), &newCounter)
+			switch state := req.GetState(); state {
+			case services.RequestState_PENDING:
+				atomic.AddInt64(val.(*int64), 1)
+			case services.RequestState_APPROVED:
+				atomic.AddInt64(val.(*int64), -1)
+			default:
+				return setRaceErr(trace.Errorf("wrong request state %v", state))
+			}
+			return nil
+		})
+	}
+	process.Terminate()
+	<-process.Done()
+	c.Assert(raceErr, IsNil)
+
+	var count int
+	requests.Range(func(key, val interface{}) bool {
+		count++
+		c.Assert(*val.(*int64), Equals, int64(0))
+		return true
+	})
+	c.Assert(count, Equals, s.raceNumber)
 }
