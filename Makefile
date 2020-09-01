@@ -31,7 +31,7 @@ access-example:
 # Run all tests
 .PHONY: test
 test:
-	go test -count 1 ./...
+	go test -race -count 1 ./...
 
 # Individual releases
 .PHONY: release/access-slack
