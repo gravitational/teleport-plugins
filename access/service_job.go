@@ -6,6 +6,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/gravitational/trace"
+	"google.golang.org/grpc"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -20,6 +21,7 @@ type watcherJob struct {
 }
 
 func NewWatcherJob(client Client, filter Filter, fn WatcherJobFunc) utils.ServiceJob {
+	client = client.WithCallOptions(grpc.WaitForReady(true)) // Enable backoff on reconnecting.
 	watcherJob := &watcherJob{
 		client:    client,
 		filter:    filter,
