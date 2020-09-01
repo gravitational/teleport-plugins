@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
@@ -31,15 +30,15 @@ type FakeGitlab struct {
 	issueUpdates       chan Issue
 }
 
-func NewFakeGitLab(projectID IntID) *FakeGitlab {
+func NewFakeGitLab(projectID IntID, concurrency int) *FakeGitlab {
 	router := httprouter.New()
 
 	gitlab := &FakeGitlab{
-		newIssues:          make(chan Issue, 20),
-		issueUpdates:       make(chan Issue, 20),
-		newProjectHooks:    make(chan ProjectHook, 20),
-		projectHookUpdates: make(chan ProjectHook, 20),
-		newLabels:          make(chan Label, 20),
+		newIssues:          make(chan Issue, concurrency),
+		issueUpdates:       make(chan Issue, concurrency),
+		newProjectHooks:    make(chan ProjectHook, concurrency),
+		projectHookUpdates: make(chan ProjectHook, concurrency),
+		newLabels:          make(chan Label, concurrency),
 		srv:                httptest.NewServer(router),
 	}
 
@@ -47,7 +46,6 @@ func NewFakeGitLab(projectID IntID) *FakeGitlab {
 
 	router.GET("/api/v4/projects/:project_id", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
 		err := json.NewEncoder(rw).Encode(&Project{ID: projectID})
 		fatalIf(err)
 	})
@@ -64,7 +62,6 @@ func NewFakeGitLab(projectID IntID) *FakeGitlab {
 		})
 
 		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
 		err := json.NewEncoder(rw).Encode(hooks)
 		fatalIf(err)
 	})
@@ -103,7 +100,6 @@ func NewFakeGitLab(projectID IntID) *FakeGitlab {
 		gitlab.projectHookUpdates <- hook
 
 		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
 		err = json.NewEncoder(rw).Encode(&hook)
 		fatalIf(err)
 	})
@@ -123,7 +119,6 @@ func NewFakeGitLab(projectID IntID) *FakeGitlab {
 		})
 
 		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
 		err := json.NewEncoder(rw).Encode(labels)
 		fatalIf(err)
 	})
@@ -203,7 +198,6 @@ func NewFakeGitLab(projectID IntID) *FakeGitlab {
 		gitlab.issueUpdates <- issue
 
 		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
 		err = json.NewEncoder(rw).Encode(&issue)
 		fatalIf(err)
 	})
@@ -221,7 +215,6 @@ func NewFakeGitLab(projectID IntID) *FakeGitlab {
 			return
 		}
 
-		rw.WriteHeader(http.StatusOK)
 		err = json.NewEncoder(rw).Encode(&issue)
 		fatalIf(err)
 	})
@@ -320,9 +313,7 @@ func (s *FakeGitlab) StoreProjectHook(hook ProjectHook) ProjectHook {
 	return hook
 }
 
-func (s *FakeGitlab) CheckNewProjectHook(ctx context.Context, timeout time.Duration) (ProjectHook, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+func (s *FakeGitlab) CheckNewProjectHook(ctx context.Context) (ProjectHook, error) {
 	select {
 	case hook := <-s.newProjectHooks:
 		return hook, nil
@@ -331,9 +322,7 @@ func (s *FakeGitlab) CheckNewProjectHook(ctx context.Context, timeout time.Durat
 	}
 }
 
-func (s *FakeGitlab) CheckProjectHookUpdate(ctx context.Context, timeout time.Duration) (ProjectHook, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+func (s *FakeGitlab) CheckProjectHookUpdate(ctx context.Context) (ProjectHook, error) {
 	select {
 	case hook := <-s.projectHookUpdates:
 		return hook, nil
@@ -363,9 +352,7 @@ func (s *FakeGitlab) GetAllNewLabels() map[string]Label {
 	}
 }
 
-func (s *FakeGitlab) CheckNewIssue(ctx context.Context, timeout time.Duration) (Issue, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+func (s *FakeGitlab) CheckNewIssue(ctx context.Context) (Issue, error) {
 	select {
 	case issue := <-s.newIssues:
 		return issue, nil
@@ -374,9 +361,7 @@ func (s *FakeGitlab) CheckNewIssue(ctx context.Context, timeout time.Duration) (
 	}
 }
 
-func (s *FakeGitlab) CheckIssueUpdate(ctx context.Context, timeout time.Duration) (Issue, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+func (s *FakeGitlab) CheckIssueUpdate(ctx context.Context) (Issue, error) {
 	select {
 	case issue := <-s.issueUpdates:
 		return issue, nil
