@@ -19,6 +19,7 @@ type App struct {
 
 	accessClient access.Client
 	webhook      *WebhookClient
+	callbackSrv  *CallbackServer
 	mainJob      utils.ServiceJob
 
 	*utils.Process
@@ -26,10 +27,7 @@ type App struct {
 
 // NewApp initializes a new teleport-webhooks app and returns it.
 func NewApp(conf Config) (*App, error) {
-	app := &App{
-		conf:    conf,
-		webhook: NewWebhookClient(conf.Webhook),
-	}
+	app := &App{conf: conf}
 	app.mainJob = utils.NewServiceJob(app.run)
 	return app, nil
 }
@@ -48,8 +46,51 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 	return a.mainJob.WaitReady(ctx)
 }
 
+// initCallbackServer initializes the incoming webhooks (callbacks) server
+// and returns it's services job, status, and, optionally, an error.
+// It's invoked in `run`, only if `a.conf.Webhook.NotifyOnly` is false.
+func (a *App) initCallbackServer(ctx context.Context) (utils.ServiceJob, bool, error) {
+	// Make the instance of callback server first, make sure the
+	// config is OK
+	var err error
+	a.callbackSrv, err = NewCallbackServer(a.conf.HTTP, a.onCallback)
+	if err != nil {
+		return nil, false, err
+	}
+
+	// Make sure the certificates are valid if the config requires them.
+	err = a.callbackSrv.EnsureCert()
+	if err != nil {
+		return nil, false, err
+	}
+
+	// Start the server
+	httpJob := a.callbackSrv.ServiceJob()
+	a.SpawnCriticalJob(httpJob)
+	httpOk, err := httpJob.WaitReady(ctx)
+	if err != nil {
+		return httpJob, httpOk, err
+	}
+
+	return httpJob, httpOk, nil
+}
+
 func (a *App) run(ctx context.Context) (err error) {
 	log.Infof("Starting Teleport Webhooks Plugin %s:%s", Version, Gitref)
+
+	// Initialize the callback server if we need to:
+	// Only init the callback server if NOT running in notifyOnly mode
+	var httpJob utils.ServiceJob
+	httpOk := true
+	if !a.conf.Webhook.NotifyOnly {
+		httpJob, httpOk, err = a.initCallbackServer(ctx)
+		if err != nil {
+			return
+		}
+	}
+
+	// Initialize the webhook sender client
+	a.webhook = NewWebhookClient(a.conf)
 
 	// Load the certificates that the plugin will use to authenticate
 	// itself with Teleport.
@@ -88,7 +129,6 @@ func (a *App) run(ctx context.Context) (err error) {
 		access.Filter{},
 		a.onWatcherEvent,
 	)
-
 	// Start the access request watcher
 	a.SpawnCriticalJob(watcherJob)
 	watcherOk, err := watcherJob.WaitReady(ctx)
@@ -97,10 +137,18 @@ func (a *App) run(ctx context.Context) (err error) {
 	}
 
 	// Set the applicataion status to Ready if the watcher successfully loaded.
-	a.mainJob.SetReady(watcherOk)
+	// httpOk is true by defualt, so even if we haven't actually tried initializing
+	// the callback server, this line will still work.
+	a.mainJob.SetReady(watcherOk && httpOk)
 
 	// Wait for Watcher to close it's channel.
 	<-watcherJob.Done()
+
+	// If running with the callback HTTP server, then also wait for it's channel to close.
+	if httpJob != nil {
+		<-httpJob.Done()
+		return trace.NewAggregate(watcherJob.Err(), httpJob.Err())
+	}
 	return trace.Wrap(watcherJob.Err())
 }
 
@@ -163,8 +211,56 @@ func (a *App) onRequestUpdate(ctx context.Context, req access.Request) error {
 	return nil
 }
 
-// TODO add a config option to send a webhook when a request is deleted.
+// TODO: Either add an option to send deleted requests, or drop this handler.
 func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 	log.WithField("request_id", req.ID).Info("Ignoring deleted request")
+	return nil
+}
+
+// OnCallback processes an incoming webhook actions.
+// It's called from CallbackServer's onCallback.
+//
+// It doesn't have to care about the HTTP request at all — just process
+// the request logic, or return an error if it's invalid or an error happened.
+// The CallbackServer will send the appropriate response to the HTTP request.
+func (a *App) onCallback(ctx context.Context, cb Callback) error {
+
+	// If the plugin is working in read-only mode, do not process any
+	// callbacks from Slack, and return an error.
+	if a.conf.Webhook.NotifyOnly {
+		return trace.Errorf("Received an incoming webhook while in notify-only mode.")
+	}
+
+	// Fetch the requeast from Auth Server
+	req, err := a.accessClient.GetRequest(ctx, cb.Payload.ReqID)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	// Allow only changing the requests that are pending. If someone
+	// tries to change a request that's already approved or denied,
+	// show them an error message.
+	if req.State != access.StatePending {
+		return trace.Errorf("Cannot process non-pending request: %+v", req)
+	}
+
+	// Make sure the log entries will have relevant request fields
+	logger := log.WithFields(log.Fields{
+		"request_id":    req.ID,
+		"request_user":  req.User,
+		"request_roles": req.Roles,
+	})
+
+	// Validate proposed new request state.
+	newState := stringToState(cb.Payload.State)
+	if newState == access.StatePending {
+		logger.Debugf("Attempt to set access request state to Pending")
+	}
+
+	if err := a.accessClient.SetRequestState(ctx, req.ID, newState, cb.Payload.Delegator); err != nil {
+		return trace.Wrap(err)
+	}
+
+	logger.Infof("teleport-webhook user %s %s the request", cb.Payload.Delegator, cb.Payload.State)
 	return nil
 }

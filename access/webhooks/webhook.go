@@ -19,6 +19,7 @@ const webhookHTTPTimeout = 10 * time.Second
 type WebhookClient struct {
 	client      *http.Client
 	url         string
+	callbackURL string
 	notifyOnly  bool
 	clusterName string
 }
@@ -30,13 +31,14 @@ type Payload struct {
 	RequestID   string
 	User        string
 	Roles       []string
-	CreatedAt   time.Time
-	StateNum    access.State
-	StateName   string
+	CreatedAt   int64
+	State       access.State
+	StateStr    string
+	CallbackURL string
 }
 
 // NewWebhookClient initializes and returns a new webhook client
-func NewWebhookClient(conf WebhookConfig) *WebhookClient {
+func NewWebhookClient(conf Config) *WebhookClient {
 	return &WebhookClient{
 		client: &http.Client{
 			Timeout: webhookHTTPTimeout,
@@ -45,14 +47,10 @@ func NewWebhookClient(conf WebhookConfig) *WebhookClient {
 				MaxIdleConnsPerHost: webhookMaxConnections,
 			},
 		},
-		notifyOnly: conf.NotifyOnly,
-		url:        conf.URL,
+		notifyOnly:  conf.Webhook.NotifyOnly,
+		url:         conf.Webhook.URL,
+		callbackURL: conf.HTTP.PublicAddr,
 	}
-}
-
-// stateString converts an access.State to it's string representation
-func stateString(state access.State) string {
-	return [...]string{"", "Pending", "Approved", "Denied"}[state]
 }
 
 // makeRequestBody builds a Payload and then serializes it to JSON,
@@ -64,9 +62,10 @@ func (c *WebhookClient) makeRequestBody(req access.Request) ([]byte, error) {
 		RequestID:   req.ID,
 		User:        req.User,
 		Roles:       req.Roles,
-		CreatedAt:   req.Created,
-		StateNum:    req.State,
-		StateName:   stateString(req.State),
+		CreatedAt:   req.Created.Unix(),
+		State:       req.State,
+		StateStr:    stateToString(req.State),
+		CallbackURL: c.callbackURL,
 	}
 
 	return json.Marshal(payload)
