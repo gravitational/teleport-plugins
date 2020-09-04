@@ -32,8 +32,8 @@ type Payload struct {
 	User        string
 	Roles       []string
 	CreatedAt   int64
-	State       access.State
-	StateStr    string
+	State       string
+	NotifyOnly  bool
 	CallbackURL string
 }
 
@@ -63,9 +63,9 @@ func (c *WebhookClient) makeRequestBody(req access.Request) ([]byte, error) {
 		User:        req.User,
 		Roles:       req.Roles,
 		CreatedAt:   req.Created.Unix(),
-		State:       req.State,
-		StateStr:    stateToString(req.State),
+		State:       stateToString(req.State),
 		CallbackURL: c.callbackURL,
+		NotifyOnly:  c.notifyOnly,
 	}
 
 	return json.Marshal(payload)

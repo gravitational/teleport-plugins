@@ -202,19 +202,34 @@ func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 // the Teleport server.
 // It sends the webhook with the json-marshalled request and some extra meta information.
 func (a *App) onRequestUpdate(ctx context.Context, req access.Request) error {
+	stateStr := stateToString(req.State)
+	logger := log.WithFields(log.Fields{
+		"request_id":    req.ID,
+		"request_state": stateStr,
+	})
+
+	// Ignore status updates that the plugin is not configured to listen to.
+	if !a.conf.Webhook.RequestStatuses[stateStr] {
+		logger.Info("Not configured to send webhooks on this state.")
+		return nil
+	}
+
 	err := a.webhook.sendWebhook(ctx, req)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	log.WithField("request_id", req.ID).Info("Successfully posted to the Webhook")
+	logger.Info("Successfully posted to the Webhook")
 	return nil
 }
 
-// TODO: Either add an option to send deleted requests, or drop this handler.
 func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
-	log.WithField("request_id", req.ID).Info("Ignoring deleted request")
-	return nil
+	if !a.conf.Webhook.RequestStatuses["Deleted"] {
+		log.WithField("request_id", req.ID).Info("Not configured to send webhooks on request deletions.")
+		return nil
+	}
+
+	return trace.Errorf("Sending deletion requests is not implemented yet!")
 }
 
 // OnCallback processes an incoming webhook actions.

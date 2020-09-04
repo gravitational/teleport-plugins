@@ -16,8 +16,9 @@ type Config struct {
 
 // WebhookConfig represents webhook configuration section, including the URL to use and notifyOnly mode
 type WebhookConfig struct {
-	URL        string `toml:"webhook_url"`
-	NotifyOnly bool   `toml:"notify_only"`
+	URL             string          `toml:"webhook_url"`
+	NotifyOnly      bool            `toml:"notify_only"`
+	RequestStatuses map[string]bool `toml:"request_statuses"`
 }
 
 const exampleConfig = `# example slack plugin configuration TOML file
@@ -29,7 +30,8 @@ root_cas = "/var/lib/teleport/plugins/slack/auth.cas"   # Teleport cluster CA ce
 
 [webhook]
 webhook_url = "https://mywebhook.com/ppst" # Receiver webhook URL
-notify_only = false                # Allow Approval / Denial actions on Slack, or use it as notification only
+notify_only = false # Allow Approval / Denial actions via the Callbacks
+request_statuses = { "Pending" = true, "Approved" = false, "Denied" = false } # What request statuses to notify about?
 
 [http]
 public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com
@@ -75,9 +77,14 @@ func (c *Config) CheckAndSetDefaults() error {
 	if c.Teleport.RootCAs == "" {
 		c.Teleport.RootCAs = "cas.pem"
 	}
+
 	if c.Webhook.URL == "" {
 		return trace.BadParameter("missing required value webhook.webhook_url")
 	}
+	if c.Webhook.RequestStatuses == nil {
+		c.Webhook.RequestStatuses = defaultStatuses
+	}
+
 	if c.HTTP.ListenAddr == "" {
 		c.HTTP.ListenAddr = ":8081"
 	}
@@ -91,4 +98,10 @@ func (c *Config) CheckAndSetDefaults() error {
 		c.Log.Severity = "info"
 	}
 	return nil
+}
+
+var defaultStatuses = map[string]bool{
+	"Pending":  true,
+	"Approved": false,
+	"Denied":   false,
 }

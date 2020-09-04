@@ -9,6 +9,7 @@ root_cas = "/mnt/shared/certs/access-plugin/plug.cas"   # Teleport cluster CA ce
 [webhook]
 webhook_url = "https://hooks.zapier.com/hooks/catch/8407867/oar7ris/" # Receiver webhook URL
 notify_only = false # Allow Approval / Denial actions on Slack, or use it as notification only
+request_statuses = { "Pending" = true, "Approved" = false, "Denied" = false }
 
 [http]
 listen_addr = "0.0.0.0:8046" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:443
