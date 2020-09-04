@@ -31,10 +31,6 @@ import (
 )
 
 const (
-	// ActionApprove uniquely identifies the approve button in events.
-	ActionApprove = "approve_request"
-	// ActionDeny uniquely identifies the deny button in events.
-	ActionDeny = "deny_request"
 	// DefaultDir is the directory to be used in various configurations.
 	// It's used across the files in main package, and in utils.
 	DefaultDir = "/var/lib/teleport/plugins/webhooks"

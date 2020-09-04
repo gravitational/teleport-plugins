@@ -78,6 +78,9 @@ func (c *WebhookClient) sendWebhook(ctx context.Context, req access.Request) err
 	}
 
 	request, err := http.NewRequestWithContext(ctx, "POST", c.url, bytes.NewReader(body))
+	if err != nil {
+		return trace.Wrap(err, "Failed to prepare the HTTP request.")
+	}
 	request.Header.Set("Content-Type", "application/json")
 
 	response, err := c.client.Do(request)

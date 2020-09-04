@@ -137,7 +137,7 @@ func (a *App) run(ctx context.Context) (err error) {
 	}
 
 	// Set the applicataion status to Ready if the watcher successfully loaded.
-	// httpOk is true by defualt, so even if we haven't actually tried initializing
+	// httpOk is true by default, so even if we haven't actually tried initializing
 	// the callback server, this line will still work.
 	a.mainJob.SetReady(watcherOk && httpOk)
 

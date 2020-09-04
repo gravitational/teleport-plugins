@@ -37,7 +37,6 @@ type CallbackFunc func(ctx context.Context, callback Callback) error
 type CallbackServer struct {
 	http       *utils.HTTP
 	onCallback CallbackFunc
-	counter    uint64
 }
 
 // NewCallbackServer initializes and returns an HTTP server that handles Slack callback (webhook) requests.
@@ -107,14 +106,3 @@ func (s *CallbackServer) handleCallback(rw http.ResponseWriter, r *http.Request,
 		rw.WriteHeader(http.StatusOK)
 	}
 }
-
-// func (s *CallbackServer) validateSignature(reqSignature, payload, secret string) error {
-// 	h := hmac.New(sha256.New, []byte(secret))
-// 	h.Write([]byte(payload))
-// 	sign := base64.StdEncoding.EncodeToString(h.Sum(nil))
-
-// 	if sign != reqSignature {
-// 		return trace.Errorf("Request signature verification failed")
-// 	}
-// 	return nil
-// }
