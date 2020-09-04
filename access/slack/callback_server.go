@@ -34,21 +34,33 @@ type CallbackFunc func(ctx context.Context, callback Callback) error
 type CallbackServer struct {
 	http       *utils.HTTP
 	secret     string
+	readOnly   bool
 	onCallback CallbackFunc
 	counter    uint64
 }
 
 // NewCallbackServer initializes and returns an HTTP server that handles Slack callback (webhook) requests.
-func NewCallbackServer(conf utils.HTTPConfig, secret string, onCallback CallbackFunc) (*CallbackServer, error) {
+func NewCallbackServer(conf utils.HTTPConfig, secret string, readOnly bool, onCallback CallbackFunc) (*CallbackServer, error) {
 	httpSrv, err := utils.NewHTTP(conf)
 	if err != nil {
 		return nil, err
 	}
-	srv := &CallbackServer{
-		http:       httpSrv,
-		secret:     secret,
-		onCallback: onCallback,
+
+	var srv *CallbackServer
+	if readOnly {
+		srv = &CallbackServer{
+			http:     httpSrv,
+			secret:   secret,
+			readOnly: true,
+		}
+	} else {
+		srv = &CallbackServer{
+			http:       httpSrv,
+			secret:     secret,
+			onCallback: onCallback,
+		}
 	}
+
 	httpSrv.POST("/", srv.processCallback)
 	return srv, nil
 }
@@ -78,6 +90,14 @@ func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request
 
 	httpRequestID := fmt.Sprintf("%s-%v", r.Header.Get("x-slack-request-timestamp"), atomic.AddUint64(&s.counter, 1))
 	log := log.WithField("slack_http_id", httpRequestID)
+
+	// If the plugin is working in notify-only mode, do not process any
+	// callbacks from Slack, and return an error.
+	if s.readOnly {
+		log.Error("Received a Slack Webhook while in notify-only mode")
+		http.Error(rw, "", http.StatusUnauthorized)
+		return
+	}
 
 	sv, err := slack.NewSecretsVerifier(r.Header, s.secret)
 	if err != nil {

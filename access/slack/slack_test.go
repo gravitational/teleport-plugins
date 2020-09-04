@@ -22,6 +22,7 @@ import (
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/events"
 	"github.com/gravitational/teleport/lib/services"
+	"github.com/gravitational/trace"
 	"github.com/nlopes/slack"
 	"github.com/nlopes/slack/slacktest"
 
@@ -38,6 +39,7 @@ const (
 type SlackSuite struct {
 	ctx         context.Context
 	cancel      context.CancelFunc
+	appConfig   Config
 	app         *App
 	publicURL   string
 	me          *user.User
@@ -91,33 +93,7 @@ func (s *SlackSuite) SetUpTest(c *C) {
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), time.Second)
 	s.publicURL = ""
 	s.startSlack(c)
-}
 
-func (s *SlackSuite) TearDownTest(c *C) {
-	s.shutdownApp(c)
-	s.slackServer.Stop()
-	s.cancel()
-	for _, tmp := range s.tmpFiles {
-		err := os.Remove(tmp.Name())
-		c.Assert(err, IsNil)
-	}
-	s.tmpFiles = []*os.File{}
-}
-
-func (s *SlackSuite) newTmpFile(c *C, pattern string) (file *os.File) {
-	file, err := ioutil.TempFile("", pattern)
-	c.Assert(err, IsNil)
-	s.tmpFiles = append(s.tmpFiles, file)
-	return
-}
-
-func (s *SlackSuite) startSlack(c *C) {
-	s.slackServer = slacktest.NewTestServer()
-	s.slackServer.SetBotName("access_bot")
-	go s.slackServer.Start()
-}
-
-func (s *SlackSuite) startApp(c *C, notifyOnly bool) {
 	auth := s.teleport.Process.GetAuthServer()
 	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
 	c.Assert(err, IsNil)
@@ -153,15 +129,44 @@ func (s *SlackSuite) startApp(c *C, notifyOnly bool) {
 	conf.Slack.Secret = SlackSecret
 	conf.Slack.Token = "000000"
 	conf.Slack.Channel = "test"
-	conf.Slack.NotifyOnly = notifyOnly
 	conf.Slack.APIURL = "http://" + s.slackServer.ServerAddr + "/"
 	conf.HTTP.ListenAddr = ":0"
-	if s.publicURL != "" {
-		conf.HTTP.PublicAddr = s.publicURL
-	}
 	conf.HTTP.Insecure = true
 
-	s.app, err = NewApp(conf)
+	s.appConfig = conf
+}
+
+func (s *SlackSuite) TearDownTest(c *C) {
+	s.shutdownApp(c)
+	s.slackServer.Stop()
+	s.cancel()
+	for _, tmp := range s.tmpFiles {
+		err := os.Remove(tmp.Name())
+		c.Assert(err, IsNil)
+	}
+	s.tmpFiles = []*os.File{}
+}
+
+func (s *SlackSuite) newTmpFile(c *C, pattern string) (file *os.File) {
+	file, err := ioutil.TempFile("", pattern)
+	c.Assert(err, IsNil)
+	s.tmpFiles = append(s.tmpFiles, file)
+	return
+}
+
+func (s *SlackSuite) startSlack(c *C) {
+	s.slackServer = slacktest.NewTestServer()
+	s.slackServer.SetBotName("access_bot")
+	go s.slackServer.Start()
+}
+
+func (s *SlackSuite) startApp(c *C) {
+	var err error
+
+	if s.publicURL != "" {
+		s.appConfig.HTTP.PublicAddr = s.publicURL
+	}
+	s.app, err = NewApp(s.appConfig)
 	c.Assert(err, IsNil)
 
 	go func() {
@@ -201,11 +206,18 @@ func (s *SlackSuite) checkPluginData(c *C, reqID string) PluginData {
 	return DecodePluginData(rawData)
 }
 
-func (s *SlackSuite) postCallback(c *C, actionID, reqID string) {
+func (s *SlackSuite) postCallbackAndCheck(c *C, actionID, reqID string, expectedStatus int) {
+	resp, err := s.postCallback(s.ctx, actionID, reqID)
+	c.Assert(err, IsNil)
+	c.Assert(resp.Body.Close(), IsNil)
+	c.Assert(resp.StatusCode, Equals, expectedStatus)
+}
+
+func (s *SlackSuite) postCallback(ctx context.Context, actionID, reqID string) (*http.Response, error) {
 	cb := &slack.InteractionCallback{
 		ActionCallback: slack.ActionCallbacks{
 			BlockActions: []*slack.BlockAction{
-				&slack.BlockAction{
+				{
 					ActionID: actionID,
 					Value:    reqID,
 				},
@@ -214,7 +226,9 @@ func (s *SlackSuite) postCallback(c *C, actionID, reqID string) {
 	}
 
 	payload, err := json.Marshal(cb)
-	c.Assert(err, IsNil)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 	data := url.Values{
 		"payload": {string(payload)},
 	}
@@ -223,42 +237,48 @@ func (s *SlackSuite) postCallback(c *C, actionID, reqID string) {
 	stimestamp := fmt.Sprintf("%d", time.Now().Unix())
 	hash := hmac.New(sha256.New, []byte(SlackSecret))
 	_, err = hash.Write([]byte(fmt.Sprintf("v0:%s:%s", stimestamp, body)))
-	c.Assert(err, IsNil)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 
 	signature := hash.Sum(nil)
 
-	req, err := http.NewRequest("POST", s.publicURL, strings.NewReader(body))
-	c.Assert(err, IsNil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.publicURL, strings.NewReader(body))
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Add("X-Slack-Request-Timestamp", stimestamp)
 	req.Header.Add("X-Slack-Signature", "v0="+hex.EncodeToString(signature))
-	response, err := http.DefaultClient.Do(req)
-	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, http.StatusOK)
 
-	err = response.Body.Close()
-	c.Assert(err, IsNil)
+	response, err := http.DefaultClient.Do(req)
+	return response, trace.Wrap(err)
 }
 
 // fetchSlackMessage and all the tests using it heavily rely on changes in slacktest package, see 13c57c4 commit.
-func (s *SlackSuite) fetchSlackMessage(c *C) slack.Msg {
+func (s *SlackSuite) fetchSlackMessage(ctx context.Context) (slack.Msg, error) {
 	var msg slack.Msg
 	select {
 	case data := <-s.slackServer.SeenFeed:
 		err := json.Unmarshal([]byte(data), &msg)
-		c.Assert(err, IsNil)
-	case <-time.After(time.Millisecond * 250):
-		c.Fatal("no messages were sent to a channel")
+		return msg, trace.Wrap(err)
+	case <-ctx.Done():
+		return msg, trace.Wrap(ctx.Err())
 	}
+}
+
+func (s *SlackSuite) fetchSlackMessageAndCheck(c *C) slack.Msg {
+	msg, err := s.fetchSlackMessage(s.ctx)
+	c.Assert(err, IsNil)
 	return msg
 }
 
 // Tests if Interactive Mode posts Slack message with buttons correctly
 func (s *SlackSuite) TestSlackMessagePostingWithButtons(c *C) {
-	s.startApp(c, false)
+	s.startApp(c)
 	request := s.createAccessRequest(c)
 	pluginData := s.checkPluginData(c, request.GetName())
-	msg := s.fetchSlackMessage(c)
+	msg := s.fetchSlackMessageAndCheck(c)
 	c.Assert(pluginData.Timestamp, Equals, msg.Timestamp)
 	c.Assert(pluginData.ChannelID, Equals, msg.Channel)
 	var blockAction *slack.ActionBlock
@@ -283,10 +303,11 @@ func (s *SlackSuite) TestSlackMessagePostingWithButtons(c *C) {
 
 // Tests if Interactive Mode posts Slack message with buttons correctly
 func (s *SlackSuite) TestSlackMessagePostingReadonly(c *C) {
-	s.startApp(c, true)
+	s.appConfig.Slack.NotifyOnly = true
+	s.startApp(c)
 	request := s.createAccessRequest(c)
 	pluginData := s.checkPluginData(c, request.GetName())
-	msg := s.fetchSlackMessage(c)
+	msg := s.fetchSlackMessageAndCheck(c)
 	c.Assert(pluginData.Timestamp, Equals, msg.Timestamp)
 	c.Assert(pluginData.ChannelID, Equals, msg.Channel)
 	var blockAction *slack.ActionBlock
@@ -300,11 +321,11 @@ func (s *SlackSuite) TestSlackMessagePostingReadonly(c *C) {
 }
 
 func (s *SlackSuite) TestApproval(c *C) {
-	s.startApp(c, false)
+	s.startApp(c)
 	request := s.createAccessRequest(c)
 	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
-	s.postCallback(c, "approve_request", request.GetName())
+	s.postCallbackAndCheck(c, "approve_request", request.GetName(), http.StatusOK)
 
 	request, err := s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
@@ -318,11 +339,11 @@ func (s *SlackSuite) TestApproval(c *C) {
 }
 
 func (s *SlackSuite) TestDenial(c *C) {
-	s.startApp(c, false)
+	s.startApp(c)
 	request := s.createAccessRequest(c)
 	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
-	s.postCallback(c, "deny_request", request.GetName())
+	s.postCallbackAndCheck(c, "deny_request", request.GetName(), http.StatusOK)
 
 	request, err := s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
@@ -335,26 +356,50 @@ func (s *SlackSuite) TestDenial(c *C) {
 	c.Assert(auditLog[0].GetString("delegator"), Equals, "slack:spengler@ghostbusters.example.com") // This email comes from a private const in a slacktest package
 }
 
-func (s *SlackSuite) TestApproveExpired(c *C) {
-	s.startApp(c, false)
-	request := s.createExpiredAccessRequest(c)
-	msg1 := s.fetchSlackMessage(c)
+func (s *SlackSuite) TestApproveReadonly(c *C) {
+	s.appConfig.Slack.NotifyOnly = true
+	s.startApp(c)
+	request := s.createAccessRequest(c)
+	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
+	s.postCallbackAndCheck(c, "approve_request", request.GetName(), http.StatusUnauthorized)
 
-	s.postCallback(c, "approve_request", request.GetName())
+	request, err := s.teleport.GetAccessRequest(s.ctx, request.GetName())
+	c.Assert(err, IsNil)
+	c.Assert(request.GetState(), Equals, services.RequestState_PENDING)
+}
+
+func (s *SlackSuite) TestDenyReadonly(c *C) {
+	s.appConfig.Slack.NotifyOnly = true
+	s.startApp(c)
+	request := s.createAccessRequest(c)
+	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
+	s.postCallbackAndCheck(c, "deny_request", request.GetName(), http.StatusUnauthorized)
+
+	request, err := s.teleport.GetAccessRequest(s.ctx, request.GetName())
+	c.Assert(err, IsNil)
+	c.Assert(request.GetState(), Equals, services.RequestState_PENDING)
+}
+
+func (s *SlackSuite) TestApproveExpired(c *C) {
+	s.startApp(c)
+	request := s.createExpiredAccessRequest(c)
+	msg1 := s.fetchSlackMessageAndCheck(c)
+
+	s.postCallbackAndCheck(c, "approve_request", request.GetName(), http.StatusOK)
 
 	// Get updated message
-	msg2 := s.fetchSlackMessage(c)
+	msg2 := s.fetchSlackMessageAndCheck(c)
 	c.Assert(msg1.Timestamp, Equals, msg2.Timestamp)
 }
 
 func (s *SlackSuite) TestDenyExpired(c *C) {
-	s.startApp(c, false)
+	s.startApp(c)
 	request := s.createExpiredAccessRequest(c)
-	msg1 := s.fetchSlackMessage(c)
+	msg1 := s.fetchSlackMessageAndCheck(c)
 
-	s.postCallback(c, "deny_request", request.GetName())
+	s.postCallbackAndCheck(c, "deny_request", request.GetName(), http.StatusOK)
 
 	// Get updated message
-	msg2 := s.fetchSlackMessage(c)
+	msg2 := s.fetchSlackMessageAndCheck(c)
 	c.Assert(msg1.Timestamp, Equals, msg2.Timestamp)
 }
