@@ -62,7 +62,7 @@ func (a *App) run(ctx context.Context) (err error) {
 	a.bot = NewBot(a.conf.Slack)
 
 	// Create callback server providing a.onSlackCallback as a callback function.
-	a.callbackSrv, err = NewCallbackServer(a.conf.HTTP, a.conf.Slack.Secret, a.onSlackCallback)
+	a.callbackSrv, err = NewCallbackServer(a.conf.HTTP, a.conf.Slack.Secret, a.conf.Slack.NotifyOnly, a.onSlackCallback)
 	if err != nil {
 		return
 	}
@@ -172,12 +172,6 @@ func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 // OnSlackCallback processes Slack actions and updates original Slack message with a new status
 func (a *App) onSlackCallback(ctx context.Context, cb Callback) error {
 	log := log.WithField("slack_http_id", cb.HTTPRequestID)
-
-	// If the plugin is working in read-only mode, do not process any
-	// callbacks from Slack, and return an error.
-	if a.conf.Slack.NotifyOnly {
-		return trace.Errorf("Received a Slack Webhook while in notify-only mode.")
-	}
 
 	if len(cb.ActionCallback.BlockActions) != 1 {
 		log.WithField("slack_block_actions", cb.ActionCallback.BlockActions).Warn("Received more than one Slack action")
