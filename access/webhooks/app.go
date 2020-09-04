@@ -209,7 +209,7 @@ func (a *App) onRequestUpdate(ctx context.Context, req access.Request) error {
 	})
 
 	// Ignore status updates that the plugin is not configured to listen to.
-	if !a.conf.Webhook.RequestStatuses[stateStr] {
+	if !a.conf.Webhook.RequestStates[stateStr] {
 		logger.Info("Not configured to send webhooks on this state.")
 		return nil
 	}
@@ -224,7 +224,7 @@ func (a *App) onRequestUpdate(ctx context.Context, req access.Request) error {
 }
 
 func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
-	if !a.conf.Webhook.RequestStatuses["Deleted"] {
+	if !a.conf.Webhook.RequestStates["Deleted"] {
 		log.WithField("request_id", req.ID).Info("Not configured to send webhooks on request deletions.")
 		return nil
 	}

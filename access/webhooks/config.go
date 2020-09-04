@@ -16,28 +16,34 @@ type Config struct {
 
 // WebhookConfig represents webhook configuration section, including the URL to use and notifyOnly mode
 type WebhookConfig struct {
-	URL             string          `toml:"webhook_url"`
-	NotifyOnly      bool            `toml:"notify_only"`
-	RequestStatuses map[string]bool `toml:"request_statuses"`
+	URL            string          `toml:"webhook_url"`
+	NotifyOnly     bool            `toml:"notify_only"`
+	RequestStates  map[string]bool `toml:"request_statuses"`
+	CallbackSecret string          `toml:"callback_secret"`
 }
 
-const exampleConfig = `# example slack plugin configuration TOML file
+const exampleConfig = `# example webhooks plugin configuration TOML file
 [teleport]
 auth_server = "example.com:3025"                        # Teleport Auth Server GRPC API address
-client_key = "/var/lib/teleport/plugins/slack/auth.key" # Teleport GRPC client secret key
-client_crt = "/var/lib/teleport/plugins/slack/auth.crt" # Teleport GRPC client certificate
-root_cas = "/var/lib/teleport/plugins/slack/auth.cas"   # Teleport cluster CA certs
+client_key = "/var/lib/teleport/plugins/webhooks/auth.key" # Teleport GRPC client secret key
+client_crt = "/var/lib/teleport/plugins/webhooks/auth.crt" # Teleport GRPC client certificate
+root_cas = "/var/lib/teleport/plugins/webhooks/auth.cas"   # Teleport cluster CA certs
 
 [webhook]
 webhook_url = "https://mywebhook.com/ppst" # Receiver webhook URL
 notify_only = false # Allow Approval / Denial actions via the Callbacks
-request_statuses = { "Pending" = true, "Approved" = false, "Denied" = false } # What request statuses to notify about?
+request_states = { "Pending" = true, "Approved" = false, "Denied" = false } # What request statuses to notify about?
+callback_secret = "secret string to sign callback payloads with"
 
 [http]
 public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com
 # listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:8081
 https_key_file = "/var/lib/teleport/webproxy_key.pem"  # TLS private key
 https_cert_file = "/var/lib/teleport/webproxy_cert.pem" # TLS certificate
+
+#[http.basic_auth]
+#user = "user"
+#password = "password" # If you prefer to use basic auth for Webhooks authentication, use this section to store user and password
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/slack.log"
@@ -81,8 +87,8 @@ func (c *Config) CheckAndSetDefaults() error {
 	if c.Webhook.URL == "" {
 		return trace.BadParameter("missing required value webhook.webhook_url")
 	}
-	if c.Webhook.RequestStatuses == nil {
-		c.Webhook.RequestStatuses = defaultStatuses
+	if c.Webhook.RequestStates == nil {
+		c.Webhook.RequestStates = defaultStates
 	}
 
 	if c.HTTP.ListenAddr == "" {
@@ -100,7 +106,7 @@ func (c *Config) CheckAndSetDefaults() error {
 	return nil
 }
 
-var defaultStatuses = map[string]bool{
+var defaultStates = map[string]bool{
 	"Pending":  true,
 	"Approved": false,
 	"Denied":   false,
