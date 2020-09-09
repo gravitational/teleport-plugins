@@ -433,6 +433,8 @@ func (s *PagerdutySuite) TestRace(c *C) {
 	log.SetLevel(log.InfoLevel) // Turn off noisy debug logging
 	defer log.SetLevel(prevLogLevel)
 
+	s.cancel() // Cancel the default timeout
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	s.startApp(c)
 
 	var (

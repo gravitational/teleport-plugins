@@ -96,7 +96,7 @@ func (s *GitlabSuite) SetUpSuite(c *C) {
 }
 
 func (s *GitlabSuite) SetUpTest(c *C) {
-	s.ctx, s.cancel = context.WithTimeout(context.Background(), 5*time.Second)
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 2*time.Second)
 	s.publicURL = ""
 	dbFile := s.newTmpFile(c, "db.*")
 	s.dbPath = dbFile.Name()
@@ -506,6 +506,8 @@ func (s *GitlabSuite) TestRace(c *C) {
 	log.SetLevel(log.InfoLevel) // Turn off noisy debug logging
 	defer log.SetLevel(prevLogLevel)
 
+	s.cancel() // Cancel the default timeout
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	s.startApp(c)
 	labels := s.assertNewLabels(c, 4)
 
