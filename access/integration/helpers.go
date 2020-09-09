@@ -138,22 +138,22 @@ func NewInstance(cfg InstanceConfig) *TeleInstance {
 	var err error
 	if cfg.NodeName == "" {
 		cfg.NodeName, err = os.Hostname()
-		fatalIf(err)
+		panicIf(err)
 	}
 	// generate instance secrets (keys):
 	keygen, err := native.New(context.TODO(), native.PrecomputeKeys(0))
-	fatalIf(err)
+	panicIf(err)
 	if cfg.Priv == nil || cfg.Pub == nil {
 		cfg.Priv, cfg.Pub, _ = keygen.GenerateKeyPair("")
 	}
 	rsaKey, err := ssh.ParseRawPrivateKey(cfg.Priv)
-	fatalIf(err)
+	panicIf(err)
 
 	tlsCAKey, tlsCACert, err := tlsca.GenerateSelfSignedCAWithPrivateKey(rsaKey.(*rsa.PrivateKey), pkix.Name{
 		CommonName:   cfg.ClusterName,
 		Organization: []string{cfg.ClusterName},
 	}, nil, defaults.CATTL)
-	fatalIf(err)
+	panicIf(err)
 
 	cert, err := keygen.GenerateHostCert(services.HostCertParams{
 		PrivateCASigningKey: cfg.Priv,
@@ -165,25 +165,25 @@ func NewInstance(cfg InstanceConfig) *TeleInstance {
 		Roles:               teleport.Roles{teleport.RoleAdmin},
 		TTL:                 time.Hour * 24,
 	})
-	fatalIf(err)
+	panicIf(err)
 	tlsCA, err := tlsca.New(tlsCACert, tlsCAKey)
-	fatalIf(err)
+	panicIf(err)
 	cryptoPubKey, err := sshutils.CryptoPublicKey(cfg.Pub)
-	fatalIf(err)
+	panicIf(err)
 	identity := tlsca.Identity{
 		Username: fmt.Sprintf("%v.%v", cfg.HostID, cfg.ClusterName),
 		Groups:   []string{string(teleport.RoleAdmin)},
 	}
 	clock := clockwork.NewRealClock()
 	subject, err := identity.Subject()
-	fatalIf(err)
+	panicIf(err)
 	tlsCert, err := tlsCA.GenerateCertificate(tlsca.CertificateRequest{
 		Clock:     clock,
 		PublicKey: cryptoPubKey,
 		Subject:   subject,
 		NotAfter:  clock.Now().UTC().Add(time.Hour * 24),
 	})
-	fatalIf(err)
+	panicIf(err)
 
 	i := &TeleInstance{
 		Hostname: cfg.NodeName,
@@ -263,7 +263,7 @@ func (s *InstanceSecrets) GetIdentity() *auth.Identity {
 		TLSCert:    s.TLSCert,
 		TLSCACerts: [][]byte{s.TLSCACert},
 	})
-	fatalIf(err)
+	panicIf(err)
 	return i
 }
 
@@ -647,8 +647,8 @@ func startAndWait(process *service.TeleportProcess, expectedEvents []string) ([]
 	return receivedEvents, nil
 }
 
-func fatalIf(err error) {
+func panicIf(err error) {
 	if err != nil {
-		log.Fatalf("%v at %v", string(debug.Stack()), err)
+		log.Panicf("%v at %v", string(debug.Stack()), err)
 	}
 }

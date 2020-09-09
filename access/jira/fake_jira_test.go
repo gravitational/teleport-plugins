@@ -47,7 +47,7 @@ func NewFakeJIRA(author jira.User, concurrency int) *FakeJIRA {
 		}
 		rw.Header().Add("Content-Type", "application/json")
 		err := json.NewEncoder(rw).Encode(&project)
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.GET("/rest/api/2/mypermissions", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		permissions := Permissions{
@@ -62,13 +62,13 @@ func NewFakeJIRA(author jira.User, concurrency int) *FakeJIRA {
 		}
 		rw.Header().Add("Content-Type", "application/json")
 		err := json.NewEncoder(rw).Encode(&permissions)
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.POST("/rest/api/2/issue", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		var issueInput IssueInput
 
 		err := json.NewDecoder(r.Body).Decode(&issueInput)
-		fatalIf(err)
+		panicIf(err)
 
 		issue := Issue{
 			Fields:     issueInput.Fields,
@@ -98,7 +98,7 @@ func NewFakeJIRA(author jira.User, concurrency int) *FakeJIRA {
 		rw.Header().Add("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusCreated)
 		err = json.NewEncoder(rw).Encode(issue)
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.GET("/rest/api/2/issue/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		issue, found := self.GetIssue(ps.ByName("id"))
@@ -109,7 +109,7 @@ func NewFakeJIRA(author jira.User, concurrency int) *FakeJIRA {
 
 		rw.Header().Add("Content-Type", "application/json")
 		err := json.NewEncoder(rw).Encode(issue)
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.POST("/rest/api/2/issue/:id/transitions", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		issue, found := self.GetIssue(ps.ByName("id"))
@@ -120,7 +120,7 @@ func NewFakeJIRA(author jira.User, concurrency int) *FakeJIRA {
 
 		var payload jira.CreateTransitionPayload
 		err := json.NewDecoder(r.Body).Decode(&payload)
-		fatalIf(err)
+		panicIf(err)
 
 		switch payload.Transition.ID {
 		case "100001":
@@ -220,8 +220,8 @@ func (s *FakeJIRA) CheckIssueTransition(ctx context.Context) (Issue, error) {
 	}
 }
 
-func fatalIf(err error) {
+func panicIf(err error) {
 	if err != nil {
-		log.Fatalf("%v at %v", err, string(debug.Stack()))
+		log.Panicf("%v at %v", err, string(debug.Stack()))
 	}
 }

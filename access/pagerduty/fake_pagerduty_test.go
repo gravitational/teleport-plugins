@@ -57,12 +57,12 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 		if !found {
 			rw.WriteHeader(http.StatusNotFound)
 			err := json.NewEncoder(rw).Encode(&ErrorResult{Message: "Service not found"})
-			fatalIf(err)
+			panicIf(err)
 			return
 		}
 
 		err := json.NewEncoder(rw).Encode(&ServiceResult{Service: service})
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.GET("/extension_schemas", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
@@ -80,7 +80,7 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 			},
 		}
 		err := json.NewEncoder(rw).Encode(&resp)
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.GET("/extensions", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
@@ -100,7 +100,7 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 			Extensions: extensions,
 		}
 		err := json.NewEncoder(rw).Encode(&resp)
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.POST("/extensions", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
@@ -108,7 +108,7 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 
 		var body ExtensionBodyWrap
 		err := json.NewDecoder(r.Body).Decode(&body)
-		fatalIf(err)
+		panicIf(err)
 
 		extension := pagerduty.StoreExtension(Extension{
 			Name:             body.Extension.Name,
@@ -119,7 +119,7 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 		pagerduty.newExtensions <- extension
 
 		err = json.NewEncoder(rw).Encode(&ExtensionResult{Extension: extension})
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.PUT("/extensions/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
@@ -128,18 +128,18 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 		if !found {
 			rw.WriteHeader(http.StatusNotFound)
 			err := json.NewEncoder(rw).Encode(&ErrorResult{Message: "Extension not found"})
-			fatalIf(err)
+			panicIf(err)
 			return
 		}
 
 		err := json.NewDecoder(r.Body).Decode(&extension)
-		fatalIf(err)
+		panicIf(err)
 
 		pagerduty.StoreExtension(extension)
 		pagerduty.newExtensions <- extension
 
 		err = json.NewEncoder(rw).Encode(&ExtensionResult{Extension: extension})
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.GET("/users", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
@@ -152,7 +152,7 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 			return true
 		})
 		err := json.NewEncoder(rw).Encode(&ListUsersResult{Users: users})
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.GET("/users/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
@@ -162,12 +162,12 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 		if !found {
 			rw.WriteHeader(http.StatusNotFound)
 			err := json.NewEncoder(rw).Encode(&ErrorResult{Message: "User not found"})
-			fatalIf(err)
+			panicIf(err)
 			return
 		}
 
 		err := json.NewEncoder(rw).Encode(&UserResult{User: user})
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.POST("/incidents", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
@@ -175,7 +175,7 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 
 		var body IncidentBodyWrap
 		err := json.NewDecoder(r.Body).Decode(&body)
-		fatalIf(err)
+		panicIf(err)
 
 		incident := pagerduty.StoreIncident(Incident{
 			IncidentKey: body.Incident.IncidentKey,
@@ -187,7 +187,7 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 		pagerduty.newIncidents <- incident
 
 		err = json.NewEncoder(rw).Encode(&IncidentResult{Incident: incident})
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.PUT("/incidents/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
@@ -196,20 +196,20 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 		if !found {
 			rw.WriteHeader(http.StatusNotFound)
 			err := json.NewEncoder(rw).Encode(&ErrorResult{Message: "Incident not found"})
-			fatalIf(err)
+			panicIf(err)
 			return
 		}
 
 		var body IncidentBodyWrap
 		err := json.NewDecoder(r.Body).Decode(&body)
-		fatalIf(err)
+		panicIf(err)
 
 		incident.Status = body.Incident.Status
 		pagerduty.StoreIncident(incident)
 		pagerduty.incidentUpdates <- incident
 
 		err = json.NewEncoder(rw).Encode(&IncidentResult{Incident: incident})
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.POST("/incidents/:id/notes", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
@@ -217,13 +217,13 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 
 		var body IncidentNoteBodyWrap
 		err := json.NewDecoder(r.Body).Decode(&body)
-		fatalIf(err)
+		panicIf(err)
 
 		note := pagerduty.StoreIncidentNote(IncidentNote{Content: body.Note.Content})
 		pagerduty.newIncidentNotes <- note
 
 		err = json.NewEncoder(rw).Encode(&IncidentNoteResult{Note: note})
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.GET("/oncalls", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
@@ -266,7 +266,7 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 		})
 
 		err := json.NewEncoder(rw).Encode(&ListOnCallsResult{OnCalls: onCalls})
-		fatalIf(err)
+		panicIf(err)
 	})
 
 	return pagerduty
@@ -398,8 +398,8 @@ func (s *FakePagerduty) CheckNewIncidentNote(ctx context.Context) (IncidentNote,
 	}
 }
 
-func fatalIf(err error) {
+func panicIf(err error) {
 	if err != nil {
-		log.Fatalf("%v at %v", err, string(debug.Stack()))
+		log.Panicf("%v at %v", err, string(debug.Stack()))
 	}
 }
