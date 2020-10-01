@@ -20,6 +20,10 @@ access-pagerduty:
 access-gitlab:
 	make -C access/gitlab
 
+.PHONY: access-webhooks
+access-webhooks:
+	make -C access/webhooks
+
 .PHONY: access-example
 access-example:
 	go build -o build/access-example ./access/example
@@ -50,12 +54,16 @@ release/access-pagerduty:
 release/access-gitlab:
 	make -C access/gitlab clean release
 
+.PHONY: release/access-webhooks
+release/access-webhooks:
+	make -C access/webhooks clean release
+
 # Run all releases
 .PHONY: releases
 releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-gitlab
 
 .PHONY: build-all
-build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab
+build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab access-webhooks
 
 #
 # Lint the Go code.

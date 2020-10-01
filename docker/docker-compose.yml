@@ -118,6 +118,21 @@ services:
         aliases:
           - "teleport-jira-cloud.cluster.local"
 
+  teleport-webhooks:
+    <<: *plugin
+    container_name: teleport-webhooks
+    command: |
+      ${PLUGINSHOME}/access/webhooks/build/teleport-webhooks start
+      -c ${PLUGINSHOME}/docker/plugins/teleport-webhooks.toml
+      ${PLUGIN_FLAGS}
+    ports:
+      - "8046:8046"
+    networks:
+      teleport-network:
+        ipv4_address: 172.10.1.46
+        aliases:
+          - "teleport-webhooks.cluster.local"
+
 networks:
   teleport-network:
     driver: bridge

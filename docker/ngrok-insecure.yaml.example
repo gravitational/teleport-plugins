@@ -32,3 +32,7 @@ tunnels:
     addr: 8043
     proto: http
     host_header: teleport-pagerduty.cluster.local
+    teleport-webhooks:
+  addr: 8046
+    proto: http
+    host_header: teleport-webhooks.cluster.local
