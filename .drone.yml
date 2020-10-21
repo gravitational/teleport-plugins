@@ -8,80 +8,26 @@ trigger:
     - master
     - branch/*
   event:
-    exclude:
-      - cron
-      - promote
-      - rollback
+    include:
+      - push
+      - pull_request
   repo:
     include:
       - gravitational/*
 
 workspace:
-  path: /go
-
-clone:
-  disable: true
+  path: /go/src/github.com/gravitational/teleport-plugins
 
 steps:
-  - name: Check out code
-    image: golang:1.13.2
-    commands:
-      - mkdir -p /go/src/github.com/gravitational/teleport-plugins
-      - cd /go/src/github.com/gravitational/teleport-plugins
-      - git init && git remote add origin ${DRONE_REMOTE_URL}
-      - |
-        # handle pull requests
-        if [ "${DRONE_BUILD_EVENT}" = "pull_request" ]; then
-          git fetch origin +refs/heads/${DRONE_COMMIT_BRANCH}:
-          git checkout ${DRONE_COMMIT_BRANCH}
-          git fetch origin ${DRONE_COMMIT_REF}:
-          git merge ${DRONE_COMMIT}
-        # handle tags
-        elif [ "${DRONE_BUILD_EVENT}" = "tag" ]; then
-          git fetch origin +refs/tags/${DRONE_TAG}:
-          git checkout -qf FETCH_HEAD
-        # handle pushes/other events
-        else
-          if [ "${DRONE_COMMIT_BRANCH}" = "" ]; then
-            git fetch origin
-            git checkout -qf ${DRONE_COMMIT_SHA}
-          else
-            git fetch origin +refs/heads/${DRONE_COMMIT_BRANCH}:
-            git checkout ${DRONE_COMMIT} -b ${DRONE_COMMIT_BRANCH}
-          fi
-        fi
-
   - name: Run linter
     image: golangci/golangci-lint:v1.27.0
     commands:
-      - cd /go/src/github.com/gravitational/teleport-plugins
       - make lint
 
   - name: Run tests
-    image: golang:1.13.2
+    image: golang:1.14.4
     commands:
-      - cd /go/src/github.com/gravitational/teleport-plugins
       - make test
-
-  - name: Send Slack notification
-    image: plugins/slack
-    settings:
-      webhook:
-        from_secret: SLACK_WEBHOOK
-      channel: teleport-builds
-      template: |
-        {{#if build.pull }}
-          *{{#success build.status}}✔{{ else }}✘{{/success}} {{ uppercasefirst build.status }}*: <https://github.com/{{ repo.owner }}/{{ repo.name }}/pull/{{ build.pull }}|Pull Request #{{ build.pull }}>
-        {{else}}
-          *{{#success build.status}}✔{{ else }}✘{{/success}} {{ uppercasefirst build.status }}: Build #{{ build.number }}* (type: `{{ build.event }}`)
-        {{/if}}
-        Commit: <https://github.com/{{ repo.owner }}/{{ repo.name }}/commit/{{ build.commit }}|{{ truncate build.commit 8 }}>
-        Branch: <https://github.com/{{ repo.owner }}/{{ repo.name }}/commits/{{ build.branch }}|{{ build.branch }}>
-        Author: {{ build.author }}
-        <{{ build.link }}|Visit build page ↗>
-    when:
-      event: [push]
-      status: [failure]
 
 ---
 kind: pipeline
@@ -101,16 +47,10 @@ depends_on:
 workspace:
   path: /go/src/github.com/gravitational/teleport-plugins
 
-clone:
-  disable: true
-
 steps:
   - name: Build artifacts
-    image: golang:1.13.2
+    image: golang:1.14.4
     commands:
-      - git clone https://github.com/gravitational/teleport-plugins.git .
-      - git fetch --all --tags
-      - git checkout ${DRONE_TAG}
       - mkdir -p build/
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
       - make release/access-$PLUGIN_TYPE
@@ -181,6 +121,6 @@ steps:
 
 ---
 kind: signature
-hmac: 9f98e09eba5b29877ae002614d6b7fb65414068e17be6b08d065ed6de9f702fa
+hmac: 659d91eda782d8ca46f4e99022741226f6d1015b1539f3ce31e082a8c77f705e
 
 ...
