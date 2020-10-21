@@ -16,19 +16,17 @@ trigger:
       - gravitational/*
 
 workspace:
-  path: /go
+  path: /go/src/github.com/gravitational/teleport-plugins
 
 steps:
   - name: Run linter
     image: golangci/golangci-lint:v1.27.0
     commands:
-      - cd /go/src/github.com/gravitational/teleport-plugins
       - make lint
 
   - name: Run tests
     image: golang:1.14.4
     commands:
-      - cd /go/src/github.com/gravitational/teleport-plugins
       - make test
 
 ---
@@ -123,6 +121,6 @@ steps:
 
 ---
 kind: signature
-hmac: 4f195d4107ccd62b6ab641dd441c654e3a058306ee6376e94603a368bec259a1
+hmac: 659d91eda782d8ca46f4e99022741226f6d1015b1539f3ce31e082a8c77f705e
 
 ...
