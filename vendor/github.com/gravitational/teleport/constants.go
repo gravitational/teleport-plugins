@@ -52,6 +52,13 @@ const (
 )
 
 const (
+	// HTTPNextProtoTLS is the NPN/ALPN protocol negotiated during
+	// HTTP/1.1.'s TLS setup.
+	// https://www.iana.org/assignments/tls-extensiontype-values/tls-extensiontype-values.xhtml#alpn-protocol-ids
+	HTTPNextProtoTLS = "http/1.1"
+)
+
+const (
 	// HTTPSProxy is an environment variable pointing to a HTTPS proxy.
 	HTTPSProxy = "HTTPS_PROXY"
 
@@ -290,6 +297,9 @@ const (
 	// Text means text serialization format
 	Text = "text"
 
+	// Names is for formatting node names in plain text
+	Names = "names"
+
 	// LinuxAdminGID is the ID of the standard adm group on linux
 	LinuxAdminGID = 4
 
@@ -323,6 +333,12 @@ const (
 	// SchemeGCS is GCS file scheme, means upload or download to GCS like object
 	// storage
 	SchemeGCS = "gs"
+
+	// GCSTestURI turns on GCS tests
+	GCSTestURI = "TEST_GCS_URI"
+
+	// AWSRunTests turns on tests executed against AWS directly
+	AWSRunTests = "TEST_AWS"
 
 	// Region is AWS region parameter
 	Region = "region"
@@ -553,23 +569,8 @@ const (
 	// KubeCAPath is a hardcode of mounted CA inside every pod of K8s
 	KubeCAPath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 
-	// KubeKindCSR is a certificate signing requests
-	KubeKindCSR = "CertificateSigningRequest"
-
-	// KubeKindPod is a kubernetes pod
-	KubeKindPod = "Pod"
-
-	// KubeMetadataNameSelector is a selector for name metadata in API requests
-	KubeMetadataNameSelector = "metadata.name"
-
-	// KubeMetadataLabelSelector is a selector for label
-	KubeMetadataLabelSelector = "metadata.label"
-
 	// KubeRunTests turns on kubernetes tests
 	KubeRunTests = "TEST_KUBE"
-
-	// KubeSystemMasters is a name of the builtin kubernets group for master nodes
-	KubeSystemMasters = "system:masters"
 
 	// KubeSystemAuthenticated is a builtin group that allows
 	// any user to access common API methods, e.g. discovery methods
@@ -589,6 +590,11 @@ const (
 	// NodeIsAmbiguous serves as an identifying error string indicating that
 	// the proxy subsystem found multiple nodes matching the specified hostname.
 	NodeIsAmbiguous = "err-node-is-ambiguous"
+
+	// MaxLeases serves as an identifying error string indicating that the
+	// semaphore system is rejecting an acquisition attempt due to max
+	// leases having already been reached.
+	MaxLeases = "err-max-leases"
 )
 
 const (

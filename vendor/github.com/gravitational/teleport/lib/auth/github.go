@@ -67,12 +67,19 @@ func (s *AuthServer) upsertGithubConnector(ctx context.Context, connector servic
 	if err := s.Identity.UpsertGithubConnector(connector); err != nil {
 		return trace.Wrap(err)
 	}
-
-	if err := s.EmitAuditEvent(events.GithubConnectorCreated, events.EventFields{
-		events.FieldName: connector.GetName(),
-		events.EventUser: clientUsername(ctx),
+	if err := s.emitter.EmitAuditEvent(s.closeCtx, &events.GithubConnectorCreate{
+		Metadata: events.Metadata{
+			Type: events.GithubConnectorCreatedEvent,
+			Code: events.GithubConnectorCreatedCode,
+		},
+		UserMetadata: events.UserMetadata{
+			User: clientUsername(ctx),
+		},
+		ResourceMetadata: events.ResourceMetadata{
+			Name: connector.GetName(),
+		},
 	}); err != nil {
-		log.Warnf("Failed to emit GitHub connector create event: %v", err)
+		log.WithError(err).Warn("Failed to emit GitHub connector create event.")
 	}
 
 	return nil
@@ -84,11 +91,19 @@ func (s *AuthServer) deleteGithubConnector(ctx context.Context, connectorName st
 		return trace.Wrap(err)
 	}
 
-	if err := s.EmitAuditEvent(events.GithubConnectorDeleted, events.EventFields{
-		events.FieldName: connectorName,
-		events.EventUser: clientUsername(ctx),
+	if err := s.emitter.EmitAuditEvent(s.closeCtx, &events.GithubConnectorDelete{
+		Metadata: events.Metadata{
+			Type: events.GithubConnectorDeletedEvent,
+			Code: events.GithubConnectorDeletedCode,
+		},
+		UserMetadata: events.UserMetadata{
+			User: clientUsername(ctx),
+		},
+		ResourceMetadata: events.ResourceMetadata{
+			Name: connectorName,
+		},
 	}); err != nil {
-		log.Warnf("Failed to emit GitHub connector delete event: %v", err)
+		log.WithError(err).Warn("Failed to emit GitHub connector delete event.")
 	}
 
 	return nil
@@ -113,34 +128,49 @@ type GithubAuthResponse struct {
 	HostSigners []services.CertAuthority `json:"host_signers"`
 }
 
+type githubManager interface {
+	validateGithubAuthCallback(q url.Values) (*githubAuthResponse, error)
+}
+
 // ValidateGithubAuthCallback validates Github auth callback redirect
-func (a *AuthServer) ValidateGithubAuthCallback(q url.Values) (*GithubAuthResponse, error) {
-	re, err := a.validateGithubAuthCallback(q)
+func (s *AuthServer) ValidateGithubAuthCallback(q url.Values) (*GithubAuthResponse, error) {
+	return validateGithubAuthCallbackHelper(s.closeCtx, s, q, s.emitter)
+}
+
+func validateGithubAuthCallbackHelper(ctx context.Context, m githubManager, q url.Values, emitter events.Emitter) (*GithubAuthResponse, error) {
+	re, err := m.validateGithubAuthCallback(q)
+
+	event := &events.UserLogin{
+		Metadata: events.Metadata{
+			Type: events.UserLoginEvent,
+		},
+		Method: events.LoginMethodGithub,
+	}
+
+	if re != nil && re.claims != nil {
+		attributes, err := events.EncodeMapStrings(re.claims)
+		if err != nil {
+			log.WithError(err).Debugf("Failed to encode identity attributes.")
+		} else {
+			event.IdentityAttributes = attributes
+		}
+	}
+
 	if err != nil {
-		fields := events.EventFields{
-			events.LoginMethod:        events.LoginMethodGithub,
-			events.AuthAttemptSuccess: false,
-			events.AuthAttemptErr:     err.Error(),
-		}
-		if re != nil && re.claims != nil {
-			fields[events.IdentityAttributes] = re.claims
-		}
-		if err := a.EmitAuditEvent(events.UserSSOLoginFailure, fields); err != nil {
-			log.Warnf("Failed to emit GitHub login failure event: %v", err)
-		}
+		event.Code = events.UserSSOLoginFailureCode
+		event.Status.Success = false
+		event.Status.Error = err.Error()
+		emitter.EmitAuditEvent(ctx, event)
 		return nil, trace.Wrap(err)
 	}
-	fields := events.EventFields{
-		events.EventUser:          re.auth.Username,
-		events.AuthAttemptSuccess: true,
-		events.LoginMethod:        events.LoginMethodGithub,
+	event.Code = events.UserSSOLoginCode
+	event.Status.Success = true
+	event.User = re.auth.Username
+
+	if err := emitter.EmitAuditEvent(ctx, event); err != nil {
+		log.WithError(err).Warn("Failed to emit Github login event.")
 	}
-	if re.claims != nil {
-		fields[events.IdentityAttributes] = re.claims
-	}
-	if err := a.EmitAuditEvent(events.UserSSOLogin, fields); err != nil {
-		log.Warnf("Failed to emit GitHub login event: %v", err)
-	}
+
 	return &re.auth, nil
 }
 
@@ -357,7 +387,7 @@ func (s *AuthServer) calculateGithubUser(connector services.GithubConnector, cla
 			claims.Username, connector.GetName())
 	}
 	p.roles = modules.GetModules().RolesFromLogins(p.logins)
-	p.traits = modules.GetModules().TraitsFromLogins(p.logins, p.kubeGroups, p.kubeUsers)
+	p.traits = modules.GetModules().TraitsFromLogins(p.username, p.logins, p.kubeGroups, p.kubeUsers)
 
 	// Pick smaller for role: session TTL from role or requested TTL.
 	roles, err := services.FetchRoles(p.roles, s.Access, p.traits)
@@ -580,13 +610,19 @@ func (c *githubAPIClient) getTeams() ([]teamResponse, error) {
 
 			// Print warning to Teleport logs as well as the Audit Log.
 			log.Warnf(warningMessage)
-			if err := c.authServer.EmitAuditEvent(events.UserSSOLoginFailure, events.EventFields{
-				events.LoginMethod:        events.LoginMethodGithub,
-				events.AuthAttemptMessage: warningMessage,
+			if err := c.authServer.emitter.EmitAuditEvent(c.authServer.closeCtx, &events.UserLogin{
+				Metadata: events.Metadata{
+					Type: events.UserLoginEvent,
+					Code: events.UserSSOLoginFailureCode,
+				},
+				Method: events.LoginMethodGithub,
+				Status: events.Status{
+					Success: false,
+					Error:   warningMessage,
+				},
 			}); err != nil {
-				log.Warnf("Failed to emit GitHub login failure event: %v", err)
+				log.WithError(err).Warn("Failed to emit GitHub login failure event.")
 			}
-
 			return result, nil
 		}
 

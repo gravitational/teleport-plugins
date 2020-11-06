@@ -80,6 +80,10 @@ type execCommand struct {
 	// ServiceName is the name of the PAM service requested if PAM is enabled.
 	ServiceName string `json:"service_name"`
 
+	// UsePAMAuth specifies whether to trigger the "auth" PAM modules from the
+	// policy.
+	UsePAMAuth bool `json:"use_pam_auth"`
+
 	// Environment is a list of environment variables to add to the defaults.
 	Environment []string `json:"environment"`
 
@@ -160,6 +164,7 @@ func RunCommand() (io.Writer, int, error) {
 		// Open the PAM context.
 		pamContext, err := pam.Open(&pam.Config{
 			ServiceName: c.ServiceName,
+			UsePAMAuth:  c.UsePAMAuth,
 			Login:       c.Login,
 			// Set Teleport specific environment variables that PAM modules
 			// like pam_script.so can pick up to potentially customize the
@@ -239,12 +244,6 @@ func RunForward() (io.Writer, int, error) {
 	// else because PAM is sometimes used to create the local user used to
 	// launch the shell under.
 	if c.PAM {
-		// Set Teleport specific environment variables that PAM modules like
-		// pam_script.so can pick up to potentially customize the account/session.
-		os.Setenv("TELEPORT_USERNAME", c.Username)
-		os.Setenv("TELEPORT_LOGIN", c.Login)
-		os.Setenv("TELEPORT_ROLES", strings.Join(c.Roles, " "))
-
 		// Open the PAM context.
 		pamContext, err := pam.Open(&pam.Config{
 			ServiceName: c.ServiceName,
@@ -252,6 +251,14 @@ func RunForward() (io.Writer, int, error) {
 			Stdin:       os.Stdin,
 			Stdout:      ioutil.Discard,
 			Stderr:      ioutil.Discard,
+			// Set Teleport specific environment variables that PAM modules
+			// like pam_script.so can pick up to potentially customize the
+			// account/session.
+			Env: map[string]string{
+				"TELEPORT_USERNAME": c.Username,
+				"TELEPORT_LOGIN":    c.Login,
+				"TELEPORT_ROLES":    strings.Join(c.Roles, " "),
+			},
 		})
 		if err != nil {
 			return errorWriter, teleport.RemoteCommandFailure, trace.Wrap(err)
@@ -424,7 +431,8 @@ func buildCommand(c *execCommand, tty *os.File, pty *os.File, pamEnvironment []s
 		cmd.SysProcAttr = &syscall.SysProcAttr{
 			Setsid:  true,
 			Setctty: true,
-			Ctty:    int(tty.Fd()),
+			// Note: leaving Ctty empty will default it to stdin fd, which is
+			// set to our tty above.
 		}
 	} else {
 		cmd.Stdin = os.Stdin

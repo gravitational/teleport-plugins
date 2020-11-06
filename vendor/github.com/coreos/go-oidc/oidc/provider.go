@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gravitational/trace"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -250,8 +248,8 @@ func (cfg ProviderConfig) toEncodableStruct() encodableProviderConfig {
 		RequestParameterSupported:                  cfg.RequestParameterSupported,
 		RequestURIParamaterSupported:               cfg.RequestURIParamaterSupported,
 		RequireRequestURIRegistration:              cfg.RequireRequestURIRegistration,
-		Policy:                                     uriToString(cfg.Policy),
-		TermsOfService:                             uriToString(cfg.TermsOfService),
+		Policy:         uriToString(cfg.Policy),
+		TermsOfService: uriToString(cfg.TermsOfService),
 	}
 }
 
@@ -293,8 +291,8 @@ func (e encodableProviderConfig) toStruct() (ProviderConfig, error) {
 		RequestParameterSupported:                  e.RequestParameterSupported,
 		RequestURIParamaterSupported:               e.RequestURIParamaterSupported,
 		RequireRequestURIRegistration:              e.RequireRequestURIRegistration,
-		Policy:                                     p.parseURI(e.Policy, "op_policy-uri"),
-		TermsOfService:                             p.parseURI(e.TermsOfService, "op_tos_uri"),
+		Policy:         p.parseURI(e.Policy, "op_policy-uri"),
+		TermsOfService: p.parseURI(e.TermsOfService, "op_tos_uri"),
 	}
 	if p.firstErr != nil {
 		return ProviderConfig{}, p.firstErr
@@ -354,9 +352,6 @@ func (p ProviderConfig) Valid() error {
 
 	if !contains(p.IDTokenSigningAlgValues, "RS256") {
 		return errors.New("id_token_signing_alg_values_supported must include 'RS256'")
-	}
-	if contains(p.TokenEndpointAuthMethodsSupported, "none") {
-		return errors.New("token_endpoint_auth_signing_alg_values_supported cannot include 'none'")
 	}
 
 	uris := []struct {
@@ -626,36 +621,20 @@ func (r *httpProviderConfigGetter) Get() (cfg ProviderConfig, err error) {
 	// If the Issuer value contains a path component, any terminating / MUST be removed before
 	// appending /.well-known/openid-configuration.
 	// https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationRequest
-	//
-	// This code path has to properly re-append query url that is required by some providers
-	// e.g. IBM to function, so
-	// https://example.com/id?a=b has to become https://example.com/id/.well-known/openid-configuration?a=b
-	// for IBM IDP to function properly
-	u, err := url.Parse(r.issuerURL)
-	if err != nil {
-		return cfg, trace.Wrap(err)
-	}
-	u.Fragment = ""
-	u.Path = strings.TrimSuffix(u.Path, "/") + discoveryConfigPath
-	discoveryURL := u.String()
+	discoveryURL := strings.TrimSuffix(r.issuerURL, "/") + discoveryConfigPath
 	req, err := http.NewRequest("GET", discoveryURL, nil)
 	if err != nil {
-		return cfg, trace.Wrap(err)
+		return
 	}
 
 	resp, err := r.hc.Do(req)
 	if err != nil {
-		return cfg, trace.ConvertSystemError(err)
+		return
 	}
 	defer resp.Body.Close()
 
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return cfg, trace.Wrap(err)
-	}
-
-	if err = json.Unmarshal(data, &cfg); err != nil {
-		return cfg, trace.Wrap(err, "failed to decode provider response %q", string(data))
+	if err = json.NewDecoder(resp.Body).Decode(&cfg); err != nil {
+		return
 	}
 
 	var ttl time.Duration
@@ -670,10 +649,11 @@ func (r *httpProviderConfigGetter) Get() (cfg ProviderConfig, err error) {
 	// The issuer value returned MUST be identical to the Issuer URL that was directly used to retrieve the configuration information.
 	// http://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfigurationValidation
 	if !urlEqual(cfg.Issuer.String(), r.issuerURL) {
-		return cfg, trace.BadParameter(`"issuer" in config (%v) does not match provided issuer URL (%v)`, cfg.Issuer, r.issuerURL)
+		err = fmt.Errorf(`"issuer" in config (%v) does not match provided issuer URL (%v)`, cfg.Issuer, r.issuerURL)
+		return
 	}
 
-	return cfg, nil
+	return
 }
 
 func FetchProviderConfig(hc phttp.Client, issuerURL string) (ProviderConfig, error) {

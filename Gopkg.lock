@@ -58,14 +58,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b55d98a31f45ffea011f05c770e64fac26c932c76ffb516646a7f17217dd0209"
-  name = "github.com/PagerDuty/go-pagerduty"
-  packages = ["."]
-  pruneopts = "NUT"
-  revision = "c2d5dcd0d508a186b43ec0aad58156d855201a62"
-
-[[projects]]
-  branch = "master"
   digest = "1:f3793f8a708522400cef1dba23385e901aede5519f68971fd69938ef330b07a1"
   name = "github.com/alecthomas/template"
   packages = [
@@ -184,14 +176,16 @@
   revision = "fe0f26ff6d26693948ee8189aa064ee8c54141fa"
 
 [[projects]]
-  digest = "1:1ad3a5c6625bf6352179f2a566391acf0bdac826de46983474d48e9cc8c12c40"
+  digest = "1:b92641d9b1ae57e709abafb26f10a29877c710285149e85e253dda328296931d"
   name = "github.com/codahale/hdrhistogram"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "954f16e8b9ef0e5d5189456aa4c1202758e04f17"
+  revision = "20a94f2ac2a0159331e1e61a0e0967208bbbcb32"
+  version = "v1.0.0"
 
 [[projects]]
-  digest = "1:85334d6960cbe5c13022a3798c5b3142fdd845243be6eea42b7c426b6d6b404d"
+  branch = "master"
+  digest = "1:6a503e232df389d94ebb97dfb22d4ae463b6e2f351660613e11d9e42f57ab6df"
   name = "github.com/coreos/go-oidc"
   packages = [
     "http",
@@ -201,9 +195,7 @@
     "oidc",
   ]
   pruneopts = "NUT"
-  revision = "ff27968050e30dbaccd9f1b31f4ea11ab1d89873"
-  source = "github.com/gravitational/go-oidc"
-  version = "v0.0.3"
+  revision = "a93f71fdfe73d2c0f5413c0565eea0af6523a6df"
 
 [[projects]]
   digest = "1:0ef770954bca104ee99b3b6b7f9b240605ac03517d9f98cbc1893daa03f3c038"
@@ -302,10 +294,11 @@
   version = "v2.2.0"
 
 [[projects]]
-  digest = "1:983cb7d70588854e2706e32c61698bbf0eab4956fca89e86c1c10d7213679a0e"
+  digest = "1:a35d141bba894725d1aa63523e146ab83c30475d23970ef402165eb96bd5907a"
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
+    "jsonpb",
     "proto",
     "protoc-gen-gogo/descriptor",
     "sortkeys",
@@ -456,7 +449,7 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:677f7d1ed5f945db20d29cee15f2bfe2f257ea269621f6ecf2b48985acf2b9ed"
+  digest = "1:33012aa593d476629bd3c865e8c6b9a3ecc694d4745c91cf5add700e1ae84d85"
   name = "github.com/gravitational/teleport"
   packages = [
     ".",
@@ -486,6 +479,7 @@
     "lib/fixtures",
     "lib/httplib",
     "lib/httplib/csrf",
+    "lib/kube/kubeconfig",
     "lib/kube/proxy",
     "lib/kube/utils",
     "lib/limiter",
@@ -521,8 +515,8 @@
     "lib/wrappers",
   ]
   pruneopts = "NUT"
-  revision = "73b68f401d55f5b0b30fa29f39ffb7a7af1c86d6"
-  version = "v4.3.0"
+  revision = "9f42992be560ea7139bce64267107db3a32260fe"
+  version = "v4.4.4"
 
 [[projects]]
   digest = "1:a43816dbfa9fa218af700e9d230d1adbcef12ffc495efe46046a57fe5490aad0"
@@ -550,6 +544,17 @@
   pruneopts = "NUT"
   revision = "ac23dc3fea5d1a983c43f6a0f6e2c13f0195d8bd"
   version = "v1.2.0"
+
+[[projects]]
+  digest = "1:9676627451831e0d8e347007d871eac494ce51d55b95a3fe1fac30ad8d717ab9"
+  name = "github.com/hashicorp/golang-lru"
+  packages = [
+    ".",
+    "simplelru",
+  ]
+  pruneopts = "NUT"
+  revision = "14eae340515388ca95aa8e7b86f0de668e981f54"
+  version = "v0.5.4"
 
 [[projects]]
   digest = "1:f0818bc212054788d1086e015b5ba32d01ef8e12c615bbb625570eefbe684a1e"
@@ -855,8 +860,7 @@
   revision = "8908227c114abe0b63b1f0606abae72d11bf632a"
 
 [[projects]]
-  branch = "master"
-  digest = "1:c1b6e4313972f8f3eff84689d6aa486138b0ce9d0308127db4f682de580edb45"
+  digest = "1:b4507a5fe7842decf6ba093f0f3bd631ddb7c063760e6d7b64f6d2c485a37f8b"
   name = "github.com/russellhaering/goxmldsig"
   packages = [
     ".",
@@ -864,7 +868,8 @@
     "types",
   ]
   pruneopts = "NUT"
-  revision = "605161228693b2efadce55323c9c661a40c5fbaa"
+  revision = "6f318b2f18251aa66983056c1db7e4eef312103c"
+  version = "v1.1.0"
 
 [[projects]]
   digest = "1:54f275b550b8a8a20bc91e2067ed740600b69dae9dcf9cdfe905bac1b9cfd1d0"
@@ -1199,7 +1204,7 @@
   revision = "f660b865573183437d2d868f703fe88bb8af0b55"
 
 [[projects]]
-  digest = "1:2e20cc8120747b862c7a415722466b9599d1e720d186ca2d441e27826822a3fe"
+  digest = "1:22f48023d2db09f05f3c839674a5fc56741e3bdf771fd6717549fc93f6ebef03"
   name = "google.golang.org/grpc"
   packages = [
     ".",
@@ -1223,6 +1228,7 @@
     "credentials/internal",
     "credentials/oauth",
     "encoding",
+    "encoding/gzip",
     "encoding/proto",
     "grpclog",
     "internal",
@@ -1252,12 +1258,35 @@
   version = "v1.23.0"
 
 [[projects]]
-  digest = "1:016a6fc6e5c1f05582f03e57df2dd920ca846b1eed2a233743216c73f98ee95d"
+  digest = "1:0bf321f39cea8a10127a98313df3225a746c6810a494fd5205483d455951f43e"
+  name = "google.golang.org/protobuf"
+  packages = [
+    "encoding/protowire",
+    "internal/detrand",
+    "internal/encoding/messageset",
+    "internal/errors",
+    "internal/fieldsort",
+    "internal/flags",
+    "internal/genid",
+    "internal/mapsort",
+    "internal/pragma",
+    "internal/strs",
+    "proto",
+    "reflect/protoreflect",
+    "reflect/protoregistry",
+    "runtime/protoiface",
+  ]
+  pruneopts = "NUT"
+  revision = "3f7a61f89bb6813f89d981d1870ed68da0b3c3f1"
+  version = "v1.25.0"
+
+[[projects]]
+  digest = "1:f0a8fd12349a7b39786ee7b9ebb0fc26ad62ead4d81e7938153cc300480415ed"
   name = "gopkg.in/andygrunwald/go-jira.v1"
   packages = ["."]
   pruneopts = "NUT"
-  revision = "1b4556ca5af8177a656b688521514fd6a3319059"
-  version = "v1.12.0"
+  revision = "5d5f811f4ded569ee7ab27e58ae94faea87f7355"
+  version = "v1.13.0"
 
 [[projects]]
   digest = "1:5d6a13485ff26011c23adcbb66c33212be42d288326f2d8b9c2b6d385296b28b"
@@ -1501,8 +1530,8 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
-    "github.com/PagerDuty/go-pagerduty",
     "github.com/go-resty/resty",
+    "github.com/google/go-querystring/query",
     "github.com/gravitational/kingpin",
     "github.com/gravitational/teleport",
     "github.com/gravitational/teleport/lib/auth",
@@ -1513,6 +1542,7 @@
     "github.com/gravitational/teleport/lib/backend/lite",
     "github.com/gravitational/teleport/lib/client",
     "github.com/gravitational/teleport/lib/defaults",
+    "github.com/gravitational/teleport/lib/events",
     "github.com/gravitational/teleport/lib/service",
     "github.com/gravitational/teleport/lib/services",
     "github.com/gravitational/teleport/lib/sshutils",

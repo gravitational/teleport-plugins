@@ -21,10 +21,12 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"time"
 
 	"golang.org/x/crypto/ssh"
 
+	"github.com/gravitational/teleport"
 	"github.com/gravitational/teleport/lib/auth"
 	"github.com/gravitational/teleport/lib/backend"
 	"github.com/gravitational/teleport/lib/backend/lite"
@@ -32,6 +34,7 @@ import (
 	"github.com/gravitational/teleport/lib/bpf"
 	"github.com/gravitational/teleport/lib/defaults"
 	"github.com/gravitational/teleport/lib/events"
+	"github.com/gravitational/teleport/lib/kube/kubeconfig"
 	"github.com/gravitational/teleport/lib/limiter"
 	"github.com/gravitational/teleport/lib/pam"
 	"github.com/gravitational/teleport/lib/services"
@@ -155,7 +158,7 @@ type Config struct {
 
 	// UploadEventsC is a channel for upload events
 	// used in tests
-	UploadEventsC chan *events.UploadEvent `json:"-"`
+	UploadEventsC chan events.UploadEvent `json:"-"`
 
 	// FileDescriptors is an optional list of file descriptors for the process
 	// to inherit and use for listeners, used for in-process updates.
@@ -344,12 +347,27 @@ type ProxyConfig struct {
 	Kube KubeProxyConfig
 }
 
+func (c ProxyConfig) KubeAddr() (string, error) {
+	if !c.Kube.Enabled {
+		return "", trace.NotFound("kubernetes support not enabled on this proxy")
+	}
+	if len(c.Kube.PublicAddrs) > 0 {
+		return fmt.Sprintf("https://%s", c.Kube.PublicAddrs[0].Addr), nil
+	}
+	host := "<proxyhost>"
+	// Try to guess the hostname from the HTTP public_addr.
+	if len(c.PublicAddrs) > 0 {
+		host = c.PublicAddrs[0].Host()
+	}
+	return fmt.Sprintf("https://%s:%d", host, c.Kube.ListenAddr.Port(defaults.KubeProxyListenPort)), nil
+}
+
 // KubeProxyConfig specifies configuration for proxy service
 type KubeProxyConfig struct {
 	// Enabled turns kubernetes proxy role on or off for this process
 	Enabled bool
 
-	// ListenAddr is address where reverse tunnel dialers connect to
+	// ListenAddr is the address to listen on for incoming kubernetes requests.
 	ListenAddr utils.NetAddr
 
 	// KubeAPIAddr is address of kubernetes API server
@@ -368,6 +386,71 @@ type KubeProxyConfig struct {
 
 	// KubeconfigPath is a path to kubeconfig
 	KubeconfigPath string
+
+	// ClusterName is the name of a kubernetes cluster this proxy is running
+	// in. If set, this proxy will handle kubernetes requests for the cluster.
+	ClusterName string
+
+	// runningInPod reports whether the current process is running inside of a
+	// Kubernetes Pod. If nil, checks for the presence of on-disk service
+	// account credentials in standard paths.
+	//
+	// Used for test mocking.
+	runningInPod func() bool
+}
+
+// ClusterNames returns the complete list of kubernetes clusters from
+// ClusterName and kubeconfig.
+func (c KubeProxyConfig) ClusterNames(teleportClusterName string) ([]string, error) {
+	if !c.Enabled {
+		return nil, nil
+	}
+
+	clusters := make(map[string]struct{})
+	if c.ClusterName != "" {
+		clusters[c.ClusterName] = struct{}{}
+	} else {
+		// If a service account CA bundle exists at the standard path, we must
+		// be running inside of a Kubernetes pod. Since we don't have a
+		// ClusterName specified, use teleport cluster name as a fallback.
+		if c.runningInPod == nil {
+			c.runningInPod = func() bool {
+				_, err := os.Stat(teleport.KubeCAPath)
+				return err == nil
+			}
+		}
+		if c.runningInPod() {
+			clusters[teleportClusterName] = struct{}{}
+		}
+	}
+	if c.KubeconfigPath != "" {
+		cfg, err := kubeconfig.Load(c.KubeconfigPath)
+		if err != nil {
+			return nil, trace.Wrap(err, "failed parsing kubeconfig file %q", c.KubeconfigPath)
+		}
+		for n := range cfg.Contexts {
+			if n != "" {
+				clusters[n] = struct{}{}
+			}
+		}
+		if cfg.CurrentContext != "" {
+			// DELETE IN 5.2
+			// Use teleport cluster name as an alias for the k8s cluster in
+			// current-context.
+			//
+			// This enables backwards-compatibility: when an older client
+			// requests a k8s cert without specifying a k8s cluster, we want to
+			// preserve pre-5.0 behavior. That is, when no specific cluster is
+			// requested, use current-context.
+			clusters[teleportClusterName] = struct{}{}
+		}
+	}
+	var uniqClusters []string
+	for n := range clusters {
+		uniqClusters = append(uniqClusters, n)
+	}
+	sort.Strings(uniqClusters)
+	return uniqClusters, nil
 }
 
 // AuthConfig is a configuration of the auth server
