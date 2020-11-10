@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/andygrunwald/go-jira"
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
-	jira "gopkg.in/andygrunwald/go-jira.v1"
 
 	log "github.com/sirupsen/logrus"
 )

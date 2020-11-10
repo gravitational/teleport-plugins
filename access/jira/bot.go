@@ -8,7 +8,7 @@ import (
 	"text/template"
 	"time"
 
-	jira "gopkg.in/andygrunwald/go-jira.v1"
+	"github.com/andygrunwald/go-jira"
 
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"

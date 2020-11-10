@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	mm "github.com/mattermost/mattermost-server/model"
+	mm "github.com/mattermost/mattermost-server/v5/model"
 
 	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/gravitational/trace"

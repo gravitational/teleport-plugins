@@ -28,11 +28,12 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gravitational/teleport/lib/utils"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/gravitational/trace"
-	log "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -71,6 +72,8 @@ type SpdyRoundTripper struct {
 
 	// ctx is a context for this round tripper
 	ctx context.Context
+
+	pingPeriod time.Duration
 }
 
 var _ utilnet.TLSClientConfigHolder = &SpdyRoundTripper{}
@@ -86,12 +89,13 @@ type roundTripperConfig struct {
 	dial            DialWithContext
 	tlsConfig       *tls.Config
 	followRedirects bool
+	pingPeriod      time.Duration
 }
 
 // NewSpdyRoundTripperWithDialer creates a new SpdyRoundTripper that will use
 // the specified tlsConfig. This function is mostly meant for unit tests.
 func NewSpdyRoundTripperWithDialer(cfg roundTripperConfig) *SpdyRoundTripper {
-	return &SpdyRoundTripper{tlsConfig: cfg.tlsConfig, followRedirects: cfg.followRedirects, dialWithContext: cfg.dial, ctx: cfg.ctx, authCtx: cfg.authCtx}
+	return &SpdyRoundTripper{tlsConfig: cfg.tlsConfig, followRedirects: cfg.followRedirects, dialWithContext: cfg.dial, ctx: cfg.ctx, authCtx: cfg.authCtx, pingPeriod: cfg.pingPeriod}
 }
 
 // TLSClientConfig implements pkg/util/net.TLSClientConfigHolder for proper TLS checking during
@@ -157,7 +161,7 @@ func (s *SpdyRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) 
 	header.Add(httpstream.HeaderConnection, httpstream.HeaderUpgrade)
 	header.Add(httpstream.HeaderUpgrade, streamspdy.HeaderSpdy31)
 
-	if err := setupImpersonationHeaders(log.StandardLogger(), &s.authCtx, header); err != nil {
+	if err := setupImpersonationHeaders(log.StandardLogger(), s.authCtx, header); err != nil {
 		return nil, trace.Wrap(err)
 	}
 
@@ -223,7 +227,7 @@ func (s *SpdyRoundTripper) NewConnection(resp *http.Response) (httpstream.Connec
 		return nil, fmt.Errorf("unable to upgrade connection: %s", responseError)
 	}
 
-	return streamspdy.NewClientConnection(s.conn)
+	return streamspdy.NewClientConnectionWithPings(s.conn, s.pingPeriod)
 }
 
 // statusScheme is private scheme for the decoding here until someone fixes the TODO in NewConnection

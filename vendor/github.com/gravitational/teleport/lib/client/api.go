@@ -31,7 +31,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"os/user"
-	"path"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -333,18 +332,25 @@ func RetryWithRelogin(ctx context.Context, tc *TeleportClient, fn func() error) 
 	// Assume that failed handshake is a result of expired credentials,
 	// retry the login procedure
 	if !utils.IsHandshakeFailedError(err) && !utils.IsCertExpiredError(err) && !trace.IsBadParameter(err) && !trace.IsTrustError(err) {
-		return err
+		return trace.Wrap(err)
+	}
+	// Don't try to login when using an identity file.
+	if tc.SkipLocalAuth {
+		return trace.Wrap(err)
 	}
 	log.Debugf("Activating relogin on %v.", err)
-	key, err := tc.Login(ctx, true)
+	key, err := tc.Login(ctx)
 	if err != nil {
 		if trace.IsTrustError(err) {
 			return trace.Wrap(err, "refusing to connect to untrusted proxy %v without --insecure flag\n", tc.Config.SSHProxyAddr)
 		}
 		return trace.Wrap(err)
 	}
+	if err := tc.ActivateKey(ctx, key); err != nil {
+		return trace.Wrap(err)
+	}
 	// Save profile to record proxy credentials
-	if err := tc.SaveProfile(key.ProxyHost, "", ProfileCreateNew|ProfileMakeCurrent); err != nil {
+	if err := tc.SaveProfile("", true); err != nil {
 		log.Warningf("Failed to save profile: %v", err)
 		return trace.Wrap(err)
 	}
@@ -367,7 +373,7 @@ func readProfile(profileDir string, profileName string) (*ProfileStatus, error) 
 	var err error
 
 	// Read in the profile for this proxy.
-	profile, err := ProfileFromFile(filepath.Join(profileDir, profileName))
+	profile, err := ProfileFromDir(profileDir, profileName)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -465,32 +471,6 @@ func readProfile(profileDir string, profileName string) (*ProfileStatus, error) 
 	}, nil
 }
 
-// fullProfileName takes a profile directory and the host the user is trying
-// to connect to and returns the name of the profile file.
-func fullProfileName(profileDir string, proxyHost string) (string, error) {
-	var err error
-	var profileName string
-
-	// If no profile name was passed in, try and extract the active profile from
-	// the ~/.tsh/profile symlink. If one was passed in, append .yaml to name.
-	if proxyHost == "" {
-		profileName, err = os.Readlink(filepath.Join(profileDir, "profile"))
-		if err != nil {
-			return "", trace.ConvertSystemError(err)
-		}
-	} else {
-		profileName = proxyHost + ".yaml"
-	}
-
-	// Make sure the profile requested actually exists.
-	_, err = os.Stat(filepath.Join(profileDir, profileName))
-	if err != nil {
-		return "", trace.ConvertSystemError(err)
-	}
-
-	return profileName, nil
-}
-
 // Status returns the active profile as well as a list of available profiles.
 func Status(profileDir string, proxyHost string) (*ProfileStatus, []*ProfileStatus, error) {
 	var err error
@@ -510,24 +490,33 @@ func Status(profileDir string, proxyHost string) (*ProfileStatus, []*ProfileStat
 	profileDir = FullProfilePath(profileDir)
 	stat, err := os.Stat(profileDir)
 	if err != nil {
-		return nil, nil, trace.Wrap(err)
+		log.Debugf("Failed to stat file: %v.", err)
+		if os.IsNotExist(err) {
+			return nil, nil, trace.NotFound(err.Error())
+		} else if os.IsPermission(err) {
+			return nil, nil, trace.AccessDenied(err.Error())
+		} else {
+			return nil, nil, trace.Wrap(err)
+		}
 	}
 	if !stat.IsDir() {
 		return nil, nil, trace.BadParameter("profile path not a directory")
 	}
 
-	// Construct the name of the profile requested. If an empty string was
-	// passed in, the name of the active profile will be extracted from the
-	// ~/.tsh/profile symlink.
-	profileName, err := fullProfileName(profileDir, proxyHost)
-	if err != nil {
-		if trace.IsNotFound(err) {
-			return nil, nil, trace.NotFound("not logged in")
+	// use proxyHost as default profile name, or the current profile if
+	// no proxyHost was supplied.
+	profileName := proxyHost
+	if profileName == "" {
+		profileName, err = GetCurrentProfileName(profileDir)
+		if err != nil {
+			if trace.IsNotFound(err) {
+				return nil, nil, trace.NotFound("not logged in")
+			}
+			return nil, nil, trace.Wrap(err)
 		}
-		return nil, nil, trace.Wrap(err)
 	}
 
-	// Read in the active profile first. If readProfile returns trace.NotFound,
+	// Read in the target profile first. If readProfile returns trace.NotFound,
 	// that means the profile may have been corrupted (for example keys were
 	// deleted but profile exists), treat this as the user not being logged in.
 	profile, err = readProfile(profileDir, profileName)
@@ -540,26 +529,17 @@ func Status(profileDir string, proxyHost string) (*ProfileStatus, []*ProfileStat
 		profile = nil
 	}
 
-	// Next, get list of all other available profiles. Filter out logged in
-	// profile if it exists and return a slice of *ProfileStatus.
-	files, err := ioutil.ReadDir(profileDir)
+	// load the rest of the profiles
+	profiles, err := ListProfileNames(profileDir)
 	if err != nil {
 		return nil, nil, trace.Wrap(err)
 	}
-	for _, file := range files {
-		if file.IsDir() {
+	for _, name := range profiles {
+		if name == profileName {
+			// already loaded this one
 			continue
 		}
-		if file.Mode()&os.ModeSymlink != 0 {
-			continue
-		}
-		if !strings.HasSuffix(file.Name(), ".yaml") {
-			continue
-		}
-		if file.Name() == profileName {
-			continue
-		}
-		ps, err := readProfile(profileDir, file.Name())
+		ps, err := readProfile(profileDir, name)
 		if err != nil {
 			// parts of profile are missing?
 			// status skips these files
@@ -609,20 +589,12 @@ func (c *Config) LoadProfile(profileDir string, proxyName string) error {
 
 // SaveProfile updates the given profiles directory with the current configuration
 // If profileDir is an empty string, the default ~/.tsh is used
-func (c *Config) SaveProfile(profileAliasHost, profileDir string, profileOptions ...ProfileOptions) error {
+func (c *Config) SaveProfile(dir string, makeCurrent bool) error {
 	if c.WebProxyAddr == "" {
 		return nil
 	}
 
-	// The profile is saved to a directory with the name of the proxy web endpoint.
-	webProxyHost, _ := c.WebProxyHostPort()
-	profileDir = FullProfilePath(profileDir)
-	profilePath := path.Join(profileDir, webProxyHost) + ".yaml"
-
-	profileAliasPath := ""
-	if profileAliasHost != "" {
-		profileAliasPath = path.Join(profileDir, profileAliasHost) + ".yaml"
-	}
+	dir = FullProfilePath(dir)
 
 	var cp ClientProfile
 	cp.Username = c.Username
@@ -632,21 +604,7 @@ func (c *Config) SaveProfile(profileAliasHost, profileDir string, profileOptions
 	cp.ForwardedPorts = c.LocalForwardPorts.String()
 	cp.SiteName = c.SiteName
 
-	// create a profile file and set it current base on the option
-	var opts ProfileOptions
-	if len(profileOptions) == 0 {
-		// default behavior is to override the profile
-		opts = ProfileMakeCurrent
-	} else {
-		for _, flag := range profileOptions {
-			opts |= flag
-		}
-	}
-	if err := cp.SaveTo(ProfileLocation{
-		AliasPath: profileAliasPath,
-		Path:      profilePath,
-		Options:   opts,
-	}); err != nil {
+	if err := cp.SaveToDir(dir, makeCurrent); err != nil {
 		return trace.Wrap(err)
 	}
 	return nil
@@ -947,6 +905,15 @@ func (tc *TeleportClient) GetAccessRequests(ctx context.Context, filter services
 	return proxyClient.GetAccessRequests(ctx, filter)
 }
 
+// GetRole loads a role resource by name.
+func (tc *TeleportClient) GetRole(ctx context.Context, name string) (services.Role, error) {
+	proxyClient, err := tc.ConnectToProxy(ctx)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	return proxyClient.GetRole(ctx, name)
+}
+
 // NewWatcher sets up a new event watcher.
 func (tc *TeleportClient) NewWatcher(ctx context.Context, watch services.Watch) (services.Watcher, error) {
 	proxyClient, err := tc.ConnectToProxy(ctx)
@@ -991,6 +958,7 @@ func (tc *TeleportClient) SSH(ctx context.Context, command []string, runLocally 
 		tc.ExitStatus = 1
 		return trace.Wrap(err)
 	}
+	defer nodeClient.Close()
 
 	// If forwarding ports were specified, start port forwarding.
 	tc.startPortForwarding(ctx, nodeClient)
@@ -1021,8 +989,10 @@ func (tc *TeleportClient) SSH(ctx context.Context, command []string, runLocally 
 	if len(command) > 0 {
 		if len(nodeAddrs) > 1 {
 			fmt.Printf("\x1b[1mWARNING\x1b[0m: Multiple nodes matched label selector, running command on all.")
+			return tc.runCommandOnNodes(ctx, siteInfo.Name, nodeAddrs, proxyClient, command)
 		}
-		return tc.runCommand(ctx, siteInfo.Name, nodeAddrs, proxyClient, command)
+		// Reuse the existing nodeClient we connected above.
+		return tc.runCommand(ctx, nodeClient, command)
 	}
 
 	// Issue "shell" request to run single node.
@@ -1457,54 +1427,32 @@ func (tc *TeleportClient) ListAllNodes(ctx context.Context) ([]services.Server, 
 	return proxyClient.FindServersByLabels(ctx, tc.Namespace, nil)
 }
 
-// runCommand executes a given bash command on a bunch of remote nodes
-func (tc *TeleportClient) runCommand(
+// runCommandOnNodes executes a given bash command on a bunch of remote nodes.
+func (tc *TeleportClient) runCommandOnNodes(
 	ctx context.Context, siteName string, nodeAddresses []string, proxyClient *ProxyClient, command []string) error {
 
 	resultsC := make(chan error, len(nodeAddresses))
 	for _, address := range nodeAddresses {
 		go func(address string) {
-			var (
-				err         error
-				nodeSession *NodeSession
-			)
+			var err error
 			defer func() {
 				resultsC <- err
 			}()
+
 			var nodeClient *NodeClient
 			nodeClient, err = proxyClient.ConnectToNode(ctx,
 				NodeAddr{Addr: address, Namespace: tc.Namespace, Cluster: siteName},
 				tc.Config.HostLogin, false)
 			if err != nil {
+				// err is passed to resultsC in the defer above.
 				fmt.Fprintln(tc.Stderr, err)
 				return
 			}
 			defer nodeClient.Close()
 
-			// run the command on one node:
-			if len(nodeAddresses) > 1 {
-				fmt.Printf("Running command on %v:\n", address)
-			}
-			nodeSession, err = newSession(nodeClient, nil, tc.Config.Env, tc.Stdin, tc.Stdout, tc.Stderr, tc.useLegacyID(nodeClient), tc.EnableEscapeSequences)
-			if err != nil {
-				log.Error(err)
-				return
-			}
-			defer nodeSession.Close()
-			if err = nodeSession.runCommand(ctx, command, tc.OnShellCreated, tc.Config.Interactive); err != nil {
-				originErr := trace.Unwrap(err)
-				exitErr, ok := originErr.(*ssh.ExitError)
-				if ok {
-					tc.ExitStatus = exitErr.ExitStatus()
-				} else {
-					// if an error occurs, but no exit status is passed back, GoSSH returns
-					// a generic error like this. in this case the error message is printed
-					// to stderr by the remote process so we have to quietly return 1:
-					if strings.Contains(originErr.Error(), "exited without exit status") {
-						tc.ExitStatus = 1
-					}
-				}
-			}
+			fmt.Printf("Running command on %v:\n", address)
+			err = tc.runCommand(ctx, nodeClient, command)
+			// err is passed to resultsC in the defer above.
 		}(address)
 	}
 	var lastError error
@@ -1514,6 +1462,33 @@ func (tc *TeleportClient) runCommand(
 		}
 	}
 	return trace.Wrap(lastError)
+}
+
+// runCommand executes a given bash command on an established NodeClient.
+func (tc *TeleportClient) runCommand(ctx context.Context, nodeClient *NodeClient, command []string) error {
+	nodeSession, err := newSession(nodeClient, nil, tc.Config.Env, tc.Stdin, tc.Stdout, tc.Stderr, tc.useLegacyID(nodeClient), tc.EnableEscapeSequences)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	defer nodeSession.Close()
+	if err := nodeSession.runCommand(ctx, command, tc.OnShellCreated, tc.Config.Interactive); err != nil {
+		originErr := trace.Unwrap(err)
+		exitErr, ok := originErr.(*ssh.ExitError)
+		if ok {
+			tc.ExitStatus = exitErr.ExitStatus()
+		} else {
+			// if an error occurs, but no exit status is passed back, GoSSH returns
+			// a generic error like this. in this case the error message is printed
+			// to stderr by the remote process so we have to quietly return 1:
+			if strings.Contains(originErr.Error(), "exited without exit status") {
+				tc.ExitStatus = 1
+			}
+		}
+
+		return trace.Wrap(err)
+	}
+
+	return nil
 }
 
 // runShell starts an interactive SSH session/shell.
@@ -1675,10 +1650,10 @@ func (tc *TeleportClient) LogoutAll() error {
 
 // Login logs the user into a Teleport cluster by talking to a Teleport proxy.
 //
-// If 'activateKey' is true, saves the received session cert into the local
-// keystore (and into the ssh-agent) for future use.
+// The returned Key should typically be passed to ActivateKey in order to
+// update local agent state.
 //
-func (tc *TeleportClient) Login(ctx context.Context, activateKey bool) (*Key, error) {
+func (tc *TeleportClient) Login(ctx context.Context) (*Key, error) {
 	// preserve original web proxy host that could have
 	webProxyHost, _ := tc.WebProxyHostPort()
 
@@ -1754,39 +1729,48 @@ func (tc *TeleportClient) Login(ctx context.Context, activateKey bool) (*Key, er
 	// Add the cluster name into the key from the host certificate.
 	key.ClusterName = response.HostSigners[0].ClusterName
 
-	if activateKey && tc.localAgent != nil {
-		// save the list of CAs client trusts to ~/.tsh/known_hosts
-		err = tc.localAgent.AddHostSignersToCache(response.HostSigners)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-
-		// save the list of TLS CAs client trusts
-		err = tc.localAgent.SaveCerts(response.HostSigners)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-
-		// save the cert to the local storage (~/.tsh usually):
-		_, err = tc.localAgent.AddKey(key)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-
-		// Connect to the Auth Server of the main cluster and fetch the known hosts
-		// for this cluster.
-		if err := tc.UpdateTrustedCA(ctx, key.ClusterName); err != nil {
-			return nil, trace.Wrap(err)
-		}
-
-		// Update the cluster name (which will be saved in the profile) with the
-		// name of the cluster the caller requested to connect to.
-		tc.SiteName, err = updateClusterName(ctx, tc, tc.SiteName, response.HostSigners)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-	}
 	return key, nil
+}
+
+// ActivateKey saves the target session cert into the local
+// keystore (and into the ssh-agent) for future use.
+func (tc *TeleportClient) ActivateKey(ctx context.Context, key *Key) error {
+	if tc.localAgent == nil {
+		// skip activation if no local agent is present
+		return nil
+	}
+	// save the list of CAs client trusts to ~/.tsh/known_hosts
+	err := tc.localAgent.AddHostSignersToCache(key.TrustedCA)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	// save the list of TLS CAs client trusts
+	err = tc.localAgent.SaveCerts(key.TrustedCA)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	// save the cert to the local storage (~/.tsh usually):
+	_, err = tc.localAgent.AddKey(key)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	// Connect to the Auth Server of the main cluster and fetch the known hosts
+	// for this cluster.
+	if err := tc.UpdateTrustedCA(ctx, key.ClusterName); err != nil {
+		return trace.Wrap(err)
+	}
+
+	// Update the cluster name (which will be saved in the profile) with the
+	// name of the cluster the caller requested to connect to.
+	tc.SiteName, err = updateClusterName(ctx, tc, tc.SiteName, key.TrustedCA)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	return nil
 }
 
 // Ping makes a ping request to the proxy, and updates tc based on the

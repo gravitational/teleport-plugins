@@ -49,6 +49,23 @@ type APIConfig struct {
 	SessionService session.Service
 	AuditLog       events.IAuditLog
 	Authorizer     Authorizer
+	Emitter        events.Emitter
+	// KeepAlivePeriod defines period between keep alives
+	KeepAlivePeriod time.Duration
+	// KeepAliveCount specifies amount of missed keep alives
+	// to wait for until declaring connection as broken
+	KeepAliveCount int
+}
+
+// CheckAndSetDefaults checks and sets default values
+func (a *APIConfig) CheckAndSetDefaults() error {
+	if a.KeepAlivePeriod == 0 {
+		a.KeepAlivePeriod = defaults.ServerKeepAliveTTL
+	}
+	if a.KeepAliveCount == 0 {
+		a.KeepAliveCount = defaults.KeepAliveCountMax
+	}
+	return nil
 }
 
 // APIServer implements http API server for AuthServer interface
@@ -260,9 +277,7 @@ func (s *APIServer) withAuth(handler HandlerWithAuthFunc) httprouter.Handle {
 		}
 		auth := &AuthWithRoles{
 			authServer: s.AuthServer,
-			user:       authContext.User,
-			checker:    authContext.Checker,
-			identity:   authContext.Identity,
+			context:    *authContext,
 			sessions:   s.SessionService,
 			alog:       s.AuthServer.IAuditLog,
 		}
@@ -748,7 +763,8 @@ func (s *APIServer) u2fSignRequest(auth ClientI, w http.ResponseWriter, r *http.
 }
 
 type createWebSessionReq struct {
-	PrevSessionID string `json:"prev_session_id"`
+	PrevSessionID   string `json:"prev_session_id"`
+	AccessRequestID string `json:"access_request_id"`
 }
 
 func (s *APIServer) createWebSession(auth ClientI, w http.ResponseWriter, r *http.Request, p httprouter.Params, version string) (interface{}, error) {
@@ -758,7 +774,7 @@ func (s *APIServer) createWebSession(auth ClientI, w http.ResponseWriter, r *htt
 	}
 	user := p.ByName("user")
 	if req.PrevSessionID != "" {
-		sess, err := auth.ExtendWebSession(user, req.PrevSessionID)
+		sess, err := auth.ExtendWebSession(user, req.PrevSessionID, req.AccessRequestID)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
@@ -1869,9 +1885,9 @@ func (s *APIServer) emitAuditEvent(auth ClientI, w http.ResponseWriter, r *http.
 	// For backwards compatibility, check if the full event struct has
 	// been sent in the request or just the event type.
 	if req.Event.Name != "" {
-		err = auth.EmitAuditEvent(req.Event, req.Fields)
+		err = auth.EmitAuditEventLegacy(req.Event, req.Fields)
 	} else {
-		err = auth.EmitAuditEvent(events.Event{Name: req.Type}, req.Fields)
+		err = auth.EmitAuditEventLegacy(events.Event{Name: req.Type}, req.Fields)
 	}
 	if err != nil {
 		return nil, trace.Wrap(err)

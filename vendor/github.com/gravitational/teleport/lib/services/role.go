@@ -39,6 +39,7 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/jonboulle/clockwork"
+	"github.com/pborman/uuid"
 	log "github.com/sirupsen/logrus"
 	"github.com/vulcand/predicate"
 )
@@ -385,12 +386,9 @@ func ApplyTraits(r Role, traits map[string][]string) Role {
 // at least one value in case if return value is nil
 func applyValueTraits(val string, traits map[string][]string) ([]string, error) {
 	// Extract the variable from the role variable.
-	variable, err := parse.RoleVariable(val)
+	variable, err := parse.NewExpression(val)
 	if err != nil {
-		if !trace.IsNotFound(err) {
-			return nil, trace.Wrap(err)
-		}
-		return []string{val}, nil
+		return nil, trace.Wrap(err)
 	}
 
 	// For internal traits, only internal.logins, internal.kubernetes_users and
@@ -670,8 +668,14 @@ func (r *RoleV3) CheckAndSetDefaults() error {
 		r.Spec.Allow.Namespaces = []string{defaults.Namespace}
 	}
 	if r.Spec.Allow.NodeLabels == nil {
-		r.Spec.Allow.NodeLabels = Labels{Wildcard: []string{Wildcard}}
+		if len(r.Spec.Allow.Logins) == 0 {
+			// no logins implies no node access
+			r.Spec.Allow.NodeLabels = Labels{}
+		} else {
+			r.Spec.Allow.NodeLabels = Labels{Wildcard: []string{Wildcard}}
+		}
 	}
+
 	if r.Spec.Deny.Namespaces == nil {
 		r.Spec.Deny.Namespaces = []string{defaults.Namespace}
 	}
@@ -690,7 +694,7 @@ func (r *RoleV3) CheckAndSetDefaults() error {
 	for _, condition := range []RoleConditionType{Allow, Deny} {
 		for _, login := range r.GetLogins(condition) {
 			if strings.Contains(login, "{{") || strings.Contains(login, "}}") {
-				_, err := parse.RoleVariable(login)
+				_, err := parse.NewExpression(login)
 				if err != nil {
 					return trace.BadParameter("invalid login found: %v", login)
 				}
@@ -726,6 +730,7 @@ func (r *RoleV3) CheckAndSetDefaults() error {
 			return trace.BadParameter("failed to process 'deny' rule %v: %v", i, err)
 		}
 	}
+
 	return nil
 }
 
@@ -1330,7 +1335,7 @@ type AccessChecker interface {
 
 	// CheckKubeGroupsAndUsers check if role can login into kubernetes
 	// and returns two lists of combined allowed groups and users
-	CheckKubeGroupsAndUsers(ttl time.Duration) (groups []string, users []string, err error)
+	CheckKubeGroupsAndUsers(ttl time.Duration, overrideTTL bool) (groups []string, users []string, err error)
 
 	// AdjustSessionTTL will reduce the requested ttl to lowest max allowed TTL
 	// for this role set, otherwise it returns ttl unchanged
@@ -1451,7 +1456,7 @@ func ExtractFromCertificate(access UserGetter, cert *ssh.Certificate) ([]string,
 // ExtractFromIdentity will extract roles and traits from the *x509.Certificate
 // which Teleport passes along as a *tlsca.Identity. If roles and traits do not
 // exist in the certificates, they are extracted from the backend.
-func ExtractFromIdentity(access UserGetter, identity *tlsca.Identity) ([]string, wrappers.Traits, error) {
+func ExtractFromIdentity(access UserGetter, identity tlsca.Identity) ([]string, wrappers.Traits, error) {
 	// For legacy certificates, fetch roles and traits from the services.User
 	// object in the backend.
 	if missingIdentity(identity) {
@@ -1501,7 +1506,7 @@ func isFormatOld(cert *ssh.Certificate) bool {
 
 // missingIdentity returns true if the identity is missing or the identity
 // has no roles or traits.
-func missingIdentity(identity *tlsca.Identity) bool {
+func missingIdentity(identity tlsca.Identity) bool {
 	if len(identity.Groups) == 0 || len(identity.Traits) == 0 {
 		return true
 	}
@@ -1635,6 +1640,32 @@ func (set RoleSet) AdjustSessionTTL(ttl time.Duration) time.Duration {
 	return ttl
 }
 
+// MaxConnections returns the maximum number of concurrent ssh connections
+// allowed.  If MaxConnections is zero then no maximum was defined
+// and the number of concurrent connections is unconstrained.
+func (set RoleSet) MaxConnections() int64 {
+	var mcs int64
+	for _, role := range set {
+		if m := role.GetOptions().MaxConnections; m != 0 && (m < mcs || mcs == 0) {
+			mcs = m
+		}
+	}
+	return mcs
+}
+
+// MaxSessions returns the maximum number of concurrent ssh sessions
+// per connection.  If MaxSessions is zero then no maximum was defined
+// and the number of sessions is unconstrained.
+func (set RoleSet) MaxSessions() int64 {
+	var ms int64
+	for _, role := range set {
+		if m := role.GetOptions().MaxSessions; m != 0 && (m < ms || ms == 0) {
+			ms = m
+		}
+	}
+	return ms
+}
+
 // AdjustClientIdleTimeout adjusts requested idle timeout
 // to the lowest max allowed timeout, the most restrictive
 // option will be picked, negative values will be assumed as 0
@@ -1674,13 +1705,13 @@ func (set RoleSet) AdjustDisconnectExpiredCert(disconnect bool) bool {
 
 // CheckKubeGroupsAndUsers check if role can login into kubernetes
 // and returns two lists of allowed groups and users
-func (set RoleSet) CheckKubeGroupsAndUsers(ttl time.Duration) ([]string, []string, error) {
+func (set RoleSet) CheckKubeGroupsAndUsers(ttl time.Duration, overrideTTL bool) ([]string, []string, error) {
 	groups := make(map[string]struct{})
 	users := make(map[string]struct{})
 	var matchedTTL bool
 	for _, role := range set {
 		maxSessionTTL := role.GetOptions().MaxSessionTTL.Value()
-		if ttl <= maxSessionTTL && maxSessionTTL != 0 {
+		if overrideTTL || (ttl <= maxSessionTTL && maxSessionTTL != 0) {
 			matchedTTL = true
 			for _, group := range role.GetKubeGroups(Allow) {
 				groups[group] = struct{}{}
@@ -1725,6 +1756,14 @@ func (set RoleSet) CheckLoginDuration(ttl time.Duration) ([]string, error) {
 	if !matchedTTL {
 		return nil, trace.AccessDenied("this user cannot request a certificate for %v", ttl)
 	}
+	if len(logins) == 0 && !set.hasPossibleLogins() {
+		// user was deliberately configured to have no login capability,
+		// but ssh certificates must contain at least one valid principal.
+		// we add a single distinctive value which should be unique, and
+		// will never be a valid unix login (due to leading '-').
+		logins["-teleport-nologin-"+uuid.New()] = true
+	}
+
 	if len(logins) == 0 {
 		return nil, trace.AccessDenied("this user cannot create SSH sessions, has no allowed logins")
 	}
@@ -1733,6 +1772,18 @@ func (set RoleSet) CheckLoginDuration(ttl time.Duration) ([]string, error) {
 		out = append(out, login)
 	}
 	return out, nil
+}
+
+func (set RoleSet) hasPossibleLogins() bool {
+	for _, role := range set {
+		if role.GetName() == teleport.DefaultImplicitRole {
+			continue
+		}
+		if len(role.GetLogins(Allow)) != 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // CheckAccessToServer checks if a role has access to a node. Deny rules are
@@ -2301,7 +2352,11 @@ const RoleSpecV3SchemaTemplate = `{
         "enhanced_recording": {
           "type": "array",
           "items": { "type": "string" }
-        }
+        },
+        "max_connections": { "type": "number" },
+        "max_sessions": {"type": "number"},
+        "request_access": { "type": "string" },
+        "request_prompt": { "type": "string" }
       }
     },
     "allow": { "$ref": "#/definitions/role_condition" },
@@ -2339,7 +2394,21 @@ const RoleSpecV3SchemaDefinitions = `
 		  "roles": {
 		    "type": "array",
 			"items": { "type": "string" }
-		  }
+		  },
+          "claims_to_roles": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "claim": {"type": "string"},
+              "value": {"type": "string"},
+              "roles": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
 		}
 	  },
       "rules": {

@@ -491,8 +491,11 @@ func (u *UserV1) Check() error {
 		return trace.BadParameter("user name cannot be empty")
 	}
 	for _, login := range u.AllowedLogins {
-		_, err := parse.RoleVariable(login)
-		if err == nil {
+		e, err := parse.NewExpression(login)
+		if err != nil {
+			return trace.Wrap(err)
+		}
+		if e.Namespace() != parse.LiteralNamespace {
 			return trace.BadParameter("role variables not allowed in allowed logins")
 		}
 	}
