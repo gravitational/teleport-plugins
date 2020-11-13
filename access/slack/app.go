@@ -8,6 +8,7 @@ import (
 	"github.com/gravitational/teleport-plugins/access"
 	"github.com/gravitational/teleport-plugins/utils"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 
 	"github.com/gravitational/trace"
 
@@ -77,12 +78,16 @@ func (a *App) run(ctx context.Context) (err error) {
 	} else if err != nil {
 		return
 	}
+	bk := backoff.DefaultConfig
+	bk.MaxDelay = time.Second * 2
 	a.accessClient, err = access.NewClient(
 		ctx,
 		"slack",
 		a.conf.Teleport.AuthServer,
 		tlsConf,
-		grpc.WithBackoffMaxDelay(time.Second*2),
+		grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff: bk,
+		}),
 	)
 	if err != nil {
 		return
@@ -132,7 +137,7 @@ func (a *App) checkTeleportVersion(ctx context.Context) error {
 		if trace.IsNotImplemented(err) {
 			return trace.Wrap(err, "server version must be at least %s", access.MinServerVersion)
 		}
-		log.Error("Unable to get Teleport server version")
+		log.WithError(err).Error("Unable to get Teleport server version")
 		return trace.Wrap(err)
 	}
 	a.bot.clusterName = pong.ClusterName

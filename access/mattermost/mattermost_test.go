@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	mm "github.com/mattermost/mattermost-server/model"
+	mm "github.com/mattermost/mattermost-server/v5/model"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gravitational/teleport-plugins/access/integration"
@@ -194,7 +194,7 @@ func (s *MattermostSuite) checkPluginData(c *C, reqID string) PluginData {
 	return DecodePluginData(rawData)
 }
 
-func (s *MattermostSuite) postWebhook(c *C, post mm.Post, actionName string) {
+func (s *MattermostSuite) postWebhook(c *C, post *mm.Post, actionName string) {
 	attachments := post.Attachments()
 	c.Assert(attachments, HasLen, 1)
 	var action *mm.PostAction
@@ -255,7 +255,7 @@ func (s *MattermostSuite) TestApproval(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
 
-	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdated.Name, "id": request.GetName()})
+	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdateEvent, "id": request.GetName()})
 	c.Assert(err, IsNil)
 	c.Assert(auditLog, HasLen, 1)
 	c.Assert(auditLog[0].GetString("state"), Equals, "APPROVED")
@@ -275,7 +275,7 @@ func (s *MattermostSuite) TestDenial(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
 
-	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdated.Name, "id": request.GetName()})
+	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdateEvent, "id": request.GetName()})
 	c.Assert(err, IsNil)
 	c.Assert(auditLog, HasLen, 1)
 	c.Assert(auditLog[0].GetString("state"), Equals, "DENIED")

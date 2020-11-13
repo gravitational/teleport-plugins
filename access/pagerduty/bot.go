@@ -8,7 +8,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/go-resty/resty"
+	"github.com/go-resty/resty/v2"
 	"github.com/google/go-querystring/query"
 
 	"github.com/gravitational/teleport-plugins/utils"

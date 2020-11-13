@@ -6,7 +6,8 @@ import (
 	"net/http"
 
 	"github.com/gravitational/trace"
-	jira "gopkg.in/andygrunwald/go-jira.v1"
+
+	"github.com/andygrunwald/go-jira"
 )
 
 // JiraClient is a convenient wrapper around jira.Client.

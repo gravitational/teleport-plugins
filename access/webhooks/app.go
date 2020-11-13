@@ -7,6 +7,7 @@ import (
 	"github.com/gravitational/teleport-plugins/access"
 	"github.com/gravitational/teleport-plugins/utils"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/backoff"
 
 	"github.com/gravitational/trace"
 
@@ -105,13 +106,17 @@ func (a *App) run(ctx context.Context) (err error) {
 		return
 	}
 
+	bk := backoff.DefaultConfig
+	bk.MaxDelay = time.Second * 2
 	// Connect to the Teleport Auth server
 	a.accessClient, err = access.NewClient(
 		ctx,
 		"webhooks",
 		a.conf.Teleport.AuthServer,
 		tlsConf,
-		grpc.WithBackoffMaxDelay(time.Second*2),
+		grpc.WithConnectParams(grpc.ConnectParams{
+			Backoff: bk,
+		}),
 		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
 	)
 	if err != nil {

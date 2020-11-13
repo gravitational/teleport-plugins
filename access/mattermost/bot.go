@@ -9,7 +9,7 @@ import (
 	"text/template"
 	"time"
 
-	mm "github.com/mattermost/mattermost-server/model"
+	mm "github.com/mattermost/mattermost-server/v5/model"
 
 	"github.com/gravitational/trace"
 	// log "github.com/sirupsen/logrus"

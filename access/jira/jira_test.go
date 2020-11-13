@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/andygrunwald/go-jira"
 	log "github.com/sirupsen/logrus"
-	jira "gopkg.in/andygrunwald/go-jira.v1"
 
 	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
@@ -231,7 +231,7 @@ func (s *JiraSuite) TestApproval(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
 
-	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdated.Name, "id": request.GetName()})
+	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdateEvent, "id": request.GetName()})
 	c.Assert(err, IsNil)
 	c.Assert(auditLog, HasLen, 1)
 	c.Assert(auditLog[0].GetString("state"), Equals, "APPROVED")
@@ -252,7 +252,7 @@ func (s *JiraSuite) TestDenial(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
 
-	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdated.Name, "id": request.GetName()})
+	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdateEvent, "id": request.GetName()})
 	c.Assert(err, IsNil)
 	c.Assert(auditLog, HasLen, 1)
 	c.Assert(auditLog[0].GetString("state"), Equals, "DENIED")

@@ -19,6 +19,7 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -136,6 +137,9 @@ const (
 
 	// KindClusterConfig is the resource that holds cluster level configuration.
 	KindClusterConfig = "cluster_config"
+
+	// KindSemaphore is the resource that provides distributed semaphore functionality
+	KindSemaphore = "semaphore"
 
 	// MetaNameClusterConfig is the exact name of the cluster config singleton resource.
 	MetaNameClusterConfig = "cluster-config"
@@ -511,7 +515,9 @@ const V2SchemaTemplate = `{
 }`
 
 // MetadataSchema is a schema for resource metadata
-const MetadataSchema = `{
+var MetadataSchema = fmt.Sprintf(baseMetadataSchema, labelPattern)
+
+const baseMetadataSchema = `{
   "type": "object",
   "additionalProperties": false,
   "default": {},
@@ -526,7 +532,7 @@ const MetadataSchema = `{
       "type": "object",
       "additionalProperties": false,
       "patternProperties": {
-         "^[a-zA-Z/.0-9_*-]+$":  { "type": "string" }
+         "%s":  { "type": "string" }
       }
     }
   }
@@ -710,6 +716,12 @@ func (m *Metadata) CheckAndSetDefaults() error {
 		utils.UTC(m.Expires)
 	}
 
+	for key := range m.Labels {
+		if !IsValidLabelKey(key) {
+			return trace.BadParameter("invalid label key: %q", key)
+		}
+	}
+
 	return nil
 }
 
@@ -749,6 +761,8 @@ func ParseShortcut(in string) (string, error) {
 		return KindClusterAuthPreference, nil
 	case KindRemoteCluster, "remote_clusters", "rc", "rcs":
 		return KindRemoteCluster, nil
+	case KindSemaphore, "semaphores", "sem", "sems":
+		return KindSemaphore, nil
 	}
 	return "", trace.BadParameter("unsupported resource: %q - resources should be expressed as 'type/name', for example 'connector/github'", in)
 }
@@ -772,6 +786,12 @@ func ParseRef(ref string) (*Ref, error) {
 			return nil, trace.Wrap(err)
 		}
 		return &Ref{Kind: shortcut, Name: parts[1]}, nil
+	case 3:
+		shortcut, err := ParseShortcut(parts[0])
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		return &Ref{Kind: shortcut, SubKind: parts[1], Name: parts[2]}, nil
 	}
 	return nil, trace.BadParameter("failed to parse '%v'", ref)
 }
@@ -785,10 +805,12 @@ func isDelimiter(r rune) bool {
 	return false
 }
 
-// Ref is a resource reference
+// Ref is a resource reference.  Typically of the form kind/name,
+// but sometimes of the form kind/subkind/name.
 type Ref struct {
-	Kind string
-	Name string
+	Kind    string
+	SubKind string
+	Name    string
 }
 
 // IsEmpty checks whether the provided resource name is empty
@@ -807,7 +829,11 @@ func (r *Ref) Set(v string) error {
 }
 
 func (r *Ref) String() string {
-	return fmt.Sprintf("%s/%s", r.Kind, r.Name)
+	if r.SubKind == "" {
+		return fmt.Sprintf("%s/%s", r.Kind, r.Name)
+	} else {
+		return fmt.Sprintf("%s/%s/%s", r.Kind, r.SubKind, r.Name)
+	}
 }
 
 // Refs is a set of resource references
@@ -918,4 +944,14 @@ func fieldsFunc(s string, f func(rune) bool) []string {
 	}
 
 	return a
+}
+
+const labelPattern = `^[a-zA-Z/.0-9_*-]+$`
+
+var validLabelKey = regexp.MustCompile(labelPattern)
+
+// IsValidLabelKey checks if the supplied string matches the
+// label key regexp.
+func IsValidLabelKey(s string) bool {
+	return validLabelKey.MatchString(s)
 }

@@ -161,11 +161,12 @@ func NewHandler(cfg Config, opts ...HandlerOption) (*RewritingHandler, error) {
 	h.POST("/webapi/sessions", httplib.WithCSRFProtection(h.createSession))
 	h.DELETE("/webapi/sessions", h.WithAuth(h.deleteSession))
 	h.POST("/webapi/sessions/renew", h.WithAuth(h.renewSession))
+	h.POST("/webapi/sessions/renew/:requestId", h.WithAuth(h.renewSession))
 
 	h.GET("/webapi/users/password/token/:token", httplib.MakeHandler(h.getResetPasswordTokenHandle))
 	h.PUT("/webapi/users/password/token", httplib.WithCSRFProtection(h.changePasswordWithToken))
 	h.PUT("/webapi/users/password", h.WithAuth(h.changePassword))
-	h.POST("/webapi/sites/:site/namespaces/:namespace/users/password/token", h.WithClusterAuth(h.createResetPasswordToken))
+	h.POST("/webapi/users/password/token", h.WithAuth(h.createResetPasswordToken))
 
 	// Issues SSH temp certificates based on 2FA access creds
 	h.POST("/webapi/ssh/certs", httplib.MakeHandler(h.createSSHCert))
@@ -653,7 +654,7 @@ func (h *Handler) getWebConfig(w http.ResponseWriter, r *http.Request, p httprou
 	if err != nil {
 		log.Errorf("Cannot retrieve ClusterConfig: %v.", err)
 	} else {
-		canJoinSessions = clsCfg.GetSessionRecording() != services.RecordAtProxy
+		canJoinSessions = services.IsRecordAtProxy(clsCfg.GetSessionRecording()) == false
 	}
 
 	authSettings := ui.WebConfigAuthSettings{
@@ -866,7 +867,7 @@ func (h *Handler) oidcCallback(w http.ResponseWriter, r *http.Request, p httprou
 	if err != nil {
 		log.Warningf("[OIDC] Error while processing callback: %v", err)
 
-		message := "Unable to process callback from OIDC provider. Ask your system administrator to check audit logs for details."
+		message := "Unable to process callback from OIDC provider."
 		// redirect to an error page
 		pathToError := url.URL{
 			Path:     "/web/msg/error/login_failed",
@@ -1135,19 +1136,16 @@ func (h *Handler) logout(w http.ResponseWriter, ctx *SessionContext) error {
 	return nil
 }
 
-// renewSession is called to renew the session that is about to expire
-// it issues the new session and generates new session cookie.
-// It's important to understand that the old session becomes effectively invalid.
+// renewSession is called in two ways:
+// 	- Without requestId: Creates new session that is about to expire.
+// 	- With requestId: Creates new session that includes additional roles assigned with approving access request.
 //
-// POST /v1/webapi/sessions/renew
-//
-// Response
-//
-// {"type": "bearer", "token": "bearer token", "user": {"name": "alex", "allowed_logins": ["admin", "bob"]}, "expires_in": 20}
-//
-//
-func (h *Handler) renewSession(w http.ResponseWriter, r *http.Request, _ httprouter.Params, ctx *SessionContext) (interface{}, error) {
-	newSess, err := ctx.ExtendWebSession()
+// 	It issues the new session and generates new session cookie.
+// 	It's important to understand that the old session becomes effectively invalid.
+func (h *Handler) renewSession(w http.ResponseWriter, r *http.Request, params httprouter.Params, ctx *SessionContext) (interface{}, error) {
+	requestID := params.ByName("requestId")
+
+	newSess, err := ctx.ExtendWebSession(requestID)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -1185,8 +1183,10 @@ func (h *Handler) changePasswordWithToken(w http.ResponseWriter, r *http.Request
 	return NewSessionResponse(ctx)
 }
 
-func (h *Handler) createResetPasswordToken(w http.ResponseWriter, r *http.Request, p httprouter.Params, ctx *SessionContext, site reversetunnel.RemoteSite) (interface{}, error) {
-	clt, err := ctx.GetUserClient(site)
+// createResetPasswordToken allows a UI user to reset a user's password.
+// This handler is also required for after creating new users.
+func (h *Handler) createResetPasswordToken(w http.ResponseWriter, r *http.Request, _ httprouter.Params, ctx *SessionContext) (interface{}, error) {
+	clt, err := ctx.GetClient()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -1196,7 +1196,7 @@ func (h *Handler) createResetPasswordToken(w http.ResponseWriter, r *http.Reques
 		return nil, trace.Wrap(err)
 	}
 
-	token, err := clt.CreateResetPasswordToken(context.TODO(),
+	token, err := clt.CreateResetPasswordToken(r.Context(),
 		auth.CreateResetPasswordTokenRequest{
 			Name: req.Name,
 			Type: req.Type,
@@ -1207,8 +1207,9 @@ func (h *Handler) createResetPasswordToken(w http.ResponseWriter, r *http.Reques
 	}
 
 	return ui.ResetPasswordToken{
-		URL:    token.GetURL(),
-		Expiry: token.Expiry(),
+		TokenID: token.GetName(),
+		Expiry:  token.Expiry(),
+		User:    token.GetUser(),
 	}, nil
 }
 
@@ -1425,6 +1426,19 @@ func (h *Handler) siteNodeConnect(
 	log.Debugf("[WEB] new terminal request for ns=%s, server=%s, login=%s, sid=%s",
 		req.Namespace, req.Server, req.Login, req.SessionID)
 
+	authAccessPoint, err := site.CachingAccessPoint()
+	if err != nil {
+		log.Debugf("[WEB] Unable to get auth access point: %v.", err)
+		return nil, trace.Wrap(err)
+	}
+
+	clusterConfig, err := authAccessPoint.GetClusterConfig()
+	if err != nil {
+		log.Debugf("[WEB] Unable to fetch cluster config: %v.", err)
+		return nil, trace.Wrap(err)
+	}
+
+	req.KeepAliveInterval = clusterConfig.GetKeepAliveInterval()
 	req.Namespace = namespace
 	req.ProxyHostPort = h.ProxyHostPort()
 	req.Cluster = site.GetName()
@@ -1456,18 +1470,13 @@ type siteSessionGenerateResponse struct {
 }
 
 // siteSessionCreate generates a new site session that can be used by UI
-//
-// POST /v1/webapi/sites/:site/sessions
-//
-// Request body:
-//
-// {"session": {"terminal_params": {"w": 100, "h": 100}, "login": "centos"}}
-//
-// Response body:
-//
-// {"session": {"id": "session-id", "terminal_params": {"w": 100, "h": 100}, "login": "centos"}}
-//
+// The ServerID from request can be in the form of hostname, uuid, or ip address.
 func (h *Handler) siteSessionGenerate(w http.ResponseWriter, r *http.Request, p httprouter.Params, ctx *SessionContext, site reversetunnel.RemoteSite) (interface{}, error) {
+	clt, err := ctx.GetUserClient(site)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
 	namespace := p.ByName("namespace")
 	if !services.IsValidNamespace(namespace) {
 		return nil, trace.BadParameter("invalid namespace %q", namespace)
@@ -1478,12 +1487,25 @@ func (h *Handler) siteSessionGenerate(w http.ResponseWriter, r *http.Request, p 
 		return nil, trace.Wrap(err)
 	}
 
-	// DELETE IN 4.2: change from session.NewLegacyID() to session.NewID().
-	req.Session.ID = session.NewLegacyID()
+	if req.Session.ServerID != "" {
+		servers, err := clt.GetNodes(namespace, services.SkipValidation())
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		hostname, _, err := resolveServerHostPort(req.Session.ServerID, servers)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		req.Session.ServerHostname = hostname
+	}
+
+	req.Session.ID = session.NewID()
 	req.Session.Created = time.Now().UTC()
 	req.Session.LastActive = time.Now().UTC()
 	req.Session.Namespace = namespace
-	log.Infof("Generated session: %#v", req.Session)
+
 	return siteSessionGenerateResponse{Session: req.Session}, nil
 }
 
@@ -1514,6 +1536,20 @@ func (h *Handler) siteSessionsGet(w http.ResponseWriter, r *http.Request, p http
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
+
+	// DELETE IN: 5.0.0
+	// Teleport Nodes < v4.3 does not set ClusterName, ServerHostname with new sessions,
+	// which 4.3 UI client relies on to create URL's and display node inform.
+	clusterName := p.ByName("site")
+	for i, session := range sessions {
+		if session.ClusterName == "" {
+			sessions[i].ClusterName = clusterName
+		}
+		if session.ServerHostname == "" {
+			sessions[i].ServerHostname = session.ServerID
+		}
+	}
+
 	return siteSessionsGetResponse{Sessions: sessions}, nil
 }
 
@@ -1546,6 +1582,17 @@ func (h *Handler) siteSessionGet(w http.ResponseWriter, r *http.Request, p httpr
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
+
+	// DELETE IN: 5.0.0
+	// Teleport Nodes < v4.3 does not set ClusterName, ServerHostname with new sessions,
+	// which 4.3 UI client relies on to create URL's and display node inform.
+	if sess.ClusterName == "" {
+		sess.ClusterName = p.ByName("site")
+	}
+	if sess.ServerHostname == "" {
+		sess.ServerHostname = sess.ServerID
+	}
+
 	return *sess, nil
 }
 

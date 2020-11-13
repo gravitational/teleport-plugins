@@ -13,7 +13,7 @@ import (
 
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
-	mm "github.com/mattermost/mattermost-server/model"
+	mm "github.com/mattermost/mattermost-server/v5/model"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -21,8 +21,8 @@ import (
 type FakeMattermost struct {
 	srv         *httptest.Server
 	objects     sync.Map
-	newPosts    chan mm.Post
-	postUpdates chan mm.Post
+	newPosts    chan *mm.Post
+	postUpdates chan *mm.Post
 
 	postIDCounter uint64
 	userIDCounter uint64
@@ -32,8 +32,8 @@ func NewFakeMattermost() *FakeMattermost {
 	router := httprouter.New()
 
 	mattermost := &FakeMattermost{
-		newPosts:    make(chan mm.Post, 20),
-		postUpdates: make(chan mm.Post, 20),
+		newPosts:    make(chan *mm.Post, 20),
+		postUpdates: make(chan *mm.Post, 20),
 		srv:         httptest.NewServer(router),
 	}
 
@@ -75,8 +75,8 @@ func NewFakeMattermost() *FakeMattermost {
 	router.POST("/api/v4/posts", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
 
-		var post mm.Post
-		err := json.NewDecoder(r.Body).Decode(&post)
+		post := new(mm.Post)
+		err := json.NewDecoder(r.Body).Decode(post)
 		fatalIf(err)
 
 		if post.ChannelId != "2222" {
@@ -103,8 +103,8 @@ func NewFakeMattermost() *FakeMattermost {
 			return
 		}
 
-		var newPost mm.Post
-		err := json.NewDecoder(r.Body).Decode(&newPost)
+		newPost := new(mm.Post)
+		err := json.NewDecoder(r.Body).Decode(newPost)
 		fatalIf(err)
 
 		post.Message = newPost.Message
@@ -130,15 +130,15 @@ func (s *FakeMattermost) Close() {
 	close(s.postUpdates)
 }
 
-func (s *FakeMattermost) GetPost(id string) (mm.Post, bool) {
+func (s *FakeMattermost) GetPost(id string) (*mm.Post, bool) {
 	if obj, ok := s.objects.Load(id); ok {
-		post, ok := obj.(mm.Post)
+		post, ok := obj.(*mm.Post)
 		return post, ok
 	}
-	return mm.Post{}, false
+	return nil, false
 }
 
-func (s *FakeMattermost) StorePost(post mm.Post) mm.Post {
+func (s *FakeMattermost) StorePost(post *mm.Post) *mm.Post {
 	if post.Id == "" {
 		post.Id = fmt.Sprintf("post-%v", atomic.AddUint64(&s.postIDCounter, 1))
 	}
@@ -162,25 +162,25 @@ func (s *FakeMattermost) StoreUser(user mm.User) mm.User {
 	return user
 }
 
-func (s *FakeMattermost) CheckNewPost(ctx context.Context, timeout time.Duration) (mm.Post, error) {
+func (s *FakeMattermost) CheckNewPost(ctx context.Context, timeout time.Duration) (*mm.Post, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	select {
 	case post := <-s.newPosts:
 		return post, nil
 	case <-ctx.Done():
-		return mm.Post{}, trace.Wrap(ctx.Err())
+		return nil, trace.Wrap(ctx.Err())
 	}
 }
 
-func (s *FakeMattermost) CheckPostUpdate(ctx context.Context, timeout time.Duration) (mm.Post, error) {
+func (s *FakeMattermost) CheckPostUpdate(ctx context.Context, timeout time.Duration) (*mm.Post, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	select {
 	case post := <-s.postUpdates:
 		return post, nil
 	case <-ctx.Done():
-		return mm.Post{}, trace.Wrap(ctx.Err())
+		return nil, trace.Wrap(ctx.Err())
 	}
 }
 

@@ -10,7 +10,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/go-resty/resty"
+	"gopkg.in/resty.v1"
 
 	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/gravitational/trace"
