@@ -62,6 +62,8 @@ const OpPut = proto.Operation_PUT
 // OpDelete indicates deletion or expiry.
 const OpDelete = proto.Operation_DELETE
 
+type RequestStateSetter = proto.RequestStateSetter
+
 type DialOption = grpc.DialOption
 type CallOption = grpc.CallOption
 
@@ -91,6 +93,17 @@ type Request struct {
 	State State
 	// Created is a creation time of the request.
 	Created time.Time
+	// RequestReason is an optional message explaining the reason for the request.
+	RequestReason string
+	// ResolveReason is an optional message explaining the reason for the resolution
+	// (approval/denail) of the request.
+	ResolveReason string
+	// ResolveAnnotations is a set of arbitrary values sent by plugins or other
+	// resolving parties during approval/denial.
+	ResolveAnnotations map[string][]string
+	// SystemAnnotations is a set of programmatically generated annotations attached
+	// to pending access requests by teleport.
+	SystemAnnotations map[string][]string
 }
 
 // Pong describes a ping response.
@@ -126,6 +139,10 @@ type Client interface {
 	GetRequest(ctx context.Context, reqID string) (Request, error)
 	// SetRequestState updates the state of a request.
 	SetRequestState(ctx context.Context, reqID string, state State, delegator string) error
+	// SetRequestStateExt is an advanced version of SetRequestState which
+	// supports extra features like overriding the requet's role list and
+	// attaching annotations (requires teleport v4.4.4 or later).
+	SetRequestStateExt(ctx context.Context, params RequestStateSetter) error
 	// GetPluginData fetches plugin data of the specific request.
 	GetPluginData(ctx context.Context, reqID string) (PluginDataMap, error)
 	// UpdatePluginData updates plugin data of the specific request comparing it with a previous value.
@@ -227,6 +244,11 @@ func (c *clt) SetRequestState(ctx context.Context, reqID string, state State, de
 		State:     state,
 		Delegator: fmt.Sprintf("%s:%s", c.plugin, delegator),
 	})
+	return utils.FromGRPC(err)
+}
+
+func (c *clt) SetRequestStateExt(ctx context.Context, params RequestStateSetter) error {
+	_, err := c.clt.SetAccessRequestState(ctx, &params)
 	return utils.FromGRPC(err)
 }
 
@@ -399,10 +421,14 @@ func (p *Pong) AssertServerVersion() error {
 
 func requestFromV3(req *services.AccessRequestV3) Request {
 	return Request{
-		ID:      req.GetName(),
-		User:    req.GetUser(),
-		Roles:   req.GetRoles(),
-		State:   req.GetState(),
-		Created: req.GetCreationTime(),
+		ID:                 req.GetName(),
+		User:               req.GetUser(),
+		Roles:              req.GetRoles(),
+		State:              req.GetState(),
+		Created:            req.GetCreationTime(),
+		RequestReason:      req.GetRequestReason(),
+		ResolveReason:      req.GetResolveReason(),
+		ResolveAnnotations: req.GetResolveAnnotations(),
+		SystemAnnotations:  req.GetSystemAnnotations(),
 	}
 }
