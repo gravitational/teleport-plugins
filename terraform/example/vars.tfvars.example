@@ -1,0 +1,4 @@
+# Change these paths to actual certificate paths on your machine
+cert_path = "/etc/teleport-plugins/terraform.crt"
+key_path = "/etc/teleport-plugins/terraform.key"
+root_ca_path = "/etc/teleport-plugins/terraform.cas"
