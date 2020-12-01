@@ -4,25 +4,72 @@
 
 This is an early proof of concept, expect a lot of things to not work.
 
+**Users**
+
+* [x] Create users
+* [x] Update users
+* [x] Delete users
+
+**Roles**
+
+* [ ] Create roles
+* [ ] Update roles
+* [ ] Delete roles
+
+**Testing framework**
+
+
+**Validation framework**
+
+
+## Known issues
+
+User traits are a string where trait values are separated by space, since
+Terraform Schema Map doesn't provide an out of the box way to do a map of string
+to a list. One way to improve this is to define a Trait as a separate piece of
+data that can be nested in a resource, i.e:
+
+```
+"teleport_user" "tf_player_one" {
+  name = "nate"
+  roles = ["foo"]
+
+  trait {
+    name = "logins"
+    values = [
+      "root"
+    ]
+  }
+}
+```
+
 ### Building the provider
+
+**Dependencies**
 
 The `terraform` directory has it's own go module defined, but some dependencies
 versions are pinned to the same versions Teleport itself uses.
 
-- Separate go module makes sense because we'll likely move the provider to a
+* Separate go module makes sense because we'll likely move the provider to a
   separate repository in the future, and will build it independently of the
   other Teleport Plugins.
-- Pinning dependency versions to Teleport's deps is required becuase for now,
+* Pinning dependency versions to Teleport's deps is required becuase for now,
   the provider depends on the whole Teleport, and to build it, we need
   compatible deps.
 
-To build the provider binary: `go build -o build/terraform-provider-teleport`
+**Dev install**
 
-### Testing the provider
+To build and install the provider in development, set the architecture in
+`Makefile` (should be `linux_amd64` or `darwin_amd64`), then `make build`.
 
-One way to test the provider without having your own terraform project is by
-setting up your Teleport certificates and address in `main.tf` and then
-`terraform plan`.
+Teleport provider is currently an "in house" provider, meaning it's not
+distributed via Hasicorp's Terraform Registry.
+
+`terraform` directory contains `main.tf` — a minimal Terraform demo project that
+uses Teleport Provider to provision Teleport Users.
+
+**To use the Provider, you'll need to provision a Teleport cluster, and set the
+Auth server address and certificate paths in `main.tf`**
 
 ## Project Description
 
@@ -45,12 +92,12 @@ teleport auth server.
 
 Add support for the following resources:
 
-- OIDC/SAML/Github Connectors for Enterprise
-- Github connectors for SSO
-- Trusted clusters
-- Roles
-- Users
-- Tokens
+* OIDC/SAML/Github Connectors for Enterprise
+* Github connectors for SSO
+* Trusted clusters
+* Roles
+* Users
+* Tokens
 
 Support Terraform >= v0.13.
 

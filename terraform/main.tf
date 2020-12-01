@@ -9,14 +9,16 @@ terraform {
 
 provider "teleport" {
     addr = "localhost:3025"
-    cert_path = "/Users/xnutsive/go/src/github.com/gravitational/teleport-plugins/docker/tmp/auth.crt"
-    key_path = "/Users/xnutsive/go/src/github.com/gravitational/teleport-plugins/docker/tmp/auth.key"
-    root_ca_path = "/Users/xnutsive/go/src/github.com/gravitational/teleport-plugins/docker/tmp/auth.cas"
+    cert_path = "/home/nategadzhi/go/src/github.com/gravitational/teleport-plugins/docker/tmp/auth.crt"
+    key_path = "/home/nategadzhi/go/src/github.com/gravitational/teleport-plugins/docker/tmp/auth.key"
+    root_ca_path = "/home/nategadzhi/go/src/github.com/gravitational/teleport-plugins/docker/tmp/auth.cas"
 }
 
 resource "teleport_user" "tf_test" {
     name = "tf_test_user"
-    roles = [
-        "foo"
-    ]
+    roles = ["foo", "access-plugin"]
+
+    traits = {
+      logins = "root foo"
+    }
 }

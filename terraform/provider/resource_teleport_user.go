@@ -1,6 +1,9 @@
 package provider
 
 import (
+	"context"
+	"strings"
+
 	"github.com/gravitational/teleport/lib/auth"
 	"github.com/gravitational/teleport/lib/services"
 
@@ -10,12 +13,6 @@ import (
 )
 
 // teleport_user resource definition
-//
-// TODOs:
-// - [ ] Verify that this definition works with just username and roles
-// - [ ] Write a tf provider test cases for the definition
-// - [ ] Support user traits
-//
 func resourceTeleportUser() *schema.Resource {
 	return &schema.Resource{
 		Create: resourceTeleportUserUpsert,
@@ -37,6 +34,14 @@ func resourceTeleportUser() *schema.Resource {
 					Type: schema.TypeString,
 				},
 			},
+			"traits": {
+				Type:     schema.TypeMap,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type:     schema.TypeString,
+					Required: true,
+				},
+			},
 		},
 	}
 }
@@ -45,11 +50,19 @@ func resourceTeleportUserUpsert(d *schema.ResourceData, m interface{}) error {
 	client := m.(*auth.Client)
 
 	name := d.Get("name").(string)
-	tfRoles := d.Get("roles").(*schema.Set)
+
+	tfRoles := d.Get("roles").([]interface{})
 	roles := make([]string, len(tfRoles))
 
 	for i, tfRole := range tfRoles {
 		roles[i] = tfRole.(string)
+	}
+
+	tfTraits := d.Get("traits").(map[string]interface{})
+	traits := make(map[string][]string)
+
+	for k, tfTraitString := range tfTraits {
+		traits[k] = strings.Split(tfTraitString.(string), " ")
 	}
 
 	user, err := services.NewUser(name)
@@ -58,6 +71,7 @@ func resourceTeleportUserUpsert(d *schema.ResourceData, m interface{}) error {
 	}
 
 	user.SetRoles(roles)
+	user.SetTraits(traits)
 
 	err = client.UpsertUser(user)
 	if err != nil {
@@ -79,15 +93,28 @@ func resourceTeleportUserRead(d *schema.ResourceData, m interface{}) error {
 
 	user := u.(services.User)
 
-	//nolint:errcheck
-	{
-		d.Set("roles", user.GetRoles())
+	traits := user.GetTraits()
+	tfTraits := map[string]string{}
+
+	for k, trait := range traits {
+		tfTraits[k] = strings.Join(trait, " ")
 	}
+
+	d.Set("roles", user.GetRoles())
+	d.Set("traits", tfTraits)
 
 	return nil
 }
 
 func resourceTeleportUserDelete(d *schema.ResourceData, m interface{}) error {
+	client := m.(*auth.Client)
+	name := d.Get("name").(string)
+
+	err := client.DeleteUser(context.TODO(), name)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
 	return nil
 }
 
