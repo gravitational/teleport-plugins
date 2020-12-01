@@ -2,10 +2,27 @@
 
 ## Current Status
 
-This is a sandbox / proof of concept at this point.
+This is an early proof of concept, expect a lot of things to not work.
 
-To compile the provider: `go build -o teleport-provider -mod=mod`. go.mod
-screwed up vendoring and I don't want to yak shave it just yet.
+### Building the provider
+
+The `terraform` directory has it's own go module defined, but some dependencies
+versions are pinned to the same versions Teleport itself uses.
+
+- Separate go module makes sense because we'll likely move the provider to a
+  separate repository in the future, and will build it independently of the
+  other Teleport Plugins.
+- Pinning dependency versions to Teleport's deps is required becuase for now,
+  the provider depends on the whole Teleport, and to build it, we need
+  compatible deps.
+
+To build the provider binary: `go build -o build/terraform-provider-teleport`
+
+### Testing the provider
+
+One way to test the provider without having your own terraform project is by
+setting up your Teleport certificates and address in `main.tf` and then
+`terraform plan`.
 
 ## Project Description
 
