@@ -1,0 +1,866 @@
+2020/11/30 12:04:20 [INFO] Terraform version: 0.13.5  
+2020/11/30 12:04:20 [INFO] Go runtime version: go1.14.10
+2020/11/30 12:04:20 [INFO] CLI args: []string{"/usr/local/bin/terraform", "apply"}
+2020/11/30 12:04:20 [DEBUG] Attempting to open CLI config file: /Users/xnutsive/.terraformrc
+2020/11/30 12:04:20 [DEBUG] File doesn't exist, but doesn't need to. Ignoring.
+2020/11/30 12:04:20 [DEBUG] checking for credentials in "/Users/xnutsive/.terraform.d/plugins"
+2020/11/30 12:04:20 [DEBUG] ignoring non-existing provider search directory terraform.d/plugins
+2020/11/30 12:04:20 [DEBUG] will search for provider plugins in /Users/xnutsive/.terraform.d/plugins
+2020/11/30 12:04:20 [TRACE] getproviders.SearchLocalDirectory: /Users/xnutsive/.terraform.d/plugins is a symlink to /Users/xnutsive/.terraform.d/plugins
+2020/11/30 12:04:20 [TRACE] getproviders.SearchLocalDirectory: found gravitational.com/teleport/teleport v0.0.1 for darwin_amd64 at /Users/xnutsive/.terraform.d/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64
+2020/11/30 12:04:20 [DEBUG] ignoring non-existing provider search directory /Users/xnutsive/Library/Application Support/io.terraform/plugins
+2020/11/30 12:04:20 [DEBUG] ignoring non-existing provider search directory /Library/Application Support/io.terraform/plugins
+2020/11/30 12:04:20 [INFO] CLI command args: []string{"apply"}
+2020/11/30 12:04:20 [TRACE] Meta.Backend: no config given or present on disk, so returning nil config
+2020/11/30 12:04:20 [TRACE] Meta.Backend: backend has not previously been initialized in this working directory
+2020/11/30 12:04:20 [DEBUG] New state was assigned lineage "b2efba83-a72f-bccf-2b31-942e65ef4546"
+2020/11/30 12:04:20 [TRACE] Meta.Backend: using default local state only (no backend configuration, and no existing initialized backend)
+2020/11/30 12:04:20 [TRACE] Meta.Backend: instantiated backend of type <nil>
+2020/11/30 12:04:20 [TRACE] providercache.fillMetaCache: scanning directory .terraform/plugins
+2020/11/30 12:04:20 [TRACE] getproviders.SearchLocalDirectory: .terraform/plugins is a symlink to .terraform/plugins
+2020/11/30 12:04:20 [TRACE] getproviders.SearchLocalDirectory: found gravitational.com/teleport/teleport v0.0.1 for darwin_amd64 at .terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64
+2020/11/30 12:04:20 [TRACE] providercache.fillMetaCache: including .terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64 as a candidate package for gravitational.com/teleport/teleport 0.0.1
+2020/11/30 12:04:20 [DEBUG] checking for provisioner in "."
+2020/11/30 12:04:20 [DEBUG] checking for provisioner in "/usr/local/bin"
+2020/11/30 12:04:20 [DEBUG] checking for provisioner in "/Users/xnutsive/.terraform.d/plugins"
+2020/11/30 12:04:20 [INFO] Failed to read plugin lock file .terraform/plugins/darwin_amd64/lock.json: open .terraform/plugins/darwin_amd64/lock.json: no such file or directory
+2020/11/30 12:04:20 [TRACE] Meta.Backend: backend <nil> does not support operations, so wrapping it in a local backend
+2020/11/30 12:04:20 [INFO] backend/local: starting Apply operation
+2020/11/30 12:04:20 [TRACE] backend/local: requesting state manager for workspace "default"
+2020/11/30 12:04:20 [TRACE] backend/local: state manager for workspace "default" will:
+ - read initial snapshot from terraform.tfstate
+ - write new snapshots to terraform.tfstate
+ - create any backup at terraform.tfstate.backup
+2020/11/30 12:04:20 [TRACE] backend/local: requesting state lock for workspace "default"
+2020/11/30 12:04:20 [TRACE] statemgr.Filesystem: preparing to manage state snapshots at terraform.tfstate
+2020/11/30 12:04:20 [TRACE] statemgr.Filesystem: existing snapshot has lineage "c7099fb9-47ed-b08c-4481-b4ac4bb90526" serial 1
+2020/11/30 12:04:20 [TRACE] statemgr.Filesystem: locking terraform.tfstate using fcntl flock
+2020/11/30 12:04:20 [TRACE] statemgr.Filesystem: writing lock metadata to .terraform.tfstate.lock.info
+2020/11/30 12:04:20 [TRACE] backend/local: reading remote state for workspace "default"
+2020/11/30 12:04:20 [TRACE] statemgr.Filesystem: reading latest snapshot from terraform.tfstate
+2020/11/30 12:04:20 [TRACE] statemgr.Filesystem: read snapshot with lineage "c7099fb9-47ed-b08c-4481-b4ac4bb90526" serial 1
+2020/11/30 12:04:20 [TRACE] backend/local: retrieving local state snapshot for workspace "default"
+2020/11/30 12:04:20 [TRACE] backend/local: building context for current working directory
+2020/11/30 12:04:20 [TRACE] terraform.NewContext: starting
+2020/11/30 12:04:20 [TRACE] terraform.NewContext: loading provider schemas
+2020/11/30 12:04:20 [TRACE] LoadSchemas: retrieving schema for provider type "gravitational.com/teleport/teleport"
+2020-11-30T12:04:20.826-0800 [INFO]  plugin: configuring client automatic mTLS
+2020-11-30T12:04:20.873-0800 [DEBUG] plugin: starting plugin: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport args=[.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport]
+2020-11-30T12:04:20.877-0800 [DEBUG] plugin: plugin started: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport pid=14449
+2020-11-30T12:04:20.877-0800 [DEBUG] plugin: waiting for RPC address: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport
+2020-11-30T12:04:21.406-0800 [INFO]  plugin.terraform-provider-teleport: configuring server automatic mTLS: timestamp=2020-11-30T12:04:21.405-0800
+2020-11-30T12:04:21.434-0800 [DEBUG] plugin: using plugin: version=5
+2020-11-30T12:04:21.434-0800 [DEBUG] plugin.terraform-provider-teleport: plugin address: address=/var/folders/4k/kk3m6tcs32j25wx615vcbddw0000gn/T/plugin454025468 network=unix timestamp=2020-11-30T12:04:21.434-0800
+2020-11-30T12:04:21.498-0800 [TRACE] plugin.stdio: waiting for stdio data
+2020/11/30 12:04:21 [TRACE] GRPCProvider: GetSchema
+2020/11/30 12:04:21 [TRACE] GRPCProvider: Close
+2020-11-30T12:04:21.501-0800 [WARN]  plugin.stdio: received EOF, stopping recv loop: err="rpc error: code = Unavailable desc = transport is closing"
+2020-11-30T12:04:21.503-0800 [DEBUG] plugin: plugin process exited: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport pid=14449
+2020-11-30T12:04:21.503-0800 [DEBUG] plugin: plugin exited
+2020/11/30 12:04:21 [TRACE] terraform.NewContext: complete
+2020/11/30 12:04:21 [TRACE] backend/local: finished building terraform.Context
+2020/11/30 12:04:21 [TRACE] backend/local: requesting interactive input, if necessary
+2020/11/30 12:04:21 [TRACE] Context.Input: Prompting for provider arguments
+2020/11/30 12:04:21 [TRACE] Context.Input: Provider provider.teleport declared at main.tf:10,1-20
+2020/11/30 12:04:21 [TRACE] Context.Input: Input for provider.teleport: map[string]cty.Value{}
+2020/11/30 12:04:21 [TRACE] backend/local: running validation operation
+2020/11/30 12:04:21 [INFO] terraform: building graph: GraphTypeValidate
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ConfigTransformer
+2020/11/30 12:04:21 [TRACE] ConfigTransformer: Starting for path: 
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ConfigTransformer with new graph:
+  teleport_user.tf_test - *terraform.NodeValidatableResource
+  ------
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.LocalTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.LocalTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.OutputTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.OutputTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.OrphanResourceInstanceTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.OrphanResourceInstanceTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.StateTransformer
+2020/11/30 12:04:21 [TRACE] StateTransformer: state is empty, so nothing to do
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.StateTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.OrphanOutputTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.OrphanOutputTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.AttachResourceConfigTransformer
+2020/11/30 12:04:21 [TRACE] AttachResourceConfigTransformer: attaching to "teleport_user.tf_test" (*terraform.NodeValidatableResource) config from main.tf:17,1-35
+2020/11/30 12:04:21 [TRACE] AttachResourceConfigTransformer: attaching provider meta configs to teleport_user.tf_test
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.AttachResourceConfigTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.AttachStateTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.AttachStateTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.RootVariableTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.RootVariableTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.MissingProvisionerTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.MissingProvisionerTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ProvisionerTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ProvisionerTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ModuleVariableTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ModuleVariableTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.graphTransformerMulti
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ProviderConfigTransformer
+2020/11/30 12:04:21 [TRACE] ProviderConfigTransformer: attaching to "provider[\"gravitational.com/teleport/teleport\"]" provider configuration from main.tf:10,1-20
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ProviderConfigTransformer with new graph:
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  teleport_user.tf_test - *terraform.NodeValidatableResource
+  ------
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.MissingProviderTransformer
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.MissingProviderTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ProviderTransformer
+2020/11/30 12:04:21 [TRACE] ProviderTransformer: exact match for provider["gravitational.com/teleport/teleport"] serving teleport_user.tf_test
+2020/11/30 12:04:21 [DEBUG] ProviderTransformer: "teleport_user.tf_test" (*terraform.NodeValidatableResource) needs provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ProviderTransformer with new graph:
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  teleport_user.tf_test - *terraform.NodeValidatableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.PruneProviderTransformer
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.PruneProviderTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ParentProviderTransformer
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ParentProviderTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.graphTransformerMulti with new graph:
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  teleport_user.tf_test - *terraform.NodeValidatableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.RemovedModuleTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.RemovedModuleTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.AttachSchemaTransformer
+2020/11/30 12:04:21 [TRACE] AttachSchemaTransformer: attaching provider config schema to provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:21 [TRACE] AttachSchemaTransformer: attaching resource schema to teleport_user.tf_test
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.AttachSchemaTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ModuleExpansionTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ModuleExpansionTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ReferenceTransformer
+2020/11/30 12:04:21 [DEBUG] ReferenceTransformer: "teleport_user.tf_test" references: []
+2020/11/30 12:04:21 [DEBUG] ReferenceTransformer: "provider[\"gravitational.com/teleport/teleport\"]" references: []
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ReferenceTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.attachDataResourceDependenciesTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.attachDataResourceDependenciesTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.TargetsTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.TargetsTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ForcedCBDTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ForcedCBDTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.CountBoundaryTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.CountBoundaryTransformer with new graph:
+  meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test - *terraform.NodeValidatableResource
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  teleport_user.tf_test - *terraform.NodeValidatableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.CloseProviderTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.CloseProviderTransformer with new graph:
+  meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test - *terraform.NodeValidatableResource
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test - *terraform.NodeValidatableResource
+  teleport_user.tf_test - *terraform.NodeValidatableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.CloseProvisionerTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.CloseProvisionerTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.CloseRootModuleTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.CloseRootModuleTransformer with new graph:
+  meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test - *terraform.NodeValidatableResource
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test - *terraform.NodeValidatableResource
+  root - *terraform.nodeCloseModule
+    meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+  teleport_user.tf_test - *terraform.NodeValidatableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.TransitiveReductionTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.TransitiveReductionTransformer with new graph:
+  meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    teleport_user.tf_test - *terraform.NodeValidatableResource
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+    teleport_user.tf_test - *terraform.NodeValidatableResource
+  root - *terraform.nodeCloseModule
+    meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+  teleport_user.tf_test - *terraform.NodeValidatableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:21 [DEBUG] Starting graph walk: walkValidate
+2020/11/30 12:04:21 [TRACE] dag/walk: visiting "provider[\"gravitational.com/teleport/teleport\"]"
+2020/11/30 12:04:21 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"]": starting visit (*terraform.NodeApplyableProvider)
+2020/11/30 12:04:21 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"]": evaluating
+2020/11/30 12:04:21 [TRACE] [walkValidate] Entering eval tree: provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalSequence
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalInitProvider
+2020-11-30T12:04:21.510-0800 [INFO]  plugin: configuring client automatic mTLS
+2020-11-30T12:04:21.540-0800 [DEBUG] plugin: starting plugin: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport args=[.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport]
+2020-11-30T12:04:21.544-0800 [DEBUG] plugin: plugin started: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport pid=14450
+2020-11-30T12:04:21.544-0800 [DEBUG] plugin: waiting for RPC address: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport
+2020-11-30T12:04:21.561-0800 [INFO]  plugin.terraform-provider-teleport: configuring server automatic mTLS: timestamp=2020-11-30T12:04:21.560-0800
+2020-11-30T12:04:21.591-0800 [DEBUG] plugin.terraform-provider-teleport: plugin address: address=/var/folders/4k/kk3m6tcs32j25wx615vcbddw0000gn/T/plugin748003865 network=unix timestamp=2020-11-30T12:04:21.591-0800
+2020-11-30T12:04:21.591-0800 [DEBUG] plugin: using plugin: version=5
+2020/11/30 12:04:21 [TRACE] BuiltinEvalContext: Initialized "provider[\"gravitational.com/teleport/teleport\"]" provider for provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalOpFilter
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalSequence
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalGetProvider
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalValidateProvider
+2020/11/30 12:04:21 [TRACE] buildProviderConfig for provider["gravitational.com/teleport/teleport"]: using explicit config only
+2020/11/30 12:04:21 [TRACE] GRPCProvider: GetSchema
+2020-11-30T12:04:21.649-0800 [TRACE] plugin.stdio: waiting for stdio data
+2020/11/30 12:04:21 [TRACE] GRPCProvider: PrepareProviderConfig
+2020/11/30 12:04:21 [TRACE] eval: terraform.EvalNoop
+2020/11/30 12:04:21 [TRACE] eval: terraform.EvalNoop
+2020/11/30 12:04:21 [TRACE] eval: terraform.EvalNoop
+2020/11/30 12:04:21 [TRACE] [walkValidate] Exiting eval tree: provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:21 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"]": visit complete
+2020/11/30 12:04:21 [TRACE] dag/walk: visiting "teleport_user.tf_test"
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test": starting visit (*terraform.NodeValidatableResource)
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test": evaluating
+2020/11/30 12:04:21 [TRACE] [walkValidate] Entering eval tree: teleport_user.tf_test
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalSequence
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalGetProvider
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalValidateResource
+2020/11/30 12:04:21 [TRACE] GRPCProvider: ValidateResourceTypeConfig
+2020/11/30 12:04:21 [TRACE] [walkValidate] Exiting eval tree: teleport_user.tf_test
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test": visit complete
+2020/11/30 12:04:21 [TRACE] dag/walk: visiting "meta.count-boundary (EachMode fixup)"
+2020/11/30 12:04:21 [TRACE] vertex "meta.count-boundary (EachMode fixup)": starting visit (*terraform.NodeCountBoundary)
+2020/11/30 12:04:21 [TRACE] vertex "meta.count-boundary (EachMode fixup)": evaluating
+2020/11/30 12:04:21 [TRACE] [walkValidate] Entering eval tree: meta.count-boundary (EachMode fixup)
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalCountFixZeroOneBoundaryGlobal
+2020/11/30 12:04:21 [TRACE] [walkValidate] Exiting eval tree: meta.count-boundary (EachMode fixup)
+2020/11/30 12:04:21 [TRACE] vertex "meta.count-boundary (EachMode fixup)": visit complete
+2020/11/30 12:04:21 [TRACE] dag/walk: visiting "provider[\"gravitational.com/teleport/teleport\"] (close)"
+2020/11/30 12:04:21 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"] (close)": starting visit (*terraform.graphNodeCloseProvider)
+2020/11/30 12:04:21 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"] (close)": evaluating
+2020/11/30 12:04:21 [TRACE] [walkValidate] Entering eval tree: provider["gravitational.com/teleport/teleport"] (close)
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalCloseProvider
+2020/11/30 12:04:21 [TRACE] GRPCProvider: Close
+2020-11-30T12:04:21.652-0800 [WARN]  plugin.stdio: received EOF, stopping recv loop: err="rpc error: code = Unavailable desc = transport is closing"
+2020-11-30T12:04:21.654-0800 [DEBUG] plugin: plugin process exited: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport pid=14450
+2020-11-30T12:04:21.654-0800 [DEBUG] plugin: plugin exited
+2020/11/30 12:04:21 [TRACE] [walkValidate] Exiting eval tree: provider["gravitational.com/teleport/teleport"] (close)
+2020/11/30 12:04:21 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"] (close)": visit complete
+2020/11/30 12:04:21 [TRACE] dag/walk: visiting "root"
+2020/11/30 12:04:21 [TRACE] vertex "root": starting visit (*terraform.nodeCloseModule)
+2020/11/30 12:04:21 [TRACE] vertex "root": evaluating
+2020/11/30 12:04:21 [TRACE] [walkValidate] Entering eval tree: root
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalSequence
+2020/11/30 12:04:21 [TRACE] eval: terraform.EvalNoop
+2020/11/30 12:04:21 [TRACE] [walkValidate] Exiting eval tree: root
+2020/11/30 12:04:21 [TRACE] vertex "root": visit complete
+2020/11/30 12:04:21 [INFO] backend/local: apply calling Refresh
+2020/11/30 12:04:21 [INFO] terraform: building graph: GraphTypeRefresh
+2020/11/30 12:04:21 [TRACE] No managed resources in state during refresh; skipping managed resource transformer
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ConfigTransformer
+2020/11/30 12:04:21 [TRACE] ConfigTransformer: Starting for path: 
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ConfigTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.OrphanResourceInstanceTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.OrphanResourceInstanceTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.StateTransformer
+2020/11/30 12:04:21 [TRACE] StateTransformer: state is empty, so nothing to do
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.StateTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.AttachStateTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.AttachStateTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.AttachResourceConfigTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.AttachResourceConfigTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.RootVariableTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.RootVariableTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.LocalTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.LocalTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.OutputTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.OutputTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ModuleVariableTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ModuleVariableTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.graphTransformerMulti
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ProviderConfigTransformer
+2020/11/30 12:04:21 [TRACE] ProviderConfigTransformer: attaching to "provider[\"gravitational.com/teleport/teleport\"]" provider configuration from main.tf:10,1-20
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ProviderConfigTransformer with new graph:
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.MissingProviderTransformer
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.MissingProviderTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ProviderTransformer
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ProviderTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.PruneProviderTransformer
+2020/11/30 12:04:21 [DEBUG] pruning unused provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.PruneProviderTransformer with new graph:
+  ------
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ParentProviderTransformer
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ParentProviderTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.graphTransformerMulti (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.AttachSchemaTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.AttachSchemaTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ModuleExpansionTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ModuleExpansionTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ReferenceTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ReferenceTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.AttachDependenciesTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.AttachDependenciesTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.attachDataResourceDependenciesTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.attachDataResourceDependenciesTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.TargetsTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.TargetsTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.CloseProviderTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.CloseProviderTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.CloseRootModuleTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.CloseRootModuleTransformer with new graph:
+  root - *terraform.nodeCloseModule
+  ------
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.TransitiveReductionTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.TransitiveReductionTransformer (no changes)
+2020/11/30 12:04:21 [DEBUG] Starting graph walk: walkRefresh
+2020/11/30 12:04:21 [TRACE] dag/walk: visiting "root"
+2020/11/30 12:04:21 [TRACE] vertex "root": starting visit (*terraform.nodeCloseModule)
+2020/11/30 12:04:21 [TRACE] vertex "root": evaluating
+2020/11/30 12:04:21 [TRACE] [walkRefresh] Entering eval tree: root
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalSequence
+2020/11/30 12:04:21 [TRACE] eval: terraform.EvalNoop
+2020/11/30 12:04:21 [TRACE] [walkRefresh] Exiting eval tree: root
+2020/11/30 12:04:21 [TRACE] vertex "root": visit complete
+2020/11/30 12:04:21 [INFO] backend/local: apply calling Plan
+2020/11/30 12:04:21 [INFO] terraform: building graph: GraphTypePlan
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ConfigTransformer
+2020/11/30 12:04:21 [TRACE] ConfigTransformer: Starting for path: 
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ConfigTransformer with new graph:
+  teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+  ------
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.LocalTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.LocalTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.OutputTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.OutputTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.OrphanResourceInstanceTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.OrphanResourceInstanceTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.StateTransformer
+2020/11/30 12:04:21 [TRACE] StateTransformer: state is empty, so nothing to do
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.StateTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.OrphanOutputTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.OrphanOutputTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.AttachResourceConfigTransformer
+2020/11/30 12:04:21 [TRACE] AttachResourceConfigTransformer: attaching to "teleport_user.tf_test (expand)" (*terraform.nodeExpandPlannableResource) config from main.tf:17,1-35
+2020/11/30 12:04:21 [TRACE] AttachResourceConfigTransformer: attaching provider meta configs to teleport_user.tf_test (expand)
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.AttachResourceConfigTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.AttachStateTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.AttachStateTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.RootVariableTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.RootVariableTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.MissingProvisionerTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.MissingProvisionerTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ProvisionerTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ProvisionerTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ModuleVariableTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ModuleVariableTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.graphTransformerMulti
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ProviderConfigTransformer
+2020/11/30 12:04:21 [TRACE] ProviderConfigTransformer: attaching to "provider[\"gravitational.com/teleport/teleport\"]" provider configuration from main.tf:10,1-20
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ProviderConfigTransformer with new graph:
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+  ------
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.MissingProviderTransformer
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.MissingProviderTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ProviderTransformer
+2020/11/30 12:04:21 [TRACE] ProviderTransformer: exact match for provider["gravitational.com/teleport/teleport"] serving teleport_user.tf_test (expand)
+2020/11/30 12:04:21 [DEBUG] ProviderTransformer: "teleport_user.tf_test (expand)" (*terraform.nodeExpandPlannableResource) needs provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ProviderTransformer with new graph:
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.PruneProviderTransformer
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.PruneProviderTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ParentProviderTransformer
+2020/11/30 12:04:21 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ParentProviderTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.graphTransformerMulti with new graph:
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.RemovedModuleTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.RemovedModuleTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.AttachSchemaTransformer
+2020/11/30 12:04:21 [TRACE] AttachSchemaTransformer: attaching resource schema to teleport_user.tf_test (expand)
+2020/11/30 12:04:21 [TRACE] AttachSchemaTransformer: attaching provider config schema to provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.AttachSchemaTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ModuleExpansionTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ModuleExpansionTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ReferenceTransformer
+2020/11/30 12:04:21 [DEBUG] ReferenceTransformer: "teleport_user.tf_test (expand)" references: []
+2020/11/30 12:04:21 [DEBUG] ReferenceTransformer: "provider[\"gravitational.com/teleport/teleport\"]" references: []
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ReferenceTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.attachDataResourceDependenciesTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.attachDataResourceDependenciesTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.TargetsTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.TargetsTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ForcedCBDTransformer
+2020/11/30 12:04:21 [TRACE] ForcedCBDTransformer: "teleport_user.tf_test (expand)" (*terraform.nodeExpandPlannableResource) has no CBD descendent, so skipping
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ForcedCBDTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.CountBoundaryTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.CountBoundaryTransformer with new graph:
+  meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.CloseProviderTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.CloseProviderTransformer with new graph:
+  meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+  teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.CloseProvisionerTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.CloseProvisionerTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.CloseRootModuleTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.CloseRootModuleTransformer with new graph:
+  meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+  root - *terraform.nodeCloseModule
+    meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+  teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.TransitiveReductionTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.TransitiveReductionTransformer with new graph:
+  meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+    teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+  root - *terraform.nodeCloseModule
+    meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+  teleport_user.tf_test (expand) - *terraform.nodeExpandPlannableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:21 [DEBUG] Starting graph walk: walkPlan
+2020/11/30 12:04:21 [TRACE] dag/walk: visiting "provider[\"gravitational.com/teleport/teleport\"]"
+2020/11/30 12:04:21 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"]": starting visit (*terraform.NodeApplyableProvider)
+2020/11/30 12:04:21 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"]": evaluating
+2020/11/30 12:04:21 [TRACE] [walkPlan] Entering eval tree: provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalSequence
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalInitProvider
+2020-11-30T12:04:21.655-0800 [INFO]  plugin: configuring client automatic mTLS
+2020-11-30T12:04:21.681-0800 [DEBUG] plugin: starting plugin: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport args=[.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport]
+2020-11-30T12:04:21.685-0800 [DEBUG] plugin: plugin started: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport pid=14451
+2020-11-30T12:04:21.685-0800 [DEBUG] plugin: waiting for RPC address: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport
+2020-11-30T12:04:21.700-0800 [INFO]  plugin.terraform-provider-teleport: configuring server automatic mTLS: timestamp=2020-11-30T12:04:21.700-0800
+2020-11-30T12:04:21.728-0800 [DEBUG] plugin.terraform-provider-teleport: plugin address: address=/var/folders/4k/kk3m6tcs32j25wx615vcbddw0000gn/T/plugin085809478 network=unix timestamp=2020-11-30T12:04:21.728-0800
+2020-11-30T12:04:21.728-0800 [DEBUG] plugin: using plugin: version=5
+2020/11/30 12:04:21 [TRACE] BuiltinEvalContext: Initialized "provider[\"gravitational.com/teleport/teleport\"]" provider for provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:21 [TRACE] eval: terraform.EvalNoop
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalOpFilter
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalSequence
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalGetProvider
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalOpFilter
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalSequence
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalConfigProvider
+2020/11/30 12:04:21 [TRACE] buildProviderConfig for provider["gravitational.com/teleport/teleport"]: using explicit config only
+2020/11/30 12:04:21 [TRACE] GRPCProvider: GetSchema
+2020-11-30T12:04:21.784-0800 [TRACE] plugin.stdio: waiting for stdio data
+2020/11/30 12:04:21 [TRACE] GRPCProvider: Configure
+2020/11/30 12:04:21 [TRACE] eval: terraform.EvalNoop
+2020/11/30 12:04:21 [TRACE] [walkPlan] Exiting eval tree: provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:21 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"]": visit complete
+2020/11/30 12:04:21 [TRACE] dag/walk: visiting "teleport_user.tf_test (expand)"
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test (expand)": starting visit (*terraform.nodeExpandPlannableResource)
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test (expand)": expanding dynamic subgraph
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test (expand)": entering dynamic subgraph
+2020/11/30 12:04:21 [TRACE] dag/walk: visiting "teleport_user.tf_test"
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test": starting visit (*terraform.NodePlannableResource)
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test": evaluating
+2020/11/30 12:04:21 [TRACE] [walkPlan] Entering eval tree: teleport_user.tf_test
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalWriteResourceState
+2020/11/30 12:04:21 [TRACE] [walkPlan] Exiting eval tree: teleport_user.tf_test
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test": expanding dynamic subgraph
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ResourceCountTransformer
+2020/11/30 12:04:21 [TRACE] ResourceCountTransformer: adding teleport_user.tf_test as *terraform.NodePlannableResourceInstance
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ResourceCountTransformer with new graph:
+  teleport_user.tf_test - *terraform.NodePlannableResourceInstance
+  ------
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.OrphanResourceInstanceCountTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.OrphanResourceInstanceCountTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.AttachStateTransformer
+2020/11/30 12:04:21 [DEBUG] Resource instance state not found for node "teleport_user.tf_test", instance teleport_user.tf_test
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.AttachStateTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.TargetsTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.TargetsTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.ReferenceTransformer
+2020/11/30 12:04:21 [DEBUG] ReferenceTransformer: "teleport_user.tf_test" references: []
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.ReferenceTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] Executing graph transform *terraform.RootTransformer
+2020/11/30 12:04:21 [TRACE] Completed graph transform *terraform.RootTransformer (no changes)
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test": entering dynamic subgraph
+2020/11/30 12:04:21 [TRACE] dag/walk: visiting "teleport_user.tf_test"
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test": starting visit (*terraform.NodePlannableResourceInstance)
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test": evaluating
+2020/11/30 12:04:21 [TRACE] [walkPlan] Entering eval tree: teleport_user.tf_test
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalSequence
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalGetProvider
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalReadState
+2020/11/30 12:04:21 [TRACE] EvalReadState: reading state for teleport_user.tf_test
+2020/11/30 12:04:21 [TRACE] EvalReadState: no state present for teleport_user.tf_test
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalValidateSelfRef
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalDiff
+2020/11/30 12:04:21 [TRACE] Re-validating config for "teleport_user.tf_test"
+2020/11/30 12:04:21 [TRACE] GRPCProvider: ValidateResourceTypeConfig
+2020/11/30 12:04:21 [TRACE] GRPCProvider: PlanResourceChange
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalCheckPreventDestroy
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalWriteState
+2020/11/30 12:04:21 [TRACE] EvalWriteState: writing current state object for teleport_user.tf_test
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalWriteDiff
+2020/11/30 12:04:21 [TRACE] EvalWriteDiff: recorded Create change for teleport_user.tf_test
+2020/11/30 12:04:21 [TRACE] [walkPlan] Exiting eval tree: teleport_user.tf_test
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test": visit complete
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test": dynamic subgraph completed successfully
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test": visit complete
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test (expand)": dynamic subgraph completed successfully
+2020/11/30 12:04:21 [TRACE] vertex "teleport_user.tf_test (expand)": visit complete
+2020/11/30 12:04:21 [TRACE] dag/walk: visiting "meta.count-boundary (EachMode fixup)"
+2020/11/30 12:04:21 [TRACE] vertex "meta.count-boundary (EachMode fixup)": starting visit (*terraform.NodeCountBoundary)
+2020/11/30 12:04:21 [TRACE] vertex "meta.count-boundary (EachMode fixup)": evaluating
+2020/11/30 12:04:21 [TRACE] dag/walk: visiting "provider[\"gravitational.com/teleport/teleport\"] (close)"
+2020/11/30 12:04:21 [TRACE] [walkPlan] Entering eval tree: meta.count-boundary (EachMode fixup)
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalCountFixZeroOneBoundaryGlobal
+2020/11/30 12:04:21 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"] (close)": starting visit (*terraform.graphNodeCloseProvider)
+2020/11/30 12:04:21 [TRACE] [walkPlan] Exiting eval tree: meta.count-boundary (EachMode fixup)
+2020/11/30 12:04:21 [TRACE] vertex "meta.count-boundary (EachMode fixup)": visit complete
+2020/11/30 12:04:21 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"] (close)": evaluating
+2020/11/30 12:04:21 [TRACE] [walkPlan] Entering eval tree: provider["gravitational.com/teleport/teleport"] (close)
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalCloseProvider
+2020/11/30 12:04:21 [TRACE] GRPCProvider: Close
+2020-11-30T12:04:21.791-0800 [WARN]  plugin.stdio: received EOF, stopping recv loop: err="rpc error: code = Unavailable desc = transport is closing"
+2020-11-30T12:04:21.793-0800 [DEBUG] plugin: plugin process exited: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport pid=14451
+2020-11-30T12:04:21.793-0800 [DEBUG] plugin: plugin exited
+2020/11/30 12:04:21 [TRACE] [walkPlan] Exiting eval tree: provider["gravitational.com/teleport/teleport"] (close)
+2020/11/30 12:04:21 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"] (close)": visit complete
+2020/11/30 12:04:21 [TRACE] dag/walk: visiting "root"
+2020/11/30 12:04:21 [TRACE] vertex "root": starting visit (*terraform.nodeCloseModule)
+2020/11/30 12:04:21 [TRACE] vertex "root": evaluating
+2020/11/30 12:04:21 [TRACE] [walkPlan] Entering eval tree: root
+2020/11/30 12:04:21 [TRACE] eval: *terraform.EvalSequence
+2020/11/30 12:04:21 [TRACE] eval: terraform.EvalNoop
+2020/11/30 12:04:21 [TRACE] [walkPlan] Exiting eval tree: root
+2020/11/30 12:04:21 [TRACE] vertex "root": visit complete
+2020/11/30 12:04:21 [DEBUG] command: asking for input: "Do you want to perform these actions?"
+2020/11/30 12:04:23 [ERR] Checkpoint error: Get "https://checkpoint-api.hashicorp.com/v1/check/terraform?arch=amd64&os=darwin&signature=dd14aeaf-3a1e-64ee-61e5-d89d2abf8f4b&version=0.13.5": context deadline exceeded (Client.Timeout exceeded while awaiting headers)
+2020/11/30 12:04:24 [INFO] backend/local: apply calling Apply
+2020/11/30 12:04:24 [INFO] terraform: building graph: GraphTypeApply
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.ConfigTransformer
+2020/11/30 12:04:24 [TRACE] ConfigTransformer: Starting for path: 
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.ConfigTransformer with new graph:
+  teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  ------
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.DiffTransformer
+2020/11/30 12:04:24 [TRACE] DiffTransformer starting
+2020/11/30 12:04:24 [TRACE] DiffTransformer: found Create change for teleport_user.tf_test 
+2020/11/30 12:04:24 [TRACE] DiffTransformer: teleport_user.tf_test will be represented by teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] DiffTransformer complete
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.DiffTransformer with new graph:
+  teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+    teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  ------
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.OrphanOutputTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.OrphanOutputTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.AttachResourceConfigTransformer
+2020/11/30 12:04:24 [TRACE] AttachResourceConfigTransformer: attaching to "teleport_user.tf_test (expand)" (*terraform.nodeExpandApplyableResource) config from main.tf:17,1-35
+2020/11/30 12:04:24 [TRACE] AttachResourceConfigTransformer: attaching provider meta configs to teleport_user.tf_test (expand)
+2020/11/30 12:04:24 [TRACE] AttachResourceConfigTransformer: attaching to "teleport_user.tf_test" (*terraform.NodeApplyableResourceInstance) config from main.tf:17,1-35
+2020/11/30 12:04:24 [TRACE] AttachResourceConfigTransformer: attaching provider meta configs to teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.AttachResourceConfigTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.AttachStateTransformer
+2020/11/30 12:04:24 [DEBUG] Resource state not found for node "teleport_user.tf_test", instance teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.AttachStateTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.MissingProvisionerTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.MissingProvisionerTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.ProvisionerTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.ProvisionerTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.RootVariableTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.RootVariableTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.LocalTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.LocalTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.OutputTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.OutputTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.ModuleVariableTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.ModuleVariableTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.graphTransformerMulti
+2020/11/30 12:04:24 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ProviderConfigTransformer
+2020/11/30 12:04:24 [TRACE] ProviderConfigTransformer: attaching to "provider[\"gravitational.com/teleport/teleport\"]" provider configuration from main.tf:10,1-20
+2020/11/30 12:04:24 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ProviderConfigTransformer with new graph:
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+    teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  ------
+2020/11/30 12:04:24 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.MissingProviderTransformer
+2020/11/30 12:04:24 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.MissingProviderTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ProviderTransformer
+2020/11/30 12:04:24 [TRACE] ProviderTransformer: exact match for provider["gravitational.com/teleport/teleport"] serving teleport_user.tf_test (expand)
+2020/11/30 12:04:24 [DEBUG] ProviderTransformer: "teleport_user.tf_test (expand)" (*terraform.nodeExpandApplyableResource) needs provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:24 [TRACE] ProviderTransformer: exact match for provider["gravitational.com/teleport/teleport"] serving teleport_user.tf_test
+2020/11/30 12:04:24 [DEBUG] ProviderTransformer: "teleport_user.tf_test" (*terraform.NodeApplyableResourceInstance) needs provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:24 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ProviderTransformer with new graph:
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:24 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.PruneProviderTransformer
+2020/11/30 12:04:24 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.PruneProviderTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] (graphTransformerMulti) Executing graph transform *terraform.ParentProviderTransformer
+2020/11/30 12:04:24 [TRACE] (graphTransformerMulti) Completed graph transform *terraform.ParentProviderTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.graphTransformerMulti with new graph:
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.RemovedModuleTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.RemovedModuleTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.AttachSchemaTransformer
+2020/11/30 12:04:24 [TRACE] AttachSchemaTransformer: attaching resource schema to teleport_user.tf_test (expand)
+2020/11/30 12:04:24 [TRACE] AttachSchemaTransformer: attaching resource schema to teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] AttachSchemaTransformer: attaching provider config schema to provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.AttachSchemaTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.ModuleExpansionTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.ModuleExpansionTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.ReferenceTransformer
+2020/11/30 12:04:24 [DEBUG] ReferenceTransformer: "teleport_user.tf_test (expand)" references: []
+2020/11/30 12:04:24 [DEBUG] ReferenceTransformer: "teleport_user.tf_test" references: []
+2020/11/30 12:04:24 [DEBUG] ReferenceTransformer: "provider[\"gravitational.com/teleport/teleport\"]" references: []
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.ReferenceTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.AttachDependenciesTransformer
+2020/11/30 12:04:24 [TRACE] AttachDependenciesTransformer: teleport_user.tf_test depends on []
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.AttachDependenciesTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.ForcedCBDTransformer
+2020/11/30 12:04:24 [TRACE] ForcedCBDTransformer: "teleport_user.tf_test" (*terraform.NodeApplyableResourceInstance) has no CBD descendent, so skipping
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.ForcedCBDTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.DestroyEdgeTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.DestroyEdgeTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.CBDEdgeTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.CBDEdgeTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.destroyRootOutputTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.destroyRootOutputTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.pruneUnusedNodesTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.pruneUnusedNodesTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.TargetsTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.TargetsTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.CountBoundaryTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.CountBoundaryTransformer with new graph:
+  meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+    teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.CloseProviderTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.CloseProviderTransformer with new graph:
+  meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+    teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+    teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.CloseProvisionerTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.CloseProvisionerTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.applyDestroyNodeReferenceFixupTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.applyDestroyNodeReferenceFixupTransformer (no changes)
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.CloseRootModuleTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.CloseRootModuleTransformer with new graph:
+  meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+    teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+    teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  root - *terraform.nodeCloseModule
+    meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+  teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+    teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:24 [TRACE] Executing graph transform *terraform.TransitiveReductionTransformer
+2020/11/30 12:04:24 [TRACE] Completed graph transform *terraform.TransitiveReductionTransformer with new graph:
+  meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+  provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+    teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+  root - *terraform.nodeCloseModule
+    meta.count-boundary (EachMode fixup) - *terraform.NodeCountBoundary
+    provider["gravitational.com/teleport/teleport"] (close) - *terraform.graphNodeCloseProvider
+  teleport_user.tf_test - *terraform.NodeApplyableResourceInstance
+    teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+  teleport_user.tf_test (expand) - *terraform.nodeExpandApplyableResource
+    provider["gravitational.com/teleport/teleport"] - *terraform.NodeApplyableProvider
+  ------
+2020/11/30 12:04:24 [DEBUG] Starting graph walk: walkApply
+2020/11/30 12:04:24 [TRACE] dag/walk: visiting "provider[\"gravitational.com/teleport/teleport\"]"
+2020/11/30 12:04:24 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"]": starting visit (*terraform.NodeApplyableProvider)
+2020/11/30 12:04:24 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"]": evaluating
+2020/11/30 12:04:24 [TRACE] [walkApply] Entering eval tree: provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalSequence
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalInitProvider
+2020-11-30T12:04:24.192-0800 [INFO]  plugin: configuring client automatic mTLS
+2020-11-30T12:04:24.225-0800 [DEBUG] plugin: starting plugin: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport args=[.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport]
+2020-11-30T12:04:24.229-0800 [DEBUG] plugin: plugin started: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport pid=14452
+2020-11-30T12:04:24.229-0800 [DEBUG] plugin: waiting for RPC address: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport
+2020-11-30T12:04:24.244-0800 [INFO]  plugin.terraform-provider-teleport: configuring server automatic mTLS: timestamp=2020-11-30T12:04:24.244-0800
+2020-11-30T12:04:24.273-0800 [DEBUG] plugin.terraform-provider-teleport: plugin address: address=/var/folders/4k/kk3m6tcs32j25wx615vcbddw0000gn/T/plugin535174403 network=unix timestamp=2020-11-30T12:04:24.273-0800
+2020-11-30T12:04:24.273-0800 [DEBUG] plugin: using plugin: version=5
+2020/11/30 12:04:24 [TRACE] BuiltinEvalContext: Initialized "provider[\"gravitational.com/teleport/teleport\"]" provider for provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:24 [TRACE] eval: terraform.EvalNoop
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalOpFilter
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalSequence
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalGetProvider
+2020-11-30T12:04:24.329-0800 [TRACE] plugin.stdio: waiting for stdio data
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalOpFilter
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalSequence
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalConfigProvider
+2020/11/30 12:04:24 [TRACE] buildProviderConfig for provider["gravitational.com/teleport/teleport"]: using explicit config only
+2020/11/30 12:04:24 [TRACE] GRPCProvider: GetSchema
+2020/11/30 12:04:24 [TRACE] GRPCProvider: Configure
+2020/11/30 12:04:24 [TRACE] eval: terraform.EvalNoop
+2020/11/30 12:04:24 [TRACE] [walkApply] Exiting eval tree: provider["gravitational.com/teleport/teleport"]
+2020/11/30 12:04:24 [TRACE] vertex "provider[\"gravitational.com/teleport/teleport\"]": visit complete
+2020/11/30 12:04:24 [TRACE] dag/walk: visiting "teleport_user.tf_test (expand)"
+2020/11/30 12:04:24 [TRACE] vertex "teleport_user.tf_test (expand)": starting visit (*terraform.nodeExpandApplyableResource)
+2020/11/30 12:04:24 [TRACE] vertex "teleport_user.tf_test (expand)": expanding dynamic subgraph
+2020/11/30 12:04:24 [TRACE] vertex "teleport_user.tf_test (expand)": entering dynamic subgraph
+2020/11/30 12:04:24 [TRACE] dag/walk: visiting "teleport_user.tf_test"
+2020/11/30 12:04:24 [TRACE] vertex "teleport_user.tf_test": starting visit (*terraform.NodeApplyableResource)
+2020/11/30 12:04:24 [TRACE] vertex "teleport_user.tf_test": evaluating
+2020/11/30 12:04:24 [TRACE] [walkApply] Entering eval tree: teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalWriteResourceState
+2020/11/30 12:04:24 [TRACE] [walkApply] Exiting eval tree: teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] vertex "teleport_user.tf_test": visit complete
+2020/11/30 12:04:24 [TRACE] vertex "teleport_user.tf_test (expand)": dynamic subgraph completed successfully
+2020/11/30 12:04:24 [TRACE] vertex "teleport_user.tf_test (expand)": visit complete
+2020/11/30 12:04:24 [TRACE] dag/walk: visiting "teleport_user.tf_test"
+2020/11/30 12:04:24 [TRACE] vertex "teleport_user.tf_test": starting visit (*terraform.NodeApplyableResourceInstance)
+2020/11/30 12:04:24 [TRACE] vertex "teleport_user.tf_test": evaluating
+2020/11/30 12:04:24 [TRACE] [walkApply] Entering eval tree: teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalSequence
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalGetProvider
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalReadDiff
+2020/11/30 12:04:24 [TRACE] EvalReadDiff: Read Create change from plan for teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalIf
+2020/11/30 12:04:24 [TRACE] eval: terraform.EvalNoop
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalIf
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalReadState
+2020/11/30 12:04:24 [TRACE] EvalReadState: reading state for teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] EvalReadState: no state present for teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalReadDiff
+2020/11/30 12:04:24 [TRACE] EvalReadDiff: Read Create change from plan for teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalDiff
+2020/11/30 12:04:24 [TRACE] Re-validating config for "teleport_user.tf_test"
+2020/11/30 12:04:24 [TRACE] GRPCProvider: ValidateResourceTypeConfig
+2020/11/30 12:04:24 [TRACE] GRPCProvider: PlanResourceChange
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalCheckPlannedChange
+2020/11/30 12:04:24 [TRACE] EvalCheckPlannedChange: Verifying that actual change (action Create) matches planned change (action Create)
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalGetProvider
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalReadState
+2020/11/30 12:04:24 [TRACE] EvalReadState: reading state for teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] EvalReadState: no state present for teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalReduceDiff
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalIf
+2020/11/30 12:04:24 [TRACE] eval: terraform.EvalNoop
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalApplyPre
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalApply
+2020/11/30 12:04:24 [DEBUG] EvalApply: ProviderMeta config value set
+2020/11/30 12:04:24 [DEBUG] teleport_user.tf_test: applying the planned Create change
+2020/11/30 12:04:24 [TRACE] GRPCProvider: ApplyResourceChange
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: panic: interface conversion: interface {} is []interface {}, not *schema.Set
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: 
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: goroutine 61 [running]:
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: github.com/gravitational/teleport-plugins/terraform/provider.resourceTeleportUserUpsert(0xc00019c6c0, 0x4f21d00, 0xc0001985b0, 0x2, 0x57be820)
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: 	/Users/xnutsive/go/src/github.com/gravitational/teleport-plugins/terraform/provider/resource_teleport_user.go:48 +0x35f
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: github.com/hashicorp/terraform/helper/schema.(*Resource).Apply(0xc000196900, 0xc0002db030, 0xc00044f0e0, 0x4f21d00, 0xc0001985b0, 0x1, 0x0, 0x0)
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: 	/Users/xnutsive/go/pkg/mod/github.com/hashicorp/terraform@v0.13.5/helper/schema/resource.go:308 +0x3b8
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: github.com/hashicorp/terraform/helper/schema.(*Provider).Apply(0xc000196980, 0xc0004c3a00, 0xc0002db030, 0xc00044f0e0, 0xc0000104e0, 0x50a21e0, 0xc0000104e0)
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: 	/Users/xnutsive/go/pkg/mod/github.com/hashicorp/terraform@v0.13.5/helper/schema/provider.go:297 +0x99
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: github.com/hashicorp/terraform/helper/plugin.(*GRPCProviderServer).ApplyResourceChange(0xc00018a390, 0x50a12e0, 0xc0001ec0c0, 0xc0002daee0, 0xc00018a390, 0xc0001ec0c0, 0xc000085b78)
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: 	/Users/xnutsive/go/pkg/mod/github.com/hashicorp/terraform@v0.13.5/helper/plugin/grpc_provider.go:923 +0x905
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: github.com/hashicorp/terraform/internal/tfplugin5._Provider_ApplyResourceChange_Handler(0x4ed98c0, 0xc00018a390, 0x50a12e0, 0xc0001ec0c0, 0xc0000b7800, 0x0, 0x50a12e0, 0xc0001ec0c0, 0xc0000e8680, 0x7f)
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: 	/Users/xnutsive/go/pkg/mod/github.com/hashicorp/terraform@v0.13.5/internal/tfplugin5/tfplugin5.pb.go:3303 +0x214
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: google.golang.org/grpc.(*Server).processUnaryRPC(0xc000602600, 0x50ac220, 0xc0000a3200, 0xc000445300, 0xc0002dca50, 0x57789c0, 0x0, 0x0, 0x0)
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: 	/Users/xnutsive/go/pkg/mod/google.golang.org/grpc@v1.27.0/server.go:1024 +0x522
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: google.golang.org/grpc.(*Server).handleStream(0xc000602600, 0x50ac220, 0xc0000a3200, 0xc000445300, 0x0)
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: 	/Users/xnutsive/go/pkg/mod/google.golang.org/grpc@v1.27.0/server.go:1313 +0xd34
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: google.golang.org/grpc.(*Server).serveStreams.func1.1(0xc0000404f0, 0xc000602600, 0x50ac220, 0xc0000a3200, 0xc000445300)
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: 	/Users/xnutsive/go/pkg/mod/google.golang.org/grpc@v1.27.0/server.go:722 +0xa5
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: created by google.golang.org/grpc.(*Server).serveStreams.func1
+2020-11-30T12:04:24.335-0800 [DEBUG] plugin.terraform-provider-teleport: 	/Users/xnutsive/go/pkg/mod/google.golang.org/grpc@v1.27.0/server.go:720 +0xa5
+2020-11-30T12:04:24.337-0800 [WARN]  plugin.stdio: received EOF, stopping recv loop: err="rpc error: code = Unavailable desc = transport is closing"
+2020/11/30 12:04:24 [DEBUG] teleport_user.tf_test: apply errored, but we're indicating that via the Error pointer rather than returning it: rpc error: code = Unavailable desc = transport is closing
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalMaybeTainted
+2020/11/30 12:04:24 [TRACE] EvalMaybeTainted: teleport_user.tf_test encountered an error during creation, so it is now marked as tainted
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalWriteState
+2020/11/30 12:04:24 [TRACE] EvalWriteState: removing state object for teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalApplyProvisioners
+2020/11/30 12:04:24 [TRACE] EvalApplyProvisioners: teleport_user.tf_test has no state, so skipping provisioners
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalMaybeTainted
+2020/11/30 12:04:24 [TRACE] EvalMaybeTainted: teleport_user.tf_test encountered an error during creation, so it is now marked as tainted
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalWriteState
+2020/11/30 12:04:24 [TRACE] EvalWriteState: removing state object for teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalIf
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalIf
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalWriteDiff
+2020/11/30 12:04:24 [TRACE] eval: *terraform.EvalApplyPost
+2020/11/30 12:04:24 [ERROR] eval: *terraform.EvalApplyPost, err: rpc error: code = Unavailable desc = transport is closing
+2020/11/30 12:04:24 [ERROR] eval: *terraform.EvalSequence, err: rpc error: code = Unavailable desc = transport is closing
+2020/11/30 12:04:24 [TRACE] [walkApply] Exiting eval tree: teleport_user.tf_test
+2020/11/30 12:04:24 [TRACE] vertex "teleport_user.tf_test": visit complete
+2020/11/30 12:04:24 [TRACE] dag/walk: upstream of "meta.count-boundary (EachMode fixup)" errored, so skipping
+2020/11/30 12:04:24 [TRACE] dag/walk: upstream of "provider[\"gravitational.com/teleport/teleport\"] (close)" errored, so skipping
+2020/11/30 12:04:24 [TRACE] dag/walk: upstream of "root" errored, so skipping
+2020/11/30 12:04:24 [TRACE] statemgr.Filesystem: not making a backup, because the new snapshot is identical to the old
+2020-11-30T12:04:24.337-0800 [DEBUG] plugin: plugin process exited: path=.terraform/plugins/gravitational.com/teleport/teleport/0.0.1/darwin_amd64/terraform-provider-teleport pid=14452 error="exit status 2"
+2020/11/30 12:04:24 [TRACE] statemgr.Filesystem: no state changes since last snapshot
+2020/11/30 12:04:24 [TRACE] statemgr.Filesystem: writing snapshot at terraform.tfstate
+2020/11/30 12:04:24 [TRACE] statemgr.Filesystem: removing lock metadata file .terraform.tfstate.lock.info
+2020/11/30 12:04:24 [TRACE] statemgr.Filesystem: unlocking terraform.tfstate using fcntl flock
+2020-11-30T12:04:24.432-0800 [DEBUG] plugin: plugin exited

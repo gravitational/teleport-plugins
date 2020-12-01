@@ -8,9 +8,9 @@ MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 
 # Teleport Enterprise Binary release name. Can be any teleport
 # enterprise version, but has to be available on get.gravitational.com
-RELEASE ?= teleport-ent-v4.3.5-linux-amd64-bin
+RELEASE ?= teleport-ent-v5.0.0-linux-amd64-bin
 
-RUNTIME ?= go1.14.4
+RUNTIME ?= go1.15.5
 BBOX ?= teleport-buildbox:$(RUNTIME)
 
 # Teleport CLI and plugins CLI flags to pass to them on start
@@ -72,6 +72,14 @@ config:
 	docker-compose exec teleport /bin/bash -c "tctl auth sign --format=tls --user=access-plugin --out=plug"
 	docker-compose exec teleport /bin/bash -c "mkdir -p /mnt/shared/certs/access-plugin && mv plug.* /mnt/shared/certs/access-plugin/"
 
+
+	docker-compose stop teleport
+
+.PHONY: foo-certs
+foo-certs:
+	docker-compose up -d teleport
+	docker-compose exec teleport /bin/bash -c "tctl auth sign --format=tls --user=foo --out=auth"
+	docker-compose exec teleport /bin/bash -c "rm -rf /root/go/src/github.com/gravitational/teleport-plugins/docker/tmp/ && mkdir /root/go/src/github.com/gravitational/teleport-plugins/docker/tmp/ && mv auth.* /root/go/src/github.com/gravitational/teleport-plugins/docker/tmp/"
 	docker-compose stop teleport
 
 # Builds teleport-plugins:latest docker image that will run plugins in it.

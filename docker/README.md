@@ -86,11 +86,6 @@ docker build \
 	.
 ```
 
-#### Building `teleport:latest`
-
-You'll need Teleport's `teleport:latest` Docker image to run plugins. This
-command will build it:
-
 ```bash
 # In the parent directory of teleport-plugins
 git clone git@gitnub.com:gravitational/teleport.git

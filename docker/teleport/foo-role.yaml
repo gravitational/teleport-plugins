@@ -19,6 +19,10 @@ spec:
     rules:
       - resources: ["access_request"]
         verbs: ["list", "read", "update"]
+      - resources: ["user"]
+        verbs: ["list", "read", "create", "update"]
+      - resources: ["role"]
+        verbs: ["list", "read", "create", "update"]
     # teleport currently refuses to issue certs for a user with 0 logins,
     # this restriction may be lifted in future versions.
     logins: ["root"]
