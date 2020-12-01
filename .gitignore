@@ -51,6 +51,7 @@ docs/latest.yaml
 # terraform
 .terraform
 *.tfstate*
+crash.log
 
 # macOS
 **/.DS_Store
