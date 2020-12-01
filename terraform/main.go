@@ -9,6 +9,4 @@ func main() {
 	plugin.Serve(&plugin.ServeOpts{
 		ProviderFunc: provider.Provider,
 	})
-
-	plugin:w.
 }

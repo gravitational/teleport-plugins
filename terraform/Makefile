@@ -1,5 +1,5 @@
 VERSION=0.0.1
-TERRAFORM_ARCH=darwin_amd64
+TERRAFORM_ARCH=linux_amd64
 PROVIDER_PATH = ~/.terraform.d/plugins/gravitational.com/teleport/teleport/$(VERSION)/$(TERRAFORM_ARCH)/
 
 .PHONY: build
