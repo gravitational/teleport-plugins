@@ -20,7 +20,7 @@ spec:
       - resources: ["access_request"]
         verbs: ["list", "read", "update"]
       - resources: ["user"]
-        verbs: ["list", "read", "create", "update"]
+        verbs: ["list", "read", "create", "update", "delete"]
       - resources: ["role"]
         verbs: ["list", "read", "create", "update"]
     # teleport currently refuses to issue certs for a user with 0 logins,
