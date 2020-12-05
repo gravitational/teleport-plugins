@@ -18,7 +18,13 @@ resource "teleport_user" "tf_test" {
     name = "tf_test_user"
     roles = ["foo", "access-plugin"]
 
-    traits = {
-      logins = "root foo"
+    trait {
+      name = "logins"
+      value = ["root", "foo"]
+    }
+
+    trait {
+      name = "another_key"
+      value = ["value", "of", "trait"]
     }
 }

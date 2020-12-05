@@ -32,14 +32,26 @@ func resourceTeleportUser() *schema.Resource {
 				MinItems: 1,
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
+					// TODO: Add validation with roleDataSource:
+					// read roles list and verify that the role exists.
 				},
 			},
-			"traits": {
-				Type:     schema.TypeMap,
-				Optional: true,
-				Elem: &schema.Schema{
-					Type:     schema.TypeString,
-					Required: true,
+			"trait": {
+				Type:     schema.TypeSet,
+				Required: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"name": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"value": &schema.Schema{
+							Type:     schema.TypeList,
+							Required: true,
+							MinItems: 1,
+							Elem:     &schema.Schema{Type: schema.TypeString},
+						},
+					},
 				},
 			},
 		},
@@ -58,11 +70,21 @@ func resourceTeleportUserUpsert(d *schema.ResourceData, m interface{}) error {
 		roles[i] = tfRole.(string)
 	}
 
-	tfTraits := d.Get("traits").(map[string]interface{})
-	traits := make(map[string][]string)
+	tfTraits := d.Get("trait").(*schema.Set).List()
+	traits := map[string][]string{}
 
-	for k, tfTraitString := range tfTraits {
-		traits[k] = strings.Split(tfTraitString.(string), " ")
+	for _, tfTrait := range tfTraits {
+		traitMap := tfTrait.(map[string]interface{})
+		name := traitMap["name"].(string)
+
+		tfValues := traitMap["value"].([]interface{})
+		values := make([]string, len(tfValues))
+
+		for i, value := range tfValues {
+			values[i] = value.(string)
+		}
+
+		traits[name] = values
 	}
 
 	user, err := services.NewUser(name)
