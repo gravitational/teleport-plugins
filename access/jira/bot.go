@@ -43,6 +43,11 @@ func init() {
 {{range .Roles}}
 * {{ . }}
 {{end}}
+{{if .RequestReason}}
+Request Reason: *{{.RequestReason}}*
+{{else}}
+No Request Reason provided.
+{{end}}
 Request ID: *{{.ID}}*
 `)
 	if err != nil {
@@ -184,7 +189,7 @@ func (b *Bot) CreateIssue(ctx context.Context, reqID string, reqData RequestData
 		Fields: &jira.IssueFields{
 			Type:        jira.IssueType{Name: "Task"},
 			Project:     jira.Project{Key: b.project},
-			Summary:     fmt.Sprintf("Access request from %s", reqData.User),
+			Summary:     fmt.Sprintf("%s requested %s", reqData.User, strings.Join(reqData.Roles, ", ")),
 			Description: description,
 		},
 	})

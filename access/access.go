@@ -36,7 +36,7 @@ import (
 )
 
 // MinServerVersion is the minimal teleport version the plugin supports.
-const MinServerVersion = "4.3.0"
+const MinServerVersion = "5.0.0"
 
 // State represents the state of an access request.
 type State = services.RequestState

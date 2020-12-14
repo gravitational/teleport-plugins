@@ -281,7 +281,7 @@ func (a *App) onJIRAWebhook(ctx context.Context, webhook Webhook) error {
 }
 
 func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
-	reqData := RequestData{User: req.User, Roles: req.Roles, Created: req.Created}
+	reqData := RequestData{User: req.User, Roles: req.Roles, RequestReason: req.RequestReason, Created: req.Created}
 	jiraData, err := a.bot.CreateIssue(ctx, req.ID, reqData)
 
 	if err != nil {

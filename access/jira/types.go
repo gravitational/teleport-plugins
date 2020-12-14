@@ -11,9 +11,10 @@ import (
 )
 
 type RequestData struct {
-	User    string
-	Roles   []string
-	Created time.Time
+	User          string
+	Roles         []string
+	Created       time.Time
+	RequestReason string
 }
 
 type JiraData struct {
