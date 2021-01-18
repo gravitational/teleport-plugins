@@ -2,45 +2,28 @@
 
 ## Current Status
 
-This is an early proof of concept, expect a lot of things to not work.
+Work in progress.
 
-**Users**
+Build requirements:
 
-* [x] Create users
-* [x] Update users
-* [x] Delete users
+- Install
+  [protoc-gen-tfschema](https://github.com/nategadzhi/protoc-gen-tfschema)
+- `gravitational/teleport` source available
 
-**Roles**
+```shell
 
-* [ ] Create roles
-* [ ] Update roles
-* [ ] Delete roles
+go install github.com/nategadzhi/protoc-gen-tfschema
 
-**Testing framework**
+# Substitute your path to teleport source
+protoc --proto_path=. \
+  --proto_path=/Users/xnutsive/go/src/github.com/gravitational/teleport/vendor/github.com/gogo/protobuf \
+  --proto_path=/Users/xnutsive/go/src/github.com/gravitational/teleport/lib/services \
+  --proto_path=/Users/xnutsive/go/src \
+  types.proto \
+  --tfschema_out=./tfschema/ \
+  --go_out=./tfschema/ \
+  --tfschema_opt="types=UserV2"
 
-
-**Validation framework**
-
-
-## Known issues
-
-User traits are a string where trait values are separated by space, since
-Terraform Schema Map doesn't provide an out of the box way to do a map of string
-to a list. One way to improve this is to define a Trait as a separate piece of
-data that can be nested in a resource, i.e:
-
-```
-"teleport_user" "tf_player_one" {
-  name = "nate"
-  roles = ["foo"]
-
-  trait {
-    name = "logins"
-    values = [
-      "root"
-    ]
-  }
-}
 ```
 
 ### Building the provider
@@ -50,10 +33,10 @@ data that can be nested in a resource, i.e:
 The `terraform` directory has it's own go module defined, but some dependencies
 versions are pinned to the same versions Teleport itself uses.
 
-* Separate go module makes sense because we'll likely move the provider to a
+- Separate go module makes sense because we'll likely move the provider to a
   separate repository in the future, and will build it independently of the
   other Teleport Plugins.
-* Pinning dependency versions to Teleport's deps is required becuase for now,
+- Pinning dependency versions to Teleport's deps is required becuase for now,
   the provider depends on the whole Teleport, and to build it, we need
   compatible deps.
 
@@ -92,12 +75,12 @@ teleport auth server.
 
 Add support for the following resources:
 
-* OIDC/SAML/Github Connectors for Enterprise
-* Github connectors for SSO
-* Trusted clusters
-* Roles
-* Users
-* Tokens
+- OIDC/SAML/Github Connectors for Enterprise
+- Github connectors for SSO
+- Trusted clusters
+- Roles
+- Users
+- Tokens
 
 Support Terraform >= v0.13.
 
