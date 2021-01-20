@@ -5,6 +5,9 @@ const jwt = require("jsonwebtoken");
 const process = require("process");
 const url = require("url");
 
+const dotenv = require('dotenv');
+dotenv.config();
+
 const listenPort = parseInt(process.env.PORT || 8080);
 const isInsecure =
   process.env.TELEPORT_INSECURE === "true"
@@ -17,7 +20,7 @@ const isInsecure =
     ? true
     : false;
 
-let proxyAddr = process.env.TELEPORT_PROXY || "https://teleport.cluster.local:3080";
+let proxyAddr = process.env.TELEPORT_PROXY || "https://example.teleport.sh:443";
 
 if (!proxyAddr.match(/(http|https):\/\//)) {
   proxyAddr = "https://" + proxyAddr;
@@ -59,13 +62,14 @@ app.use(function (req, res, next) {
 });
 
 // Main endpoint.
+// Prints users Teleport Username and all roles for that user.
 app.get("/", function (req, res) {
   const { username, roles } = req.teleportJWT;
   res.send(
     ejs.render(
       `
     <p>Hello <b><%= username %></b>!</p>
-   <p>You know the roles and so do I:
+   <p>You are now logged in and have these roles.
    <ul>
      <% roles.forEach(role => { %>
        <li><%= role %></li>

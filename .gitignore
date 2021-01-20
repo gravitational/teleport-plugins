@@ -5,6 +5,8 @@ debug
 default.etcd
 darwin
 
+node_modules
+
 # usually release tarballs get in the way
 *.gz
 *.zip
