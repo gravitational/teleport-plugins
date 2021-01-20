@@ -31,8 +31,8 @@ implementation and it is _fully compatible with OpenSSH_ and can be used with
 
 |Project Links| Description
 |---|----
-| [Teleport Website](https://gravitational.com/teleport)  | The official website of the project |
-| [Documentation](https://gravitational.com/teleport/docs/quickstart/)  | Admin guide, user manual and more |
+| [Teleport Website](https://goteleport.com/teleport)  | The official website of the project |
+| [Documentation](https://goteleport.com/teleport/docs/quickstart/)  | Admin guide, user manual and more |
 | [Demo Video](https://www.youtube.com/watch?v=DUlTAlEJr5w) | 5-minute video overview of the UI. |
 | [Teleconsole](https://www.teleconsole.com) | The free service to "invite" SSH clients behind NAT, built on top of Teleport |
 | [Blog](https://gravitational.com/blog/) | Our blog where we publish Teleport news |
@@ -42,7 +42,7 @@ implementation and it is _fully compatible with OpenSSH_ and can be used with
 
 ## Installing and Running
 
-Download the [latest binary release](https://gravitational.com/teleport/download/),
+Download the [latest binary release](https://goteleport.com/teleport/download/),
 unpack the .tar.gz and run `sudo ./install`. This will copy Teleport binaries into
 `/usr/local/bin`.
 
@@ -205,11 +205,11 @@ magically _teleported_. And Teleport was born!
 
 ## More Information
 
-* [Quick Start Guide](https://gravitational.com/teleport/docs/quickstart)
-* [Teleport Architecture](https://gravitational.com/teleport/docs/architecture)
-* [Admin Manual](https://gravitational.com/teleport/docs/admin-guide)
-* [User Manual](https://gravitational.com/teleport/docs/user-manual)
-* [FAQ](https://gravitational.com/teleport/docs/faq)
+* [Quick Start Guide](https://goteleport.com/teleport/docs/quickstart)
+* [Teleport Architecture](https://goteleport.com/teleport/docs/architecture)
+* [Admin Manual](https://goteleport.com/teleport/docs/admin-guide)
+* [User Manual](https://goteleport.com/teleport/docs/user-manual)
+* [FAQ](https://goteleport.com/teleport/docs/faq)
 
 ## Support and Contributing
 
@@ -217,7 +217,7 @@ We offer a few different options for support. First of all, we try to provide cl
 
 * Join the [Teleport Community](https://community.gravitational.com/c/teleport) to ask questions. Our engineers are available there to help you.
 * If you want to contribute to Teleport or file a bug report/issue, you can do so by creating an issue here in Github.
-* If you are interested in Teleport Enterprise or more responsive support during a POC, we can also create a dedicated Slack channel for you during your POC. You can [reach out to us through our website](https://gravitational.com/teleport/) to arrange for a POC.
+* If you are interested in Teleport Enterprise or more responsive support during a POC, we can also create a dedicated Slack channel for you during your POC. You can [reach out to us through our website](https://goteleport.com/teleport/) to arrange for a POC.
 
 ## Is Teleport Secure and Production Ready?
 
@@ -227,14 +227,14 @@ technology security companies. [Some](https://gravitational.com/blog/teleport-re
 We are comfortable with the use of Teleport from a security perspective.
 
 You can see the list of companies who use Teleport in production on the Teleport
-[product page](https://gravitational.com/teleport#customerlist).
+[product page](https://goteleport.com/teleport#customerlist).
 
 However, Teleport is still a relatively young product so you may experience
 usability issues.  We are actively supporting Teleport and addressing any
 issues that are submitted to this repo. Ask questions, send pull requests,
 report issues and don't be shy! :)
 
-The latest stable Teleport build can be found in [Releases](https://gravitational.com/teleport/download/)
+The latest stable Teleport build can be found in [Releases](https://goteleport.com/teleport/download/)
 
 ## Who Built Teleport?
 
