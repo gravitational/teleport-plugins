@@ -77,7 +77,7 @@ app.get("/", function (req, res) {
        <li><%= role %></li>
      <% }); %>
    </ul>
-     <p> Your JSON Web Token (JWT) was verified against <a href="<%= proxyAddr %><%= jwtResource %>"><%= proxyAddr %><%= jwtResource %></a> </p>
+     <p> Your JSON Web Token (JWT) was sent via <a href="<%= proxyAddr %>"><%= proxyAddr %></a> and verified against <%= proxyAddr %><%= jwtResource %></p>
 `,
       { username: username, roles: roles, proxyAddr: proxyAddr, jwtResource: jwtResource }
     )
