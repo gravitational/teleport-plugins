@@ -18,7 +18,7 @@ Teleport enables teams to easily adopt the best SSH practices like:
 	- Keep the full audit log of all SSH sessions within a cluster.
 
 Teleport web site:
-	https://goteleport.com/teleport/
+	https://gravitational.com/teleport/
 
 Teleport on Github:
 	https://github.com/gravitational/teleport
