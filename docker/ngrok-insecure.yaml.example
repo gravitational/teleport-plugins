@@ -24,10 +24,10 @@ tunnels:
     addr: 8044
     proto: http
     host_header: teleport-gitlab.cluster.local
-  teleport-jira:
+  teleport-jira-cloud:
     addr: 8045
     proto: http
-    host_header: teleport-jira.cluster.local
+    host_header: teleport-jira-cloud.cluster.local
   teleport-pagerduty:
     addr: 8043
     proto: http

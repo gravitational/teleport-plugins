@@ -2,13 +2,13 @@
 
 If you're using Jira Cloud or Jira Server to manage your projects, you can also use it to monitor, approve, deny, or discuss Teleport permission requests. This quickstart will walk you through the setup.
 
-For the purpose of this quickstart, we assume you've already setup an [Enterprise Teleport Cluster](https://gravitational.com/teleport/docs/enterprise/quickstart-enterprise/).
+For the purpose of this quickstart, we assume you've already setup an [Enterprise Teleport Cluster](https://goteleport.com/teleport/docs/enterprise/quickstart-enterprise/).
 
 Note: The Approval Workflow only works with Pro and Enterprise version of Teleport
 
 ## Prerequisites
 - An Enterprise or Pro Teleport Cluster
-- Admin Privileges with access and control of [`tctl`](https://gravitational.com/teleport/docs/cli-docs/#tctl)
+- Admin Privileges with access and control of [`tctl`](https://goteleport.com/teleport/docs/cli-docs/#tctl)
 - Jira Server or Jira Cloud installation with an owner privileges, specifically to setup webhooks, issue types, and workflows.
 
 ### Create an access-plugin role and user within Teleport
@@ -47,7 +47,7 @@ $ tctl create -f rscs.yaml
 ```
 
 #### Export access-plugin Certificate
-Teleport Plugin uses the `access-plugin`role and user to perform the approval. We export the identity files, using [`tctl auth sign`](https://gravitational.com/teleport/docs/cli-docs/#tctl-auth-sign).
+Teleport Plugin uses the `access-plugin`role and user to perform the approval. We export the identity files, using [`tctl auth sign`](https://goteleport.com/teleport/docs/cli-docs/#tctl-auth-sign).
 
 ```
 $ tctl auth sign --format=tls --user=access-plugin --out=auth --ttl=8760h

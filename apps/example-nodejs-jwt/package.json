@@ -1,0 +1,13 @@
+{
+  "name": "teleport-app-example-node",
+  "version": "1.0.0",
+  "main": "app.js",
+  "license": "MIT",
+  "dependencies": {
+    "ejs": "^3.1.5",
+    "express": "^4.17.1",
+    "jsonwebtoken": "^8.5.1",
+    "jwks-rsa": "^1.11.0", 
+    "dotenv": "^8.2.0"
+  }
+}
