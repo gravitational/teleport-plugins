@@ -4,6 +4,7 @@ const jwksClient = require("jwks-rsa");
 const jwt = require("jsonwebtoken");
 const process = require("process");
 const url = require("url");
+const jwtResource = "/.well-known/jwks.json";
 
 const dotenv = require('dotenv');
 dotenv.config();
@@ -30,7 +31,7 @@ const app = express();
 const jwks = jwksClient({
   strictSsl: !isInsecure,
   cache: true, // Public key must be memoized.
-  jwksUri: new url.URL("/.well-known/jwks.json", proxyAddr).toString(),
+  jwksUri: new url.URL(jwtResource, proxyAddr).toString(),
 });
 
 function getKey(header, callback) {
@@ -48,12 +49,12 @@ function getKey(header, callback) {
 app.use(function (req, res, next) {
   const token = req.headers["teleport-jwt-assertion"];
   if (!token) {
-    res.status(403).send("Access denied");
+    res.status(403).send("Access denied. No JWT Token present.");
     return;
   }
   jwt.verify(token, getKey, function (err, decoded) {
     if (err) {
-      res.status(403).send("Access denied");
+      res.status(403).send("Access denied. Error in verifying token.");
       return;
     }
     req.teleportJWT = decoded;
@@ -65,6 +66,7 @@ app.use(function (req, res, next) {
 // Prints users Teleport Username and all roles for that user.
 app.get("/", function (req, res) {
   const { username, roles } = req.teleportJWT;
+
   res.send(
     ejs.render(
       `
@@ -75,8 +77,9 @@ app.get("/", function (req, res) {
        <li><%= role %></li>
      <% }); %>
    </ul>
+     <p> Your JSON Web Token (JWT) was sent via <a href="<%= proxyAddr %>"><%= proxyAddr %></a> and verified against <%= proxyAddr %><%= jwtResource %></p>
 `,
-      { username: username, roles: roles }
+      { username: username, roles: roles, proxyAddr: proxyAddr, jwtResource: jwtResource }
     )
   );
 });
