@@ -5,7 +5,7 @@ treat Teleport access and permission requests as Pagerduty incidents — and
 notify the appropriate team, and approve or deny the requests via Pagerduty
 special action.
 
-[See setup instructions on Teleport's website](https://gravitational.com/teleport/docs/enterprise/workflow/ssh_approval_pagerduty/)
+[See setup instructions on Teleport's website](https://goteleport.com/teleport/docs/enterprise/workflow/ssh_approval_pagerduty/)
 
 ## Prerequisites
 
@@ -59,7 +59,7 @@ $ tctl create -f rscs.yaml
 
 Teleport Plugin uses the `access-plugin`role and user to perform the approval.
 We export the identify files, using
-[`tctl auth sign`](https://gravitational.com/teleport/docs/cli-docs/#tctl-auth-sign).
+[`tctl auth sign`](https://goteleport.com/teleport/docs/cli-docs/#tctl-auth-sign).
 
 ```
 $ tctl auth sign --format=tls --user=access-plugin --out=auth --ttl=8760h

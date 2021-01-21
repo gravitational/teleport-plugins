@@ -1,12 +1,12 @@
 ## Teleport Plugins Setup Quickstart
 
 If you're using Slack, you can be notified of
-[new teleport permission requests](https://gravitational.com/teleport/docs/cli-docs/#tctl-request-ls),
+[new teleport permission requests](https://goteleport.com/teleport/docs/cli-docs/#tctl-request-ls),
 approve or deny them on Slack with Teleport Slack Plugin. This guide covers it's
 setup.
 
 For this quickstart, we assume you've already setup an
-[Enterprise Teleport Cluster](https://gravitational.com/teleport/docs/enterprise/quickstart-enterprise/)
+[Enterprise Teleport Cluster](https://goteleport.com/teleport/docs/enterprise/quickstart-enterprise/)
 
 Note: The Approval Workflow only works with Pro and Enterprise version of
 Teleport.
@@ -15,7 +15,7 @@ Teleport.
 
 - An Enterprise or Pro Teleport Cluster
 - Admin Privileges. With access and control of
-  [`tctl`](https://gravitational.com/teleport/docs/cli-docs/#tctl)
+  [`tctl`](https://goteleport.com/teleport/docs/cli-docs/#tctl)
 - Slack Admin Privileges to create an app and install it to your workspace.
 
 ### Create an access-plugin role and user within Teleport
@@ -60,7 +60,7 @@ $ tctl create -f rscs.yaml
 
 Teleport Plugin uses the `access-plugin`role and user to perform the approval.
 We export the identify files, using
-[`tctl auth sign`](https://gravitational.com/teleport/docs/cli-docs/#tctl-auth-sign).
+[`tctl auth sign`](https://goteleport.com/teleport/docs/cli-docs/#tctl-auth-sign).
 
 ```bash
 $ tctl auth sign --format=tls --user=access-plugin --out=auth --ttl=8760h
