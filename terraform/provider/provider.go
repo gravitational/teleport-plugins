@@ -1,7 +1,6 @@
 package provider
 
 import (
-	// TODO: Only use api/* Teleport packages
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/trace"
 
@@ -49,16 +48,16 @@ func Provider() terraform.ResourceProvider {
 // providerConfigure accepts provider settings schema,
 // initializes a Teleport's `auth.Client` and returns it.
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
-
 	certPath := d.Get("cert_path").(string)
 	keyPath := d.Get("key_path").(string)
 	rootCAsPath := d.Get("root_ca_path").(string)
 
 	// TODO: Verify Addr format is [protocol://]host:port
 	addr := d.Get("addr").(string)
+
 	tlsConfig, err := loadTLSConfig(certPath, keyPath, rootCAsPath)
 	if err != nil {
-		// TODO decorate the error into a Terraform-friendly wrapper
+		// TODO decorate the error into a Terraform-friendly Diags
 		return nil, trace.Wrap(err)
 	}
 
