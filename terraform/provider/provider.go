@@ -39,7 +39,7 @@ func Provider() terraform.ResourceProvider {
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			// "teleport_user": resourceTeleportUser(),
+			"teleport_user": resourceTeleportUser(),
 			"teleport_role": resourceTeleportRole(),
 		},
 		ConfigureFunc: providerConfigure,
