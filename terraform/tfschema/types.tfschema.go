@@ -8,11 +8,11 @@ package tfschema
 
 import (
 	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/helper/validation"
+	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 )
 
-// proto type fullname: services.RoleV3
-func schemaRoleV3() map[string]*schema.Schema {
+// proto type fullname: types.RoleV3
+func SchemaRoleV3() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"Kind": {
 			Type:     schema.TypeString,
@@ -31,7 +31,7 @@ func schemaRoleV3() map[string]*schema.Schema {
 			Optional: true,
 			MaxItems: 1,
 			Elem: &schema.Resource{
-				// nested type name: services.Metadata
+				// nested type name: types.Metadata
 				Schema: map[string]*schema.Schema{
 					"Name": {
 						Type:     schema.TypeString,
@@ -55,7 +55,7 @@ func schemaRoleV3() map[string]*schema.Schema {
 					"Expires": {
 						Type:         schema.TypeString,
 						Optional:     true,
-						ValidateFunc: validation.ValidateRFC3339TimeString,
+						ValidateFunc: validation.IsRFC3339Time,
 					},
 					"ID": {
 						Type:     schema.TypeInt,
@@ -69,14 +69,14 @@ func schemaRoleV3() map[string]*schema.Schema {
 			Optional: true,
 			MaxItems: 1,
 			Elem: &schema.Resource{
-				// nested type name: services.RoleSpecV3
+				// nested type name: types.RoleSpecV3
 				Schema: map[string]*schema.Schema{
 					"Options": {
 						Type:     schema.TypeList,
 						Optional: true,
 						MaxItems: 1,
 						Elem: &schema.Resource{
-							// nested type name: services.RoleOptions
+							// nested type name: types.RoleOptions
 							Schema: map[string]*schema.Schema{
 								"ForwardAgent": {
 									Type:     schema.TypeBool,
@@ -91,7 +91,7 @@ func schemaRoleV3() map[string]*schema.Schema {
 									Optional: true,
 									MaxItems: 1,
 									Elem: &schema.Resource{
-										// nested type name: services.BoolValue
+										// nested type name: types.BoolValue
 										Schema: map[string]*schema.Schema{
 											"Value": {
 												Type:     schema.TypeBool,
@@ -145,7 +145,7 @@ func schemaRoleV3() map[string]*schema.Schema {
 						Optional: true,
 						MaxItems: 1,
 						Elem: &schema.Resource{
-							// nested type name: services.RoleConditions
+							// nested type name: types.RoleConditions
 							Schema: map[string]*schema.Schema{
 								"Logins": {
 									Type:     schema.TypeList,
@@ -200,7 +200,7 @@ func schemaRoleV3() map[string]*schema.Schema {
 									Type:     schema.TypeList,
 									Optional: true,
 									Elem: &schema.Resource{
-										// nested type name: services.Rule
+										// nested type name: types.Rule
 										Schema: map[string]*schema.Schema{
 											"Resources": {
 												Type:     schema.TypeList,
@@ -234,7 +234,7 @@ func schemaRoleV3() map[string]*schema.Schema {
 									Optional: true,
 									MaxItems: 1,
 									Elem: &schema.Resource{
-										// nested type name: services.AccessRequestConditions
+										// nested type name: types.AccessRequestConditions
 										Schema: map[string]*schema.Schema{
 											"Roles": {
 												Type:     schema.TypeList,
@@ -245,7 +245,7 @@ func schemaRoleV3() map[string]*schema.Schema {
 												Type:     schema.TypeList,
 												Optional: true,
 												Elem: &schema.Resource{
-													// nested type name: services.AccessRequestClaimMapping
+													// nested type name: types.AccessRequestClaimMapping
 													Schema: map[string]*schema.Schema{
 														"Claim": {
 															Type:     schema.TypeString,
@@ -426,6 +426,55 @@ func schemaRoleV3() map[string]*schema.Schema {
 											},
 										},
 									},
+								},
+								"DatabaseLabels": {
+									Type:     schema.TypeList,
+									Optional: true,
+									MaxItems: 1,
+									Elem: &schema.Resource{
+										// nested type name: wrappers.LabelValues
+										Schema: map[string]*schema.Schema{
+											"Values": {
+												Type:     schema.TypeList,
+												Optional: true,
+												MaxItems: 1,
+												Elem: &schema.Resource{
+													// nested type name: wrappers.LabelValues.ValuesEntry
+													Schema: map[string]*schema.Schema{
+														"key": {
+															Type:     schema.TypeString,
+															Optional: true,
+														},
+														"value": {
+															Type:     schema.TypeList,
+															Optional: true,
+															MaxItems: 1,
+															Elem: &schema.Resource{
+																// nested type name: wrappers.StringValues
+																Schema: map[string]*schema.Schema{
+																	"Values": {
+																		Type:     schema.TypeList,
+																		Optional: true,
+																		Elem:     &schema.Schema{Type: schema.TypeString},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+								"DatabaseNames": {
+									Type:     schema.TypeList,
+									Optional: true,
+									Elem:     &schema.Schema{Type: schema.TypeString},
+								},
+								"DatabaseUsers": {
+									Type:     schema.TypeList,
+									Optional: true,
+									Elem:     &schema.Schema{Type: schema.TypeString},
 								},
 							},
 						},
@@ -435,7 +484,7 @@ func schemaRoleV3() map[string]*schema.Schema {
 						Optional: true,
 						MaxItems: 1,
 						Elem: &schema.Resource{
-							// nested type name: services.RoleConditions
+							// nested type name: types.RoleConditions
 							Schema: map[string]*schema.Schema{
 								"Logins": {
 									Type:     schema.TypeList,
@@ -490,7 +539,7 @@ func schemaRoleV3() map[string]*schema.Schema {
 									Type:     schema.TypeList,
 									Optional: true,
 									Elem: &schema.Resource{
-										// nested type name: services.Rule
+										// nested type name: types.Rule
 										Schema: map[string]*schema.Schema{
 											"Resources": {
 												Type:     schema.TypeList,
@@ -524,7 +573,7 @@ func schemaRoleV3() map[string]*schema.Schema {
 									Optional: true,
 									MaxItems: 1,
 									Elem: &schema.Resource{
-										// nested type name: services.AccessRequestConditions
+										// nested type name: types.AccessRequestConditions
 										Schema: map[string]*schema.Schema{
 											"Roles": {
 												Type:     schema.TypeList,
@@ -535,7 +584,7 @@ func schemaRoleV3() map[string]*schema.Schema {
 												Type:     schema.TypeList,
 												Optional: true,
 												Elem: &schema.Resource{
-													// nested type name: services.AccessRequestClaimMapping
+													// nested type name: types.AccessRequestClaimMapping
 													Schema: map[string]*schema.Schema{
 														"Claim": {
 															Type:     schema.TypeString,
@@ -716,6 +765,55 @@ func schemaRoleV3() map[string]*schema.Schema {
 											},
 										},
 									},
+								},
+								"DatabaseLabels": {
+									Type:     schema.TypeList,
+									Optional: true,
+									MaxItems: 1,
+									Elem: &schema.Resource{
+										// nested type name: wrappers.LabelValues
+										Schema: map[string]*schema.Schema{
+											"Values": {
+												Type:     schema.TypeList,
+												Optional: true,
+												MaxItems: 1,
+												Elem: &schema.Resource{
+													// nested type name: wrappers.LabelValues.ValuesEntry
+													Schema: map[string]*schema.Schema{
+														"key": {
+															Type:     schema.TypeString,
+															Optional: true,
+														},
+														"value": {
+															Type:     schema.TypeList,
+															Optional: true,
+															MaxItems: 1,
+															Elem: &schema.Resource{
+																// nested type name: wrappers.StringValues
+																Schema: map[string]*schema.Schema{
+																	"Values": {
+																		Type:     schema.TypeList,
+																		Optional: true,
+																		Elem:     &schema.Schema{Type: schema.TypeString},
+																	},
+																},
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+								"DatabaseNames": {
+									Type:     schema.TypeList,
+									Optional: true,
+									Elem:     &schema.Schema{Type: schema.TypeString},
+								},
+								"DatabaseUsers": {
+									Type:     schema.TypeList,
+									Optional: true,
+									Elem:     &schema.Schema{Type: schema.TypeString},
 								},
 							},
 						},
@@ -726,8 +824,8 @@ func schemaRoleV3() map[string]*schema.Schema {
 	}
 }
 
-// proto type fullname: services.UserV2
-func schemaUserV2() map[string]*schema.Schema {
+// proto type fullname: types.UserV2
+func SchemaUserV2() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		"Kind": {
 			Type:     schema.TypeString,
@@ -746,7 +844,7 @@ func schemaUserV2() map[string]*schema.Schema {
 			Optional: true,
 			MaxItems: 1,
 			Elem: &schema.Resource{
-				// nested type name: services.Metadata
+				// nested type name: types.Metadata
 				Schema: map[string]*schema.Schema{
 					"Name": {
 						Type:     schema.TypeString,
@@ -770,7 +868,7 @@ func schemaUserV2() map[string]*schema.Schema {
 					"Expires": {
 						Type:         schema.TypeString,
 						Optional:     true,
-						ValidateFunc: validation.ValidateRFC3339TimeString,
+						ValidateFunc: validation.IsRFC3339Time,
 					},
 					"ID": {
 						Type:     schema.TypeInt,
@@ -784,13 +882,13 @@ func schemaUserV2() map[string]*schema.Schema {
 			Optional: true,
 			MaxItems: 1,
 			Elem: &schema.Resource{
-				// nested type name: services.UserSpecV2
+				// nested type name: types.UserSpecV2
 				Schema: map[string]*schema.Schema{
 					"OIDCIdentities": {
 						Type:     schema.TypeList,
 						Optional: true,
 						Elem: &schema.Resource{
-							// nested type name: services.ExternalIdentity
+							// nested type name: types.ExternalIdentity
 							Schema: map[string]*schema.Schema{
 								"ConnectorID": {
 									Type:     schema.TypeString,
@@ -807,7 +905,7 @@ func schemaUserV2() map[string]*schema.Schema {
 						Type:     schema.TypeList,
 						Optional: true,
 						Elem: &schema.Resource{
-							// nested type name: services.ExternalIdentity
+							// nested type name: types.ExternalIdentity
 							Schema: map[string]*schema.Schema{
 								"ConnectorID": {
 									Type:     schema.TypeString,
@@ -824,7 +922,7 @@ func schemaUserV2() map[string]*schema.Schema {
 						Type:     schema.TypeList,
 						Optional: true,
 						Elem: &schema.Resource{
-							// nested type name: services.ExternalIdentity
+							// nested type name: types.ExternalIdentity
 							Schema: map[string]*schema.Schema{
 								"ConnectorID": {
 									Type:     schema.TypeString,
@@ -886,7 +984,7 @@ func schemaUserV2() map[string]*schema.Schema {
 						Optional: true,
 						MaxItems: 1,
 						Elem: &schema.Resource{
-							// nested type name: services.LoginStatus
+							// nested type name: types.LoginStatus
 							Schema: map[string]*schema.Schema{
 								"IsLocked": {
 									Type:     schema.TypeBool,
@@ -899,12 +997,12 @@ func schemaUserV2() map[string]*schema.Schema {
 								"LockedTime": {
 									Type:         schema.TypeString,
 									Optional:     true,
-									ValidateFunc: validation.ValidateRFC3339TimeString,
+									ValidateFunc: validation.IsRFC3339Time,
 								},
 								"LockExpires": {
 									Type:         schema.TypeString,
 									Optional:     true,
-									ValidateFunc: validation.ValidateRFC3339TimeString,
+									ValidateFunc: validation.IsRFC3339Time,
 								},
 							},
 						},
@@ -912,21 +1010,21 @@ func schemaUserV2() map[string]*schema.Schema {
 					"Expires": {
 						Type:         schema.TypeString,
 						Optional:     true,
-						ValidateFunc: validation.ValidateRFC3339TimeString,
+						ValidateFunc: validation.IsRFC3339Time,
 					},
 					"CreatedBy": {
 						Type:     schema.TypeList,
 						Optional: true,
 						MaxItems: 1,
 						Elem: &schema.Resource{
-							// nested type name: services.CreatedBy
+							// nested type name: types.CreatedBy
 							Schema: map[string]*schema.Schema{
 								"Connector": {
 									Type:     schema.TypeList,
 									Optional: true,
 									MaxItems: 1,
 									Elem: &schema.Resource{
-										// nested type name: services.ConnectorRef
+										// nested type name: types.ConnectorRef
 										Schema: map[string]*schema.Schema{
 											"Type": {
 												Type:     schema.TypeString,
@@ -946,14 +1044,14 @@ func schemaUserV2() map[string]*schema.Schema {
 								"Time": {
 									Type:         schema.TypeString,
 									Optional:     true,
-									ValidateFunc: validation.ValidateRFC3339TimeString,
+									ValidateFunc: validation.IsRFC3339Time,
 								},
 								"User": {
 									Type:     schema.TypeList,
 									Optional: true,
 									MaxItems: 1,
 									Elem: &schema.Resource{
-										// nested type name: services.UserRef
+										// nested type name: types.UserRef
 										Schema: map[string]*schema.Schema{
 											"Name": {
 												Type:     schema.TypeString,
@@ -970,7 +1068,7 @@ func schemaUserV2() map[string]*schema.Schema {
 						Optional: true,
 						MaxItems: 1,
 						Elem: &schema.Resource{
-							// nested type name: services.LocalAuthSecrets
+							// nested type name: types.LocalAuthSecrets
 							Schema: map[string]*schema.Schema{
 								"PasswordHash": {
 									Type:     schema.TypeString,
@@ -985,7 +1083,7 @@ func schemaUserV2() map[string]*schema.Schema {
 									Optional: true,
 									MaxItems: 1,
 									Elem: &schema.Resource{
-										// nested type name: services.U2FRegistrationData
+										// nested type name: types.U2FRegistrationData
 										Schema: map[string]*schema.Schema{
 											"Raw": {
 												Type:     schema.TypeString,

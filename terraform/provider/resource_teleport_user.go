@@ -2,10 +2,10 @@ package provider
 
 import (
 	"context"
-	"strings"
 
-	"github.com/gravitational/teleport/lib/auth"
-	"github.com/gravitational/teleport/lib/services"
+	"github.com/gravitational/teleport-plugins/terraform/tfschema"
+	"github.com/gravitational/teleport/api/client"
+	"github.com/gravitational/teleport/api/types"
 
 	"github.com/gravitational/trace"
 
@@ -21,45 +21,12 @@ func resourceTeleportUser() *schema.Resource {
 		Delete: resourceTeleportUserDelete,
 		Exists: resourceTeleportUserExists,
 
-		Schema: map[string]*schema.Schema{
-			"name": {
-				Type:     schema.TypeString,
-				Required: true,
-			},
-			"roles": {
-				Type:     schema.TypeList,
-				Required: true,
-				MinItems: 1,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-					// TODO: Add validation with roleDataSource:
-					// read roles list and verify that the role exists.
-				},
-			},
-			"trait": {
-				Type:     schema.TypeSet,
-				Required: true,
-				Elem: &schema.Resource{
-					Schema: map[string]*schema.Schema{
-						"name": &schema.Schema{
-							Type:     schema.TypeString,
-							Required: true,
-						},
-						"value": &schema.Schema{
-							Type:     schema.TypeList,
-							Required: true,
-							MinItems: 1,
-							Elem:     &schema.Schema{Type: schema.TypeString},
-						},
-					},
-				},
-			},
-		},
+		Schema: tfschema.SchemaUserV2(),
 	}
 }
 
 func resourceTeleportUserUpsert(d *schema.ResourceData, m interface{}) error {
-	client := m.(*auth.Client)
+	client := m.(*client.Client)
 
 	name := d.Get("name").(string)
 
@@ -87,7 +54,7 @@ func resourceTeleportUserUpsert(d *schema.ResourceData, m interface{}) error {
 		traits[name] = values
 	}
 
-	user, err := services.NewUser(name)
+	user, err := types.NewUser(name)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -95,7 +62,7 @@ func resourceTeleportUserUpsert(d *schema.ResourceData, m interface{}) error {
 	user.SetRoles(roles)
 	user.SetTraits(traits)
 
-	err = client.UpsertUser(user)
+	err = client.CreateUser(context.Background(), user)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -105,7 +72,7 @@ func resourceTeleportUserUpsert(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceTeleportUserRead(d *schema.ResourceData, m interface{}) error {
-	client := m.(*auth.Client)
+	client := m.(*client.Client)
 	name := d.Get("name").(string)
 
 	u, err := client.GetUser(name, false)
@@ -113,26 +80,31 @@ func resourceTeleportUserRead(d *schema.ResourceData, m interface{}) error {
 		return trace.Wrap(err)
 	}
 
-	user := u.(services.User)
+	user := u.(types.User)
 
-	traits := user.GetTraits()
-	tfTraits := map[string]string{}
-
-	for k, trait := range traits {
-		tfTraits[k] = strings.Join(trait, " ")
+	err = client.UpdateUser(context.Background(), user)
+	if err != nil {
+		return trace.Wrap(err)
 	}
 
-	d.Set("roles", user.GetRoles())
-	d.Set("traits", tfTraits)
+	// traits := user.GetTraits()
+	// tfTraits := map[string]string{}
+
+	// for k, trait := range traits {
+	// 	tfTraits[k] = strings.Join(trait, " ")
+	// }
+
+	// d.Set("roles", user.GetRoles())
+	// d.Set("traits", tfTraits)
 
 	return nil
 }
 
 func resourceTeleportUserDelete(d *schema.ResourceData, m interface{}) error {
-	client := m.(*auth.Client)
+	client := m.(*client.Client)
 	name := d.Get("name").(string)
 
-	err := client.DeleteUser(context.TODO(), name)
+	err := client.DeleteUser(context.Background(), name)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -141,7 +113,7 @@ func resourceTeleportUserDelete(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceTeleportUserExists(d *schema.ResourceData, m interface{}) (bool, error) {
-	client := m.(*auth.Client)
+	client := m.(*client.Client)
 	name := d.Get("name").(string)
 
 	user, err := client.GetUser(name, false)
