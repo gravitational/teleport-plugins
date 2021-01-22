@@ -1,13 +1,7 @@
 package provider
 
 import (
-	"context"
-
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
-	"github.com/gravitational/teleport/api/client"
-	"github.com/gravitational/teleport/api/types"
-
-	"github.com/gravitational/trace"
 
 	"github.com/hashicorp/terraform/helper/schema"
 )
@@ -26,101 +20,103 @@ func resourceTeleportUser() *schema.Resource {
 }
 
 func resourceTeleportUserUpsert(d *schema.ResourceData, m interface{}) error {
-	client := m.(*client.Client)
+	// client := m.(*client.Client)
 
-	name := d.Get("name").(string)
+	// name := d.Get("name").(string)
 
-	tfRoles := d.Get("roles").([]interface{})
-	roles := make([]string, len(tfRoles))
+	// tfRoles := d.Get("roles").([]interface{})
+	// roles := make([]string, len(tfRoles))
 
-	for i, tfRole := range tfRoles {
-		roles[i] = tfRole.(string)
-	}
+	// for i, tfRole := range tfRoles {
+	// 	roles[i] = tfRole.(string)
+	// }
 
-	tfTraits := d.Get("trait").(*schema.Set).List()
-	traits := map[string][]string{}
+	// tfTraits := d.Get("trait").(*schema.Set).List()
+	// traits := map[string][]string{}
 
-	for _, tfTrait := range tfTraits {
-		traitMap := tfTrait.(map[string]interface{})
-		name := traitMap["name"].(string)
+	// for _, tfTrait := range tfTraits {
+	// 	traitMap := tfTrait.(map[string]interface{})
+	// 	name := traitMap["name"].(string)
 
-		tfValues := traitMap["value"].([]interface{})
-		values := make([]string, len(tfValues))
+	// 	tfValues := traitMap["value"].([]interface{})
+	// 	values := make([]string, len(tfValues))
 
-		for i, value := range tfValues {
-			values[i] = value.(string)
-		}
+	// 	for i, value := range tfValues {
+	// 		values[i] = value.(string)
+	// 	}
 
-		traits[name] = values
-	}
+	// 	traits[name] = values
+	// }
 
-	user, err := types.NewUser(name)
-	if err != nil {
-		return trace.Wrap(err)
-	}
+	// user, err := types.NewUser(name)
+	// if err != nil {
+	// 	return trace.Wrap(err)
+	// }
 
-	user.SetRoles(roles)
-	user.SetTraits(traits)
+	// user.SetRoles(roles)
+	// user.SetTraits(traits)
 
-	err = client.CreateUser(context.Background(), user)
-	if err != nil {
-		return trace.Wrap(err)
-	}
+	// err = client.CreateUser(context.Background(), user)
+	// if err != nil {
+	// 	return trace.Wrap(err)
+	// }
 
-	d.SetId(name)
+	// d.SetId(name)
 	return nil
 }
 
 func resourceTeleportUserRead(d *schema.ResourceData, m interface{}) error {
-	client := m.(*client.Client)
-	name := d.Get("name").(string)
+	// 	client := m.(*client.Client)
+	// 	name := d.Get("name").(string)
 
-	u, err := client.GetUser(name, false)
-	if err != nil {
-		return trace.Wrap(err)
-	}
+	// 	u, err := client.GetUser(name, false)
+	// 	if err != nil {
+	// 		return trace.Wrap(err)
+	// 	}
 
-	user := u.(types.User)
+	// 	user := u.(types.User)
 
-	err = client.UpdateUser(context.Background(), user)
-	if err != nil {
-		return trace.Wrap(err)
-	}
+	// 	err = client.UpdateUser(context.Background(), user)
+	// 	if err != nil {
+	// 		return trace.Wrap(err)
+	// 	}
 
-	// traits := user.GetTraits()
-	// tfTraits := map[string]string{}
+	// 	// traits := user.GetTraits()
+	// 	// tfTraits := map[string]string{}
 
-	// for k, trait := range traits {
-	// 	tfTraits[k] = strings.Join(trait, " ")
-	// }
+	// 	// for k, trait := range traits {
+	// 	// 	tfTraits[k] = strings.Join(trait, " ")
+	// 	// }
 
-	// d.Set("roles", user.GetRoles())
-	// d.Set("traits", tfTraits)
+	// 	// d.Set("roles", user.GetRoles())
+	// 	// d.Set("traits", tfTraits)
 
 	return nil
 }
 
 func resourceTeleportUserDelete(d *schema.ResourceData, m interface{}) error {
-	client := m.(*client.Client)
-	name := d.Get("name").(string)
+	// 	client := m.(*client.Client)
+	// 	name := d.Get("name").(string)
 
-	err := client.DeleteUser(context.Background(), name)
-	if err != nil {
-		return trace.Wrap(err)
-	}
+	// 	err := client.DeleteUser(context.Background(), name)
+	// 	if err != nil {
+	// 		return trace.Wrap(err)
+	// 	}
 
 	return nil
 }
 
 func resourceTeleportUserExists(d *schema.ResourceData, m interface{}) (bool, error) {
-	client := m.(*client.Client)
-	name := d.Get("name").(string)
+	// client := m.(*client.Client)
+	// name := d.Get("name").(string)
 
-	user, err := client.GetUser(name, false)
+	// user, err := client.GetUser(name, false)
 
-	if err != nil {
-		return false, err
-	}
+	// if err != nil {
+	// 	return false, err
+	// }
 
-	return user != nil, nil
+	// return user != nil, nil
+
+	return true, nil
 }
