@@ -1,9 +1,8 @@
 package provider
 
 import (
-	"github.com/gravitational/teleport/lib/auth"
-	"github.com/gravitational/teleport/lib/utils"
-
+	// TODO: Only use api/* Teleport packages
+	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/trace"
 
 	"github.com/hashicorp/terraform/helper/schema"
@@ -40,7 +39,7 @@ func Provider() terraform.ResourceProvider {
 			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
-			"teleport_user": resourceTeleportUser(),
+			// "teleport_user": resourceTeleportUser(),
 			"teleport_role": resourceTeleportRole(),
 		},
 		ConfigureFunc: providerConfigure,
@@ -55,25 +54,24 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	keyPath := d.Get("key_path").(string)
 	rootCAsPath := d.Get("root_ca_path").(string)
 
-	addr, err := utils.ParseAddr(d.Get("addr").(string))
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
+	// TODO: Verify Addr format is [protocol://]host:port
+	addr := d.Get("addr").(string)
 	tlsConfig, err := loadTLSConfig(certPath, keyPath, rootCAsPath)
 	if err != nil {
+		// TODO decorate the error into a Terraform-friendly wrapper
 		return nil, trace.Wrap(err)
 	}
 
-	config := auth.ClientConfig{
-		Addrs:           []utils.NetAddr{*addr},
+	config := client.Config{
+		Addrs:           []string{addr},
 		Dialer:          nil,
+		DialTimeout:     0,
 		KeepAlivePeriod: 0,
 		KeepAliveCount:  0,
 		TLS:             tlsConfig,
 	}
 
-	client, err := auth.NewTLSClient(config)
+	client, err := client.NewClient(config)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
