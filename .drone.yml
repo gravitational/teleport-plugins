@@ -32,6 +32,37 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
+name: test-darwin
+
+trigger:
+  branch:
+    - master
+    - branch/*
+  event:
+    include:
+      - push
+      - pull_request
+  repo:
+    include:
+      - gravitational/*
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+steps:
+  - name: Run linter
+    image: golangci/golangci-lint:v1.27.0
+    commands:
+      - make lint
+
+  - name: Run tests
+    image: golang:1.14.4
+    commands:
+      - GOOS=darwin make test
+
+---
+kind: pipeline
+type: kubernetes
 name: build
 
 trigger:
