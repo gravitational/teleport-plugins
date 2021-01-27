@@ -82,7 +82,7 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 }
 
 func (s *MattermostSuite) SetUpTest(c *C) {
-	s.ctx, s.cancel = context.WithTimeout(context.Background(), time.Second)
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 2*time.Second)
 	s.publicURL = ""
 	s.fakeMattermost = NewFakeMattermost()
 	s.mmUser = s.fakeMattermost.StoreUser(mm.User{
