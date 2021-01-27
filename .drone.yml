@@ -77,7 +77,85 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
-name: build-linux
+name: build-on-push-linux
+
+trigger:
+  branch:
+    - master
+    - branch/*
+  event:
+    include:
+      - push
+  repo:
+    include:
+      - gravitational/*
+
+depends_on:
+  - test-linux
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+steps:
+  - name: Build artifacts
+    image: golang:1.14.4
+    commands:
+      - for PLUGIN_DIR in $(find access/ -mindepth 1 -maxdepth 1 -type d | grep -v example); do echo $PLUGIN_DIR:; make -C $PLUGIN_DIR; done
+
+---
+kind: pipeline
+type: exec
+name: build-on-push-darwin
+
+concurrency:
+  limit: 1
+
+platform:
+  os: darwin
+  arch: amd64
+
+trigger:
+  branch:
+    - master
+    - branch/*
+  event:
+    include:
+      - push
+      # TODO(gus): uncomment after testing
+      - pull_request
+  repo:
+    include:
+      - gravitational/*
+
+# TODO(gus): uncomment after testing
+# depends_on:
+#   - test-darwin
+
+workspace:
+  path: /tmp/teleport-plugins/build-darwin
+
+steps:
+  - name: Clean up exec runner storage (pre)
+    commands:
+      - rm -rf /tmp/teleport-plugins/build-darwin/go
+      - mkdir -p /tmp/teleport-plugins/build-darwin/go/cache
+      - chmod -R u+rw /tmp/teleport-plugins/build-darwin/go
+
+  - name: Build artifacts (darwin)
+    environment:
+      GOPATH: /tmp/teleport-plugins/build-darwin/go
+      GOCACHE: /tmp/teleport-plugins/build-darwin/go/cache
+    commands:
+      - for PLUGIN_DIR in $(find access/ -mindepth 1 -maxdepth 1 -type d | grep -v example); do echo $PLUGIN_DIR:; make -C $PLUGIN_DIR; done
+
+  - name: Clean up exec runner storage (post)
+    commands:
+      - rm -rf /tmp/teleport-plugins/build-darwin/go
+
+---
+kind: pipeline
+type: kubernetes
+name: tag-build-linux
 
 trigger:
   event:
@@ -117,64 +195,6 @@ steps:
       source: /go/src/github.com/gravitational/teleport-plugins/build/*
       target: teleport-plugins/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
-
----
-# note: this pipeline does not upload any Mac artifacts, it just
-# validates that teleport-plugins will build successfully on MacOS
-kind: pipeline
-type: exec
-name: build-darwin
-
-concurrency:
-  limit: 1
-
-platform:
-  os: darwin
-  arch: amd64
-
-# TODO(gus): uncomment after testing
-# trigger:
-#   event:
-#     - tag
-#   ref:
-#     include:
-#       - refs/tags/teleport-*-v*
-trigger:
-  branch:
-    - master
-    - branch/*
-  event:
-    include:
-      - push
-      - pull_request
-  repo:
-    include:
-      - gravitational/*
-
-# TODO(gus): uncomment after testing
-# depends_on:
-#   - test-darwin
-
-workspace:
-  path: /tmp/teleport-plugins/build-darwin
-
-steps:
-  - name: Clean up exec runner storage (pre)
-    commands:
-      - rm -rf /tmp/teleport-plugins/build-darwin/go
-      - mkdir -p /tmp/teleport-plugins/build-darwin/go/cache
-      - chmod -R u+rw /tmp/teleport-plugins/build-darwin/go
-
-  - name: Build artifacts (darwin)
-    environment:
-      GOPATH: /tmp/teleport-plugins/build-darwin/go
-      GOCACHE: /tmp/teleport-plugins/build-darwin/go/cache
-    commands:
-      - for PLUGIN_DIR in $(find access/ -mindepth 1 -maxdepth 1 -type d | grep -v example); do echo $PLUGIN_DIR:; make -C $PLUGIN_DIR; done
-
-  - name: Clean up exec runner storage (post)
-    commands:
-      - rm -rf /tmp/teleport-plugins/build-darwin/go
 
 ---
 kind: pipeline
@@ -224,6 +244,6 @@ steps:
 
 ---
 kind: signature
-hmac: 4a000c51378e82edec499ea6291234ec1c239290fcb39678798743feffb38808
+hmac: 0012e06087c089ddade27056228efc53e8a195c604766062ffe970552d2bba89
 
 ...
