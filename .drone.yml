@@ -25,7 +25,7 @@ steps:
       - make lint
 
   - name: Run tests
-    image: golang:1.14.4
+    image: golang:1.15.5
     commands:
       - make test
 
@@ -98,7 +98,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.14.4
+    image: golang:1.15.5
     commands:
       - for PLUGIN_DIR in $(find access/ -mindepth 1 -maxdepth 1 -type d | grep -v example); do echo $PLUGIN_DIR:; make -C $PLUGIN_DIR; done
 
@@ -169,7 +169,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.14.4
+    image: golang:1.15.5
     commands:
       - mkdir -p build/
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
@@ -241,6 +241,6 @@ steps:
 
 ---
 kind: signature
-hmac: e69a430a2b8c289f1a153f4334ea022dd366c170ce0c623a4aa0d811f75c48db
+hmac: 05a0cbf9e41b88fbe0290b5d2987951faaa2763eebd7b5c5a64f6f4f897aba38
 
 ...
