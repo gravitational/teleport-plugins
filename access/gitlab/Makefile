@@ -23,7 +23,8 @@ $(BINARY):
 	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BINARY) $(BUILDFLAGS)
 
 .PHONY: test
-test:
+test: FLAGS ?= '-race'
+test: $(VERSRC)
 	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go test $(FLAGS) $(ADDFLAGS)
 
 clean:

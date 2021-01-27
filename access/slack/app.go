@@ -40,6 +40,11 @@ func (a *App) Run(ctx context.Context) error {
 	a.Process = utils.NewProcess(ctx)
 	a.SpawnCriticalJob(a.mainJob)
 	<-a.Process.Done()
+	return a.Err()
+}
+
+// Err returns the error app finished with.
+func (a *App) Err() error {
 	return trace.Wrap(a.mainJob.Err())
 }
 
@@ -253,17 +258,14 @@ func (a *App) onSlackCallback(ctx context.Context, cb Callback) error {
 		reqData = RequestData{User: req.User, Roles: req.Roles}
 	}
 
-	// In real world it cannot be empty. This is for tests.
-	if cb.ResponseURL != "" {
-		a.Spawn(func(ctx context.Context) error {
-			if err := a.bot.Respond(ctx, req.ID, reqData, slackStatus, cb.ResponseURL); err != nil {
-				log.WithError(err).WithField("request_id", req.ID).Error("Cannot update Slack message")
-				return err
-			}
-			log.WithField("request_id", req.ID).Info("Successfully updated Slack message")
-			return nil
-		})
-	}
+	a.Spawn(func(ctx context.Context) error {
+		if err := a.bot.Respond(ctx, req.ID, reqData, slackStatus, cb.ResponseURL); err != nil {
+			log.WithError(err).WithField("request_id", req.ID).Error("Cannot update Slack message")
+			return err
+		}
+		log.WithField("request_id", req.ID).Info("Successfully updated Slack message")
+		return nil
+	})
 
 	return nil
 }

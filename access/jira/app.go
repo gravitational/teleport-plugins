@@ -43,6 +43,11 @@ func (a *App) Run(ctx context.Context) error {
 	return trace.Wrap(a.mainJob.Err())
 }
 
+// Err returns the error app finished with.
+func (a *App) Err() error {
+	return trace.Wrap(a.mainJob.Err())
+}
+
 // WaitReady waits for http and watcher service to start up.
 func (a *App) WaitReady(ctx context.Context) (bool, error) {
 	return a.mainJob.WaitReady(ctx)

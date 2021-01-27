@@ -10,15 +10,21 @@ import (
 	"os"
 	"os/user"
 	"reflect"
+	"runtime"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gravitational/teleport-plugins/access/integration"
+	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
+	"github.com/gravitational/teleport/lib/backend"
 	"github.com/gravitational/teleport/lib/events"
 	"github.com/gravitational/teleport/lib/services"
+	"github.com/gravitational/trace"
 
 	. "gopkg.in/check.v1"
 )
@@ -36,6 +42,7 @@ type GitlabSuite struct {
 	cancel     context.CancelFunc
 	app        *App
 	publicURL  string
+	raceNumber int
 	me         *user.User
 	userEmail  string
 	tmpFiles   []*os.File
@@ -56,6 +63,7 @@ func (s *GitlabSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Priv: priv, Pub: pub})
 
+	s.raceNumber = runtime.GOMAXPROCS(0)
 	s.me, err = user.Current()
 	c.Assert(err, IsNil)
 	s.userEmail = s.me.Username + "@example.com"
@@ -88,13 +96,13 @@ func (s *GitlabSuite) SetUpSuite(c *C) {
 }
 
 func (s *GitlabSuite) SetUpTest(c *C) {
-	s.ctx, s.cancel = context.WithTimeout(context.Background(), time.Second)
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 2*time.Second)
 	s.publicURL = ""
 	dbFile := s.newTmpFile(c, "db.*")
 	s.dbPath = dbFile.Name()
 	dbFile.Close()
 
-	s.fakeGitLab = NewFakeGitLab(projectID)
+	s.fakeGitLab = NewFakeGitLab(projectID, s.raceNumber)
 }
 
 func (s *GitlabSuite) TearDownTest(c *C) {
@@ -161,13 +169,8 @@ func (s *GitlabSuite) startApp(c *C) {
 	s.app, err = NewApp(conf)
 	c.Assert(err, IsNil)
 
-	go func() {
-		err = s.app.Run(s.ctx)
-		c.Assert(err, IsNil)
-	}()
-	ctx, cancel := context.WithTimeout(s.ctx, time.Millisecond*250)
-	defer cancel()
-	ok, err := s.app.WaitReady(ctx)
+	go s.app.Run(s.ctx)
+	ok, err := s.app.WaitReady(s.ctx)
 	c.Assert(err, IsNil)
 	c.Assert(ok, Equals, true)
 	if s.publicURL == "" {
@@ -178,6 +181,7 @@ func (s *GitlabSuite) startApp(c *C) {
 func (s *GitlabSuite) shutdownApp(c *C) {
 	err := s.app.Shutdown(s.ctx)
 	c.Assert(err, IsNil)
+	c.Assert(s.app.Err(), IsNil)
 }
 
 func (s *GitlabSuite) createAccessRequest(c *C) services.AccessRequest {
@@ -209,7 +213,7 @@ func (s *GitlabSuite) assertNewLabels(c *C, expected int) map[string]Label {
 	return newLabels
 }
 
-func (s *GitlabSuite) postIssueUpdateHook(c *C, oldIssue, newIssue Issue) {
+func (s *GitlabSuite) postIssueUpdateHook(ctx context.Context, oldIssue, newIssue Issue) (*http.Response, error) {
 	var labelsChange *LabelsChange
 	if !reflect.DeepEqual(oldIssue.Labels, newIssue.Labels) {
 		labelsChange = &LabelsChange{Previous: oldIssue.Labels, Current: newIssue.Labels}
@@ -231,16 +235,27 @@ func (s *GitlabSuite) postIssueUpdateHook(c *C, oldIssue, newIssue Issue) {
 
 	var buf bytes.Buffer
 	err := json.NewEncoder(&buf).Encode(&payload)
-	c.Assert(err, IsNil)
-	req, err := http.NewRequest("POST", s.publicURL+gitlabWebhookPath, &buf)
-	c.Assert(err, IsNil)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.publicURL+gitlabWebhookPath, &buf)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("X-Gitlab-Token", WebhookSecret)
 	req.Header.Add("X-Gitlab-Event", "Issue Hook")
+
 	response, err := http.DefaultClient.Do(req)
-	response.Body.Close()
+	return response, trace.Wrap(err)
+}
+
+func (s *GitlabSuite) postIssueUpdateHookAndCheck(c *C, oldIssue, newIssue Issue) {
+	resp, err := s.postIssueUpdateHook(s.ctx, oldIssue, newIssue)
 	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, http.StatusNoContent)
+	c.Assert(resp.StatusCode, Equals, http.StatusNoContent)
+	c.Assert(resp.Body.Close(), IsNil)
 }
 
 func (s *GitlabSuite) openDB(c *C, fn func(db DB) error) {
@@ -257,7 +272,7 @@ func (s *GitlabSuite) openDB(c *C, fn func(db DB) error) {
 func (s *GitlabSuite) TestProjectHookSetup(c *C) {
 	s.startApp(c)
 
-	hook, err := s.fakeGitLab.CheckNewProjectHook(s.ctx, 250*time.Millisecond)
+	hook, err := s.fakeGitLab.CheckNewProjectHook(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new project hooks stored"))
 	c.Assert(hook.URL, Equals, s.publicURL+gitlabWebhookPath)
 
@@ -303,7 +318,7 @@ func (s *GitlabSuite) TestProjectHookSetupWhenItExistsInDB(c *C) {
 
 	s.startApp(c)
 
-	hook, err := s.fakeGitLab.CheckProjectHookUpdate(s.ctx, 250*time.Millisecond)
+	hook, err := s.fakeGitLab.CheckProjectHookUpdate(s.ctx)
 	c.Assert(err, IsNil, Commentf("no project hooks updated"))
 	c.Assert(hook.ID, Equals, existingID)
 	c.Assert(hook.URL, Equals, s.publicURL+gitlabWebhookPath)
@@ -378,7 +393,7 @@ func (s *GitlabSuite) TestIssueCreation(c *C) {
 	request := s.createAccessRequest(c)
 	pluginData := s.checkPluginData(c, request.GetName())
 
-	issue, err := s.fakeGitLab.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	issue, err := s.fakeGitLab.CheckNewIssue(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new issues stored"))
 	c.Assert(issue.Labels, HasLen, 1)
 	c.Assert(LabelName(issue.Labels[0].Name).Reduced(), Equals, "pending")
@@ -406,7 +421,7 @@ func (s *GitlabSuite) TestApproval(c *C) {
 	request := s.createAccessRequest(c)
 	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
-	issue, err := s.fakeGitLab.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	issue, err := s.fakeGitLab.CheckNewIssue(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new issues stored"))
 	c.Assert(issue.Labels, HasLen, 1)
 	c.Assert(LabelName(issue.Labels[0].Name).Reduced(), Equals, "pending")
@@ -415,9 +430,9 @@ func (s *GitlabSuite) TestApproval(c *C) {
 	oldIssue := issue
 	issue.Labels = []Label{labels["approved"]}
 	s.fakeGitLab.StoreIssue(issue)
-	s.postIssueUpdateHook(c, oldIssue, issue)
+	s.postIssueUpdateHookAndCheck(c, oldIssue, issue)
 
-	issue, err = s.fakeGitLab.CheckIssueUpdate(s.ctx, 250*time.Millisecond)
+	issue, err = s.fakeGitLab.CheckIssueUpdate(s.ctx)
 	c.Assert(err, IsNil, Commentf("no issues updated"))
 	c.Assert(issue.ID, Equals, issueID)
 	c.Assert(issue.State, Equals, "closed")
@@ -440,7 +455,7 @@ func (s *GitlabSuite) TestDenial(c *C) {
 	request := s.createAccessRequest(c)
 	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
 
-	issue, err := s.fakeGitLab.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	issue, err := s.fakeGitLab.CheckNewIssue(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new issues stored"))
 	c.Assert(issue.Labels, HasLen, 1)
 	c.Assert(LabelName(issue.Labels[0].Name).Reduced(), Equals, "pending")
@@ -449,9 +464,9 @@ func (s *GitlabSuite) TestDenial(c *C) {
 	oldIssue := issue
 	issue.Labels = []Label{labels["denied"]}
 	s.fakeGitLab.StoreIssue(issue)
-	s.postIssueUpdateHook(c, oldIssue, issue)
+	s.postIssueUpdateHookAndCheck(c, oldIssue, issue)
 
-	issue, err = s.fakeGitLab.CheckIssueUpdate(s.ctx, 250*time.Millisecond)
+	issue, err = s.fakeGitLab.CheckIssueUpdate(s.ctx)
 	c.Assert(err, IsNil, Commentf("no issues updated"))
 	c.Assert(issue.ID, Equals, issueID)
 	c.Assert(issue.State, Equals, "closed")
@@ -472,16 +487,145 @@ func (s *GitlabSuite) TestExpiration(c *C) {
 
 	s.createExpiredAccessRequest(c)
 
-	issue, err := s.fakeGitLab.CheckNewIssue(s.ctx, 250*time.Millisecond)
+	issue, err := s.fakeGitLab.CheckNewIssue(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new issues stored"))
 	c.Assert(issue.Labels, HasLen, 1)
 	c.Assert(LabelName(issue.Labels[0].Name).Reduced(), Equals, "pending")
 	issueID := issue.ID
 
-	issue, err = s.fakeGitLab.CheckIssueUpdate(s.ctx, 250*time.Millisecond)
+	issue, err = s.fakeGitLab.CheckIssueUpdate(s.ctx)
 	c.Assert(err, IsNil, Commentf("no issues updated"))
 	c.Assert(issue.ID, Equals, issueID)
 	c.Assert(issue.Labels, HasLen, 1)
 	c.Assert(LabelName(issue.Labels[0].Name).Reduced(), Equals, "expired")
 	c.Assert(issue.State, Equals, "closed")
+}
+
+func (s *GitlabSuite) TestRace(c *C) {
+	prevLogLevel := log.GetLevel()
+	log.SetLevel(log.InfoLevel) // Turn off noisy debug logging
+	defer log.SetLevel(prevLogLevel)
+
+	s.cancel() // Cancel the default timeout
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	s.startApp(c)
+	labels := s.assertNewLabels(c, 4)
+
+	var (
+		raceErr     error
+		raceErrOnce sync.Once
+		requests    sync.Map
+	)
+	setRaceErr := func(err error) error {
+		raceErrOnce.Do(func() {
+			raceErr = err
+		})
+		return err
+	}
+
+	watcher, err := s.teleport.Process.GetAuthServer().NewWatcher(s.ctx, services.Watch{
+		Kinds: []services.WatchKind{
+			{
+				Kind: services.KindAccessRequest,
+			},
+		},
+	})
+	c.Assert(err, IsNil)
+	defer watcher.Close()
+	c.Assert((<-watcher.Events()).Type, Equals, backend.OpInit)
+
+	process := utils.NewProcess(s.ctx)
+	for i := 0; i < s.raceNumber; i++ {
+		process.SpawnCritical(func(ctx context.Context) error {
+			_, err := s.teleport.CreateAccessRequest(ctx, s.me.Username, "admin")
+			if err := trace.Wrap(err); err != nil {
+				return setRaceErr(err)
+			}
+			return nil
+		})
+		process.SpawnCritical(func(ctx context.Context) error {
+			issue, err := s.fakeGitLab.CheckNewIssue(ctx)
+			if err := trace.Wrap(err); err != nil {
+				return setRaceErr(err)
+			}
+			if obtained, expected := len(issue.Labels), 1; obtained != expected {
+				return setRaceErr(trace.Errorf("wrong labels size. expected %v, obtained %v", expected, obtained))
+			}
+			if obtained, expected := LabelName(issue.Labels[0].Name).Reduced(), "pending"; obtained != expected {
+				return setRaceErr(trace.Errorf("wrong label. expected %q, obtained %q", expected, obtained))
+			}
+
+			oldIssue := issue
+			issue.Labels = []Label{labels["approved"]}
+			s.fakeGitLab.StoreIssue(issue)
+
+			ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			defer cancel()
+			var lastErr error
+			for {
+				log.Infof("Trying to approve issue %v", issue.ID)
+				resp, err := s.postIssueUpdateHook(ctx, oldIssue, issue)
+				if err != nil {
+					if utils.IsDeadline(err) {
+						return setRaceErr(lastErr)
+					}
+					return setRaceErr(trace.Wrap(err))
+				}
+				if err := resp.Body.Close(); err != nil {
+					return setRaceErr(trace.Wrap(err))
+				}
+				if status := resp.StatusCode; status != http.StatusNoContent {
+					lastErr = trace.Errorf("got %v http code from webhook server", status)
+				} else {
+					return nil
+				}
+			}
+		})
+		process.SpawnCritical(func(ctx context.Context) error {
+			issue, err := s.fakeGitLab.CheckIssueUpdate(ctx)
+			if err := trace.Wrap(err); err != nil {
+				return setRaceErr(err)
+			}
+			if obtained, expected := issue.State, "closed"; obtained != expected {
+				return setRaceErr(trace.Errorf("wrong issue state. expected %q, obtained %q", expected, obtained))
+			}
+			return nil
+		})
+	}
+	for i := 0; i < 2*s.raceNumber; i++ {
+		process.SpawnCritical(func(ctx context.Context) error {
+			var event services.Event
+			select {
+			case event = <-watcher.Events():
+			case <-ctx.Done():
+				return setRaceErr(trace.Wrap(ctx.Err()))
+			}
+			if obtained, expected := event.Type, backend.OpPut; obtained != expected {
+				return setRaceErr(trace.Errorf("wrong event type. expected %v, obtained %v", expected, obtained))
+			}
+			req := event.Resource.(services.AccessRequest)
+			var newCounter int64
+			val, _ := requests.LoadOrStore(req.GetName(), &newCounter)
+			switch state := req.GetState(); state {
+			case services.RequestState_PENDING:
+				atomic.AddInt64(val.(*int64), 1)
+			case services.RequestState_APPROVED:
+				atomic.AddInt64(val.(*int64), -1)
+			default:
+				return setRaceErr(trace.Errorf("wrong request state %v", state))
+			}
+			return nil
+		})
+	}
+	process.Terminate()
+	<-process.Done()
+	c.Assert(raceErr, IsNil)
+
+	var count int
+	requests.Range(func(key, val interface{}) bool {
+		count++
+		c.Assert(*val.(*int64), Equals, int64(0))
+		return true
+	})
+	c.Assert(count, Equals, s.raceNumber)
 }

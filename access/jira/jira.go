@@ -84,7 +84,7 @@ func (c *JiraClient) Do(req *http.Request, value interface{}) (*jira.Response, e
 }
 
 func (c *JiraClient) GetMyPermissions(ctx context.Context, options *GetMyPermissionsQueryOptions) (*Permissions, error) {
-	req, err := c.NewRequest(ctx, "GET", "rest/api/2/mypermissions", nil, jira.WithQueryOptions(options))
+	req, err := c.NewRequest(ctx, http.MethodGet, "rest/api/2/mypermissions", nil, jira.WithQueryOptions(options))
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +99,7 @@ func (c *JiraClient) GetMyPermissions(ctx context.Context, options *GetMyPermiss
 
 func (c *JiraClient) GetProject(ctx context.Context, projectID string) (*jira.Project, error) {
 	url := fmt.Sprintf("rest/api/2/project/%s", projectID)
-	req, err := c.NewRequest(ctx, "GET", url, nil)
+	req, err := c.NewRequest(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +113,7 @@ func (c *JiraClient) GetProject(ctx context.Context, projectID string) (*jira.Pr
 }
 
 func (c *JiraClient) CreateIssue(ctx context.Context, input *IssueInput) (*CreatedIssue, error) {
-	req, err := c.NewRequest(ctx, "POST", "rest/api/2/issue", input)
+	req, err := c.NewRequest(ctx, http.MethodPost, "rest/api/2/issue", input)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (c *JiraClient) CreateIssue(ctx context.Context, input *IssueInput) (*Creat
 
 func (c *JiraClient) GetIssue(ctx context.Context, issueID string, options *jira.GetQueryOptions) (*Issue, error) {
 	url := fmt.Sprintf("rest/api/2/issue/%s", issueID)
-	req, err := c.NewRequest(ctx, "GET", url, nil, jira.WithQueryOptions(options))
+	req, err := c.NewRequest(ctx, http.MethodGet, url, nil, jira.WithQueryOptions(options))
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +148,7 @@ func (c *JiraClient) TransitionIssue(ctx context.Context, issueID, transitionID 
 			ID: transitionID,
 		},
 	}
-	req, err := c.NewRequest(ctx, "POST", url, payload)
+	req, err := c.NewRequest(ctx, http.MethodPost, url, payload)
 	if err != nil {
 		return err
 	}

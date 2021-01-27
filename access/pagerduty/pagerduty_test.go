@@ -8,13 +8,17 @@ import (
 	"net/http"
 	"os"
 	"os/user"
+	"runtime"
 	"sort"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gravitational/teleport-plugins/access/integration"
+	"github.com/gravitational/teleport-plugins/utils"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/backend"
 	"github.com/gravitational/teleport/lib/events"
@@ -39,6 +43,7 @@ type PagerdutySuite struct {
 	app           *App
 	publicURL     string
 	userName      string
+	raceNumber    int
 	me            *user.User
 	fakePagerduty *FakePagerduty
 	pdService     Service
@@ -58,6 +63,7 @@ func (s *PagerdutySuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Priv: priv, Pub: pub})
 
+	s.raceNumber = runtime.GOMAXPROCS(0)
 	s.me, err = user.Current()
 	c.Assert(err, IsNil)
 	userRole, err := services.NewRole("foo", services.RoleSpecV3{
@@ -90,9 +96,9 @@ func (s *PagerdutySuite) SetUpSuite(c *C) {
 }
 
 func (s *PagerdutySuite) SetUpTest(c *C) {
-	s.ctx, s.cancel = context.WithTimeout(context.Background(), time.Second)
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 2*time.Second)
 	s.publicURL = ""
-	s.fakePagerduty = NewFakePagerduty(20)
+	s.fakePagerduty = NewFakePagerduty(s.raceNumber)
 	s.pdService = s.fakePagerduty.StoreService(Service{
 		Name: "Test service",
 		EscalationPolicy: Reference{
@@ -173,13 +179,8 @@ func (s *PagerdutySuite) startApp(c *C) {
 	s.app, err = NewApp(s.appConfig)
 	c.Assert(err, IsNil)
 
-	go func() {
-		err = s.app.Run(s.ctx)
-		c.Assert(err, IsNil)
-	}()
-	ctx, cancel := context.WithTimeout(s.ctx, time.Millisecond*250)
-	defer cancel()
-	ok, err := s.app.WaitReady(ctx)
+	go s.app.Run(s.ctx)
+	ok, err := s.app.WaitReady(s.ctx)
 	c.Assert(err, IsNil)
 	c.Assert(ok, Equals, true)
 	if s.publicURL == "" {
@@ -190,6 +191,7 @@ func (s *PagerdutySuite) startApp(c *C) {
 func (s *PagerdutySuite) shutdownApp(c *C) {
 	err := s.app.Shutdown(s.ctx)
 	c.Assert(err, IsNil)
+	c.Assert(s.app.Err(), IsNil)
 }
 
 func (s *PagerdutySuite) createAccessRequest(c *C) services.AccessRequest {
@@ -211,21 +213,21 @@ func (s *PagerdutySuite) checkPluginData(c *C, reqID string) PluginData {
 }
 
 func (s *PagerdutySuite) postActionAndCheck(c *C, incident Incident, action string) {
-	response, err := s.postAction(incident, action)
+	response, err := s.postAction(s.ctx, incident, action)
 	c.Assert(err, IsNil)
 	c.Assert(response.Body.Close(), IsNil)
 	c.Assert(response.StatusCode, Equals, http.StatusNoContent)
 }
 
-func (s *PagerdutySuite) postAction(incident Incident, action string) (*http.Response, error) {
+func (s *PagerdutySuite) postAction(ctx context.Context, incident Incident, action string) (*http.Response, error) {
 	payload := WebhookPayload{
 		Messages: []WebhookMessage{
-			WebhookMessage{
+			{
 				ID:       "MSG1",
 				Event:    "incident.custom",
 				Incident: &incident,
 				LogEntries: []WebhookLogEntry{
-					WebhookLogEntry{
+					{
 						Type: "custom_log_entry",
 						Agent: Reference{
 							ID: s.pdUser.ID,
@@ -242,7 +244,7 @@ func (s *PagerdutySuite) postAction(incident Incident, action string) (*http.Res
 		return nil, trace.Wrap(err)
 	}
 
-	req, err := http.NewRequest("POST", s.publicURL+"/"+action, &buf)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.publicURL+"/"+action, &buf)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -250,11 +252,7 @@ func (s *PagerdutySuite) postAction(incident Incident, action string) (*http.Res
 	req.Header.Add("X-Webhook-Id", "Webhook-123")
 
 	response, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	return response, nil
+	return response, trace.Wrap(err)
 }
 
 func (s *PagerdutySuite) TestExtensionCreation(c *C) {
@@ -363,7 +361,7 @@ func (s *PagerdutySuite) TestAutoApprovalWhenOnCall(c *C) {
 	s.startApp(c)
 	watcher, err := s.teleport.Process.GetAuthServer().NewWatcher(s.ctx, services.Watch{
 		Kinds: []services.WatchKind{
-			services.WatchKind{
+			{
 				Kind: services.KindAccessRequest,
 			},
 		},
@@ -428,4 +426,124 @@ func (s *PagerdutySuite) TestExpiration(c *C) {
 	note, err := s.fakePagerduty.CheckNewIncidentNote(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new notes stored"))
 	c.Assert(note.Content, Equals, "Access request has been expired")
+}
+
+func (s *PagerdutySuite) TestRace(c *C) {
+	prevLogLevel := log.GetLevel()
+	log.SetLevel(log.InfoLevel) // Turn off noisy debug logging
+	defer log.SetLevel(prevLogLevel)
+
+	s.cancel() // Cancel the default timeout
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	s.startApp(c)
+
+	var (
+		raceErr     error
+		raceErrOnce sync.Once
+		requests    sync.Map
+	)
+	setRaceErr := func(err error) error {
+		raceErrOnce.Do(func() {
+			raceErr = err
+		})
+		return err
+	}
+
+	watcher, err := s.teleport.Process.GetAuthServer().NewWatcher(s.ctx, services.Watch{
+		Kinds: []services.WatchKind{
+			{
+				Kind: services.KindAccessRequest,
+			},
+		},
+	})
+	c.Assert(err, IsNil)
+	defer watcher.Close()
+	c.Assert((<-watcher.Events()).Type, Equals, backend.OpInit)
+
+	process := utils.NewProcess(s.ctx)
+	for i := 0; i < s.raceNumber; i++ {
+		process.SpawnCritical(func(ctx context.Context) error {
+			_, err := s.teleport.CreateAccessRequest(ctx, s.userName, "admin")
+			if err := trace.Wrap(err); err != nil {
+				return setRaceErr(err)
+			}
+			return nil
+		})
+		process.SpawnCritical(func(ctx context.Context) error {
+			incident, err := s.fakePagerduty.CheckNewIncident(ctx)
+			if err := trace.Wrap(err); err != nil {
+				return setRaceErr(err)
+			}
+			if obtained, expected := incident.Status, "triggered"; obtained != expected {
+				return setRaceErr(trace.Errorf("wrong incident status. expected %q, obtained %q", expected, obtained))
+			}
+			ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+			defer cancel()
+			var lastErr error
+			for {
+				log.Infof("Trying to approve incident %q", incident.ID)
+				resp, err := s.postAction(ctx, incident, pdApproveAction)
+				if err != nil {
+					if utils.IsDeadline(err) {
+						return setRaceErr(lastErr)
+					}
+					return setRaceErr(trace.Wrap(err))
+				}
+				if err := resp.Body.Close(); err != nil {
+					return setRaceErr(trace.Wrap(err))
+				}
+				if status := resp.StatusCode; status != http.StatusNoContent {
+					lastErr = trace.Errorf("got %v http code from webhook server", status)
+				} else {
+					return nil
+				}
+			}
+		})
+		process.SpawnCritical(func(ctx context.Context) error {
+			incident, err := s.fakePagerduty.CheckIncidentUpdate(ctx)
+			if err := trace.Wrap(err); err != nil {
+				return setRaceErr(err)
+			}
+			if obtained, expected := incident.Status, "resolved"; obtained != expected {
+				return setRaceErr(trace.Errorf("wrong incident status. expected %q, obtained %q", expected, obtained))
+			}
+			return nil
+		})
+	}
+	for i := 0; i < 2*s.raceNumber; i++ {
+		process.SpawnCritical(func(ctx context.Context) error {
+			var event services.Event
+			select {
+			case event = <-watcher.Events():
+			case <-ctx.Done():
+				return setRaceErr(trace.Wrap(ctx.Err()))
+			}
+			if obtained, expected := event.Type, backend.OpPut; obtained != expected {
+				return setRaceErr(trace.Errorf("wrong event type. expected %v, obtained %v", expected, obtained))
+			}
+			req := event.Resource.(services.AccessRequest)
+			var newCounter int64
+			val, _ := requests.LoadOrStore(req.GetName(), &newCounter)
+			switch state := req.GetState(); state {
+			case services.RequestState_PENDING:
+				atomic.AddInt64(val.(*int64), 1)
+			case services.RequestState_APPROVED:
+				atomic.AddInt64(val.(*int64), -1)
+			default:
+				return setRaceErr(trace.Errorf("wrong request state %v", state))
+			}
+			return nil
+		})
+	}
+	process.Terminate()
+	<-process.Done()
+	c.Assert(raceErr, IsNil)
+
+	var count int
+	requests.Range(func(key, val interface{}) bool {
+		count++
+		c.Assert(*val.(*int64), Equals, int64(0))
+		return true
+	})
+	c.Assert(count, Equals, s.raceNumber)
 }
