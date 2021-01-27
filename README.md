@@ -1,6 +1,6 @@
-# teleport-plugins
+# Teleport Plugins and Example Applications
 
-Set of plugins for Teleport
+A set of plugins for Teleport's for Access Workflows and example applications for Teleport Application Access.
 
 [![Build Status](https://drone.gravitational.io/api/badges/gravitational/teleport-plugins/status.svg)](https://drone.gravitational.io/gravitational/teleport-plugins)
 
@@ -11,7 +11,7 @@ which can be used for writing plugins. More info can be found in
 [access/README.md](./access/README.md), including instructions on how to
 properly provision necessary certificates.
 
-### Example
+### API Example
 
 The [access/example](./access/example) plugin automatically approves access
 requests based on a user whitelist. This is a good place to start if you are
@@ -20,7 +20,7 @@ trying to understand how to use the [`access`](./access) API.
 Use `make access-example` to build the plugin and
 `./build/access-example configure` to print out a sample configuration file.
 
-### Slack Bot
+### Slack
 
 [See setup instructions on Teleport's website](https://goteleport.com/teleport/docs/enterprise/workflow/ssh_approval_slack/)
 
@@ -28,7 +28,7 @@ A basic slack plugin (WIP) can be found in [access/slack](./access/slack). The
 plugin can be built with `make access-slack` and instructions for configuring
 the plugin can be found in the plugin's [README](./access/slack/README.md).
 
-### JIRA Bot
+### JIRA
 
 - [See detailed setup instructions for Jira Cloud on the website](https://goteleport.com/teleport/docs/enterprise/workflow/ssh_approval_jira_cloud/)
 - [See detailed setup instructions for Jira Server on the website](https://goteleport.com/teleport/docs/enterprise/workflow/ssh_approval_jira_server/)
@@ -38,7 +38,7 @@ A basic Teleport / JIRA integration (WIP) can be found in
 and instructions for configuring the plugin can be found in the plugin's
 [README](./access/jira/README.md).
 
-### Mattermost Bot
+### Mattermost
 
 [See setup instructions on Teleport's website](https://goteleport.com/teleport/docs/enterprise/workflow/ssh_approval_mattermost/)
 
@@ -48,7 +48,7 @@ to Slack integration above. The plugin can be built with
 `make access-mattermost`, and instructions for configuring the plugin can be
 found in the plugin's [README](./access/mattermost/README.md).
 
-### Pagerduty Extension
+### PagerDuty
 
 [See setup instructions on Teleport's website](https://goteleport.com/teleport/docs/enterprise/workflow/ssh_approval_pagerduty/)
 
