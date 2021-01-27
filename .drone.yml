@@ -1,7 +1,7 @@
 ---
 kind: pipeline
 type: kubernetes
-name: test
+name: test-linux
 
 trigger:
   branch:
@@ -28,6 +28,51 @@ steps:
     image: golang:1.14.4
     commands:
       - make test
+
+---
+kind: pipeline
+type: exec
+name: test-darwin
+
+concurrency:
+  limit: 1
+
+platform:
+  os: darwin
+  arch: amd64
+
+trigger:
+  branch:
+    - master
+    - branch/*
+  event:
+    include:
+      - push
+      - pull_request
+  repo:
+    include:
+      - gravitational/*
+
+workspace:
+  path: /tmp/teleport-plugins
+
+steps:
+  - name: Clean up exec runner storage (pre)
+    commands:
+      - rm -rf test-darwin
+      - mkdir -p test-darwin/go/cache
+      - chmod -R u+rw test-darwin
+
+  - name: Run tests
+    environment:
+      GOPATH: /tmp/teleport-plugins/test-darwin/go
+      GOCACHE: /tmp/teleport-plugins/test-darwin/go/cache
+    commands:
+      - make test
+
+  - name: Clean up exec runner storage (post)
+    commands:
+      - rm -rf test-darwin
 
 ---
 kind: pipeline
@@ -121,6 +166,6 @@ steps:
 
 ---
 kind: signature
-hmac: 659d91eda782d8ca46f4e99022741226f6d1015b1539f3ce31e082a8c77f705e
+hmac: 544928929d6a902a619dc482ff75ca5152177a632dfbaba1ee9894a0d79f7059
 
 ...
