@@ -68,6 +68,7 @@ steps:
       GOPATH: /tmp/teleport-plugins/test-darwin/go
       GOCACHE: /tmp/teleport-plugins/test-darwin/go/cache
     commands:
+      - go version
       - make test
 
   - name: Clean up exec runner storage (post)
@@ -241,6 +242,6 @@ steps:
 
 ---
 kind: signature
-hmac: 05a0cbf9e41b88fbe0290b5d2987951faaa2763eebd7b5c5a64f6f4f897aba38
+hmac: 75cc39c2639db4d0c15d61327abcc0398bab3acda7aca7a70e69783db24deb30
 
 ...
