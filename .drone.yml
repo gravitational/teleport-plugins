@@ -1,7 +1,7 @@
 ---
 kind: pipeline
 type: kubernetes
-name: test
+name: test-linux
 
 trigger:
   branch:
@@ -31,8 +31,128 @@ steps:
 
 ---
 kind: pipeline
+type: exec
+name: test-darwin
+
+concurrency:
+  limit: 1
+
+platform:
+  os: darwin
+  arch: amd64
+
+trigger:
+  branch:
+    - master
+    - branch/*
+  event:
+    include:
+      - push
+      - pull_request
+  repo:
+    include:
+      - gravitational/*
+
+workspace:
+  path: /tmp/teleport-plugins/test-darwin
+
+steps:
+  - name: Clean up exec runner storage (pre)
+    commands:
+      - rm -rf /tmp/teleport-plugins/test-darwin/go
+      - mkdir -p /tmp/teleport-plugins/test-darwin/go
+      - chmod -R u+rw /tmp/teleport-plugins/test-darwin/go
+
+  - name: Run tests
+    environment:
+      GOPATH: /tmp/teleport-plugins/test-darwin/go
+      GOCACHE: /tmp/teleport-plugins/test-darwin/go/cache
+    commands:
+      - make test
+
+  - name: Clean up exec runner storage (post)
+    commands:
+      - rm -rf /tmp/teleport-plugins/test-darwin/go
+
+---
+kind: pipeline
 type: kubernetes
-name: build
+name: build-on-push-linux
+
+trigger:
+  branch:
+    - master
+    - branch/*
+  event:
+    include:
+      - push
+  repo:
+    include:
+      - gravitational/*
+
+depends_on:
+  - test-linux
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+steps:
+  - name: Build artifacts
+    image: golang:1.14.4
+    commands:
+      - for PLUGIN_DIR in $(find access/ -mindepth 1 -maxdepth 1 -type d | grep -v example); do echo $PLUGIN_DIR:; make -C $PLUGIN_DIR; done
+
+---
+kind: pipeline
+type: exec
+name: build-on-push-darwin
+
+concurrency:
+  limit: 1
+
+platform:
+  os: darwin
+  arch: amd64
+
+trigger:
+  branch:
+    - master
+    - branch/*
+  event:
+    include:
+      - push
+  repo:
+    include:
+      - gravitational/*
+
+depends_on:
+  - test-darwin
+
+workspace:
+  path: /tmp/teleport-plugins/build-darwin
+
+steps:
+  - name: Clean up exec runner storage (pre)
+    commands:
+      - rm -rf /tmp/teleport-plugins/build-darwin/go
+      - mkdir -p /tmp/teleport-plugins/build-darwin/go/cache
+      - chmod -R u+rw /tmp/teleport-plugins/build-darwin/go
+
+  - name: Build artifacts (darwin)
+    environment:
+      GOPATH: /tmp/teleport-plugins/build-darwin/go
+      GOCACHE: /tmp/teleport-plugins/build-darwin/go/cache
+    commands:
+      - for PLUGIN_DIR in $(find access/ -mindepth 1 -maxdepth 1 -type d | grep -v example); do echo $PLUGIN_DIR:; make -C $PLUGIN_DIR; done
+
+  - name: Clean up exec runner storage (post)
+    commands:
+      - rm -rf /tmp/teleport-plugins/build-darwin/go
+
+---
+kind: pipeline
+type: kubernetes
+name: tag-build-linux
 
 trigger:
   event:
@@ -42,7 +162,7 @@ trigger:
       - refs/tags/teleport-*-v*
 
 depends_on:
-  - test
+  - test-linux
 
 workspace:
   path: /go/src/github.com/gravitational/teleport-plugins
@@ -121,6 +241,6 @@ steps:
 
 ---
 kind: signature
-hmac: 659d91eda782d8ca46f4e99022741226f6d1015b1539f3ce31e082a8c77f705e
+hmac: e69a430a2b8c289f1a153f4334ea022dd366c170ce0c623a4aa0d811f75c48db
 
 ...
