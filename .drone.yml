@@ -101,7 +101,7 @@ steps:
   - name: Build artifacts
     image: golang:1.15.5
     commands:
-      - for PLUGIN_DIR in $(find access/ -mindepth 1 -maxdepth 1 -type d | grep -v example); do echo $PLUGIN_DIR:; make -C $PLUGIN_DIR; done
+      - make build-all
 
 ---
 kind: pipeline
@@ -144,7 +144,7 @@ steps:
       GOPATH: /tmp/teleport-plugins/build-darwin/go
       GOCACHE: /tmp/teleport-plugins/build-darwin/go/cache
     commands:
-      - for PLUGIN_DIR in $(find access/ -mindepth 1 -maxdepth 1 -type d | grep -v example); do echo $PLUGIN_DIR:; make -C $PLUGIN_DIR; done
+      - make build-all
 
   - name: Clean up exec runner storage (post)
     commands:
@@ -242,6 +242,6 @@ steps:
 
 ---
 kind: signature
-hmac: 75cc39c2639db4d0c15d61327abcc0398bab3acda7aca7a70e69783db24deb30
+hmac: 488b49769a5fa00dc1cf55d7e982d0f49d0ac004c2ba056ada96b8c3570943dd
 
 ...
