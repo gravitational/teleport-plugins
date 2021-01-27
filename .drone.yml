@@ -77,7 +77,7 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
-name: build
+name: build-linux
 
 trigger:
   event:
@@ -87,7 +87,7 @@ trigger:
       - refs/tags/teleport-*-v*
 
 depends_on:
-  - test
+  - test-linux
 
 workspace:
   path: /go/src/github.com/gravitational/teleport-plugins
@@ -166,6 +166,6 @@ steps:
 
 ---
 kind: signature
-hmac: 544928929d6a902a619dc482ff75ca5152177a632dfbaba1ee9894a0d79f7059
+hmac: 7ba0986b68dfc1c5dc1d21a1540b451385c3cd7f6165aeab1a21b92726c3e3c0
 
 ...
