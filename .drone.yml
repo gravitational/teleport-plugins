@@ -121,15 +121,12 @@ trigger:
   event:
     include:
       - push
-      # TODO(gus): uncomment after testing
-      - pull_request
   repo:
     include:
       - gravitational/*
 
-# TODO(gus): uncomment after testing
-# depends_on:
-#   - test-darwin
+depends_on:
+  - test-darwin
 
 workspace:
   path: /tmp/teleport-plugins/build-darwin
@@ -244,6 +241,6 @@ steps:
 
 ---
 kind: signature
-hmac: 0012e06087c089ddade27056228efc53e8a195c604766062ffe970552d2bba89
+hmac: e69a430a2b8c289f1a153f4334ea022dd366c170ce0c623a4aa0d811f75c48db
 
 ...
