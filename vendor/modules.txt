@@ -174,10 +174,9 @@ github.com/dgrijalva/jwt-go
 ## explicit
 # github.com/disintegration/imaging v1.6.2
 ## explicit
-# github.com/docker/docker v17.12.0-ce-rc1.0.20180721085148-1ef1cc838816+incompatible
+# github.com/docker/docker v20.10.2+incompatible
 ## explicit
 github.com/docker/docker/pkg/term
-github.com/docker/docker/pkg/term/windows
 # github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29
 ## explicit
 github.com/docker/spdystream
@@ -547,6 +546,10 @@ github.com/mdp/rsc/qr/coding
 ## explicit
 # github.com/mitchellh/mapstructure v1.3.3
 ## explicit
+# github.com/moby/term v0.0.0-20201216013528-df9cb8a40635
+## explicit
+github.com/moby/term
+github.com/moby/term/windows
 # github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
 github.com/modern-go/concurrent
 # github.com/modern-go/reflect2 v1.0.1

@@ -104,7 +104,7 @@ func (b *Bot) Respond(ctx context.Context, reqID string, reqData RequestData, st
 		return trace.Wrap(err, "failed to serialize msg block: %v", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", responseURL, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, responseURL, bytes.NewReader(body))
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -152,13 +152,13 @@ func (b *Bot) msgSections(reqID string, reqData RequestData, status string) []sl
 	var statusEmoji string
 	switch status {
 	case "PENDING":
-		statusEmoji = ":hourglass_flowing_sand: "
+		statusEmoji = ":hourglass_flowing_sand:"
 	case "APPROVED":
-		statusEmoji = ":white_check_mark: "
+		statusEmoji = ":white_check_mark:"
 	case "DENIED":
-		statusEmoji = ":x: "
+		statusEmoji = ":x:"
 	case "EXPIRED":
-		statusEmoji = ":hourglass: "
+		statusEmoji = ":hourglass:"
 	}
 
 	sections := []slack.Block{
@@ -182,7 +182,7 @@ func (b *Bot) msgSections(reqID string, reqData RequestData, status string) []sl
 				Elements: []slack.MixedElement{
 					&slack.TextBlockObject{
 						Type: slack.MarkdownType,
-						Text: fmt.Sprintf("*Status:* %s%s", statusEmoji, status),
+						Text: fmt.Sprintf("*Status:* %s %s", statusEmoji, status),
 					},
 				},
 			},

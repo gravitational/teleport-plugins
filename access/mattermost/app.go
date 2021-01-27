@@ -39,6 +39,11 @@ func (a *App) Run(ctx context.Context) error {
 	a.Process = utils.NewProcess(ctx)
 	a.SpawnCriticalJob(a.mainJob)
 	<-a.Process.Done()
+	return a.Err()
+}
+
+// Err returns the error app finished with.
+func (a *App) Err() error {
 	return trace.Wrap(a.mainJob.Err())
 }
 
@@ -213,6 +218,10 @@ func (a *App) onMattermostAction(ctx context.Context, data ActionData) (*ActionR
 		pluginData, err := a.getPluginData(ctx, reqID)
 		if err != nil {
 			return nil, trace.Wrap(err)
+		}
+
+		if pluginData.MattermostData.PostID == "" {
+			return nil, trace.Errorf("plugin data is empty")
 		}
 
 		log = log.WithFields(logFields{

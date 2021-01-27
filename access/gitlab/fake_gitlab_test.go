@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
@@ -31,15 +30,15 @@ type FakeGitlab struct {
 	issueUpdates       chan Issue
 }
 
-func NewFakeGitLab(projectID IntID) *FakeGitlab {
+func NewFakeGitLab(projectID IntID, concurrency int) *FakeGitlab {
 	router := httprouter.New()
 
 	gitlab := &FakeGitlab{
-		newIssues:          make(chan Issue, 20),
-		issueUpdates:       make(chan Issue, 20),
-		newProjectHooks:    make(chan ProjectHook, 20),
-		projectHookUpdates: make(chan ProjectHook, 20),
-		newLabels:          make(chan Label, 20),
+		newIssues:          make(chan Issue, concurrency),
+		issueUpdates:       make(chan Issue, concurrency),
+		newProjectHooks:    make(chan ProjectHook, concurrency),
+		projectHookUpdates: make(chan ProjectHook, concurrency),
+		newLabels:          make(chan Label, concurrency),
 		srv:                httptest.NewServer(router),
 	}
 
@@ -47,9 +46,8 @@ func NewFakeGitLab(projectID IntID) *FakeGitlab {
 
 	router.GET("/api/v4/projects/:project_id", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
 		err := json.NewEncoder(rw).Encode(&Project{ID: projectID})
-		fatalIf(err)
+		panicIf(err)
 	})
 
 	// Hooks
@@ -64,14 +62,13 @@ func NewFakeGitLab(projectID IntID) *FakeGitlab {
 		})
 
 		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
 		err := json.NewEncoder(rw).Encode(hooks)
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.POST("/api/v4/projects/:project_id/hooks", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		var hook ProjectHook
 		err := json.NewDecoder(r.Body).Decode(&hook)
-		fatalIf(err)
+		panicIf(err)
 
 		hook = gitlab.StoreProjectHook(hook)
 		gitlab.newProjectHooks <- hook
@@ -79,33 +76,32 @@ func NewFakeGitLab(projectID IntID) *FakeGitlab {
 		rw.Header().Add("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusCreated)
 		err = json.NewEncoder(rw).Encode(&hook)
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.PUT("/api/v4/projects/:project_id/hooks/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
 
 		id, err := strconv.ParseUint(ps.ByName("id"), 10, 64)
-		fatalIf(err)
+		panicIf(err)
 
 		hook, found := gitlab.GetProjectHook(IntID(id))
 		if !found {
 			rw.WriteHeader(http.StatusNotFound)
 			err = json.NewEncoder(rw).Encode(&ErrorResult{Message: "Hook not found"})
-			fatalIf(err)
+			panicIf(err)
 			return
 		}
 
 		err = json.NewDecoder(r.Body).Decode(&hook)
-		fatalIf(err)
+		panicIf(err)
 		hook.ID = IntID(id)
 
 		gitlab.StoreProjectHook(hook)
 		gitlab.projectHookUpdates <- hook
 
 		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
 		err = json.NewEncoder(rw).Encode(&hook)
-		fatalIf(err)
+		panicIf(err)
 	})
 
 	// Labels
@@ -123,29 +119,28 @@ func NewFakeGitLab(projectID IntID) *FakeGitlab {
 		})
 
 		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
 		err := json.NewEncoder(rw).Encode(labels)
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.POST("/api/v4/projects/:project_id/labels", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
 
 		var label Label
 		err := json.NewDecoder(r.Body).Decode(&label)
-		fatalIf(err)
+		panicIf(err)
 
 		label, ok := gitlab.StoreLabelIfNotExists(label)
 		if !ok {
 			rw.WriteHeader(http.StatusBadRequest)
 			err = json.NewEncoder(rw).Encode(&ErrorResult{Message: "Label already exists"})
-			fatalIf(err)
+			panicIf(err)
 			return
 		}
 		gitlab.newLabels <- label
 
 		rw.WriteHeader(http.StatusCreated)
 		err = json.NewEncoder(rw).Encode(&label)
-		fatalIf(err)
+		panicIf(err)
 	})
 
 	// Issues
@@ -154,11 +149,11 @@ func NewFakeGitLab(projectID IntID) *FakeGitlab {
 		rw.Header().Add("Content-Type", "application/json")
 
 		projectID, err := strconv.ParseUint(ps.ByName("project_id"), 10, 64)
-		fatalIf(err)
+		panicIf(err)
 
 		var params IssueParams
 		err = json.NewDecoder(r.Body).Decode(&params)
-		fatalIf(err)
+		panicIf(err)
 		issue := gitlab.StoreIssue(Issue{
 			ProjectID:   IntID(projectID),
 			Title:       params.Title,
@@ -170,25 +165,25 @@ func NewFakeGitLab(projectID IntID) *FakeGitlab {
 
 		rw.WriteHeader(http.StatusCreated)
 		err = json.NewEncoder(rw).Encode(&issue)
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.PUT("/api/v4/projects/:project_id/issues/:iid", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
 
 		iid, err := strconv.ParseUint(ps.ByName("iid"), 10, 64)
-		fatalIf(err)
+		panicIf(err)
 
 		issue, found := gitlab.GetIssue(IntID(iid))
 		if !found {
 			rw.WriteHeader(http.StatusNotFound)
 			err = json.NewEncoder(rw).Encode(&ErrorResult{Message: "Issue not found"})
-			fatalIf(err)
+			panicIf(err)
 			return
 		}
 
 		var params IssueParams
 		err = json.NewDecoder(r.Body).Decode(&params)
-		fatalIf(err)
+		panicIf(err)
 
 		issue.Title = params.Title
 		issue.Labels = gitlab.GetLabelsFromStr(params.Labels)
@@ -196,34 +191,32 @@ func NewFakeGitLab(projectID IntID) *FakeGitlab {
 		case "close":
 			issue.State = "closed"
 		default:
-			log.Fatalf("unknown StateEvent=%q", params.StateEvent)
+			log.Panicf("unknown StateEvent=%q", params.StateEvent)
 		}
 
 		gitlab.StoreIssue(issue)
 		gitlab.issueUpdates <- issue
 
 		rw.Header().Add("Content-Type", "application/json")
-		rw.WriteHeader(http.StatusOK)
 		err = json.NewEncoder(rw).Encode(&issue)
-		fatalIf(err)
+		panicIf(err)
 	})
 	router.GET("/api/v4/projects/:project_id/issues/:iid", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
 
 		issueIID, err := strconv.ParseUint(ps.ByName("iid"), 10, 64)
-		fatalIf(err)
+		panicIf(err)
 
 		issue, found := gitlab.GetIssue(IntID(issueIID))
 		if !found {
 			rw.WriteHeader(http.StatusNotFound)
 			err = json.NewEncoder(rw).Encode(&ErrorResult{Message: "Hook not found"})
-			fatalIf(err)
+			panicIf(err)
 			return
 		}
 
-		rw.WriteHeader(http.StatusOK)
 		err = json.NewEncoder(rw).Encode(&issue)
-		fatalIf(err)
+		panicIf(err)
 	})
 
 	return gitlab
@@ -320,9 +313,7 @@ func (s *FakeGitlab) StoreProjectHook(hook ProjectHook) ProjectHook {
 	return hook
 }
 
-func (s *FakeGitlab) CheckNewProjectHook(ctx context.Context, timeout time.Duration) (ProjectHook, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+func (s *FakeGitlab) CheckNewProjectHook(ctx context.Context) (ProjectHook, error) {
 	select {
 	case hook := <-s.newProjectHooks:
 		return hook, nil
@@ -331,9 +322,7 @@ func (s *FakeGitlab) CheckNewProjectHook(ctx context.Context, timeout time.Durat
 	}
 }
 
-func (s *FakeGitlab) CheckProjectHookUpdate(ctx context.Context, timeout time.Duration) (ProjectHook, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+func (s *FakeGitlab) CheckProjectHookUpdate(ctx context.Context) (ProjectHook, error) {
 	select {
 	case hook := <-s.projectHookUpdates:
 		return hook, nil
@@ -363,9 +352,7 @@ func (s *FakeGitlab) GetAllNewLabels() map[string]Label {
 	}
 }
 
-func (s *FakeGitlab) CheckNewIssue(ctx context.Context, timeout time.Duration) (Issue, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+func (s *FakeGitlab) CheckNewIssue(ctx context.Context) (Issue, error) {
 	select {
 	case issue := <-s.newIssues:
 		return issue, nil
@@ -374,9 +361,7 @@ func (s *FakeGitlab) CheckNewIssue(ctx context.Context, timeout time.Duration) (
 	}
 }
 
-func (s *FakeGitlab) CheckIssueUpdate(ctx context.Context, timeout time.Duration) (Issue, error) {
-	ctx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
+func (s *FakeGitlab) CheckIssueUpdate(ctx context.Context) (Issue, error) {
 	select {
 	case issue := <-s.issueUpdates:
 		return issue, nil
@@ -385,8 +370,8 @@ func (s *FakeGitlab) CheckIssueUpdate(ctx context.Context, timeout time.Duration
 	}
 }
 
-func fatalIf(err error) {
+func panicIf(err error) {
 	if err != nil {
-		log.Fatalf("%v at %v", err, string(debug.Stack()))
+		log.Panicf("%v at %v", err, string(debug.Stack()))
 	}
 }
