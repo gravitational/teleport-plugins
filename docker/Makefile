@@ -75,7 +75,6 @@ config:
 	docker-compose exec teleport /bin/bash -c "tctl auth sign --format=tls --user=access-plugin --out=plug"
 	docker-compose exec teleport /bin/bash -c "mkdir -p /mnt/shared/certs/access-plugin && mv plug.* /mnt/shared/certs/access-plugin/"
 
-
 	docker-compose stop teleport
 
 .PHONY: foo-certs
