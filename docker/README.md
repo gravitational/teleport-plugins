@@ -1,8 +1,7 @@
 ## Docker
 
-This directory contains Docker-based flow to run Teleport Plugins locally, and
-is indended for manual QA with the [Test Plan](../testplan.md) / testing
-purposuses.
+This directory contains a set of tools to run Teleport, Teleport Plugins, and
+Teleport Terraform Provider locally in Docker.
 
 ### TOC
 
@@ -20,7 +19,6 @@ This guide assumes you'll run the QA on a machine that has the following:
 - GNU Make
 - Docker
 - git
-- Public hostname or static IP address, or ngrok.
 
 ### Setup
 
@@ -30,20 +28,19 @@ Teleport's own Docker image and services are managed with that flow.
 
 #### Overview
 
-The setup process builds up several Docker images, and then helps you configure
-the Teleport cluster on those images and some plugins to run together.
+You'll need to build Docker images for:
 
-Docker images are responsible for the software (i.e. have the correct version of
-Teleport Enterprise to run the plugins), but the further confuguration, like
-what specific certificates and addresses to use for different services is
-performed _after Dockerfiles are built_:
+- Teleport Enterprise
+- Teleport Plugins
+- Terraform (terraform commands will be executer from that VM).
 
-- `Dockerfile` is generally responsible for the software running in the
-  container.
+The flow is structured in the following way:
+
+- `Dockerfile` is responsible for _installing_ the software that we'll run.
 - `docker-compose.yml` is responsible for baseline configuration for the cluster
   to work together, and for passing runtime params to the containers.
 - `make config-*` subcommands will help you setup specific configs for specific
-  plugins, and they should work even if the config format changes in the fugure.
+  plugins.
 
 #### Getting started with Teleport's Docker flow
 
@@ -51,69 +48,20 @@ First prepare your teleport directory to work with the Docker flow. The flow
 assumes that you have `teleport` alongside `teleport-plugins`, and they have the
 same parent directory.
 
-Teleport's Docker image uses the `teleport-buildbox` image, so we'll set it up
-first. Teleport also uses quay.io to store images, but for the purpose of this
-guide, we'll store images locally.
-
-_*Note: if you're also running Teleport's own dockerized testing kit, you may
-already have `teleport:lastest` and `teleport-buildox` ready.* If that's the
-case, just skip that part and jump to building `teleport-ent` and using it with
-the plugins._
-
-#### Building `teleport-buildbox`
-
-The Buildbox is defined and built in `teleport/build.assets` directory. The
-easiest way to build it is to run the following:
-
-```bash
-git clone git@gitnub.com:gravitational/teleport.git
-cd teleport
-make -C build.assets build
-```
-
-This will build the buildbox container for you, and tag it for quay. If you
-don't have access to that, you can run the command that make runs yourself, but
-with `-t teleport-builbox:go-{GOVERSION}`, like that:
-
-```bash
-# In the teleport/build.assets dir:
-docker build \
-	--build-arg UID=(id -u) \
-	--build-arg GID=(id -g) \
-	--build-arg RUNTIME=go1.13.2 \ # Set whatever runtime verison you want
-	--cache-from quay.io/gravitational/teleport-buildbox:go1.13.2 \
-	-t teleport-buildbox:go1.13.2
-	.
-```
-
 #### Building `teleport:latest`
 
-You'll need Teleport's `teleport:latest` Docker image to run plugins. This
-command will build it:
+Go to the teleport source directory and run `make -C docker build`. This should
+setup `teleport:latest` image with whatever current runtime is set in Teleport
+docker flow source.
 
-```bash
-# In the parent directory of teleport-plugins
-git clone git@gitnub.com:gravitational/teleport.git
-cd teleport
+```shell
+cd ../teleport
 make -C docker build
 ```
 
-Note that unlike the `build.assets` Makefile, `docker/Makefile` tags the image
-as `teleport:latest` by default, you don't have to tweak it and remove quay
-reference.
-
-After building the Teleport prerequisites, you should have `teleport` and
-`teleport-buildbox` images build and tagged like this:
-
-```bash
-nate-mbp17:~/g/s/g/g/teleport master docker image ls |grep teleport
-teleport                                  latest              9d87869a9aee        50 seconds ago      1.12GB
-teleport-buildbox                         go1.14.4            9aea93e15a50        6 minutes ago       866MB
-nate-mbp17:~/g/s/g/g/teleport master
-```
-
-If you don't have any of those two images built, the flow might not work
-correctly.
+**_Note_**: For example, it might use `go1.15.5` — make sure you use the same
+runtime version in the whole guide. You might need to adjust the runtime version
+in the makefile and docker compose file yourself.
 
 #### Building `teleport-ent:latest`
 
@@ -133,18 +81,12 @@ Enterprise version to the container. All the build does, actually, is it takes
 the OSS built `teleport:latest`, downloads the Teleport Enterprise edition, and
 installs it._
 
+#### Teleport Enterprise License
+
 _*Note*: this setup requires you to bring your own Teleport Enterprise License
-and put it to `data/var/lib/teleport/license.pam`. Enterprise features, and
-hence the whole flow, might not work otherwise._
-
-After that, we'll build the teleport's image from teleport-plugin's directory.
-We'll still use teleport's own Dockerfile, but the services in
-`docker-compose.yml` are different, and teleport-plugins test flow uses it's own
-`data` directory, just so if you've been testing both teleport and
-teleport-plugins, they shouldn't interfere with each other.
-
-Please refer to Teleport's Docker documentation for more details about it's
-configuration.
+and put it to `data/var/lib/teleport/license.pam`. Enterprise features,
+specifically creating roles with tctl, and hence the whole flow, might not work
+otherwise._
 
 #### Building plugins and their docker images
 
@@ -237,7 +179,7 @@ Gotchas:
 make down
 ```
 
-### Testing
+### Testing Plugins
 
 Here's a good starting point on what needs to be tested before each release of
 the plugins: [Test Plan](/testplan.md).

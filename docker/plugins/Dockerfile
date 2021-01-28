@@ -1,12 +1,10 @@
-# Defines Teleport Slack image
-# Based on Teleport's image
-# Tweak this and then do `make build-teleport-slack-image` to rebuild the image.
-
-# The base image (buildbox:latest) is built by running `make -C build.assets`
-# from the teleport repo directory $GOPATH/gravitational.com/teleport
+# Defines Teleport Slack image, based on Teleport OSS image.
 ARG RUNTIME="go1.15.5"
-FROM quay.io/gravitational/teleport-buildbox:$RUNTIME
+ARG BBOX="quay.io/gravitational/teleport-buildbox"
+FROM $BBOX:$RUNTIME
+
 RUN apt-get update
+
 # DEBUG=1 is needed for the Web UI to be loaded from static assets instead
 # of the binary
 ENV DEBUG=1 GOPATH=/root/go PATH=$PATH:/root/go/src/github.com/gravitational/teleport/build:/root/go/src/github.com/gravitational/teleport-plugins/access/slack/build:/root/go/bin
