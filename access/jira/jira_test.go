@@ -158,7 +158,11 @@ func (s *JiraSuite) startApp(c *C) {
 	s.app, err = NewApp(conf)
 	c.Assert(err, IsNil)
 
-	go s.app.Run(s.ctx)
+	go func() {
+		if err := s.app.Run(s.ctx); err != nil {
+			panic(err)
+		}
+	}()
 	ok, err := s.app.WaitReady(s.ctx)
 	c.Assert(err, IsNil)
 	c.Assert(ok, Equals, true)
