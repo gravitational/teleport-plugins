@@ -2,7 +2,6 @@
 ARG RUNTIME="go1.15.5"
 ARG BBOX="quay.io/gravitational/teleport-buildbox"
 FROM $BBOX:$RUNTIME
-
 RUN apt-get update
 
 # DEBUG=1 is needed for the Web UI to be loaded from static assets instead

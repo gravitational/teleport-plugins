@@ -11,7 +11,7 @@ MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 RELEASE ?= teleport-ent-v6.0.0-alpha.2-linux-amd64-bin
 
 RUNTIME ?= go1.15.5
-BBOX ?= quay.io/gravitational/teleport-buildbox:$(RUNTIME)
+BBOX ?= quay.io/gravitational/teleport-buildbox
 
 # Teleport CLI and plugins CLI flags to pass to them on start
 # This is used in insecure-up and debug to pass

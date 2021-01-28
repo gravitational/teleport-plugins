@@ -8,10 +8,10 @@ terraform {
 }
 
 provider "teleport" {
-    addr = "localhost:3025"
-    cert_path = "/home/nategadzhi/go/src/github.com/gravitational/teleport-plugins/docker/tmp/auth.crt"
-    key_path = "/home/nategadzhi/go/src/github.com/gravitational/teleport-plugins/docker/tmp/auth.key"
-    root_ca_path = "/home/nategadzhi/go/src/github.com/gravitational/teleport-plugins/docker/tmp/auth.cas"
+    addr = "teleport.cluster.local:3025"
+    cert_path = "/mnt/shared/certs/access-plugin/auth.crt"
+    key_path = "/mnt/shared/certs/access-plugin/auth.key"
+    root_ca_path = "/mnt/shared/certs/access-plugin/auth.cas"
 }
 
 resource "teleport_user" "tf_test" {

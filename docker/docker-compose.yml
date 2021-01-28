@@ -43,6 +43,20 @@ services:
         aliases:
           - "teleport.cluster.local"
 
+  terraform:
+    image: teleport-terraform:latest
+    container_name: terraform-client
+    volumes:
+      - ./data/var/lib/teleport:/var/lib/teleport
+      - ../../teleport:/root/go/src/github.com/gravitational/teleport
+      - ..:/root/go/src/github.com/gravitational/teleport-plugins
+      - certs:/mnt/shared/certs
+    networks:
+      teleport-network:
+        ipv4_address: 172.10.1.187
+        aliases:
+          - "terraform-client.cluster.local"
+
   teleport-slack:
     <<: *plugin
     container_name: teleport-slack
