@@ -97,7 +97,7 @@ func (s *SlackSuite) SetUpSuite(c *C) {
 }
 
 func (s *SlackSuite) SetUpTest(c *C) {
-	s.ctx, s.cancel = context.WithTimeout(context.Background(), 2*time.Second)
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	s.publicURL = ""
 	s.fakeSlack = NewFakeSlack(slack.User{Name: "slackbot"}, s.raceNumber)
 	s.slackUser = s.fakeSlack.StoreUser(slack.User{

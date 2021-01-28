@@ -96,7 +96,7 @@ func (s *PagerdutySuite) SetUpSuite(c *C) {
 }
 
 func (s *PagerdutySuite) SetUpTest(c *C) {
-	s.ctx, s.cancel = context.WithTimeout(context.Background(), 2*time.Second)
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	s.publicURL = ""
 	s.fakePagerduty = NewFakePagerduty(s.raceNumber)
 	s.pdService = s.fakePagerduty.StoreService(Service{
