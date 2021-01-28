@@ -89,7 +89,7 @@ func (s *JiraSuite) SetUpSuite(c *C) {
 }
 
 func (s *JiraSuite) SetUpTest(c *C) {
-	s.ctx, s.cancel = context.WithTimeout(context.Background(), 2*time.Second)
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	s.publicURL = ""
 	s.fakeJira = NewFakeJIRA(jira.User{Name: "Test User", EmailAddress: s.me.Username + "@example.com"}, s.raceNumber)
 }
@@ -158,7 +158,11 @@ func (s *JiraSuite) startApp(c *C) {
 	s.app, err = NewApp(conf)
 	c.Assert(err, IsNil)
 
-	go s.app.Run(s.ctx)
+	go func() {
+		if err := s.app.Run(s.ctx); err != nil {
+			panic(err)
+		}
+	}()
 	ok, err := s.app.WaitReady(s.ctx)
 	c.Assert(err, IsNil)
 	c.Assert(ok, Equals, true)
