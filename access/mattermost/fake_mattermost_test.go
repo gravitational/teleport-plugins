@@ -20,8 +20,8 @@ import (
 type FakeMattermost struct {
 	srv         *httptest.Server
 	objects     sync.Map
-	newPosts    chan *mm.Post
-	postUpdates chan *mm.Post
+	newPosts    chan Post
+	postUpdates chan Post
 
 	postIDCounter uint64
 	userIDCounter uint64
@@ -31,8 +31,8 @@ func NewFakeMattermost(concurrency int) *FakeMattermost {
 	router := httprouter.New()
 
 	mattermost := &FakeMattermost{
-		newPosts:    make(chan *mm.Post, concurrency),
-		postUpdates: make(chan *mm.Post, concurrency),
+		newPosts:    make(chan Post, concurrency),
+		postUpdates: make(chan Post, concurrency),
 		srv:         httptest.NewServer(router),
 	}
 
@@ -74,11 +74,11 @@ func NewFakeMattermost(concurrency int) *FakeMattermost {
 	router.POST("/api/v4/posts", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
 
-		post := new(mm.Post)
-		err := json.NewDecoder(r.Body).Decode(post)
+		var post Post
+		err := json.NewDecoder(r.Body).Decode(&post)
 		panicIf(err)
 
-		if post.ChannelId != "2222" {
+		if post.ChannelID != "2222" {
 			http.Error(rw, `{}`, http.StatusNotFound)
 			return
 		}
@@ -102,8 +102,8 @@ func NewFakeMattermost(concurrency int) *FakeMattermost {
 			return
 		}
 
-		newPost := new(mm.Post)
-		err := json.NewDecoder(r.Body).Decode(newPost)
+		var newPost Post
+		err := json.NewDecoder(r.Body).Decode(&newPost)
 		panicIf(err)
 
 		post.Message = newPost.Message
@@ -128,23 +128,23 @@ func (s *FakeMattermost) Close() {
 	close(s.postUpdates)
 }
 
-func (s *FakeMattermost) GetPost(id string) (*mm.Post, bool) {
+func (s *FakeMattermost) GetPost(id string) (Post, bool) {
 	if obj, ok := s.objects.Load(id); ok {
-		post, ok := obj.(*mm.Post)
+		post, ok := obj.(Post)
 		return post, ok
 	}
-	return nil, false
+	return Post{}, false
 }
 
-func (s *FakeMattermost) StorePost(post *mm.Post) *mm.Post {
-	if post.Id == "" {
-		post.Id = fmt.Sprintf("post-%v", atomic.AddUint64(&s.postIDCounter, 1))
+func (s *FakeMattermost) StorePost(post Post) Post {
+	if post.ID == "" {
+		post.ID = fmt.Sprintf("post-%v", atomic.AddUint64(&s.postIDCounter, 1))
 	}
-	s.objects.Store(post.Id, post)
+	s.objects.Store(post.ID, post)
 	return post
 }
 
-func (s *FakeMattermost) UpdatePost(post *mm.Post) *mm.Post {
+func (s *FakeMattermost) UpdatePost(post Post) Post {
 	post = s.StorePost(post)
 	s.postUpdates <- post
 	return post
@@ -166,21 +166,21 @@ func (s *FakeMattermost) StoreUser(user mm.User) mm.User {
 	return user
 }
 
-func (s *FakeMattermost) CheckNewPost(ctx context.Context) (*mm.Post, error) {
+func (s *FakeMattermost) CheckNewPost(ctx context.Context) (Post, error) {
 	select {
 	case post := <-s.newPosts:
 		return post, nil
 	case <-ctx.Done():
-		return nil, trace.Wrap(ctx.Err())
+		return Post{}, trace.Wrap(ctx.Err())
 	}
 }
 
-func (s *FakeMattermost) CheckPostUpdate(ctx context.Context) (*mm.Post, error) {
+func (s *FakeMattermost) CheckPostUpdate(ctx context.Context) (Post, error) {
 	select {
 	case post := <-s.postUpdates:
 		return post, nil
 	case <-ctx.Done():
-		return nil, trace.Wrap(ctx.Err())
+		return Post{}, trace.Wrap(ctx.Err())
 	}
 }
 

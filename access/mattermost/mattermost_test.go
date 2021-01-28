@@ -200,15 +200,15 @@ func (s *MattermostSuite) checkPluginData(c *C, reqID string) PluginData {
 	return DecodePluginData(rawData)
 }
 
-func (s *MattermostSuite) postWebhook(ctx context.Context, post *mm.Post, actionName string) (*http.Response, error) {
+func (s *MattermostSuite) postWebhook(ctx context.Context, post Post, actionName string) (*http.Response, error) {
 	attachments := post.Attachments()
 	if size := len(attachments); size != 1 {
 		return nil, trace.Errorf("ambigous attachments array: expected exactly 1 element, got %v", size)
 	}
-	var action *mm.PostAction
+	var action *PostAction
 	for _, a := range attachments[0].Actions {
 		if a.Name == actionName {
-			action = a
+			action = &a
 			break
 		}
 	}
@@ -217,7 +217,7 @@ func (s *MattermostSuite) postWebhook(ctx context.Context, post *mm.Post, action
 	}
 
 	payload := mm.PostActionIntegrationRequest{
-		PostId:    post.Id,
+		PostId:    post.ID,
 		TeamId:    "1111",
 		ChannelId: "2222",
 		UserId:    s.mmUser.Id,
@@ -241,7 +241,7 @@ func (s *MattermostSuite) postWebhook(ctx context.Context, post *mm.Post, action
 
 }
 
-func (s *MattermostSuite) postWebhookAndCheck(c *C, post *mm.Post, actionName string) ActionResponse {
+func (s *MattermostSuite) postWebhookAndCheck(c *C, post Post, actionName string) ActionResponse {
 	response, err := s.postWebhook(s.ctx, post, actionName)
 	c.Assert(err, IsNil)
 	c.Assert(response.StatusCode, Equals, http.StatusOK)
@@ -260,7 +260,7 @@ func (s *MattermostSuite) TestMattermostMessagePosting(c *C) {
 	c.Assert(err, IsNil, Commentf("no new messages posted"))
 
 	pluginData := s.checkPluginData(c, request.GetName())
-	c.Assert(pluginData.PostID, Equals, post.Id)
+	c.Assert(pluginData.PostID, Equals, post.ID)
 
 	attachments := post.Attachments()
 	c.Assert(attachments, HasLen, 1)
@@ -328,11 +328,11 @@ func (s *MattermostSuite) TestExpiration(c *C) {
 
 	post, err := s.fakeMattermost.CheckNewPost(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new messages posted"))
-	postID := post.Id
+	postID := post.ID
 
 	post, err = s.fakeMattermost.CheckPostUpdate(s.ctx)
 	c.Assert(err, IsNil, Commentf("no messages updated"))
-	c.Assert(post.Id, Equals, postID)
+	c.Assert(post.ID, Equals, postID)
 	attachments := post.Attachments()
 	c.Assert(attachments, HasLen, 1)
 	c.Assert(attachments[0].Actions, HasLen, 0)
@@ -432,7 +432,7 @@ func (s *MattermostSuite) TestRace(c *C) {
 			defer cancel()
 			var lastErr error
 			for {
-				log.Infof("Trying to approve post %q", post.Id)
+				log.Infof("Trying to approve post %q", post.ID)
 				resp, err := s.postWebhook(ctx, post, "Approve")
 				if err != nil {
 					if utils.IsDeadline(err) {
