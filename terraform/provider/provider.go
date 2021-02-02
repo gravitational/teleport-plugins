@@ -4,12 +4,11 @@ import (
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/trace"
 
-	"github.com/hashicorp/terraform/helper/schema"
-	"github.com/hashicorp/terraform/terraform"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
 // Provider builds Teleport Terraform Resource Provider
-func Provider() terraform.ResourceProvider {
+func Provider() *schema.Provider {
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"addr": {

@@ -1,7 +1,7 @@
 terraform {
   required_providers {
     teleport = {
-      versions = ["0.0.1"]
+      version = "0.0.1"
       source = "gravitational.com/teleport/teleport"
     }
   }

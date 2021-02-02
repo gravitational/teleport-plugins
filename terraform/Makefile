@@ -43,6 +43,6 @@ docker:
 .PHONY: docker-build
 docker-build:
 	docker run \
-		-v $(MKFILE_PATH)/../:$(DOCKER_SRC_PATH) \
+		-v $(MKFILE_PATH)/../../:$(DOCKER_SRC_PATH) \
 		teleport-terraform:latest \
 			make -C $(DOCKER_SRC_PATH)/terraform build
