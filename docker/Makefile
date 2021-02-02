@@ -84,13 +84,6 @@ foo-certs:
 	docker-compose exec teleport /bin/bash -c "rm -rf /root/go/src/github.com/gravitational/teleport-plugins/docker/tmp/ && mkdir /root/go/src/github.com/gravitational/teleport-plugins/docker/tmp/ && mv auth.* /root/go/src/github.com/gravitational/teleport-plugins/docker/tmp/"
 	docker-compose stop teleport
 
-.PHONY: foo-certs
-foo-certs:
-	docker-compose up -d teleport
-	docker-compose exec teleport /bin/bash -c "tctl auth sign --format=tls --user=foo --out=auth"
-	docker-compose exec teleport /bin/bash -c "rm -rf /root/go/src/github.com/gravitational/teleport-plugins/docker/tmp/ && mkdir /root/go/src/github.com/gravitational/teleport-plugins/docker/tmp/ && mv auth.* /root/go/src/github.com/gravitational/teleport-plugins/docker/tmp/"
-	docker-compose stop teleport
-
 # Builds teleport-plugins:latest docker image that will run plugins in it.
 #
 .PHONY: plugins
