@@ -12,30 +12,19 @@ x-plugin: &plugin
     - certs:/mnt/shared/certs
 
 services:
-  # Teleport is a single-node Teleport cluster running all 3 services (Auth, Proxy, and Web).
-  # It assumes that teleport source code is in the same parent dir as teleport-plugins, i.e.
-  # ../../teleport.
-  # It uses image `teleport-ent:latest` and runs enterprise version of Teleport.
-  # Put the license.pem file in data/var/lib/teleport/ before starting.
-  #
   teleport:
-    image: teleport-ent:latest
-    env_file:
-      - teleport.env
+    image: quay.io/gravitational/teleport-ent:${TELEPORT_VERSION}
     container_name: teleport
-    command: |
-      ${CONTAINERHOME}/build/teleport start
-      -c ${PLUGINSHOME}/docker/teleport/teleport.yaml
-      ${TELEPORT_FLAGS}
     mem_limit: 300M
     ports:
       - "3080:3080"
       - "3023:3023"
       - "3025:3025"
+    entrypoint: "/bin/bash"
+    command: -c "sleep 1 && ${TELEPORT_FLAGS} /usr/bin/dumb-init teleport start -c /etc/teleport/teleport.yaml"
     volumes:
       - ./data/var/lib/teleport:/var/lib/teleport
-      - ../../teleport:/root/go/src/github.com/gravitational/teleport
-      - ..:/root/go/src/github.com/gravitational/teleport-plugins
+      - ./teleport:/etc/teleport
       - certs:/mnt/shared/certs
     networks:
       teleport-network:

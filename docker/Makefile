@@ -6,10 +6,6 @@
 SRCDIR ?= /go/src/github.com/gravitational/teleport-plugins
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 
-# Teleport Enterprise Binary release name. Can be any teleport
-# enterprise version, but has to be available on get.gravitational.com
-RELEASE ?= teleport-ent-v6.0.0-alpha.2-linux-amd64-bin
-
 RUNTIME ?= go1.15.5
 BBOX ?= quay.io/gravitational/teleport-buildbox:$(RUNTIME)
 
@@ -22,7 +18,6 @@ PLUGIN_FLAGS ?=
 # Which plugins to run on make up?
 PLUGINS ?= teleport-slack teleport-jira teleport-mattermost teleport-gitlab teleport-pagerduty teleport-webhooks
 
-#
 # Default target starts a teleport cluster with a single node,
 # provisions all the required configurations for users and roles,
 # and then starts all the plugins.
@@ -37,26 +32,6 @@ up: down
 .PHONY:down
 down:
 	docker-compose down
-
-# `make enter-teleport` gives you shell inside auth server
-# of cluster "one"
-#
-.PHONY:enter-teleport
-enter-teleport:
-	docker-compose run teleport /bin/bash
-
-# builds teleport:latest docker image
-# Using the ../../teleport's docker instructions
-# Note: This doesn't build Teleport itself. If you need to build teleport,
-# go to teleport repo root, and run make -c build.assets
-#
-.PHONY: teleport-ent
-teleport-ent:
-	docker build \
-		-t teleport-ent:latest \
-		-f ./teleport/Dockerfile \
-		--build-arg RELEASE=$(RELEASE) \
-		.
 
 # `make config` provisions configs for the `teleport cluster:
 # 1. Creates the role and user for tests
@@ -77,6 +52,7 @@ config:
 
 	docker-compose stop teleport
 
+# Like config, but exports certificates to local ./tmp directory
 .PHONY: foo-certs
 foo-certs:
 	docker-compose up -d teleport
