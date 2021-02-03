@@ -3,100 +3,18 @@
 This directory contains a set of tools to run Teleport, Teleport Plugins, and
 Teleport Terraform Provider locally in Docker.
 
-### TOC
+### Getting started
 
-- [Prerequisites](#prerequisites)
-- [Setup](#setup)
-- [Starting](#starting)
-- [Stopping](#stopping)
-- [Testing and Manual QA](#testing)
-- [Adding new plugins](#adding-a-new-plugin)
+The flow needs `teleport-ent` image to run Teleport Enterprise, and
+`teleport-slack` and other plugin images to run the plugins.
 
-### Prerequisites
+The provided `docker-compose.yml` uses
+[publicly available images on Quay for teleport enterprise](https://quay.io/repository/gravitational/teleport-ent?tag=latest&tab=tags).
 
-This guide assumes you'll run the QA on a machine that has the following:
-
-- GNU Make
-- Docker
-- git
-
-### Setup
-
-This flow builds on top of
-[Teleport's own Docker flow](https://github.com/gravitational/teleport/tree/master/docker).
-Teleport's own Docker image and services are managed with that flow.
-
-#### Overview
-
-You'll need to build Docker images for:
-
-- Teleport Enterprise
-- Teleport Plugins
-- Terraform (terraform commands will be executer from that VM).
-
-The flow is structured in the following way:
-
-- `Dockerfile` is responsible for _installing_ the software that we'll run.
-- `docker-compose.yml` is responsible for baseline configuration for the cluster
-  to work together, and for passing runtime params to the containers.
-- `make config-*` subcommands will help you setup specific configs for specific
-  plugins.
-
-#### Getting started with Teleport's Docker flow
-
-First prepare your teleport directory to work with the Docker flow. The flow
-assumes that you have `teleport` alongside `teleport-plugins`, and they have the
-same parent directory.
-
-#### Building `teleport:latest`
-
-Go to the teleport source directory and run `make -C docker build`. This should
-setup `teleport:latest` image with whatever current runtime is set in Teleport
-docker flow source.
-
-```shell
-cd ../teleport
-make -C docker build
-```
-
-**_Note_**: For example, it might use `go1.15.5` — make sure you use the same
-runtime version in the whole guide. You might need to adjust the runtime version
-in the makefile and docker compose file yourself.
-
-#### Building `teleport-ent:latest`
-
-Teleport Plugins require Enterprise version of Teleport to run correctly, and
-`teleport:latest` won't have it by default, so you'll need to build a special
-Docker image running the enterprise version. This flow calls this immage
-`teleport-ent:latest`, and it's build like this:
-
-```shell
-# In your main teleport-plugins/docker directory
-make teleport-ent
-```
-
-_*Note*: you can pass a `-e RELEASE=binary-teleport-ent-name-to-download` to
-docker build command if you want to — that would install a specified Teleport
-Enterprise version to the container. All the build does, actually, is it takes
-the OSS built `teleport:latest`, downloads the Teleport Enterprise edition, and
-installs it._
-
-#### Teleport Enterprise License
-
-_*Note*: this setup requires you to bring your own Teleport Enterprise License
-and put it to `data/var/lib/teleport/license.pam`. Enterprise features,
-specifically creating roles with tctl, and hence the whole flow, might not work
-otherwise._
+This flow also uses [teleport-buildbox](quay.io/gravitational/teleport-buildbox)
+to build plugins in that container.
 
 #### Building plugins and their docker images
-
-The flow uses the code in your `teleport-plugins` repo clone to build and run
-the plugins. To test different versions, redo this part for a different branch.
-
-To prepare the plugins, we'll build them all in the build box (the Docker image
-used to build Teleport itself), and then, we'll use a separate Docker image to
-run those plugins that we've just built, using the same architecture as we used
-for the buildbox.
 
 `make plugins` will first run the buildbox to build all the plugins, and then
 build their docker image.
@@ -104,6 +22,13 @@ build their docker image.
 ```bash
 make plugins
 ```
+
+#### Teleport Enterprise License
+
+_*Note*: this setup requires you to bring your own Teleport Enterprise License
+and put it to `data/var/lib/teleport/license.pam`. Enterprise features,
+specifically creating roles with tctl, and hence the whole flow, might not work
+otherwise._
 
 ### Starting
 
