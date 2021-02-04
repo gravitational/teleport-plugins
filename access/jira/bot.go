@@ -45,8 +45,6 @@ func init() {
 {{end}}
 {{if .RequestReason}}
 Request Reason: *{{.RequestReason}}*
-{{else}}
-No Request Reason provided.
 {{end}}
 Request ID: *{{.ID}}*
 `)

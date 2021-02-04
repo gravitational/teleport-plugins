@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/user"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -233,6 +234,24 @@ func (s *JiraSuite) TestIssueCreation(c *C) {
 	c.Assert(err, IsNil, Commentf("no new issue stored"))
 	c.Assert(issue.Properties[RequestIDPropertyKey], Equals, request.GetName())
 	c.Assert(pluginData.ID, Equals, issue.ID)
+}
+
+func (s *JiraSuite) TestIssueCreationWithRequestReason(c *C) {
+	s.startApp(c)
+	auth := s.teleport.Process.GetAuthServer()
+	req, err := services.NewAccessRequest(s.me.Username, "admin")
+	c.Assert(err, IsNil)
+	req.SetRequestReason("because of")
+	err = auth.CreateAccessRequest(s.ctx, req)
+	c.Assert(err, IsNil)
+	s.checkPluginData(c, req.GetName()) // when plugin data created, we are sure that request is completely served.
+
+	issue, err := s.fakeJira.CheckNewIssue(s.ctx)
+	c.Assert(err, IsNil)
+
+	if !strings.Contains(issue.Fields.Description, `Request Reason: *because of*`) {
+		c.Error("Issue description should contain request reason")
+	}
 }
 
 func (s *JiraSuite) TestApproval(c *C) {
