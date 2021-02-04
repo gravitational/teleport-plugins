@@ -35,9 +35,6 @@ import (
 	"github.com/gravitational/trace"
 )
 
-// MinServerVersion is the minimal teleport version the plugin supports.
-const MinServerVersion = "5.0.0"
-
 // State represents the state of an access request.
 type State = services.RequestState
 
@@ -404,17 +401,17 @@ func (w *watcher) Close() {
 
 // AssertServerVersion returns an error if server version in ping response is
 // less than minimum required version.
-func (p *Pong) AssertServerVersion() error {
+func (p Pong) AssertServerVersion(minVersion string) error {
 	actual, err := version.NewVersion(p.ServerVersion)
 	if err != nil {
 		return trace.Wrap(err)
 	}
-	required, err := version.NewVersion(MinServerVersion)
+	required, err := version.NewVersion(minVersion)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 	if actual.LessThan(required) {
-		return trace.Errorf("server version %s is less than %s", p.ServerVersion, MinServerVersion)
+		return trace.Errorf("server version %s is less than %s", p.ServerVersion, minVersion)
 	}
 	return nil
 }

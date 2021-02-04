@@ -14,6 +14,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// MinServerVersion is the minimal teleport version the plugin supports.
+const MinServerVersion = "4.3.0"
+
 // App contains global application state.
 type App struct {
 	conf Config
@@ -166,12 +169,12 @@ func (a *App) checkTeleportVersion(ctx context.Context) error {
 	pong, err := a.accessClient.Ping(ctx)
 	if err != nil {
 		if trace.IsNotImplemented(err) {
-			return trace.Wrap(err, "server version must be at least %s", access.MinServerVersion)
+			return trace.Wrap(err, "server version must be at least %s", MinServerVersion)
 		}
 		log.Error("Unable to get Teleport server version")
 		return trace.Wrap(err)
 	}
-	err = pong.AssertServerVersion()
+	err = pong.AssertServerVersion(MinServerVersion)
 
 	// Set cluster name from Teleport Auth server
 	a.webhook.clusterName = pong.ClusterName
