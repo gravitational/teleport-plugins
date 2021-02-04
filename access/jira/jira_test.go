@@ -249,7 +249,7 @@ func (s *JiraSuite) TestIssueCreationWithRequestReason(c *C) {
 	issue, err := s.fakeJira.CheckNewIssue(s.ctx)
 	c.Assert(err, IsNil)
 
-	if !strings.Contains(issue.Fields.Description, `Request Reason: *because of*`) {
+	if !strings.Contains(issue.Fields.Description, `Reason: *because of*`) {
 		c.Error("Issue description should contain request reason")
 	}
 }
