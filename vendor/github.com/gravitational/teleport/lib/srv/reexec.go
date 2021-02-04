@@ -42,9 +42,9 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// execCommand contains the payload to "teleport exec" which will be used to
+// ExecCommand contains the payload to "teleport exec" which will be used to
 // construct and execute a shell.
-type execCommand struct {
+type ExecCommand struct {
 	// Command is the command to execute. If an interactive session is being
 	// requested, will be empty.
 	Command string `json:"command"`
@@ -119,7 +119,7 @@ func RunCommand() (io.Writer, int, error) {
 	if err != nil {
 		return errorWriter, teleport.RemoteCommandFailure, trace.Wrap(err)
 	}
-	var c execCommand
+	var c ExecCommand
 	err = json.Unmarshal(b.Bytes(), &c)
 	if err != nil {
 		return errorWriter, teleport.RemoteCommandFailure, trace.Wrap(err)
@@ -234,7 +234,7 @@ func RunForward() (io.Writer, int, error) {
 	if err != nil {
 		return errorWriter, teleport.RemoteCommandFailure, trace.Wrap(err)
 	}
-	var c execCommand
+	var c ExecCommand
 	err = json.Unmarshal(b.Bytes(), &c)
 	if err != nil {
 		return errorWriter, teleport.RemoteCommandFailure, trace.Wrap(err)
@@ -327,7 +327,7 @@ func RunAndExit(commandType string) {
 
 // buildCommand constructs a command that will execute the users shell. This
 // function is run by Teleport while it's re-executing.
-func buildCommand(c *execCommand, tty *os.File, pty *os.File, pamEnvironment []string) (*exec.Cmd, error) {
+func buildCommand(c *ExecCommand, tty *os.File, pty *os.File, pamEnvironment []string) (*exec.Cmd, error) {
 	var cmd exec.Cmd
 
 	// Lookup the UID and GID for the user.

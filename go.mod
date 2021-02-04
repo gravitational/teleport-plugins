@@ -75,7 +75,7 @@ require (
 	github.com/gravitational/oxy v0.0.0-20200916204440-3eb06d921a1d // indirect
 	github.com/gravitational/reporting v0.0.0-20180907002058-ac7b85c75c4c // indirect
 	github.com/gravitational/roundtrip v1.0.0 // indirect
-	github.com/gravitational/teleport v1.3.3-0.20201106192002-9f42992be560
+	github.com/gravitational/teleport v1.3.3-0.20201231222847-46679fb34462
 	github.com/gravitational/trace v1.1.6
 	github.com/gravitational/ttlmap v0.0.0-20171116003245-91fd36b9004c // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
@@ -96,7 +96,6 @@ require (
 	github.com/jaytaylor/html2text v0.0.0-20200412013138-3577fbdbcff7 // indirect
 	github.com/jhump/protoreflect v1.6.0 // indirect
 	github.com/jmhodges/levigo v1.0.0 // indirect
-	github.com/jmoiron/sqlx v1.2.0 // indirect
 	github.com/johannesboyne/gofakes3 v0.0.0-20191228161223-9aee1c78a252 // indirect
 	github.com/jonboulle/clockwork v0.2.1
 	github.com/jpillora/backoff v1.0.0 // indirect
@@ -153,7 +152,6 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20190728182440-6a916e37a237 // indirect
 	github.com/rs/cors v1.7.0 // indirect
 	github.com/rudderlabs/analytics-go v3.2.1+incompatible // indirect
-	github.com/russellhaering/gosaml2 v0.0.0-20170515204909-8908227c114a // indirect
 	github.com/russellhaering/goxmldsig v1.1.0 // indirect
 	github.com/satori/go.uuid v1.1.1-0.20170321230731-5bf94b69c6b6 // indirect
 	github.com/segmentio/backo-go v0.0.0-20200129164019-23eae7c10bd3 // indirect
