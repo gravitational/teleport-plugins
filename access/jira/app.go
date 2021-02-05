@@ -228,7 +228,8 @@ func (a *App) onJIRAWebhook(ctx context.Context, webhook Webhook) error {
 		return trace.Wrap(err)
 	}
 	if req.State != access.StatePending {
-		return trace.Errorf("cannot process not pending request: %+v", req)
+		log.WithField("request_id", reqID).WithField("request_state", req.State).Warningf("Cannot process not pending request")
+		return nil
 	}
 
 	pluginData, err := a.getPluginData(ctx, reqID)
