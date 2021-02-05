@@ -301,7 +301,13 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	if err := a.bot.ResolveIncident(ctx, reqID, pluginData.PagerdutyData.ID, "expired"); err != nil {
+	incidentID := pluginData.PagerdutyData.ID
+	if incidentID == "" {
+		log.Warn("Plugin data is either missing or expired")
+		return nil
+	}
+
+	if err := a.bot.ResolveIncident(ctx, reqID, incidentID, "expired"); err != nil {
 		return trace.Wrap(err)
 	}
 

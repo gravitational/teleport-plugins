@@ -304,7 +304,8 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 
 	reqData, slackData := pluginData.RequestData, pluginData.SlackData
 	if len(slackData.ChannelID) == 0 || len(slackData.Timestamp) == 0 {
-		return trace.NotFound("plugin data was expired")
+		log.Warn("Plugin data is either missing or expired")
+		return nil
 	}
 
 	if err := a.bot.Expire(ctx, reqID, reqData, slackData); err != nil {

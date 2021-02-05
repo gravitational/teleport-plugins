@@ -385,7 +385,13 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	if err := a.bot.CloseIssue(ctx, pluginData.GitlabData.IID, "expired"); err != nil {
+	issueID := pluginData.GitlabData.IID
+	if issueID == 0 {
+		log.Warn("Plugin data is either missing or expired")
+		return nil
+	}
+
+	if err := a.bot.CloseIssue(ctx, issueID, "expired"); err != nil {
 		return trace.Wrap(err)
 	}
 

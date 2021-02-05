@@ -313,7 +313,13 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	if err := a.bot.ExpireIssue(ctx, reqID, pluginData.RequestData, pluginData.JiraData); err != nil {
+	reqData, jiraData := pluginData.RequestData, pluginData.JiraData
+	if jiraData.ID == "" {
+		log.Warn("Plugin data is either missing or expired")
+		return nil
+	}
+
+	if err := a.bot.ExpireIssue(ctx, reqID, reqData, jiraData); err != nil {
 		return trace.Wrap(err)
 	}
 

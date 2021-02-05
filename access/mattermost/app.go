@@ -305,7 +305,8 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 
 	reqData, mmData := pluginData.RequestData, pluginData.MattermostData
 	if mmData.PostID == "" {
-		return trace.NotFound("plugin data was expired")
+		log.Warn("Plugin data is either missing or expired")
+		return nil
 	}
 
 	if err := a.bot.ExpirePost(ctx, reqID, reqData, mmData); err != nil {
