@@ -1,17 +1,18 @@
 package main
 
 import (
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 	"github.com/pelletier/go-toml"
 )
 
 // Config stores the full configuration for the teleport-slack plugin to run.
 type Config struct {
-	Teleport utils.TeleportConfig `toml:"teleport"`
-	Webhook  WebhookConfig        `toml:"webhook"`
-	HTTP     utils.HTTPConfig     `toml:"http"`
-	Log      utils.LogConfig      `toml:"log"`
+	Teleport lib.TeleportConfig `toml:"teleport"`
+	Webhook  WebhookConfig      `toml:"webhook"`
+	HTTP     lib.HTTPConfig     `toml:"http"`
+	Log      logger.Config      `toml:"log"`
 }
 
 // WebhookConfig represents webhook configuration section, including the URL to use and notifyOnly mode

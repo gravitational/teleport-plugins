@@ -1,4 +1,4 @@
-package utils
+package logger
 
 import (
 	"context"
@@ -10,16 +10,18 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type LogConfig struct {
+type Config struct {
 	Output   string `toml:"output"`
 	Severity string `toml:"severity"`
 }
 
-type loggerKey struct{}
+type Fields = log.Fields
+
+type contextKey struct{}
 
 // InitLogger sets up logger for a typical daemon scenario until configuration
 // file is parsed
-func InitLogger() {
+func Init() {
 	log.SetFormatter(&trace.TextFormatter{
 		DisableTimestamp: true,
 		EnableColors:     trace.IsTerminal(os.Stderr),
@@ -28,7 +30,7 @@ func InitLogger() {
 	log.SetOutput(os.Stderr)
 }
 
-func SetupLogger(conf LogConfig) error {
+func Setup(conf Config) error {
 	switch conf.Output {
 	case "stderr", "error", "2":
 		log.SetOutput(os.Stderr)
@@ -59,24 +61,38 @@ func SetupLogger(conf LogConfig) error {
 	return nil
 }
 
-func WithLogger(ctx context.Context, logger *log.Entry) context.Context {
-	return context.WithValue(ctx, loggerKey{}, logger)
+func withLogger(ctx context.Context, logger log.FieldLogger) context.Context {
+	return context.WithValue(ctx, contextKey{}, logger)
 }
 
-func WithLogField(ctx context.Context, key string, value interface{}) (context.Context, *log.Entry) {
-	logger := GetLogger(ctx).WithField(key, value)
-	return context.WithValue(ctx, loggerKey{}, logger), logger
+func WithField(ctx context.Context, key string, value interface{}) (context.Context, log.FieldLogger) {
+	logger := Get(ctx).WithField(key, value)
+	return withLogger(ctx, logger), logger
 }
 
-func WithLogFields(ctx context.Context, logFields log.Fields) (context.Context, *log.Entry) {
-	logger := GetLogger(ctx).WithFields(logFields)
-	return context.WithValue(ctx, loggerKey{}, logger), logger
+func WithFields(ctx context.Context, logFields Fields) (context.Context, log.FieldLogger) {
+	logger := Get(ctx).WithFields(logFields)
+	return withLogger(ctx, logger), logger
 }
 
-func GetLogger(ctx context.Context) *log.Entry {
-	if logger, ok := ctx.Value(loggerKey{}).(*log.Entry); ok && logger != nil {
+func SetField(ctx context.Context, key string, value interface{}) context.Context {
+	ctx, _ = WithField(ctx, key, value)
+	return ctx
+}
+
+func SetFields(ctx context.Context, logFields Fields) context.Context {
+	ctx, _ = WithFields(ctx, logFields)
+	return ctx
+}
+
+func Get(ctx context.Context) log.FieldLogger {
+	if logger, ok := ctx.Value(contextKey{}).(log.FieldLogger); ok && logger != nil {
 		return logger
 	}
 
-	return log.NewEntry(log.StandardLogger())
+	return Standard()
+}
+
+func Standard() log.FieldLogger {
+	return log.StandardLogger()
 }

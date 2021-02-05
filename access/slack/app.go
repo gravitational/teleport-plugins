@@ -6,13 +6,12 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 
 	"github.com/gravitational/trace"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // MinServerVersion is the minimal teleport version the plugin supports.
@@ -25,22 +24,22 @@ type App struct {
 	accessClient access.Client
 	bot          *Bot
 	callbackSrv  *CallbackServer
-	mainJob      utils.ServiceJob
+	mainJob      lib.ServiceJob
 
-	*utils.Process
+	*lib.Process
 }
 
 // NewApp initializes a new teleport-slack app and returns it.
 func NewApp(conf Config) (*App, error) {
 	app := &App{conf: conf}
-	app.mainJob = utils.NewServiceJob(app.run)
+	app.mainJob = lib.NewServiceJob(app.run)
 	return app, nil
 }
 
 // Run initializes and runs a watcher and a callback server
 func (a *App) Run(ctx context.Context) error {
 	// Initialize the process.
-	a.Process = utils.NewProcess(ctx)
+	a.Process = lib.NewProcess(ctx)
 	a.SpawnCriticalJob(a.mainJob)
 	<-a.Process.Done()
 	return a.Err()
@@ -66,6 +65,7 @@ func (a *App) PublicURL() *url.URL {
 }
 
 func (a *App) run(ctx context.Context) (err error) {
+	log := logger.Get(ctx)
 	log.Infof("Starting Teleport Access Slackbot %s:%s", Version, Gitref)
 
 	a.bot = NewBot(a.conf.Slack)
@@ -137,6 +137,8 @@ func (a *App) run(ctx context.Context) (err error) {
 // checkTeleportVersion checks if the Teleport Auth server
 // is compatible with this plugin version.
 func (a *App) checkTeleportVersion(ctx context.Context) error {
+	log := logger.Get(ctx)
+
 	log.Debug("Checking Teleport server version")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -155,23 +157,29 @@ func (a *App) checkTeleportVersion(ctx context.Context) error {
 
 func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 	req, op := event.Request, event.Type
+	ctx, _ = logger.WithField(ctx, "request_id", req.ID)
+
 	switch op {
 	case access.OpPut:
+		ctx, log := logger.WithField(ctx, "request_op", "put")
+
 		if !req.State.IsPending() {
 			log.WithField("event", event).Warn("non-pending request event")
 			return nil
 		}
 
 		if err := a.onPendingRequest(ctx, req); err != nil {
-			log := log.WithField("request_id", req.ID).WithError(err)
+			log := log.WithError(err)
 			log.Errorf("Failed to process pending request")
 			log.Debugf("%v", trace.DebugReport(err))
 			return err
 		}
 		return nil
 	case access.OpDelete:
+		ctx, log := logger.WithField(ctx, "request_op", "delete")
+
 		if err := a.onDeletedRequest(ctx, req); err != nil {
-			log := log.WithField("request_id", req.ID).WithError(err)
+			log := log.WithError(err)
 			log.Errorf("Failed to process deleted request")
 			log.Debugf("%v", trace.DebugReport(err))
 			return err
@@ -184,10 +192,8 @@ func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 
 // OnSlackCallback processes Slack actions and updates original Slack message with a new status
 func (a *App) onSlackCallback(ctx context.Context, cb Callback) error {
-	log := log.WithField("slack_http_id", cb.HTTPRequestID)
-
 	if len(cb.ActionCallback.BlockActions) != 1 {
-		log.WithField("slack_block_actions", cb.ActionCallback.BlockActions).Warn("Received more than one Slack action")
+		logger.Get(ctx).WithField("slack_block_actions", cb.ActionCallback.BlockActions).Warn("Received more than one Slack action")
 		return trace.Errorf("expected exactly one block action")
 	}
 
@@ -197,6 +203,7 @@ func (a *App) onSlackCallback(ctx context.Context, cb Callback) error {
 
 	var slackStatus string
 
+	ctx, _ = logger.WithField(ctx, "request_id", reqID)
 	req, err := a.accessClient.GetRequest(ctx, reqID)
 	var reqData RequestData
 
@@ -217,22 +224,10 @@ func (a *App) onSlackCallback(ctx context.Context, cb Callback) error {
 			return trace.Errorf("cannot process not pending request: %+v", req)
 		}
 
-		logger := log.WithFields(logFields{
+		userEmail := a.tryFetchEmail(logger.SetFields(ctx, logger.Fields{
 			"slack_user":    cb.User.Name,
 			"slack_channel": cb.Channel.Name,
-		})
-
-		userEmail, err := a.bot.GetUserEmail(ctx, cb.User.ID)
-		if err != nil {
-			logger.WithError(err).Warning("Failed to fetch slack user email")
-		}
-
-		logger = logger.WithFields(logFields{
-			"slack_user_email": userEmail,
-			"request_id":       req.ID,
-			"request_user":     req.User,
-			"request_roles":    req.Roles,
-		})
+		}), cb.User.ID)
 
 		var (
 			reqState   access.State
@@ -255,33 +250,46 @@ func (a *App) onSlackCallback(ctx context.Context, cb Callback) error {
 		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState, userEmail); err != nil {
 			return trace.Wrap(err)
 		}
-		logger.Infof("Slack user %s the request", resolution)
+		logger.Get(ctx).WithFields(
+			logger.Fields{
+				"slack_user_email": userEmail,
+				"request_user":     req.User,
+				"request_roles":    req.Roles,
+			},
+		).Infof("Slack user %s the request", resolution)
 
 		// Simply fill reqData from the request itself.
 		reqData = RequestData{User: req.User, Roles: req.Roles}
 	}
 
 	a.Spawn(func(ctx context.Context) error {
+		ctx, log := logger.WithField(ctx, "request_id", req.ID)
 		if err := a.bot.Respond(ctx, req.ID, reqData, slackStatus, cb.ResponseURL); err != nil {
-			log.WithError(err).WithField("request_id", req.ID).Error("Cannot update Slack message")
+			log.WithError(err).Error("Cannot update Slack message")
 			return err
 		}
-		log.WithField("request_id", req.ID).Info("Successfully updated Slack message")
+		log.Info("Successfully updated Slack message")
 		return nil
 	})
 
 	return nil
 }
 
+func (a *App) tryFetchEmail(ctx context.Context, userID string) string {
+	userEmail, err := a.bot.GetUserEmail(ctx, userID)
+	if err != nil {
+		logger.Get(ctx).WithError(err).Warning("Failed to fetch slack user email")
+	}
+	return userEmail
+}
+
 func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 	reqData := RequestData{User: req.User, Roles: req.Roles}
 	slackData, err := a.bot.Post(ctx, req.ID, reqData)
-
 	if err != nil {
 		return trace.Wrap(err)
 	}
-
-	log.WithFields(logFields{
+	logger.Get(ctx).WithFields(logger.Fields{
 		"slack_channel":   slackData.ChannelID,
 		"slack_timestamp": slackData.Timestamp,
 	}).Info("Successfully posted to Slack")
@@ -292,7 +300,9 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 }
 
 func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
+	log := logger.Get(ctx)
 	reqID := req.ID // This is the only available field
+
 	pluginData, err := a.getPluginData(ctx, reqID)
 	if err != nil {
 		if trace.IsNotFound(err) {
@@ -312,7 +322,7 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	log.WithField("request_id", reqID).Info("Successfully marked request as expired")
+	log.Info("Successfully marked request as expired")
 
 	return nil
 }

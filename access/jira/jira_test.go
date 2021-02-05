@@ -19,7 +19,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gravitational/teleport-plugins/access/integration"
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/backend"
 	"github.com/gravitational/teleport/lib/events"
@@ -341,7 +341,7 @@ func (s *JiraSuite) TestRace(c *C) {
 	defer watcher.Close()
 	c.Assert((<-watcher.Events()).Type, Equals, backend.OpInit)
 
-	process := utils.NewProcess(s.ctx)
+	process := lib.NewProcess(s.ctx)
 	for i := 0; i < s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
 			_, err := s.teleport.CreateAccessRequest(ctx, s.me.Username, "admin")
@@ -367,7 +367,7 @@ func (s *JiraSuite) TestRace(c *C) {
 				log.Infof("Trying to approve issue %q", issue.Key)
 				resp, err := s.postWebhook(ctx, issue.ID)
 				if err != nil {
-					if utils.IsDeadline(err) {
+					if lib.IsDeadline(err) {
 						return setRaceErr(lastErr)
 					}
 					return setRaceErr(trace.Wrap(err))

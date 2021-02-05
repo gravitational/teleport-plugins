@@ -29,7 +29,7 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/pborman/uuid"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport/lib/auth/proto"
 	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/trace"
@@ -162,7 +162,7 @@ func NewClient(ctx context.Context, plugin string, addr string, tc *tls.Config, 
 	conn, err := grpc.DialContext(ctx, addr, dialOptions...)
 	if err != nil {
 		cancel()
-		return nil, utils.FromGRPC(err)
+		return nil, lib.FromGRPC(err)
 	}
 	authClient := proto.NewAuthServiceClient(conn)
 	return &clt{
@@ -181,7 +181,7 @@ func (c *clt) WithCallOptions(options ...CallOption) Client {
 func (c *clt) Ping(ctx context.Context) (Pong, error) {
 	rsp, err := c.clt.Ping(ctx, &proto.PingRequest{}, c.callOpts...)
 	if err != nil {
-		return Pong{}, utils.FromGRPC(err)
+		return Pong{}, lib.FromGRPC(err)
 	}
 	return Pong{
 		rsp.ServerVersion,
@@ -196,7 +196,7 @@ func (c *clt) WatchRequests(ctx context.Context, fltr Filter) Watcher {
 func (c *clt) GetRequests(ctx context.Context, fltr Filter) ([]Request, error) {
 	rsp, err := c.clt.GetAccessRequests(ctx, &fltr, c.callOpts...)
 	if err != nil {
-		return nil, utils.FromGRPC(err)
+		return nil, lib.FromGRPC(err)
 	}
 	var reqs []Request
 	for _, req := range rsp.AccessRequests {
@@ -241,12 +241,12 @@ func (c *clt) SetRequestState(ctx context.Context, reqID string, state State, de
 		State:     state,
 		Delegator: fmt.Sprintf("%s:%s", c.plugin, delegator),
 	})
-	return utils.FromGRPC(err)
+	return lib.FromGRPC(err)
 }
 
 func (c *clt) SetRequestStateExt(ctx context.Context, params RequestStateSetter) error {
 	_, err := c.clt.SetAccessRequestState(ctx, &params)
-	return utils.FromGRPC(err)
+	return lib.FromGRPC(err)
 }
 
 func (c *clt) GetPluginData(ctx context.Context, reqID string) (PluginDataMap, error) {
@@ -256,7 +256,7 @@ func (c *clt) GetPluginData(ctx context.Context, reqID string) (PluginDataMap, e
 		Plugin:   c.plugin,
 	})
 	if err != nil {
-		return nil, utils.FromGRPC(err)
+		return nil, lib.FromGRPC(err)
 	}
 	pluginDatas := dataSeq.GetPluginData()
 	if len(pluginDatas) == 0 {
@@ -279,7 +279,7 @@ func (c *clt) UpdatePluginData(ctx context.Context, reqID string, set PluginData
 		Set:      set,
 		Expect:   expect,
 	})
-	return utils.FromGRPC(err)
+	return lib.FromGRPC(err)
 }
 
 func (c *clt) Close() {
@@ -320,14 +320,14 @@ func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, callOpts
 		},
 	}, callOpts...)
 	if err != nil {
-		w.setError(utils.FromGRPC(err))
+		w.setError(lib.FromGRPC(err))
 		return
 	}
 
 	for {
 		event, err := stream.Recv()
 		if err != nil {
-			w.setError(utils.FromGRPC(err))
+			w.setError(lib.FromGRPC(err))
 			return
 		}
 		var req Request

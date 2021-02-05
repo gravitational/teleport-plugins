@@ -6,13 +6,12 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 
 	"github.com/gravitational/trace"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // MinServerVersion is the minimal teleport version the plugin supports.
@@ -26,21 +25,21 @@ type App struct {
 	accessClient access.Client
 	bot          *Bot
 	webhookSrv   *WebhookServer
-	mainJob      utils.ServiceJob
+	mainJob      lib.ServiceJob
 
-	*utils.Process
+	*lib.Process
 }
 
 func NewApp(conf Config) (*App, error) {
 	app := &App{conf: conf}
-	app.mainJob = utils.NewServiceJob(app.run)
+	app.mainJob = lib.NewServiceJob(app.run)
 	return app, nil
 }
 
 // Run initializes and runs a watcher and a callback server
 func (a *App) Run(ctx context.Context) error {
 	// Initialize the process.
-	a.Process = utils.NewProcess(ctx)
+	a.Process = lib.NewProcess(ctx)
 	a.SpawnCriticalJob(a.mainJob)
 	<-a.Process.Done()
 	return trace.Wrap(a.mainJob.Err())
@@ -64,6 +63,7 @@ func (a *App) PublicURL() *url.URL {
 }
 
 func (a *App) run(ctx context.Context) (err error) {
+	log := logger.Get(ctx)
 	log.Infof("Starting Teleport Access GitLab integration %s:%s", Version, Gitref)
 
 	a.webhookSrv, err = NewWebhookServer(
@@ -164,6 +164,7 @@ func (a *App) run(ctx context.Context) (err error) {
 }
 
 func (a *App) checkTeleportVersion(ctx context.Context) error {
+	log := logger.Get(ctx)
 	log.Debug("Checking Teleport server version")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -208,23 +209,29 @@ func (a *App) setup(ctx context.Context) error {
 
 func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 	req, op := event.Request, event.Type
+	ctx, _ = logger.WithField(ctx, "request_id", req.ID)
+
 	switch op {
 	case access.OpPut:
+		ctx, log := logger.WithField(ctx, "request_op", "put")
+
 		if !req.State.IsPending() {
 			log.WithField("event", event).Warn("non-pending request event")
 			return nil
 		}
 
 		if err := a.onPendingRequest(ctx, req); err != nil {
-			log := log.WithField("request_id", req.ID).WithError(err)
+			log := log.WithError(err)
 			log.Errorf("Failed to process pending request")
 			log.Debugf("%v", trace.DebugReport(err))
 			return err
 		}
 		return nil
 	case access.OpDelete:
+		ctx, log := logger.WithField(ctx, "request_op", "delete")
+
 		if err := a.onDeletedRequest(ctx, req); err != nil {
-			log := log.WithField("request_id", req.ID).WithError(err)
+			log := log.WithError(err)
 			log.Errorf("Failed to process deleted request")
 			log.Debugf("%v", trace.DebugReport(err))
 			return err
@@ -236,9 +243,8 @@ func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 }
 
 func (a *App) onWebhookEvent(ctx context.Context, hook Webhook) error {
-	log := log.WithFields(logFields{
-		"gitlab_http_id": hook.HTTPID,
-	})
+	log := logger.Get(ctx)
+
 	// Not an issue event
 	event, ok := hook.Event.(IssueEvent)
 	if !ok {
@@ -272,13 +278,16 @@ func (a *App) onWebhookEvent(ctx context.Context, hook Webhook) error {
 		reqID = issues.GetRequestID(issueID)
 		return nil
 	})
+
+	ctx, log = logger.WithField(ctx, "request_id", reqID)
+
 	if trace.Unwrap(err) == ErrNoBucket || reqID == "" {
 		log.WithError(err).Warning("Failed to find an issue in database")
 		if reqID = event.ObjectAttributes.ParseDescriptionRequestID(); reqID == "" {
 			// Ignore the issue, probably it wasn't created by us at all.
 			return nil
 		}
-		log.WithField("request_id", reqID).Warning("Request ID was parsed from issue description")
+		log.Warning("Request ID was parsed from issue description")
 	} else if err != nil {
 		return trace.Wrap(err)
 	}
@@ -305,14 +314,14 @@ func (a *App) onWebhookEvent(ctx context.Context, hook Webhook) error {
 	}
 
 	if pluginData.GitlabData.ID != issueID {
-		log.WithFields(logFields{
+		log.WithFields(logger.Fields{
 			"gitlab_issue_id":      issueID,
 			"plugin_data_issue_id": pluginData.GitlabData.ID,
 		}).Debug("plugin_data.issue_id does not match event.issue_id")
 		return trace.Errorf("issue_id from request's plugin_data does not match")
 	}
 
-	log = log.WithFields(logFields{
+	log = log.WithFields(logger.Fields{
 		"gitlab_project_id":    event.ObjectAttributes.ProjectID,
 		"gitlab_issue_iid":     event.ObjectAttributes.IID,
 		"gitlab_user_name":     event.User.Name,
@@ -350,6 +359,7 @@ func (a *App) onWebhookEvent(ctx context.Context, hook Webhook) error {
 
 func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 	var err error
+
 	reqData := RequestData{User: req.User, Roles: req.Roles, Created: req.Created}
 
 	gitlabData, err := a.bot.CreateIssue(ctx, req.ID, reqData)
@@ -357,8 +367,7 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	log.WithFields(logFields{
-		"request_id":        req.ID,
+	logger.Get(ctx).WithFields(logger.Fields{
 		"gitlab_project_id": gitlabData.ProjectID,
 		"gitlab_issue_iid":  gitlabData.IID,
 	}).Info("GitLab issue created")
@@ -375,7 +384,9 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 }
 
 func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
+	log := logger.Get(ctx)
 	reqID := req.ID // This is the only available field
+
 	pluginData, err := a.getPluginData(ctx, reqID)
 	if err != nil {
 		if trace.IsNotFound(err) {
@@ -395,7 +406,7 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	log.WithField("request_id", reqID).Info("Successfully marked request as expired")
+	log.Info("Successfully marked request as expired")
 
 	return nil
 }

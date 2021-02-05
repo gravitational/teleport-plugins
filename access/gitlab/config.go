@@ -7,19 +7,20 @@ import (
 	"os"
 	"path"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 	"github.com/pelletier/go-toml"
 )
 
 type Config struct {
-	Teleport utils.TeleportConfig `toml:"teleport"`
+	Teleport lib.TeleportConfig `toml:"teleport"`
 	DB       struct {
 		Path string `toml:"path"`
 	} `toml:"db"`
-	Gitlab GitlabConfig     `toml:"gitlab"`
-	HTTP   utils.HTTPConfig `toml:"http"`
-	Log    utils.LogConfig  `toml:"log"`
+	Gitlab GitlabConfig   `toml:"gitlab"`
+	HTTP   lib.HTTPConfig `toml:"http"`
+	Log    logger.Config  `toml:"log"`
 }
 
 type GitlabConfig struct {

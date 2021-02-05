@@ -22,12 +22,11 @@ import (
 	"os"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 
 	"github.com/gravitational/kingpin"
 	"github.com/gravitational/trace"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -36,12 +35,12 @@ const (
 	// ActionDeny uniquely identifies the deny button in events.
 	ActionDeny = "deny_request"
 	// DefaultDir is the directory to be used in various configurations.
-	// It's used across the files in main package, and in utils.
+	// It's used across the files in main package, and in lib.
 	DefaultDir = "/var/lib/teleport/plugins/slack"
 )
 
 func main() {
-	utils.InitLogger()
+	logger.Init()
 	app := kingpin.New("teleport-slack", "Teleport plugin for access requests approval via Slack.")
 
 	app.Command("configure", "Prints an example .TOML configuration file.")
@@ -61,19 +60,19 @@ func main() {
 
 	selectedCmd, err := app.Parse(os.Args[1:])
 	if err != nil {
-		utils.Bail(err)
+		lib.Bail(err)
 	}
 
 	switch selectedCmd {
 	case "configure":
 		fmt.Print(exampleConfig)
 	case "version":
-		utils.PrintVersion(app.Name, Version, Gitref)
+		lib.PrintVersion(app.Name, Version, Gitref)
 	case "start":
 		if err := run(*path, *insecure, *debug); err != nil {
-			utils.Bail(err)
+			lib.Bail(err)
 		} else {
-			log.Info("Successfully shut down")
+			logger.Standard().Info("Successfully shut down")
 		}
 	}
 }
@@ -84,13 +83,15 @@ func run(configPath string, insecure bool, debug bool) error {
 		return trace.Wrap(err)
 	}
 
-	err = utils.SetupLogger(conf.Log)
-	if err != nil {
+	logConfig := conf.Log
+	if debug {
+		logConfig.Severity = "debug"
+	}
+	if err = logger.Setup(logConfig); err != nil {
 		return err
 	}
 	if debug {
-		log.SetLevel(log.DebugLevel)
-		log.Debugf("DEBUG logging enabled")
+		logger.Standard().Debugf("DEBUG logging enabled")
 	}
 
 	conf.HTTP.Insecure = insecure
@@ -99,7 +100,7 @@ func run(configPath string, insecure bool, debug bool) error {
 		return trace.Wrap(err)
 	}
 
-	go utils.ServeSignals(app, 15*time.Second)
+	go lib.ServeSignals(app, 15*time.Second)
 
 	return trace.Wrap(
 		app.Run(context.Background()),

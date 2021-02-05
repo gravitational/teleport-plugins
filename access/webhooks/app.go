@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 
@@ -24,22 +24,22 @@ type App struct {
 	accessClient access.Client
 	webhook      *WebhookClient
 	callbackSrv  *CallbackServer
-	mainJob      utils.ServiceJob
+	mainJob      lib.ServiceJob
 
-	*utils.Process
+	*lib.Process
 }
 
 // NewApp initializes a new teleport-webhooks app and returns it.
 func NewApp(conf Config) (*App, error) {
 	app := &App{conf: conf}
-	app.mainJob = utils.NewServiceJob(app.run)
+	app.mainJob = lib.NewServiceJob(app.run)
 	return app, nil
 }
 
 // Run initializes and runs a watcher and a callback server
 func (a *App) Run(ctx context.Context) error {
 	// Initialize the process.
-	a.Process = utils.NewProcess(ctx)
+	a.Process = lib.NewProcess(ctx)
 	a.SpawnCriticalJob(a.mainJob)
 	<-a.Process.Done()
 	return trace.Wrap(a.mainJob.Err())
@@ -53,7 +53,7 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 // initCallbackServer initializes the incoming webhooks (callbacks) server
 // and returns it's services job, status, and, optionally, an error.
 // It's invoked in `run`, only if `a.conf.Webhook.NotifyOnly` is false.
-func (a *App) initCallbackServer(ctx context.Context) (utils.ServiceJob, bool, error) {
+func (a *App) initCallbackServer(ctx context.Context) (lib.ServiceJob, bool, error) {
 	// Make the instance of callback server first, make sure the
 	// config is OK
 	var err error
@@ -84,7 +84,7 @@ func (a *App) run(ctx context.Context) (err error) {
 
 	// Initialize the callback server if we need to:
 	// Only init the callback server if NOT running in notifyOnly mode
-	var httpJob utils.ServiceJob
+	var httpJob lib.ServiceJob
 	httpOk := true
 	if !a.conf.Webhook.NotifyOnly {
 		httpJob, httpOk, err = a.initCallbackServer(ctx)

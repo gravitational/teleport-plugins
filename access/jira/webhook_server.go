@@ -10,10 +10,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
-	log "github.com/sirupsen/logrus"
 )
 
 type WebhookIssue struct {
@@ -23,8 +23,6 @@ type WebhookIssue struct {
 }
 
 type Webhook struct {
-	HTTPRequestID string
-
 	Timestamp          int    `json:"timestamp"`
 	WebhookEvent       string `json:"webhookEvent"`
 	IssueEventTypeName string `json:"issue_event_type_name"`
@@ -42,13 +40,13 @@ type WebhookFunc func(ctx context.Context, webhook Webhook) error
 // WebhookServer is a wrapper around http.Server that processes JIRA webhook events.
 // It verifies incoming requests and calls onWebhook for valid ones
 type WebhookServer struct {
-	http      *utils.HTTP
+	http      *lib.HTTP
 	onWebhook WebhookFunc
 	counter   uint64
 }
 
-func NewWebhookServer(conf utils.HTTPConfig, onWebhook WebhookFunc) (*WebhookServer, error) {
-	httpSrv, err := utils.NewHTTP(conf)
+func NewWebhookServer(conf lib.HTTPConfig, onWebhook WebhookFunc) (*WebhookServer, error) {
+	httpSrv, err := lib.NewHTTP(conf)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -60,7 +58,7 @@ func NewWebhookServer(conf utils.HTTPConfig, onWebhook WebhookFunc) (*WebhookSer
 	return srv, nil
 }
 
-func (s *WebhookServer) ServiceJob() utils.ServiceJob {
+func (s *WebhookServer) ServiceJob() lib.ServiceJob {
 	return s.http.ServiceJob()
 }
 
@@ -77,10 +75,9 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 	defer cancel()
 
 	httpRequestID := fmt.Sprintf("%v-%v", time.Now().Unix(), atomic.AddUint64(&s.counter, 1))
-	log := log.WithField("jira_http_id", httpRequestID)
+	ctx, log := logger.WithField(ctx, "jira_http_id", httpRequestID)
 
-	webhook := Webhook{HTTPRequestID: httpRequestID}
-
+	var webhook Webhook
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.WithError(err).Error("Failed to read webhook payload")
@@ -98,7 +95,7 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 		log.Debugf("%v", trace.DebugReport(err))
 		var code int
 		switch {
-		case utils.IsCanceled(err) || utils.IsDeadline(err):
+		case lib.IsCanceled(err) || lib.IsDeadline(err):
 			code = http.StatusServiceUnavailable
 		default:
 			code = http.StatusInternalServerError

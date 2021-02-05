@@ -8,13 +8,12 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 
 	"github.com/gravitational/trace"
-
-	log "github.com/sirupsen/logrus"
 )
 
 // MinServerVersion is the minimal teleport version the plugin supports.
@@ -27,14 +26,14 @@ type App struct {
 	accessClient access.Client
 	bot          *Bot
 	webhookSrv   *WebhookServer
-	mainJob      utils.ServiceJob
+	mainJob      lib.ServiceJob
 
-	*utils.Process
+	*lib.Process
 }
 
 func NewApp(conf Config) (*App, error) {
 	app := &App{conf: conf}
-	app.mainJob = utils.NewServiceJob(app.run)
+	app.mainJob = lib.NewServiceJob(app.run)
 	return app, nil
 }
 
@@ -43,7 +42,7 @@ var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-
 // Run initializes and runs a watcher and a callback server
 func (a *App) Run(ctx context.Context) error {
 	// Initialize the process.
-	a.Process = utils.NewProcess(ctx)
+	a.Process = lib.NewProcess(ctx)
 	a.SpawnCriticalJob(a.mainJob)
 	<-a.Process.Done()
 	return a.Err()
@@ -68,6 +67,8 @@ func (a *App) PublicURL() *url.URL {
 
 func (a *App) run(ctx context.Context) error {
 	var err error
+
+	log := logger.Get(ctx)
 	log.Infof("Starting Teleport Access PagerDuty extension %s:%s", Version, Gitref)
 
 	a.webhookSrv, err = NewWebhookServer(a.conf.HTTP, a.onPagerdutyAction)
@@ -151,6 +152,7 @@ func (a *App) run(ctx context.Context) error {
 }
 
 func (a *App) checkTeleportVersion(ctx context.Context) error {
+	log := logger.Get(ctx)
 	log.Debug("Checking Teleport server version")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -169,23 +171,29 @@ func (a *App) checkTeleportVersion(ctx context.Context) error {
 
 func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 	req, op := event.Request, event.Type
+	ctx, _ = logger.WithField(ctx, "request_id", req.ID)
+
 	switch op {
 	case access.OpPut:
+		ctx, log := logger.WithField(ctx, "request_op", "put")
+
 		if !req.State.IsPending() {
 			log.WithField("event", event).Warn("non-pending request event")
 			return nil
 		}
 
 		if err := a.onPendingRequest(ctx, req); err != nil {
-			log := log.WithField("request_id", req.ID).WithError(err)
+			log := log.WithError(err)
 			log.Errorf("Failed to process pending request")
 			log.Debugf("%v", trace.DebugReport(err))
 			return err
 		}
 		return nil
 	case access.OpDelete:
+		ctx, log := logger.WithField(ctx, "request_op", "delete")
+
 		if err := a.onDeletedRequest(ctx, req); err != nil {
-			log := log.WithField("request_id", req.ID).WithError(err)
+			log := log.WithError(err)
 			log.Errorf("Failed to process deleted request")
 			log.Debugf("%v", trace.DebugReport(err))
 			return err
@@ -197,16 +205,14 @@ func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 }
 
 func (a *App) onPagerdutyAction(ctx context.Context, action WebhookAction) error {
-	log := utils.GetLogger(ctx)
-
 	keyParts := strings.Split(action.IncidentKey, "/")
 	if len(keyParts) != 2 || keyParts[0] != pdIncidentKeyPrefix {
-		log.Warningf("Got unsupported incident key %q, ignoring", action.IncidentKey)
+		logger.Get(ctx).Warningf("Got unsupported incident key %q, ignoring", action.IncidentKey)
 		return nil
 	}
 
 	reqID := keyParts[1]
-	ctx, log = utils.WithLogField(ctx, "request_id", reqID)
+	ctx, log := logger.WithField(ctx, "request_id", reqID)
 
 	req, err := a.accessClient.GetRequest(ctx, reqID)
 	if err != nil {
@@ -220,12 +226,12 @@ func (a *App) onPagerdutyAction(ctx context.Context, action WebhookAction) error
 		return trace.Errorf("cannot process not pending request: %+v", req)
 	}
 
+	ctx, log = logger.WithField(ctx, "pd_incident_id", action.IncidentID)
+
 	pluginData, err := a.getPluginData(ctx, reqID)
 	if err != nil {
 		return trace.Wrap(err)
 	}
-
-	ctx, log = utils.WithLogField(ctx, "pd_incident_id", action.IncidentID)
 
 	if pluginData.PagerdutyData.ID == "" {
 		return trace.Errorf("plugin data is empty")
@@ -247,7 +253,7 @@ func (a *App) onPagerdutyAction(ctx context.Context, action WebhookAction) error
 		}
 	}
 
-	ctx, _ = utils.WithLogFields(ctx, logFields{
+	ctx, _ = logger.WithFields(ctx, logger.Fields{
 		"pd_user_email": userEmail,
 		"pd_user_name":  userName,
 	})
@@ -263,8 +269,6 @@ func (a *App) onPagerdutyAction(ctx context.Context, action WebhookAction) error
 }
 
 func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
-	ctx, _ = utils.WithLogField(ctx, "request_id", req.ID)
-
 	reqData := RequestData{User: req.User, Roles: req.Roles, Created: req.Created}
 
 	pdData, err := a.bot.CreateIncident(ctx, req.ID, reqData)
@@ -272,7 +276,7 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	ctx, log := utils.WithLogField(ctx, "pd_incident_id", pdData.ID)
+	ctx, log := logger.WithField(ctx, "pd_incident_id", pdData.ID)
 
 	log.Info("PagerDuty incident created")
 
@@ -289,8 +293,8 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 }
 
 func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
+	log := logger.Get(ctx)
 	reqID := req.ID // This is the only available field
-	ctx, log := utils.WithLogField(ctx, "request_id", reqID)
 
 	pluginData, err := a.getPluginData(ctx, reqID)
 	if err != nil {
@@ -317,7 +321,7 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 }
 
 func (a *App) setRequestState(ctx context.Context, reqID, incidentID, userEmail string, state access.State) error {
-	log := utils.GetLogger(ctx)
+	log := logger.Get(ctx)
 	var resolution string
 
 	switch state {
@@ -343,8 +347,10 @@ func (a *App) setRequestState(ctx context.Context, reqID, incidentID, userEmail 
 }
 
 func (a *App) tryAutoApproveRequest(ctx context.Context, req access.Request, incidentID string) error {
+	log := logger.Get(ctx)
+
 	if !emailRegex.MatchString(req.User) {
-		utils.GetLogger(ctx).Warningf("Failed to auto-approve the request: %q does not look like a valid email", req.User)
+		logger.Get(ctx).Warningf("Failed to auto-approve the request: %q does not look like a valid email", req.User)
 		return nil
 	}
 
@@ -357,7 +363,7 @@ func (a *App) tryAutoApproveRequest(ctx context.Context, req access.Request, inc
 		return err
 	}
 
-	ctx, log := utils.WithLogFields(ctx, logFields{
+	ctx, log = logger.WithFields(ctx, logger.Fields{
 		"pd_user_email": user.Email,
 		"pd_user_name":  user.Name,
 	})

@@ -1,4 +1,4 @@
-package utils
+package lib
 
 // TeleportConfig stores config options for where
 // the Teleport's Auth server is listening, and what certificates to

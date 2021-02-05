@@ -11,7 +11,8 @@ import (
 	"github.com/go-resty/resty/v2"
 	"github.com/google/go-querystring/query"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 )
 
@@ -94,7 +95,7 @@ func (b *Bot) HealthCheck(ctx context.Context) error {
 	resp, err := b.client.NewRequest().
 		SetContext(ctx).
 		SetResult(&result).
-		Get(utils.BuildURLPath("services", b.serviceID))
+		Get(lib.BuildURLPath("services", b.serviceID))
 	// We have to check `resp.IsError()` before the `err != nil` check because we set `err` in OnAfterResponse middleware.
 	if resp != nil && resp.IsError() {
 		// Check Content-Type first to ensure that this is actually looks like an API endpoint.
@@ -110,7 +111,7 @@ func (b *Bot) HealthCheck(ctx context.Context) error {
 		return trace.Wrap(err, "failed to fetch PagerDuty service info: %v", err)
 	}
 	if result.Service.ID != b.serviceID {
-		utils.GetLogger(ctx).Debugf("Got wrong response from services API: %s", resp)
+		logger.Get(ctx).Debugf("Got wrong response from services API: %s", resp)
 		return trace.Errorf("got wrong response from services API")
 	}
 
@@ -233,7 +234,7 @@ func (b *Bot) setupCustomAction(ctx context.Context, extensionID, schemaID, acti
 	_, err := b.client.NewRequest().
 		SetContext(ctx).
 		SetBody(&ExtensionBodyWrap{body}).
-		Put(utils.BuildURLPath("extensions", extensionID))
+		Put(lib.BuildURLPath("extensions", extensionID))
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -282,7 +283,7 @@ func (b *Bot) ResolveIncident(ctx context.Context, reqID, incidentID, resolution
 		SetContext(ctx).
 		SetHeader("From", b.from).
 		SetBody(&IncidentNoteBodyWrap{noteBody}).
-		Post(utils.BuildURLPath("incidents", incidentID, "notes"))
+		Post(lib.BuildURLPath("incidents", incidentID, "notes"))
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -295,7 +296,7 @@ func (b *Bot) ResolveIncident(ctx context.Context, reqID, incidentID, resolution
 		SetContext(ctx).
 		SetHeader("From", b.from).
 		SetBody(&IncidentBodyWrap{incidentBody}).
-		Put(utils.BuildURLPath("incidents", incidentID))
+		Put(lib.BuildURLPath("incidents", incidentID))
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -309,7 +310,7 @@ func (b *Bot) GetUserInfo(ctx context.Context, userID string) (User, error) {
 	_, err := b.client.NewRequest().
 		SetContext(ctx).
 		SetResult(&result).
-		Get(utils.BuildURLPath("users", userID))
+		Get(lib.BuildURLPath("users", userID))
 	if err != nil {
 		return User{}, trace.Wrap(err)
 	}
@@ -345,7 +346,7 @@ func (b *Bot) GetUserByEmail(ctx context.Context, userEmail string) (User, error
 	}
 
 	if len(result.Users) > 0 && result.More {
-		utils.GetLogger(ctx).Warningf("PagerDuty returned too many results when querying by email %q", userEmail)
+		logger.Get(ctx).Warningf("PagerDuty returned too many results when querying by email %q", userEmail)
 	}
 
 	return User{}, trace.NotFound("failed to find pagerduty user by email %q", userEmail)
@@ -356,7 +357,7 @@ func (b *Bot) IsUserOnCall(ctx context.Context, userID string) (bool, error) {
 	_, err := b.client.NewRequest().
 		SetContext(ctx).
 		SetResult(&result).
-		Get(utils.BuildURLPath("services", b.serviceID))
+		Get(lib.BuildURLPath("services", b.serviceID))
 	if err != nil {
 		return false, trace.Wrap(err)
 	}
@@ -388,7 +389,7 @@ func (b *Bot) IsUserOnCall(ctx context.Context, userID string) (bool, error) {
 	}
 
 	if len(onCallsResult.OnCalls) > 0 {
-		utils.GetLogger(ctx).WithFields(logFields{
+		logger.Get(ctx).WithFields(logger.Fields{
 			"pd_user_id":              userID,
 			"pd_escalation_policy_id": escalationPolicyID,
 		}).Warningf("PagerDuty returned some oncalls array but none of them matched the query")
