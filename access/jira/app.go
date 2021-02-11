@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -17,6 +18,9 @@ import (
 
 // MinServerVersion is the minimal teleport version the plugin supports.
 const MinServerVersion = "5.0.0"
+
+var resolveReasonInlineRegex = regexp.MustCompile(`(?im)^ *(resolution|reason) *: *(.+)$`)
+var resolveReasonSeparatorRegex = regexp.MustCompile(`(?im)^ *(resolution|reason) *: *$`)
 
 // App contains global application state.
 type App struct {
@@ -72,10 +76,7 @@ func (a *App) run(ctx context.Context) (err error) {
 		return
 	}
 
-	a.bot, err = NewBot(a.conf.JIRA)
-	if err != nil {
-		return
-	}
+	a.bot = NewBot(a.conf.JIRA)
 
 	tlsConf, err := access.LoadTLSConfig(
 		a.conf.Teleport.ClientCrt,
@@ -261,12 +262,35 @@ func (a *App) onJIRAWebhook(ctx context.Context, webhook Webhook) error {
 	}
 
 	var (
-		reqState   access.State
+		params     access.RequestStateParams
 		resolution string
 	)
 
 	issueUpdate, err := issue.GetLastUpdate(statusName)
-	if err != nil {
+	if err == nil {
+		params.Delegator = issueUpdate.Author.EmailAddress
+
+		accountID := issueUpdate.Author.AccountID
+		err := a.bot.RangeIssueCommentsDescending(ctx, issue.ID, func(page PageOfComments) bool {
+			for _, comment := range page.Comments {
+				if comment.Author.AccountID != accountID {
+					continue
+				}
+				contents := comment.Body
+				if submatch := resolveReasonInlineRegex.FindStringSubmatch(contents); len(submatch) > 0 {
+					params.Reason = strings.Trim(submatch[2], " \n")
+					return false
+				} else if locs := resolveReasonSeparatorRegex.FindStringIndex(contents); len(locs) > 0 {
+					params.Reason = strings.TrimLeft(contents[locs[1]:], "\n")
+					return false
+				}
+			}
+			return true
+		})
+		if err != nil {
+			log.WithError(err).Error("Cannot load issue comments")
+		}
+	} else {
 		log.WithError(err).Error("Cannot determine who updated the issue status")
 	}
 
@@ -275,18 +299,19 @@ func (a *App) onJIRAWebhook(ctx context.Context, webhook Webhook) error {
 		"jira_user_name":  issueUpdate.Author.DisplayName,
 		"request_user":    req.User,
 		"request_roles":   req.Roles,
+		"reason":          params.Reason,
 	})
 
 	switch statusName {
 	case "approved":
-		reqState = access.StateApproved
+		params.State = access.StateApproved
 		resolution = "approved"
 	case "denied":
-		reqState = access.StateDenied
+		params.State = access.StateDenied
 		resolution = "denied"
 	}
 
-	if err := a.accessClient.SetRequestState(ctx, req.ID, reqState, issueUpdate.Author.EmailAddress); err != nil {
+	if err := a.accessClient.SetRequestStateExt(ctx, req.ID, params); err != nil {
 		return trace.Wrap(err)
 	}
 	log.Infof("JIRA user %s the request", resolution)
