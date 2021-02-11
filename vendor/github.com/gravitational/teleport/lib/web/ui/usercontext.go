@@ -52,8 +52,16 @@ type userACL struct {
 	TrustedClusters access `json:"trustedClusters"`
 	// Events defines access to audit logs
 	Events access `json:"events"`
+	// Tokens defines access to tokens.
+	Tokens access `json:"tokens"`
+	// Nodes defines access to nodes.
+	Nodes access `json:"nodes"`
+	// AppServers defines access to application servers.
+	AppServers access `json:"appServers"`
 	// SSH defines access to servers
 	SSHLogins []string `json:"sshLogins"`
+	// AccessRequests defines access to access requests.
+	AccessRequests access `json:"accessRequests"`
 }
 
 type authType string
@@ -75,6 +83,8 @@ type UserContext struct {
 	Cluster *Cluster `json:"cluster"`
 	// AccessStrategy describes how a user should access teleport resources.
 	AccessStrategy accessStrategy `json:"accessStrategy"`
+	// RequestableRoles are roles that the user can assume when requesting access.
+	RequestableRoles []string `json:"requestableRoles"`
 }
 
 func getLogins(roleSet services.RoleSet) []string {
@@ -154,10 +164,17 @@ func NewUserContext(user services.User, userRoles services.RoleSet) (*UserContex
 	trustedClusterAccess := newAccess(userRoles, ctx, services.KindTrustedCluster)
 	eventAccess := newAccess(userRoles, ctx, services.KindEvent)
 	userAccess := newAccess(userRoles, ctx, services.KindUser)
+	tokenAccess := newAccess(userRoles, ctx, services.KindToken)
+	nodeAccess := newAccess(userRoles, ctx, services.KindNode)
+	appServerAccess := newAccess(userRoles, ctx, services.KindAppServer)
+	requestAccess := newAccess(userRoles, ctx, services.KindAccessRequest)
+
 	logins := getLogins(userRoles)
-	requestAccess := getAccessStrategy(userRoles)
+	accessStrategy := getAccessStrategy(userRoles)
 
 	acl := userACL{
+		AccessRequests:  requestAccess,
+		AppServers:      appServerAccess,
 		AuthConnectors:  authConnectors,
 		TrustedClusters: trustedClusterAccess,
 		Sessions:        sessionAccess,
@@ -165,6 +182,8 @@ func NewUserContext(user services.User, userRoles services.RoleSet) (*UserContex
 		Events:          eventAccess,
 		SSHLogins:       logins,
 		Users:           userAccess,
+		Tokens:          tokenAccess,
+		Nodes:           nodeAccess,
 	}
 
 	// local user
@@ -184,6 +203,6 @@ func NewUserContext(user services.User, userRoles services.RoleSet) (*UserContex
 		Name:           user.GetName(),
 		ACL:            acl,
 		AuthType:       authType,
-		AccessStrategy: requestAccess,
+		AccessStrategy: accessStrategy,
 	}, nil
 }

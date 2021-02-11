@@ -12,7 +12,6 @@ import (
 	mm "github.com/mattermost/mattermost-server/v5/model"
 
 	"github.com/gravitational/trace"
-	// log "github.com/sirupsen/logrus"
 )
 
 const (

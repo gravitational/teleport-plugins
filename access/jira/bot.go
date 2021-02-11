@@ -10,8 +10,8 @@ import (
 
 	"github.com/andygrunwald/go-jira"
 
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -42,6 +42,9 @@ func init() {
 	descriptionTemplate, err = template.New("description").Parse(`User *{{.User}}* requested an access on *{{.Created.Format .TimeFormat}}* with the following roles:
 {{range .Roles}}
 * {{ . }}
+{{end}}
+{{if .RequestReason}}
+Reason: *{{.RequestReason}}*
 {{end}}
 Request ID: *{{.ID}}*
 `)
@@ -117,6 +120,7 @@ func NewBot(conf JIRAConfig) (*Bot, error) {
 }
 
 func (b *Bot) HealthCheck(ctx context.Context) error {
+	log := logger.Get(ctx)
 	req, err := b.client.NewRequest(ctx, http.MethodGet, "rest/api/2/myself", nil)
 	if err != nil {
 		return trace.Wrap(err)
@@ -184,7 +188,7 @@ func (b *Bot) CreateIssue(ctx context.Context, reqID string, reqData RequestData
 		Fields: &jira.IssueFields{
 			Type:        jira.IssueType{Name: "Task"},
 			Project:     jira.Project{Key: b.project},
-			Summary:     fmt.Sprintf("Access request from %s", reqData.User),
+			Summary:     fmt.Sprintf("%s requested %s", reqData.User, strings.Join(reqData.Roles, ", ")),
 			Description: description,
 		},
 	})

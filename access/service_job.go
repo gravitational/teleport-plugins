@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/trace"
 	"google.golang.org/grpc"
 
@@ -14,23 +14,23 @@ import (
 type WatcherJobFunc func(context.Context, Event) error
 
 type watcherJob struct {
-	utils.ServiceJob
+	lib.ServiceJob
 	client    Client
 	filter    Filter
 	eventFunc WatcherJobFunc
 }
 
-func NewWatcherJob(client Client, filter Filter, fn WatcherJobFunc) utils.ServiceJob {
+func NewWatcherJob(client Client, filter Filter, fn WatcherJobFunc) lib.ServiceJob {
 	client = client.WithCallOptions(grpc.WaitForReady(true)) // Enable backoff on reconnecting.
 	watcherJob := &watcherJob{
 		client:    client,
 		filter:    filter,
 		eventFunc: fn,
 	}
-	watcherJob.ServiceJob = utils.NewServiceJob(func(ctx context.Context) error {
+	watcherJob.ServiceJob = lib.NewServiceJob(func(ctx context.Context) error {
 		ctx, cancel := context.WithCancel(ctx)
 
-		utils.MustGetProcess(ctx).OnTerminate(func(_ context.Context) error {
+		lib.MustGetProcess(ctx).OnTerminate(func(_ context.Context) error {
 			cancel()
 			return nil
 		})
@@ -42,7 +42,7 @@ func NewWatcherJob(client Client, filter Filter, fn WatcherJobFunc) utils.Servic
 				log.WithError(err).Error("Failed to connect to Teleport Auth server. Reconnecting...")
 			case trace.IsEOF(err):
 				log.WithError(err).Error("Watcher stream closed. Reconnecting...")
-			case utils.IsCanceled(err):
+			case lib.IsCanceled(err):
 				// Context cancellation is not an error
 				return nil
 			default:
@@ -64,7 +64,7 @@ func (job *watcherJob) eventLoop(ctx context.Context) error {
 	log.Debug("Watcher connected")
 	job.SetReady(true)
 
-	process := utils.MustGetProcess(ctx)
+	process := lib.MustGetProcess(ctx)
 
 	for {
 		select {

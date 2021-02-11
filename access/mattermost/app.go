@@ -6,14 +6,16 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 
 	"github.com/gravitational/trace"
-
-	log "github.com/sirupsen/logrus"
 )
+
+// MinServerVersion is the minimal teleport version the plugin supports.
+const MinServerVersion = "4.3.0"
 
 // App contains global application state.
 type App struct {
@@ -22,21 +24,21 @@ type App struct {
 	accessClient access.Client
 	bot          *Bot
 	actionSrv    *ActionServer
-	mainJob      utils.ServiceJob
+	mainJob      lib.ServiceJob
 
-	*utils.Process
+	*lib.Process
 }
 
 func NewApp(conf Config) (*App, error) {
 	app := &App{conf: conf}
-	app.mainJob = utils.NewServiceJob(app.run)
+	app.mainJob = lib.NewServiceJob(app.run)
 	return app, nil
 }
 
 // Run initializes and runs a watcher and a callback server
 func (a *App) Run(ctx context.Context) error {
 	// Initialize the process.
-	a.Process = utils.NewProcess(ctx)
+	a.Process = lib.NewProcess(ctx)
 	a.SpawnCriticalJob(a.mainJob)
 	<-a.Process.Done()
 	return a.Err()
@@ -60,6 +62,7 @@ func (a *App) PublicURL() *url.URL {
 }
 
 func (a *App) run(ctx context.Context) (err error) {
+	log := logger.Get(ctx)
 	log.Infof("Starting Teleport Access Mattermost Bot %s:%s", Version, Gitref)
 
 	auth := &ActionAuth{a.conf.Mattermost.Secret}
@@ -142,41 +145,48 @@ func (a *App) run(ctx context.Context) (err error) {
 }
 
 func (a *App) checkTeleportVersion(ctx context.Context) error {
+	log := logger.Get(ctx)
 	log.Debug("Checking Teleport server version")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	pong, err := a.accessClient.Ping(ctx)
 	if err != nil {
 		if trace.IsNotImplemented(err) {
-			return trace.Wrap(err, "server version must be at least %s", access.MinServerVersion)
+			return trace.Wrap(err, "server version must be at least %s", MinServerVersion)
 		}
 		log.Error("Unable to get Teleport server version")
 		return trace.Wrap(err)
 	}
 	a.bot.clusterName = pong.ClusterName
-	err = pong.AssertServerVersion()
+	err = pong.AssertServerVersion(MinServerVersion)
 	return trace.Wrap(err)
 }
 
 func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 	req, op := event.Request, event.Type
+	ctx, _ = logger.WithField(ctx, "request_id", req.ID)
+
 	switch op {
 	case access.OpPut:
+		ctx, log := logger.WithField(ctx, "request_op", "put")
+
 		if !req.State.IsPending() {
 			log.WithField("event", event).Warn("non-pending request event")
 			return nil
 		}
 
 		if err := a.onPendingRequest(ctx, req); err != nil {
-			log := log.WithField("request_id", req.ID).WithError(err)
+			log := log.WithError(err)
 			log.Errorf("Failed to process pending request")
 			log.Debugf("%v", trace.DebugReport(err))
 			return err
 		}
 		return nil
 	case access.OpDelete:
+		ctx, log := logger.WithField(ctx, "request_op", "delete")
+
 		if err := a.onDeletedRequest(ctx, req); err != nil {
-			log := log.WithField("request_id", req.ID).WithError(err)
+			log := log.WithError(err)
 			log.Errorf("Failed to process deleted request")
 			log.Debugf("%v", trace.DebugReport(err))
 			return err
@@ -188,10 +198,9 @@ func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 }
 
 func (a *App) onMattermostAction(ctx context.Context, data ActionData) (*ActionResponse, error) {
-	log := log.WithField("mm_http_id", data.HTTPRequestID)
-
 	action := data.Action
 	reqID := data.ReqID
+	ctx, _ = logger.WithField(ctx, "request_id", reqID)
 
 	var mmStatus string
 
@@ -211,6 +220,12 @@ func (a *App) onMattermostAction(ctx context.Context, data ActionData) (*ActionR
 			return nil, trace.Wrap(err)
 		}
 	} else {
+		ctx, log := logger.WithFields(ctx, logger.Fields{
+			"mm_channel_id": data.ChannelID,
+			"mm_post_id":    data.PostID,
+			"mm_user_id":    data.UserID,
+		})
+
 		if req.State != access.StatePending {
 			return nil, trace.Errorf("cannot process not pending request: %+v", req)
 		}
@@ -224,12 +239,6 @@ func (a *App) onMattermostAction(ctx context.Context, data ActionData) (*ActionR
 			return nil, trace.Errorf("plugin data is empty")
 		}
 
-		log = log.WithFields(logFields{
-			"mm_channel_id": data.ChannelID,
-			"mm_post_id":    data.PostID,
-			"mm_user_id":    data.UserID,
-		})
-
 		if pluginData.MattermostData.PostID != data.PostID {
 			log.WithField("plugin_data_post_id", pluginData.MattermostData.PostID).Debug("plugin_data.post_id does not match post.id")
 			return nil, trace.Errorf("post_id from request's plugin_data does not match")
@@ -239,7 +248,7 @@ func (a *App) onMattermostAction(ctx context.Context, data ActionData) (*ActionR
 		if err != nil {
 			log.WithError(err).Warning("Failed to fetch user info")
 		}
-		log = log.WithFields(logFields{
+		ctx, log = logger.WithFields(ctx, logger.Fields{
 			"mm_user_name":  user.Username,
 			"mm_user_email": user.Email,
 		})
@@ -280,17 +289,16 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 		return trace.Wrap(err)
 	}
 
-	log.WithFields(logFields{
-		"request_id": req.ID,
-		"mm_post_id": mmData.PostID,
-	}).Info("Successfully posted to Mattermost")
+	logger.Get(ctx).WithField("mm_post_id", mmData.PostID).Info("Successfully posted to Mattermost")
 
 	err = a.setPluginData(ctx, req.ID, PluginData{reqData, mmData})
 	return trace.Wrap(err)
 }
 
 func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
+	log := logger.Get(ctx)
 	reqID := req.ID // This is the only available field
+
 	pluginData, err := a.getPluginData(ctx, reqID)
 	if err != nil {
 		if trace.IsNotFound(err) {
@@ -302,14 +310,15 @@ func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
 
 	reqData, mmData := pluginData.RequestData, pluginData.MattermostData
 	if mmData.PostID == "" {
-		return trace.NotFound("plugin data was expired")
+		log.Warn("Plugin data is either missing or expired")
+		return nil
 	}
 
 	if err := a.bot.ExpirePost(ctx, reqID, reqData, mmData); err != nil {
 		return trace.Wrap(err)
 	}
 
-	log.WithField("request_id", reqID).Info("Successfully marked request as expired")
+	log.Info("Successfully marked request as expired")
 
 	return nil
 }

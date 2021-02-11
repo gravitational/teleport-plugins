@@ -96,8 +96,7 @@ func run(configPath string) error {
 						break CheckWhitelist
 					}
 				}
-				params := access.RequestStateSetter{
-					ID:        req.ID,
+				params := access.RequestStateParams{
 					Delegator: "example",
 					Annotations: map[string][]string{
 						"strategy": []string{"whitelist"},
@@ -112,7 +111,7 @@ func run(configPath string) error {
 					params.State = access.StateDenied
 					params.Reason = "user not in whitelist"
 				}
-				if err := client.SetRequestStateExt(ctx, params); err != nil {
+				if err := client.SetRequestStateExt(ctx, req.ID, params); err != nil {
 					return trace.Wrap(err)
 				}
 				eprintln("ok.")

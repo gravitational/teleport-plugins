@@ -12,9 +12,9 @@ import (
 
 	"gopkg.in/resty.v1"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -94,7 +94,7 @@ func (b *Bot) NewRequest(ctx context.Context) *resty.Request {
 func (b *Bot) APIV4URL(args ...interface{}) string {
 	args = append([]interface{}{"api", "v4"}, args...)
 	url := *b.baseURL
-	url.Path = utils.BuildURLPath(args...)
+	url.Path = lib.BuildURLPath(args...)
 	return url.String()
 }
 
@@ -255,6 +255,7 @@ func (b *Bot) SetupLabels(ctx context.Context, existingLabels map[string]string)
 }
 
 func (b *Bot) createLabel(ctx context.Context, key string) (string, error) {
+	log := logger.Get(ctx)
 	name := fmt.Sprintf("Teleport: %s", strings.Title(key))
 	log.Debugf("Trying to create a label %q", name)
 	var label Label

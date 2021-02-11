@@ -14,17 +14,14 @@ import (
 	"github.com/julienschmidt/httprouter"
 	mm "github.com/mattermost/mattermost-server/v5/model"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const ActionURL = "/mattermost_action"
 
 type ActionData struct {
-	HTTPRequestID string
-
 	UserID    string
 	PostID    string
 	ChannelID string
@@ -38,13 +35,13 @@ type ActionFunc func(ctx context.Context, action ActionData) (*ActionResponse, e
 
 type ActionServer struct {
 	auth     *ActionAuth
-	http     *utils.HTTP
+	http     *lib.HTTP
 	onAction ActionFunc
 	counter  uint64
 }
 
-func NewActionServer(config utils.HTTPConfig, auth *ActionAuth, onAction ActionFunc) (*ActionServer, error) {
-	httpSrv, err := utils.NewHTTP(config)
+func NewActionServer(config lib.HTTPConfig, auth *ActionAuth, onAction ActionFunc) (*ActionServer, error) {
+	httpSrv, err := lib.NewHTTP(config)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -57,7 +54,7 @@ func NewActionServer(config utils.HTTPConfig, auth *ActionAuth, onAction ActionF
 	return server, nil
 }
 
-func (s *ActionServer) ServiceJob() utils.ServiceJob {
+func (s *ActionServer) ServiceJob() lib.ServiceJob {
 	return s.http.ServiceJob()
 }
 
@@ -89,7 +86,7 @@ func (s *ActionServer) ServeAction(rw http.ResponseWriter, r *http.Request, _ ht
 	defer cancel()
 
 	httpRequestID := fmt.Sprintf("%v-%v", time.Now().Unix(), atomic.AddUint64(&s.counter, 1))
-	log := log.WithField("mm_http_id", httpRequestID)
+	ctx, log := logger.WithField(ctx, "mm_http_id", httpRequestID)
 
 	var payload mm.PostActionIntegrationRequest
 
@@ -146,12 +143,11 @@ func (s *ActionServer) ServeAction(rw http.ResponseWriter, r *http.Request, _ ht
 	}
 
 	actionData := ActionData{
-		HTTPRequestID: httpRequestID,
-		UserID:        payload.UserId,
-		PostID:        payload.PostId,
-		ChannelID:     payload.ChannelId,
-		Action:        action,
-		ReqID:         reqID,
+		UserID:    payload.UserId,
+		PostID:    payload.PostId,
+		ChannelID: payload.ChannelId,
+		Action:    action,
+		ReqID:     reqID,
 	}
 
 	actionResponse, err := s.onAction(ctx, actionData)
@@ -160,7 +156,7 @@ func (s *ActionServer) ServeAction(rw http.ResponseWriter, r *http.Request, _ ht
 		log.Debugf("%v", trace.DebugReport(err))
 		var code int
 		switch {
-		case utils.IsCanceled(err) || utils.IsDeadline(err):
+		case lib.IsCanceled(err) || lib.IsDeadline(err):
 			code = http.StatusServiceUnavailable
 		default:
 			code = http.StatusInternalServerError

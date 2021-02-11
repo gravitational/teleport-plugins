@@ -11,19 +11,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
 	"github.com/nlopes/slack"
-	log "github.com/sirupsen/logrus"
 )
 
 // Callback struct represents an HTTP request that is a callback from Slack,
 // and wraps around slack client's InteractionCallback.
-type Callback struct {
-	HTTPRequestID string
-	slack.InteractionCallback
-}
+type Callback slack.InteractionCallback
 
 // CallbackFunc type represents a callback handler that takes a context and
 // a callback in, handles it, and optionally returns an error.
@@ -32,7 +29,7 @@ type CallbackFunc func(ctx context.Context, callback Callback) error
 // CallbackServer is a wrapper around http.Server that processes Slack interaction events.
 // It verifies incoming requests and calls onCallback for valid ones
 type CallbackServer struct {
-	http       *utils.HTTP
+	http       *lib.HTTP
 	secret     string
 	readOnly   bool
 	onCallback CallbackFunc
@@ -40,8 +37,8 @@ type CallbackServer struct {
 }
 
 // NewCallbackServer initializes and returns an HTTP server that handles Slack callback (webhook) requests.
-func NewCallbackServer(conf utils.HTTPConfig, secret string, readOnly bool, onCallback CallbackFunc) (*CallbackServer, error) {
-	httpSrv, err := utils.NewHTTP(conf)
+func NewCallbackServer(conf lib.HTTPConfig, secret string, readOnly bool, onCallback CallbackFunc) (*CallbackServer, error) {
+	httpSrv, err := lib.NewHTTP(conf)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +63,7 @@ func NewCallbackServer(conf utils.HTTPConfig, secret string, readOnly bool, onCa
 }
 
 // ServiceJob returns a service job object from the Callback HTTP server.
-func (s *CallbackServer) ServiceJob() utils.ServiceJob {
+func (s *CallbackServer) ServiceJob() lib.ServiceJob {
 	return s.http.ServiceJob()
 }
 
@@ -89,7 +86,7 @@ func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request
 	defer cancel()
 
 	httpRequestID := fmt.Sprintf("%s-%v", r.Header.Get("x-slack-request-timestamp"), atomic.AddUint64(&s.counter, 1))
-	log := log.WithField("slack_http_id", httpRequestID)
+	ctx, log := logger.WithField(ctx, "slack_http_id", httpRequestID)
 
 	// If the plugin is working in notify-only mode, do not process any
 	// callbacks from Slack, and return an error.
@@ -124,12 +121,12 @@ func (s *CallbackServer) processCallback(rw http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := s.onCallback(ctx, Callback{httpRequestID, cb}); err != nil {
+	if err := s.onCallback(ctx, Callback(cb)); err != nil {
 		log.WithError(err).Error("Failed to process callback")
 		log.Debugf("%v", trace.DebugReport(err))
 		var code int
 		switch {
-		case utils.IsCanceled(err) || utils.IsDeadline(err):
+		case lib.IsCanceled(err) || lib.IsDeadline(err):
 			code = http.StatusServiceUnavailable
 		default:
 			code = http.StatusInternalServerError

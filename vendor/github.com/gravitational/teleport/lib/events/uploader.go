@@ -317,7 +317,7 @@ func (u *Uploader) Scan() error {
 			}
 			return trace.Wrap(err)
 		}
-		count += 1
+		count++
 	}
 	return nil
 }

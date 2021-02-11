@@ -4,8 +4,6 @@ import (
 	"strings"
 
 	"github.com/gravitational/teleport-plugins/access"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type RequestData struct {
@@ -22,8 +20,6 @@ type PluginData struct {
 	RequestData
 	SlackData
 }
-
-type logFields = log.Fields
 
 func DecodePluginData(dataMap access.PluginDataMap) (data PluginData) {
 	data.User = dataMap["user"]

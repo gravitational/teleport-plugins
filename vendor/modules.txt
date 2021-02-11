@@ -34,6 +34,8 @@ github.com/Azure/go-autorest/logger
 github.com/Azure/go-autorest/tracing
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
+# github.com/HdrHistogram/hdrhistogram-go v0.9.1-0.20201006155429-aada4ab574ea
+github.com/HdrHistogram/hdrhistogram-go
 # github.com/Masterminds/semver/v3 v3.1.0
 ## explicit
 # github.com/Masterminds/squirrel v1.4.0
@@ -112,6 +114,7 @@ github.com/aws/aws-sdk-go/private/protocol/query/queryutil
 github.com/aws/aws-sdk-go/private/protocol/rest
 github.com/aws/aws-sdk-go/private/protocol/restxml
 github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
+github.com/aws/aws-sdk-go/service/applicationautoscaling
 github.com/aws/aws-sdk-go/service/dynamodb
 github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute
 github.com/aws/aws-sdk-go/service/dynamodbstreams
@@ -140,8 +143,6 @@ github.com/boombuler/barcode/utils
 github.com/cespare/xxhash/v2
 # github.com/cjbassi/drawille-go v0.1.0
 ## explicit
-# github.com/codahale/hdrhistogram v0.0.0-20161010025455-3a0bb77429bd
-github.com/codahale/hdrhistogram
 # github.com/coreos/go-oidc v0.0.3 => github.com/gravitational/go-oidc v0.0.3
 ## explicit
 github.com/coreos/go-oidc/http
@@ -324,7 +325,7 @@ github.com/gravitational/oxy/utils
 # github.com/gravitational/roundtrip v1.0.0
 ## explicit
 github.com/gravitational/roundtrip
-# github.com/gravitational/teleport v1.3.3-0.20201106192002-9f42992be560
+# github.com/gravitational/teleport v1.3.3-0.20201231222847-46679fb34462
 ## explicit
 github.com/gravitational/teleport
 github.com/gravitational/teleport/lib
@@ -353,9 +354,10 @@ github.com/gravitational/teleport/lib/events/s3sessions
 github.com/gravitational/teleport/lib/fixtures
 github.com/gravitational/teleport/lib/httplib
 github.com/gravitational/teleport/lib/httplib/csrf
-github.com/gravitational/teleport/lib/kube/kubeconfig
+github.com/gravitational/teleport/lib/jwt
 github.com/gravitational/teleport/lib/kube/proxy
 github.com/gravitational/teleport/lib/kube/utils
+github.com/gravitational/teleport/lib/labels
 github.com/gravitational/teleport/lib/limiter
 github.com/gravitational/teleport/lib/modules
 github.com/gravitational/teleport/lib/multiplexer
@@ -370,6 +372,7 @@ github.com/gravitational/teleport/lib/services/suite
 github.com/gravitational/teleport/lib/session
 github.com/gravitational/teleport/lib/shell
 github.com/gravitational/teleport/lib/srv
+github.com/gravitational/teleport/lib/srv/app
 github.com/gravitational/teleport/lib/srv/forward
 github.com/gravitational/teleport/lib/srv/regular
 github.com/gravitational/teleport/lib/sshca
@@ -385,6 +388,7 @@ github.com/gravitational/teleport/lib/utils/proxy
 github.com/gravitational/teleport/lib/utils/socks
 github.com/gravitational/teleport/lib/utils/workpool
 github.com/gravitational/teleport/lib/web
+github.com/gravitational/teleport/lib/web/app
 github.com/gravitational/teleport/lib/web/ui
 github.com/gravitational/teleport/lib/wrappers
 # github.com/gravitational/trace v1.1.6
@@ -440,8 +444,6 @@ github.com/iovisor/gobpf/pkg/cpuonline
 # github.com/jmespath/go-jmespath v0.4.0
 github.com/jmespath/go-jmespath
 # github.com/jmhodges/levigo v1.0.0
-## explicit
-# github.com/jmoiron/sqlx v1.2.0
 ## explicit
 # github.com/johannesboyne/gofakes3 v0.0.0-20191228161223-9aee1c78a252
 ## explicit
@@ -524,6 +526,8 @@ github.com/mattermost/mattermost-server/v5/utils/markdown
 ## explicit
 # github.com/mattermost/viper v1.0.4
 ## explicit
+# github.com/mattermost/xml-roundtrip-validator v0.0.0-20201208211235-fe770d50d911
+github.com/mattermost/xml-roundtrip-validator
 # github.com/mattn/go-colorable v0.1.7
 ## explicit
 # github.com/mattn/go-runewidth v0.0.9
@@ -568,7 +572,6 @@ github.com/niemeyer/pretty
 github.com/nlopes/slack
 github.com/nlopes/slack/internal/errorsx
 github.com/nlopes/slack/internal/timex
-github.com/nlopes/slack/slacktest
 github.com/nlopes/slack/slackutilsx
 # github.com/oklog/run v1.1.0
 ## explicit
@@ -625,10 +628,10 @@ github.com/prometheus/procfs/internal/util
 ## explicit
 # github.com/rudderlabs/analytics-go v3.2.1+incompatible
 ## explicit
-# github.com/russellhaering/gosaml2 v0.0.0-20170515204909-8908227c114a
-## explicit
+# github.com/russellhaering/gosaml2 v0.6.0
 github.com/russellhaering/gosaml2
 github.com/russellhaering/gosaml2/types
+github.com/russellhaering/gosaml2/uuid
 # github.com/russellhaering/goxmldsig v1.1.0
 ## explicit
 github.com/russellhaering/goxmldsig
@@ -636,7 +639,6 @@ github.com/russellhaering/goxmldsig/etreeutils
 github.com/russellhaering/goxmldsig/types
 # github.com/satori/go.uuid v1.1.1-0.20170321230731-5bf94b69c6b6
 ## explicit
-github.com/satori/go.uuid
 # github.com/segmentio/backo-go v0.0.0-20200129164019-23eae7c10bd3
 ## explicit
 # github.com/sergi/go-diff v1.1.0
@@ -775,6 +777,7 @@ golang.org/x/crypto/ed25519
 golang.org/x/crypto/ed25519/internal/edwards25519
 golang.org/x/crypto/internal/subtle
 golang.org/x/crypto/nacl/secretbox
+golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/pkcs12
 golang.org/x/crypto/pkcs12/internal/rc2
 golang.org/x/crypto/poly1305
@@ -1026,6 +1029,11 @@ gopkg.in/natefinch/lumberjack.v2
 # gopkg.in/resty.v1 v1.12.0
 ## explicit
 gopkg.in/resty.v1
+# gopkg.in/square/go-jose.v2 v2.5.1
+gopkg.in/square/go-jose.v2
+gopkg.in/square/go-jose.v2/cipher
+gopkg.in/square/go-jose.v2/json
+gopkg.in/square/go-jose.v2/jwt
 # gopkg.in/yaml.v2 v2.3.0
 gopkg.in/yaml.v2
 # gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776

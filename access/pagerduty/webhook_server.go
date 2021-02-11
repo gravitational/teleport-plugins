@@ -13,7 +13,8 @@ import (
 
 	"github.com/julienschmidt/httprouter"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 )
 
@@ -44,12 +45,12 @@ type WebhookAction struct {
 type WebhookFunc func(ctx context.Context, action WebhookAction) error
 
 type WebhookServer struct {
-	http     *utils.HTTP
+	http     *lib.HTTP
 	onAction WebhookFunc
 	counter  uint64
 }
 
-func NewWebhookServer(conf utils.HTTPConfig, onAction WebhookFunc) (*WebhookServer, error) {
+func NewWebhookServer(conf lib.HTTPConfig, onAction WebhookFunc) (*WebhookServer, error) {
 	conf.TLS.VerifyClientCertificateFunc = func(chains [][]*x509.Certificate) error {
 		cert := chains[0][0]
 		if subj := cert.Subject.String(); subj != "CN=webhooks.pagerduty.com,O=PagerDuty Inc,L=San Francisco,ST=California,C=US" {
@@ -58,7 +59,7 @@ func NewWebhookServer(conf utils.HTTPConfig, onAction WebhookFunc) (*WebhookServ
 		return nil
 	}
 
-	httpSrv, err := utils.NewHTTP(conf)
+	httpSrv, err := lib.NewHTTP(conf)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -75,7 +76,7 @@ func NewWebhookServer(conf utils.HTTPConfig, onAction WebhookFunc) (*WebhookServ
 	return srv, nil
 }
 
-func (s *WebhookServer) ServiceJob() utils.ServiceJob {
+func (s *WebhookServer) ServiceJob() lib.ServiceJob {
 	return s.http.ServiceJob()
 }
 
@@ -98,7 +99,7 @@ func (s *WebhookServer) processWebhook(actionName string, rw http.ResponseWriter
 
 	webhookID := r.Header.Get("X-Webhook-Id")
 	httpRequestID := fmt.Sprintf("%v-%v", webhookID, atomic.AddUint64(&s.counter, 1))
-	ctx, log := utils.WithLogField(ctx, "pd_http_id", httpRequestID)
+	ctx, log := logger.WithField(ctx, "pd_http_id", httpRequestID)
 
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
 		log.Errorf(`Invalid "Content-Type" header %q`, contentType)
@@ -121,7 +122,7 @@ func (s *WebhookServer) processWebhook(actionName string, rw http.ResponseWriter
 	}
 
 	for _, msg := range payload.Messages {
-		mCtx, log := utils.WithLogField(ctx, "pd_msg_id", msg.ID)
+		mCtx, log := logger.WithField(ctx, "pd_msg_id", msg.ID)
 
 		if msg.Event != "incident.custom" {
 			log.Warningf("Got %q event, ignoring", msg.Event)
@@ -147,7 +148,7 @@ func (s *WebhookServer) processWebhook(actionName string, rw http.ResponseWriter
 			log.Debugf("%v", trace.DebugReport(err))
 			var code int
 			switch {
-			case utils.IsCanceled(err) || utils.IsDeadline(err):
+			case lib.IsCanceled(err) || lib.IsDeadline(err):
 				code = http.StatusServiceUnavailable
 			default:
 				code = http.StatusInternalServerError
