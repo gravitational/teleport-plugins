@@ -216,8 +216,13 @@ func (a *App) onJIRAWebhook(ctx context.Context, webhook Webhook) error {
 
 	statusName := strings.ToLower(issue.Fields.Status.Name)
 	if statusName == "pending" {
-		log.Info("Issue is pending, ignoring it")
+		log.Debug("Issue is pending, ignoring it")
 		return nil
+	} else if statusName == "expired" {
+		log.Debug("Issue is expired, ignoring it")
+		return nil
+	} else if statusName != "approved" && statusName != "denied" {
+		return trace.BadParameter("unknown JIRA status %q", statusName)
 	}
 
 	reqID, err := issue.GetRequestID()
@@ -279,8 +284,6 @@ func (a *App) onJIRAWebhook(ctx context.Context, webhook Webhook) error {
 	case "denied":
 		reqState = access.StateDenied
 		resolution = "denied"
-	default:
-		return trace.BadParameter("unknown JIRA status %q", statusName)
 	}
 
 	if err := a.accessClient.SetRequestState(ctx, req.ID, reqState, issueUpdate.Author.EmailAddress); err != nil {
