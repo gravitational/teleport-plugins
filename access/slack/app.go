@@ -15,7 +15,7 @@ import (
 )
 
 // MinServerVersion is the minimal teleport version the plugin supports.
-const MinServerVersion = "4.3.0"
+const MinServerVersion = "5.0.0"
 
 // App contains global application state.
 type App struct {
@@ -284,7 +284,7 @@ func (a *App) tryFetchEmail(ctx context.Context, userID string) string {
 }
 
 func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
-	reqData := RequestData{User: req.User, Roles: req.Roles}
+	reqData := RequestData{User: req.User, Roles: req.Roles, RequestReason: req.RequestReason}
 	slackData, err := a.bot.Post(ctx, req.ID, reqData)
 	if err != nil {
 		return trace.Wrap(err)

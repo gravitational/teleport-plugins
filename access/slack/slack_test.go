@@ -307,6 +307,28 @@ func (s *SlackSuite) TestSlackMessagePosting(c *C) {
 	c.Assert(denyButton.Value, Equals, request.GetName())
 }
 
+func (s *SlackSuite) TestSlackMessagePostingWithRequestReason(c *C) {
+	s.startApp(c)
+	auth := s.teleport.Process.GetAuthServer()
+	request, err := services.NewAccessRequest(s.me.Username, "admin")
+	c.Assert(err, IsNil)
+	request.SetRequestReason("because of")
+	err = auth.CreateAccessRequest(s.ctx, request)
+	c.Assert(err, IsNil)
+	pluginData := s.checkPluginData(c, request.GetName())
+
+	msg, err := s.fakeSlack.CheckNewMessage(s.ctx)
+	c.Assert(err, IsNil)
+	c.Assert(pluginData.Timestamp, Equals, msg.Timestamp)
+	c.Assert(pluginData.ChannelID, Equals, msg.Channel)
+
+	sectionBlock, ok := msg.Blocks.BlockSet[1].(*slack.SectionBlock)
+	c.Assert(ok, Equals, true)
+	if !strings.Contains(sectionBlock.Text.Text, `*Reason*: because of`) {
+		c.Error("Slack message should contain request reason")
+	}
+}
+
 // Tests if Interactive Mode posts Slack message with buttons correctly
 func (s *SlackSuite) TestSlackMessagePostingReadonly(c *C) {
 	s.appConfig.Slack.NotifyOnly = true

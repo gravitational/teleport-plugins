@@ -148,6 +148,9 @@ func (b *Bot) msgSections(reqID string, reqData RequestData, status string) []sl
 	if reqData.Roles != nil {
 		msgFieldToBuilder(&builder, "Role(s)", strings.Join(reqData.Roles, ","))
 	}
+	if reqData.RequestReason != "" {
+		msgFieldToBuilder(&builder, "Reason", reqData.RequestReason)
+	}
 
 	var statusEmoji string
 	switch status {
