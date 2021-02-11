@@ -59,8 +59,6 @@ const OpPut = proto.Operation_PUT
 // OpDelete indicates deletion or expiry.
 const OpDelete = proto.Operation_DELETE
 
-type RequestStateSetter = proto.RequestStateSetter
-
 type DialOption = grpc.DialOption
 type CallOption = grpc.CallOption
 
@@ -103,6 +101,13 @@ type Request struct {
 	SystemAnnotations map[string][]string
 }
 
+type RequestStateParams struct {
+	State       State
+	Delegator   string
+	Reason      string
+	Annotations map[string][]string
+}
+
 // Pong describes a ping response.
 type Pong struct {
 	ServerVersion string
@@ -139,7 +144,7 @@ type Client interface {
 	// SetRequestStateExt is an advanced version of SetRequestState which
 	// supports extra features like overriding the requet's role list and
 	// attaching annotations (requires teleport v4.4.4 or later).
-	SetRequestStateExt(ctx context.Context, params RequestStateSetter) error
+	SetRequestStateExt(ctx context.Context, reqID string, params RequestStateParams) error
 	// GetPluginData fetches plugin data of the specific request.
 	GetPluginData(ctx context.Context, reqID string) (PluginDataMap, error)
 	// UpdatePluginData updates plugin data of the specific request comparing it with a previous value.
@@ -244,8 +249,13 @@ func (c *clt) SetRequestState(ctx context.Context, reqID string, state State, de
 	return lib.FromGRPC(err)
 }
 
-func (c *clt) SetRequestStateExt(ctx context.Context, params RequestStateSetter) error {
-	_, err := c.clt.SetAccessRequestState(ctx, &params)
+func (c *clt) SetRequestStateExt(ctx context.Context, reqID string, params RequestStateParams) error {
+	_, err := c.clt.SetAccessRequestState(ctx, &proto.RequestStateSetter{
+		ID:        reqID,
+		State:     params.State,
+		Delegator: fmt.Sprintf("%s:%s", c.plugin, params.Delegator),
+		Reason:    params.Reason,
+	})
 	return lib.FromGRPC(err)
 }
 
