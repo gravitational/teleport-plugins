@@ -52,3 +52,22 @@ release: clean $(VERSRC) $(BINARY)
 # This rule triggers re-generation of version.go and gitref.go if Makefile changes
 $(VERSRC): Makefile
 	VERSION=$(VERSION) $(MAKE) -f version.mk setver
+
+.PHONY: docker
+docker: $(VERSRC)
+	cd ../.. && docker build -t teleport-slackbot:$(VERSION) -f access/slack/Dockerfile .
+
+check-aws-env:
+ifndef AWS_ACCESS_KEY_ID
+	$(error AWS_ACCESS_KEY_ID is undefined)
+endif
+ifndef AWS_SECRET_ACCESS_KEY
+	$(error AWS_SECRET_ACCESS_KEY is undefined)
+endif
+
+.PHONY: docker-push
+docker-push: check-aws-env $(VERSRC) docker
+	$(eval ACCOUNT := $(shell aws sts get-caller-identity --query 'Account' --output text))
+	aws ecr get-login-password --region us-east-2 | docker login --username AWS --password-stdin $(ACCOUNT).dkr.ecr.us-east-2.amazonaws.com
+	docker tag teleport-slackbot:$(VERSION) $(ACCOUNT).dkr.ecr.us-east-2.amazonaws.com/teleport-slackbot:$(VERSION)
+	docker push $(ACCOUNT).dkr.ecr.us-east-2.amazonaws.com/teleport-slackbot:$(VERSION)

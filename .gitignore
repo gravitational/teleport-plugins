@@ -60,3 +60,7 @@ terraform.tfstate
 # ansible stuff
 ssh.config
 *.retry
+
+
+secret
+/config.toml
