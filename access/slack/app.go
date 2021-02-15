@@ -265,7 +265,7 @@ func (a *App) onSlackCallback(ctx context.Context, cb Callback) error {
 	a.Spawn(func(ctx context.Context) error {
 		ctx, log := logger.WithField(ctx, "request_id", req.ID)
 		if err := a.bot.Respond(ctx, req.ID, reqData, slackStatus, cb.ResponseURL); err != nil {
-			log.WithError(err).Error("Cannot update Slack message")
+			log.WithError(err).Error("Failed to update Slack message")
 			return err
 		}
 		log.Info("Successfully updated Slack message")

@@ -1,16 +1,15 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/gravitational/trace"
+
+	"github.com/go-resty/resty/v2"
 	"github.com/nlopes/slack"
 )
 
@@ -23,7 +22,7 @@ const slackHTTPTimeout = 10 * time.Second
 // request is processed/updated.
 type Bot struct {
 	client      *slack.Client
-	respClient  *http.Client
+	respClient  *resty.Client
 	channel     string
 	clusterName string
 	notifyOnly  bool
@@ -49,10 +48,12 @@ func NewBot(conf SlackConfig) *Bot {
 		slackOptions = append(slackOptions, slack.OptionAPIURL(conf.APIURL))
 	}
 
+	respClient := resty.NewWithClient(httpClient)
+
 	return &Bot{
 		client:     slack.New(conf.Token, slackOptions...),
 		channel:    conf.Channel,
-		respClient: httpClient,
+		respClient: respClient,
 		notifyOnly: conf.NotifyOnly,
 	}
 }
@@ -99,35 +100,24 @@ func (b *Bot) Respond(ctx context.Context, reqID string, reqData RequestData, st
 	message.Blocks.BlockSet = b.msgSections(reqID, reqData, status)
 	message.ReplaceOriginal = true
 
-	body, err := json.Marshal(message)
-	if err != nil {
-		return trace.Wrap(err, "failed to serialize msg block: %v", err)
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, responseURL, bytes.NewReader(body))
-	if err != nil {
-		return trace.Wrap(err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	rsp, err := b.respClient.Do(req)
-	if err != nil {
-		return trace.Wrap(err, "failed to send update: %v", err)
-	}
-	defer rsp.Body.Close()
-
-	rbody, err := ioutil.ReadAll(rsp.Body)
-	if err != nil {
-		return trace.Wrap(err, "failed to read update response: %v", err)
-	}
-
-	var ursp struct {
+	var result struct {
 		Ok bool `json:"ok"`
 	}
-	if err := json.Unmarshal(rbody, &ursp); err != nil {
-		return trace.Wrap(err, "failed to parse response body: %v", err)
+
+	resp, err := b.respClient.NewRequest().
+		SetContext(ctx).
+		SetBody(&message).
+		SetResult(&result).
+		Post(responseURL)
+	if err != nil {
+		return err
 	}
 
-	if !ursp.Ok {
+	if !resp.IsSuccess() {
+		return trace.Errorf("unexpected http status %q", resp.Status())
+	}
+
+	if !result.Ok {
 		return trace.Errorf("operation status is not OK")
 	}
 
