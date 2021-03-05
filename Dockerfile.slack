@@ -5,7 +5,7 @@ COPY . .
 RUN cd access/slack
 RUN make && ls access/slack/*
 
-FROM ubuntu:18.04 as plugin
+FROM ubuntu:20.04 as plugin
 RUN mkdir -p tmp/slack
 WORKDIR /tmp/slack
 COPY --from=build /go/src/github.com/gravitational/teleport-plugins/access/slack/ .
