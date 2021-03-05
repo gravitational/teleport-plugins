@@ -1,0 +1,14 @@
+FROM golang:1.16.0-alpine AS build
+RUN mkdir -p /go/src/github.com/gravitational/teleport-plugins/
+WORKDIR /go/src/github.com/gravitational/teleport-plugins/
+COPY . .
+RUN apk update && apk add make
+RUN cd access/slack
+RUN make && ls access/slack/*
+
+FROM alpine:3.12 as plugin
+RUN mkdir -p tmp/slack
+WORKDIR /tmp/slack
+COPY --from=build /go/src/github.com/gravitational/teleport-plugins/access/slack/ .
+RUN cp ./build/teleport-slack .
+RUN ./install
