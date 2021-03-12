@@ -26,7 +26,7 @@ import (
 	"github.com/gravitational/teleport/api/utils"
 
 	"github.com/gravitational/trace"
-	"github.com/pborman/uuid"
+
 	"github.com/vulcand/predicate"
 )
 
@@ -80,7 +80,7 @@ type AccessRequest interface {
 	SetRoleThresholdMapping(map[string]ThresholdIndexSets)
 	// ApplyReview applies an access review.  The supplied parser must be pre-configured to evaluate
 	// boolian expressions based on the review and its author.
-	ApplyReview(AccessReview, predicate.Parser) (bool, error)
+	ApplyReview(AccessReview, predicate.Parser) error
 	// GetReviews gets the list of currently applied access reviews.
 	GetReviews() []AccessReview
 	// GetSuggestedReviewers gets the suggested reviewer list.
@@ -95,12 +95,12 @@ type AccessRequest interface {
 }
 
 // NewAccessRequest assembled an AccessRequest resource.
-func NewAccessRequest(user string, roles ...string) (AccessRequest, error) {
+func NewAccessRequest(name string, user string, roles ...string) (AccessRequest, error) {
 	req := AccessRequestV3{
 		Kind:    KindAccessRequest,
 		Version: V3,
 		Metadata: Metadata{
-			Name: uuid.New(),
+			Name: name,
 		},
 		Spec: AccessRequestSpecV3{
 			User:  user,
@@ -207,9 +207,13 @@ func (r *AccessRequestV3) SetSystemAnnotations(annotations map[string][]string) 
 }
 
 func (r *AccessRequestV3) GetOriginalRoles() []string {
-	if len(r.Spec.Roles) == len(r.Spec.RoleThresholdMapping) {
+	if l := len(r.Spec.RoleThresholdMapping); l == 0 || l == len(r.Spec.Roles) {
+		// rtm is unspecified or original role list is unmodified
 		return r.Spec.Roles
 	}
+
+	// role subselection has been applied.  calculate original roles
+	// by collecting the keys of the rtm.
 	roles := make([]string, 0, len(r.Spec.RoleThresholdMapping))
 	for role := range r.Spec.RoleThresholdMapping {
 		roles = append(roles, role)
@@ -240,21 +244,21 @@ func (r *AccessRequestV3) SetRoleThresholdMapping(rtm map[string]ThresholdIndexS
 // ApplyReview applies an access review.  The supplied parser must be pre-configured to evaluate
 // boolian expressions based on the review and its author.  Prefer using services.ApplyAccessReview
 // rather than calling this method directly.
-func (r *AccessRequestV3) ApplyReview(rev AccessReview, parser predicate.Parser) (bool, error) {
+func (r *AccessRequestV3) ApplyReview(rev AccessReview, parser predicate.Parser) error {
 	if !rev.State.IsApproved() && !rev.State.IsDenied() {
-		return false, trace.BadParameter("invalid state proposal: %s (expected approval/denial)", rev.State)
+		return trace.BadParameter("invalid state proposal: %s (expected approval/denial)", rev.State)
 	}
 
 	// the default theshold should exist. if it does not, the request either is not fully
 	// initialized (i.e. variable expansion has not been run yet) or the was inserted into
 	// the backend by a teleport instance which does not support the review feature.
 	if len(r.Spec.Thresholds) == 0 {
-		return false, trace.BadParameter("request is uninitialized or does not support reviews")
+		return trace.BadParameter("request is uninitialized or does not support reviews")
 	}
 
 	for _, existingReview := range r.Spec.Reviews {
 		if existingReview.Author == rev.Author {
-			return false, trace.AccessDenied("user %q has already reviewed this request", rev.Author)
+			return trace.AccessDenied("user %q has already reviewed this request", rev.Author)
 		}
 	}
 
@@ -265,7 +269,7 @@ func (r *AccessRequestV3) ApplyReview(rev AccessReview, parser predicate.Parser)
 	// TODO(fspmarshall): Remove this restriction once role overrides
 	// in reviews are fully supported.
 	if len(rev.Roles) != 0 && len(rev.Roles) != len(r.Spec.RoleThresholdMapping) {
-		return false, trace.NotImplemented("reviews cannot perform role subselection")
+		return trace.NotImplemented("reviews cannot perform role subselection")
 	}
 
 	// matches collects the results of checking all relevant thresholds
@@ -283,7 +287,7 @@ func (r *AccessRequestV3) ApplyReview(rev AccessReview, parser predicate.Parser)
 	for _, role := range roles {
 		thresholdSets, ok := r.Spec.RoleThresholdMapping[role]
 		if !ok {
-			return false, trace.BadParameter("role %q is not a member of this request", role)
+			return trace.BadParameter("role %q is not a member of this request", role)
 		}
 
 		for _, tset := range thresholdSets.Sets {
@@ -295,12 +299,12 @@ func (r *AccessRequestV3) ApplyReview(rev AccessReview, parser predicate.Parser)
 
 				thresh, err := r.getThreshold(tid)
 				if err != nil {
-					return false, trace.Wrap(err)
+					return trace.Wrap(err)
 				}
 
 				match, err := thresh.MatchesFilter(parser)
 				if err != nil {
-					return false, trace.Wrap(err)
+					return trace.Wrap(err)
 				}
 
 				matches[tid] = match
@@ -327,11 +331,11 @@ func (r *AccessRequestV3) ApplyReview(rev AccessReview, parser predicate.Parser)
 
 // onReview checks if we've hit sufficient thresholds for a state-transition,
 // and applies it if that is the case.
-func (r *AccessRequestV3) onReview() (bool, error) {
+func (r *AccessRequestV3) onReview() error {
 	if !r.Spec.State.IsPending() {
 		// no further state-transitions are performed after we exit
 		// the PENDING state.
-		return false, nil
+		return nil
 	}
 
 	// TODO(fspmarshall): Rework this function to support role subselection.
@@ -354,7 +358,7 @@ ProcessReviews:
 		for _, tid := range rev.ThresholdIndexes {
 			idx := int(tid)
 			if len(r.Spec.Thresholds) <= idx {
-				return false, trace.Errorf("threshold index '%d' out of range (this is a bug)", idx)
+				return trace.Errorf("threshold index '%d' out of range (this is a bug)", idx)
 			}
 			if rev.State.IsApproved() {
 				counts[idx].approval++
@@ -372,7 +376,7 @@ ProcessReviews:
 				r.Spec.State = RequestState_DENIED
 				r.Spec.ResolveReason = lastReview.Reason
 				r.Spec.ResolveAnnotations = lastReview.Annotations
-				return true, nil
+				return nil
 			}
 		}
 
@@ -393,7 +397,7 @@ ProcessReviews:
 				for _, tid := range thresholds.Indexes {
 					idx := int(tid)
 					if len(r.Spec.Thresholds) <= idx {
-						return false, trace.Errorf("threshold index out of range %s/%d (this is a bug)", role, tid)
+						return trace.Errorf("threshold index out of range %s/%d (this is a bug)", role, tid)
 					}
 					t := r.Spec.Thresholds[idx]
 
@@ -423,7 +427,7 @@ ProcessReviews:
 
 	if len(approved) != len(r.Spec.RoleThresholdMapping) {
 		// at least one role has not hit its approval threshold
-		return false, nil
+		return nil
 	}
 
 	r.Spec.State = RequestState_APPROVED
@@ -433,7 +437,7 @@ ProcessReviews:
 	r.Spec.ResolveAnnotations = lastReview.Annotations
 	r.SetExpiry(r.GetAccessExpiry())
 
-	return true, nil
+	return nil
 }
 
 // GetReviews gets the list of currently applied access reviews.
@@ -482,9 +486,6 @@ func (r *AccessRequestV3) Check() error {
 	}
 	if r.GetName() == "" {
 		return trace.BadParameter("access request id not set")
-	}
-	if uuid.Parse(r.GetName()) == nil {
-		return trace.BadParameter("invalid access request id %q", r.GetName())
 	}
 	if r.GetUser() == "" {
 		return trace.BadParameter("access request user name not set")
@@ -604,11 +605,27 @@ func (t AccessReviewThreshold) Equals(other AccessReviewThreshold) bool {
 }
 
 func (c AccessReviewConditions) IsZero() bool {
-	return c.Size() == 0
+	return reflect.ValueOf(c).IsZero()
 }
 
 func (c AccessRequestConditions) IsZero() bool {
-	return c.Size() == 0
+	return reflect.ValueOf(c).IsZero()
+}
+
+func (s AccessReviewSubmission) Check() error {
+	if s.RequestID == "" {
+		return trace.BadParameter("missing request ID")
+	}
+
+	return s.Review.Check()
+}
+
+func (s AccessReview) Check() error {
+	if s.Author == "" {
+		return trace.BadParameter("missing review author")
+	}
+
+	return nil
 }
 
 // AccessRequestUpdate encompasses the parameters of a
@@ -812,106 +829,4 @@ func (f *AccessRequestFilter) Match(req AccessRequest) bool {
 // Equals compares two AccessRequestFilters
 func (f *AccessRequestFilter) Equals(o AccessRequestFilter) bool {
 	return f.ID == o.ID && f.User == o.User && f.State == o.State
-}
-
-// AccessRequestSpecSchema is JSON schema for AccessRequestSpec
-const AccessRequestSpecSchema = `{
-	"type": "object",
-	"additionalProperties": false,
-	"properties": {
-		"user": { "type": "string" },
-		"roles": {
-			"type": "array",
-			"items": { "type": "string" }
-		},
-		"state": { "type": "integer" },
-		"created": { "type": "string" },
-		"expires": { "type": "string" },
-		"request_reason": { "type": "string" },
-		"resolve_reason": { "type": "string" },
-		"resolve_annotations": { "type": "object" },
-		"system_annotations": { "type": "object" },
-        "thresholds": {
-          "type": "array",
-          "items": { "type": "object" }
-        },
-        "rtm": { "type": "object" },
-        "reviews": {
-          "type": "array",
-          "items": { "type": "object" }
-        },
-		"suggested_reviewers": {
-		  "type": "array",
-		  "items": { "type": "string" }
-		}
-	}
-}`
-
-// GetAccessRequestSchema gets the full AccessRequest JSON schema
-func GetAccessRequestSchema() string {
-	return fmt.Sprintf(V2SchemaTemplate, MetadataSchema, AccessRequestSpecSchema, DefaultDefinitions)
-}
-
-// AccessRequestMarshaler implements marshal/unmarshal of AccessRequest implementations
-type AccessRequestMarshaler interface {
-	MarshalAccessRequest(req AccessRequest, opts ...MarshalOption) ([]byte, error)
-	UnmarshalAccessRequest(bytes []byte, opts ...MarshalOption) (AccessRequest, error)
-}
-
-type accessRequestMarshaler struct{}
-
-func (r *accessRequestMarshaler) MarshalAccessRequest(req AccessRequest, opts ...MarshalOption) ([]byte, error) {
-	cfg, err := CollectOptions(opts)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	switch r := req.(type) {
-	case *AccessRequestV3:
-		if !cfg.PreserveResourceID {
-			// avoid modifying the original object
-			// to prevent unexpected data races
-			cp := *r
-			cp.SetResourceID(0)
-			r = &cp
-		}
-		return utils.FastMarshal(r)
-	default:
-		return nil, trace.BadParameter("unrecognized access request type: %T", req)
-	}
-}
-
-func (r *accessRequestMarshaler) UnmarshalAccessRequest(data []byte, opts ...MarshalOption) (AccessRequest, error) {
-	cfg, err := CollectOptions(opts)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	var req AccessRequestV3
-	if cfg.SkipValidation {
-		if err := utils.FastUnmarshal(data, &req); err != nil {
-			return nil, trace.Wrap(err)
-		}
-	} else {
-		if err := utils.UnmarshalWithSchema(GetAccessRequestSchema(), &req, data); err != nil {
-			return nil, trace.Wrap(err)
-		}
-	}
-	if err := req.CheckAndSetDefaults(); err != nil {
-		return nil, trace.Wrap(err)
-	}
-	if cfg.ID != 0 {
-		req.SetResourceID(cfg.ID)
-	}
-	if !cfg.Expires.IsZero() {
-		req.SetExpiry(cfg.Expires)
-	}
-	return &req, nil
-}
-
-var accessRequestMarshalerInstance AccessRequestMarshaler = &accessRequestMarshaler{}
-
-// GetAccessRequestMarshaler returns currently set AccessRequestMarshaler
-func GetAccessRequestMarshaler() AccessRequestMarshaler {
-	marshalerMutex.Lock()
-	defer marshalerMutex.Unlock()
-	return accessRequestMarshalerInstance
 }

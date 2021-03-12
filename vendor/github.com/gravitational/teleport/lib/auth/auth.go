@@ -27,6 +27,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/subtle"
+	"encoding/base64"
 	"fmt"
 	"math/rand"
 	"net/url"
@@ -36,6 +37,8 @@ import (
 
 	"github.com/gravitational/teleport"
 	"github.com/gravitational/teleport/api/client"
+	"github.com/gravitational/teleport/api/client/proto"
+	"github.com/gravitational/teleport/api/constants"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/wrappers"
 	"github.com/gravitational/teleport/lib/auth/u2f"
@@ -154,6 +157,18 @@ type Services struct {
 	services.ClusterConfiguration
 	services.Events
 	events.IAuditLog
+}
+
+// GetWebSession returns existing web session described by req.
+// Implements ReadAccessPoint
+func (r Services) GetWebSession(ctx context.Context, req types.GetWebSessionRequest) (types.WebSession, error) {
+	return r.Identity.WebSessions().Get(ctx, req)
+}
+
+// GetWebToken returns existing web token described by req.
+// Implements ReadAccessPoint
+func (r Services) GetWebToken(ctx context.Context, req types.GetWebTokenRequest) (types.WebToken, error) {
+	return r.Identity.WebTokens().Get(ctx, req)
 }
 
 var (
@@ -463,6 +478,20 @@ type certRequest struct {
 	// dbName is the optional database name which, if provided, will be used
 	// as a default database.
 	dbName string
+	// mfaVerified is the UUID of an MFA device when this certRequest was
+	// created immediately after an MFA check.
+	mfaVerified string
+	// clientIP is an IP of the client requesting the certificate.
+	clientIP string
+}
+
+type certRequestOption func(*certRequest)
+
+func certRequestMFAVerified(mfaID string) certRequestOption {
+	return func(r *certRequest) { r.mfaVerified = mfaID }
+}
+func certRequestClientIP(ip string) certRequestOption {
+	return func(r *certRequest) { r.clientIP = ip }
 }
 
 // GenerateUserTestCerts is used to generate user certificate, used internally for tests
@@ -511,7 +540,7 @@ func (a *Server) GenerateUserAppTestCert(publicKey []byte, username string, ttl 
 		// used to log into servers but SSH certificate generation code requires a
 		// principal be in the certificate.
 		traits: wrappers.Traits(map[string][]string{
-			teleport.TraitLogins: []string{uuid.New()},
+			teleport.TraitLogins: {uuid.New()},
 		}),
 		// Only allow this certificate to be used for applications.
 		usage: []string{teleport.UsageAppsOnly},
@@ -621,6 +650,20 @@ func (a *Server) generateUserCert(req certRequest) (*certs, error) {
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
+	if req.routeToCluster != "" && clusterName != req.routeToCluster {
+		// Authorize access to a remote cluster.
+		rc, err := a.Presence.GetRemoteCluster(req.routeToCluster)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		if err := req.checker.CheckAccessToRemoteCluster(rc); err != nil {
+			if trace.IsAccessDenied(err) {
+				return nil, trace.NotFound("remote cluster %q not found", req.routeToCluster)
+			}
+			return nil, trace.Wrap(err)
+		}
+	}
+
 	ca, err := a.Trust.GetCertAuthority(services.CertAuthID{
 		Type:       services.UserCA,
 		DomainName: clusterName,
@@ -647,6 +690,8 @@ func (a *Server) generateUserCert(req certRequest) (*certs, error) {
 		RouteToCluster:        req.routeToCluster,
 		Traits:                req.traits,
 		ActiveRequests:        req.activeRequests,
+		MFAVerified:           req.mfaVerified,
+		ClientIP:              req.clientIP,
 	})
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -667,7 +712,7 @@ func (a *Server) generateUserCert(req certRequest) (*certs, error) {
 			if !trace.IsNotFound(err) {
 				return nil, trace.Wrap(err)
 			}
-			log.WithError(err).Debug("Failed setting default kubernetes cluster for user login (user did not provide a cluster); leaving KubernetesCluster extension in the TLS certificate empty")
+			log.Debug("Failed setting default kubernetes cluster for user login (user did not provide a cluster); leaving KubernetesCluster extension in the TLS certificate empty")
 		}
 	}
 
@@ -706,6 +751,8 @@ func (a *Server) generateUserCert(req certRequest) (*certs, error) {
 		},
 		DatabaseNames: dbNames,
 		DatabaseUsers: dbUsers,
+		MFAVerified:   req.mfaVerified,
+		ClientIP:      req.clientIP,
 	}
 	subject, err := identity.Subject()
 	if err != nil {
@@ -797,63 +844,91 @@ func (a *Server) PreAuthenticatedSignIn(user string, identity tlsca.Identity) (s
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	sess, err := a.NewWebSession(user, roles, traits)
+	sess, err := a.NewWebSession(types.NewWebSessionRequest{
+		User:   user,
+		Roles:  roles,
+		Traits: traits,
+	})
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	if err := a.UpsertWebSession(user, sess); err != nil {
+	if err := a.upsertWebSession(context.TODO(), user, sess); err != nil {
 		return nil, trace.Wrap(err)
 	}
 	return sess.WithoutSecrets(), nil
 }
 
-func (a *Server) U2FSignRequest(user string, password []byte) (*u2f.AuthenticateChallenge, error) {
-	cap, err := a.GetAuthPreference()
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
+// MFAAuthenticateChallenge is a U2F authentication challenge sent on user
+// login.
+type MFAAuthenticateChallenge struct {
+	// Before 6.0 teleport would only send 1 U2F challenge. Embed the old
+	// challenge for compatibility with older clients. All new clients should
+	// ignore this and read Challenges instead.
+	*u2f.AuthenticateChallenge
 
-	u2fConfig, err := cap.GetU2F()
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	err = a.WithUserLock(user, func() error {
-		return a.CheckPasswordWOToken(user, password)
-	})
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	return u2f.AuthenticateInit(u2f.AuthenticateInitParams{
-		AppConfig:  *u2fConfig,
-		StorageKey: user,
-		Storage:    a.Identity,
-	})
+	// U2FChallenges is a list of U2F challenges, one for each registered
+	// device.
+	U2FChallenges []u2f.AuthenticateChallenge `json:"u2f_challenges"`
+	// TOTPChallenge specifies whether TOTP is supported for this user.
+	TOTPChallenge bool `json:"totp_challenge"`
 }
 
-func (a *Server) CheckU2FSignResponse(user string, response *u2f.AuthenticateChallengeResponse) error {
+func (a *Server) GetMFAAuthenticateChallenge(user string, password []byte) (*MFAAuthenticateChallenge, error) {
+	ctx := context.TODO()
+
+	err := a.WithUserLock(user, func() error {
+		return a.checkPasswordWOToken(user, password)
+	})
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	protoChal, err := a.mfaAuthChallenge(ctx, user, a.Identity)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	// Convert from proto to JSON format.
+	chal := &MFAAuthenticateChallenge{
+		TOTPChallenge: protoChal.TOTP != nil,
+	}
+	for _, u2fChal := range protoChal.U2F {
+		ch := u2f.AuthenticateChallenge{
+			Challenge: u2fChal.Challenge,
+			KeyHandle: u2fChal.KeyHandle,
+			AppID:     u2fChal.AppID,
+		}
+		if chal.AuthenticateChallenge == nil {
+			chal.AuthenticateChallenge = &ch
+		}
+		chal.U2FChallenges = append(chal.U2FChallenges, ch)
+	}
+
+	return chal, nil
+}
+
+func (a *Server) CheckU2FSignResponse(ctx context.Context, user string, response *u2f.AuthenticateChallengeResponse) (*types.MFADevice, error) {
 	// before trying to register a user, see U2F is actually setup on the backend
 	cap, err := a.GetAuthPreference()
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 	_, err = cap.GetU2F()
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
-	return u2f.AuthenticateVerify(u2f.AuthenticateVerifyParams{
-		Resp:       *response,
-		StorageKey: user,
-		Storage:    a.Identity,
-	})
+	return a.checkU2F(ctx, user, *response, a.Identity)
 }
 
-// ExtendWebSession creates a new web session for a user based on a valid previous sessionID.
+// ExtendWebSession creates a new web session for a user based on a valid previous session.
 // Additional roles are appended to initial roles if there is an approved access request.
+// The new session expiration time will not exceed the expiration time of the old session.
 func (a *Server) ExtendWebSession(user, prevSessionID, accessRequestID string, identity tlsca.Identity) (services.WebSession, error) {
-	prevSession, err := a.GetWebSession(user, prevSessionID)
+	prevSession, err := a.GetWebSession(context.TODO(), types.GetWebSessionRequest{
+		User:      user,
+		SessionID: prevSessionID,
+	})
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -886,19 +961,22 @@ func (a *Server) ExtendWebSession(user, prevSessionID, accessRequestID string, i
 		}
 	}
 
-	sess, err := a.NewWebSession(user, roles, traits)
+	sessionTTL := utils.ToTTL(a.clock, expiresAt)
+	sess, err := a.NewWebSession(types.NewWebSessionRequest{
+		User:       user,
+		Roles:      roles,
+		Traits:     traits,
+		SessionTTL: sessionTTL,
+	})
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
-	sess.SetExpiryTime(expiresAt)
-	bearerTokenTTL := utils.MinTTL(utils.ToTTL(a.clock, expiresAt), BearerTokenTTL)
-	sess.SetBearerTokenExpiryTime(a.clock.Now().UTC().Add(bearerTokenTTL))
-	if err := a.UpsertWebSession(user, sess); err != nil {
+	if err := a.upsertWebSession(context.TODO(), user, sess); err != nil {
 		return nil, trace.Wrap(err)
 	}
 
-	sess, err = services.GetWebSessionMarshaler().ExtendWebSession(sess)
+	sess, err = services.ExtendWebSession(sess)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -929,7 +1007,7 @@ func (a *Server) getRolesAndExpiryFromAccessRequest(user, accessRequestID string
 		return nil, time.Time{}, trace.BadParameter("access request %q is awaiting approval", accessRequestID)
 	}
 
-	if err := services.ValidateAccessRequest(a, req); err != nil {
+	if err := services.ValidateAccessRequestForUser(a, req); err != nil {
 		return nil, time.Time{}, trace.Wrap(err)
 	}
 
@@ -948,15 +1026,15 @@ func (a *Server) CreateWebSession(user string) (services.WebSession, error) {
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	sess, err := a.NewWebSession(user, u.GetRoles(), u.GetTraits())
+	sess, err := a.NewWebSession(types.NewWebSessionRequest{
+		User:   user,
+		Roles:  u.GetRoles(),
+		Traits: u.GetTraits(),
+	})
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	if err := a.UpsertWebSession(user, sess); err != nil {
-		return nil, trace.Wrap(err)
-	}
-	sess, err = services.GetWebSessionMarshaler().GenerateWebSession(sess)
-	if err != nil {
+	if err := a.upsertWebSession(context.TODO(), user, sess); err != nil {
 		return nil, trace.Wrap(err)
 	}
 	return sess, nil
@@ -1461,27 +1539,30 @@ func (a *Server) GetTokens(opts ...services.MarshalOption) (tokens []services.Pr
 	return tokens, nil
 }
 
-func (a *Server) NewWebSession(username string, roles []string, traits wrappers.Traits) (services.WebSession, error) {
-	user, err := a.GetUser(username, false)
+// NewWebSession creates and returns a new web session for the specified request
+func (a *Server) NewWebSession(req types.NewWebSessionRequest) (services.WebSession, error) {
+	user, err := a.GetUser(req.User, false)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	checker, err := services.FetchRoles(roles, a.Access, traits)
+	checker, err := services.FetchRoles(req.Roles, a.Access, req.Traits)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-
 	priv, pub, err := a.GetNewKeyPairFromPool()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	sessionTTL := checker.AdjustSessionTTL(defaults.CertDuration)
+	sessionTTL := req.SessionTTL
+	if sessionTTL == 0 {
+		sessionTTL = checker.AdjustSessionTTL(defaults.CertDuration)
+	}
 	certs, err := a.generateUserCert(certRequest{
 		user:      user,
 		ttl:       sessionTTL,
 		publicKey: pub,
 		checker:   checker,
-		traits:    traits,
+		traits:    req.Traits,
 	})
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -1496,7 +1577,7 @@ func (a *Server) NewWebSession(username string, roles []string, traits wrappers.
 	}
 	bearerTokenTTL := utils.MinTTL(sessionTTL, BearerTokenTTL)
 	return services.NewWebSession(token, services.KindWebSession, services.KindWebSession, services.WebSessionSpecV2{
-		User:               user.GetName(),
+		User:               req.User,
 		Priv:               priv,
 		Pub:                certs.ssh,
 		TLSCert:            certs.tls,
@@ -1506,16 +1587,11 @@ func (a *Server) NewWebSession(username string, roles []string, traits wrappers.
 	}), nil
 }
 
-func (a *Server) UpsertWebSession(user string, sess services.WebSession) error {
-	return a.Identity.UpsertWebSession(user, sess.GetName(), sess)
-}
-
-func (a *Server) GetWebSession(userName string, id string) (services.WebSession, error) {
-	return a.Identity.GetWebSession(userName, id)
-}
-
-func (a *Server) GetWebSessionInfo(userName string, id string) (services.WebSession, error) {
-	sess, err := a.Identity.GetWebSession(userName, id)
+// GetWebSessionInfo returns the web session specified with sessionID for the given user.
+// The session is stripped of any authentication details.
+// Implements auth.WebUIService
+func (a *Server) GetWebSessionInfo(ctx context.Context, user, sessionID string) (services.WebSession, error) {
+	sess, err := a.Identity.WebSessions().Get(ctx, types.GetWebSessionRequest{User: user, SessionID: sessionID})
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -1534,10 +1610,6 @@ func (a *Server) DeleteNamespace(namespace string) error {
 		return trace.BadParameter("can't delete namespace %v that has %v registered nodes", namespace, len(nodes))
 	}
 	return a.Presence.DeleteNamespace(namespace)
-}
-
-func (a *Server) DeleteWebSession(user string, id string) error {
-	return trace.Wrap(a.Identity.DeleteWebSession(user, id))
 }
 
 // NewWatcher returns a new event watcher. In case of an auth server
@@ -1629,7 +1701,7 @@ func (a *Server) upsertRole(ctx context.Context, role services.Role) error {
 }
 
 func (a *Server) CreateAccessRequest(ctx context.Context, req services.AccessRequest) error {
-	err := services.ValidateAccessRequest(a, req,
+	err := services.ValidateAccessRequestForUser(a, req,
 		// if request is in state pending, variable expansion must be applied
 		services.ExpandVars(req.GetState().IsPending()),
 	)
@@ -1667,6 +1739,9 @@ func (a *Server) CreateAccessRequest(ctx context.Context, req services.AccessReq
 		},
 		UserMetadata: events.UserMetadata{
 			User: req.GetUser(),
+		},
+		ResourceMetadata: events.ResourceMetadata{
+			Expires: req.GetAccessExpiry(),
 		},
 		Roles:        req.GetRoles(),
 		RequestID:    req.GetName(),
@@ -1732,7 +1807,32 @@ func (a *Server) SubmitAccessReview(ctx context.Context, params types.AccessRevi
 		return nil, trace.Wrap(err)
 	}
 
-	// TODO(fspmarshall): emit audit event here
+	event := &events.AccessRequestCreate{
+		Metadata: events.Metadata{
+			Type: events.AccessRequestReviewEvent,
+			Code: events.AccessRequestReviewCode,
+		},
+		ResourceMetadata: events.ResourceMetadata{
+			Expires: req.GetAccessExpiry(),
+		},
+		RequestID:     params.RequestID,
+		RequestState:  req.GetState().String(),
+		ProposedState: params.Review.State.String(),
+		Reason:        params.Review.Reason,
+		Reviewer:      params.Review.Author,
+	}
+
+	if len(params.Review.Annotations) > 0 {
+		annotations, err := events.EncodeMapStrings(params.Review.Annotations)
+		if err != nil {
+			log.WithError(err).Debugf("Failed to encode access request annotations.")
+		} else {
+			event.Annotations = annotations
+		}
+	}
+	if err := a.emitter.EmitAuditEvent(a.closeCtx, event); err != nil {
+		log.WithError(err).Warn("Failed to emit access request update event.")
+	}
 
 	return req, nil
 }
@@ -1905,8 +2005,123 @@ func (a *Server) GetAppSession(ctx context.Context, req services.GetAppSessionRe
 }
 
 // GetDatabaseServers returns all registers database proxy servers.
-func (a *Server) GetDatabaseServers(ctx context.Context, namespace string, opts ...types.MarshalOption) ([]types.DatabaseServer, error) {
+func (a *Server) GetDatabaseServers(ctx context.Context, namespace string, opts ...services.MarshalOption) ([]types.DatabaseServer, error) {
 	return a.GetCache().GetDatabaseServers(ctx, namespace, opts...)
+}
+
+// mfaAuthChallenge constructs an MFAAuthenticateChallenge for all MFA devices
+// registered by the user.
+func (a *Server) mfaAuthChallenge(ctx context.Context, user string, u2fStorage u2f.AuthenticationStorage) (*proto.MFAAuthenticateChallenge, error) {
+	// Check what kind of MFA is enabled.
+	apref, err := a.GetAuthPreference()
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	var enableTOTP, enableU2F bool
+	switch apref.GetSecondFactor() {
+	case constants.SecondFactorOTP:
+		enableTOTP, enableU2F = true, false
+	case constants.SecondFactorU2F:
+		enableTOTP, enableU2F = false, true
+	default:
+		// Other AuthPreference types don't restrict us to a single MFA type,
+		// send all challenges.
+		enableTOTP, enableU2F = true, true
+	}
+	var u2fPref *types.U2F
+	if enableU2F {
+		u2fPref, err = apref.GetU2F()
+		if trace.IsNotFound(err) {
+			// If U2F parameters were not set in the auth server config,
+			// disable U2F challenges.
+			enableU2F = false
+		} else if err != nil {
+			return nil, trace.Wrap(err)
+		}
+	}
+
+	devs, err := a.GetMFADevices(ctx, user)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	challenge := new(proto.MFAAuthenticateChallenge)
+	for _, dev := range devs {
+		switch dev.Device.(type) {
+		case *types.MFADevice_Totp:
+			if !enableTOTP {
+				continue
+			}
+			challenge.TOTP = new(proto.TOTPChallenge)
+		case *types.MFADevice_U2F:
+			if !enableU2F {
+				continue
+			}
+			ch, err := u2f.AuthenticateInit(ctx, u2f.AuthenticateInitParams{
+				AppConfig:  *u2fPref,
+				Dev:        dev,
+				Storage:    u2fStorage,
+				StorageKey: user,
+			})
+			if err != nil {
+				return nil, trace.Wrap(err)
+			}
+			challenge.U2F = append(challenge.U2F, &proto.U2FChallenge{
+				KeyHandle: ch.KeyHandle,
+				Challenge: ch.Challenge,
+				AppID:     ch.AppID,
+			})
+		default:
+			log.Warningf("skipping MFA device of unknown type %T", dev.Device)
+		}
+	}
+	return challenge, nil
+}
+
+func (a *Server) validateMFAAuthResponse(ctx context.Context, user string, resp *proto.MFAAuthenticateResponse, u2fStorage u2f.AuthenticationStorage) (*types.MFADevice, error) {
+	switch res := resp.Response.(type) {
+	case *proto.MFAAuthenticateResponse_TOTP:
+		return a.checkOTP(user, res.TOTP.Code)
+	case *proto.MFAAuthenticateResponse_U2F:
+		return a.checkU2F(ctx, user, u2f.AuthenticateChallengeResponse{
+			KeyHandle:     res.U2F.KeyHandle,
+			ClientData:    res.U2F.ClientData,
+			SignatureData: res.U2F.Signature,
+		}, u2fStorage)
+	default:
+		return nil, trace.BadParameter("unknown or missing MFAAuthenticateResponse type %T", resp.Response)
+	}
+}
+
+func (a *Server) checkU2F(ctx context.Context, user string, res u2f.AuthenticateChallengeResponse, u2fStorage u2f.AuthenticationStorage) (*types.MFADevice, error) {
+	devs, err := a.GetMFADevices(ctx, user)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	for _, dev := range devs {
+		u2fDev := dev.GetU2F()
+		if u2fDev == nil {
+			continue
+		}
+
+		// U2F passes key handles around base64-encoded, without padding.
+		kh := base64.URLEncoding.WithPadding(base64.NoPadding).EncodeToString(u2fDev.KeyHandle)
+		if kh != res.KeyHandle {
+			continue
+		}
+		if err := u2f.AuthenticateVerify(ctx, u2f.AuthenticateVerifyParams{
+			Dev:        dev,
+			Resp:       res,
+			Storage:    u2fStorage,
+			StorageKey: user,
+			Clock:      a.clock,
+		}); err != nil {
+			// Since key handles are unique, no need to check other devices.
+			return nil, trace.AccessDenied("U2F response validation failed for device %q: %v", dev.GetName(), err)
+		}
+		return dev, nil
+	}
+	return nil, trace.AccessDenied("U2F response validation failed: no device matches the response")
 }
 
 // WithClock is a functional server option that sets the server's clock
@@ -1914,6 +2129,20 @@ func WithClock(clock clockwork.Clock) func(*Server) {
 	return func(s *Server) {
 		s.clock = clock
 	}
+}
+
+func (a *Server) upsertWebSession(ctx context.Context, user string, session services.WebSession) error {
+	if err := a.WebSessions().Upsert(ctx, session); err != nil {
+		return trace.Wrap(err)
+	}
+	token := types.NewWebToken(session.GetBearerTokenExpiryTime(), types.WebTokenSpecV3{
+		User:  session.GetUser(),
+		Token: session.GetBearerToken(),
+	})
+	if err := a.WebTokens().Upsert(ctx, token); err != nil {
+		return trace.Wrap(err)
+	}
+	return nil
 }
 
 // authKeepAliver is a keep aliver using auth server directly

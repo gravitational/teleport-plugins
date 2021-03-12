@@ -27,18 +27,36 @@ TELEPORT_DEBUG ?= no
 GITTAG=v$(VERSION)
 BUILDFLAGS ?= $(ADDFLAGS) -ldflags '-w -s'
 CGOFLAG ?= CGO_ENABLED=1
+# Windows requires extra parameters to cross-compile with CGO.
+ifeq ("$(OS)","windows")
+BUILDFLAGS = $(ADDFLAGS) -ldflags '-w -s' -buildmode=exe
+CGOFLAG = CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++
+endif
+
+ifeq ("$(OS)","linux")
+# ARM builds need to specify the correct C compiler
+ifeq ("$(ARCH)","arm")
+CGOFLAG = CGO_ENABLED=1 CC=arm-linux-gnueabihf-gcc
+endif
+# ARM64 builds need to specify the correct C compiler
+ifeq ("$(ARCH)","arm64")
+CGOFLAG = CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc
+endif
+endif
+
 GO_LINTERS ?= "unused,govet,typecheck,deadcode,goimports,varcheck,structcheck,bodyclose,staticcheck,ineffassign,unconvert,misspell,gosimple,golint"
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
 FIPS ?=
-RELEASE=teleport-$(GITTAG)-$(OS)-$(ARCH)-bin
+RELEASE = teleport-$(GITTAG)-$(OS)-$(ARCH)-bin
 
 # FIPS support must be requested at build time.
 FIPS_MESSAGE := "without FIPS support"
 ifneq ("$(FIPS)","")
 FIPS_TAG := fips
 FIPS_MESSAGE := "with FIPS support"
+RELEASE = teleport-$(GITTAG)-$(OS)-$(ARCH)-fips-bin
 endif
 
 # PAM support will only be built into Teleport if headers exist at build time.
@@ -57,9 +75,14 @@ endif
 
 # BPF support will only be built into Teleport if headers exist at build time.
 BPF_MESSAGE := "without BPF support"
+
+# BPF cannot currently be compiled on ARMv7 due to this bug: https://github.com/iovisor/gobpf/issues/272
+# ARM64 builds are not affected.
+ifneq ("$(ARCH)","arm")
 ifneq ("$(wildcard /usr/include/bcc/libbpf.h)","")
 BPF_TAG := bpf
 BPF_MESSAGE := "with BPF support"
+endif
 endif
 
 # On Windows only build tsh. On all other platforms build teleport, tctl,
@@ -264,6 +287,7 @@ test: $(VERSRC)
 
 #
 # Integration tests. Need a TTY to work.
+# Any tests which need to run as root must be skipped during regular integration testing.
 #
 .PHONY: integration
 integration: FLAGS ?= -v -race
@@ -273,12 +297,23 @@ integration:
 	go test -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG)" $(PACKAGES) $(FLAGS)
 
 #
+# Integration tests which need to be run as root in order to complete successfully
+# are run separately to all other integration tests. Need a TTY to work.
+#
+INTEGRATION_ROOT_REGEX := ^TestRoot
+.PHONY: integration-root
+integration-root: FLAGS ?= -v -race
+integration-root: PACKAGES := $(shell go list ./... | grep integration)
+integration-root:
+	go test -run "$(INTEGRATION_ROOT_REGEX)" $(PACKAGES) $(FLAGS)
+
+#
 # Lint the Go code.
 # By default lint scans the entire repo. Pass FLAGS='--new' to only scan local
 # changes (or last commit).
 #
 .PHONY: lint
-lint: lint-go lint-sh
+lint: lint-sh lint-helm lint-go
 
 .PHONY: lint-go
 lint-go: GO_LINT_FLAGS ?=
@@ -310,7 +345,25 @@ lint-sh:
 		shellcheck \
 		--exclude=SC2086 \
 		--exclude=SC1091 \
+		--exclude=SC2129 \
 		$(SH_LINT_FLAGS)
+
+# Lints all the Helm charts found in directories under examples/chart and exits on failure
+# If there is a .lint directory inside, the chart gets linted once for each .yaml file in that directory
+.PHONY: lint-helm
+lint-helm:
+	for CHART in $$(find examples/chart -mindepth 1 -maxdepth 1 -type d); do \
+		if [ -d $$CHART/.lint ]; then \
+			for VALUES in $$CHART/.lint/*.yaml; do \
+				echo "$$CHART: $$VALUES"; \
+				helm lint --strict $$CHART -f $$VALUES || exit 1; \
+				helm template test $$CHART -f $$VALUES 1>/dev/null || exit 1; \
+			done \
+		else \
+			helm lint --strict $$CHART || exit 1; \
+			helm template test $$CHART 1>/dev/null || exit 1; \
+		fi \
+	done
 
 # This rule triggers re-generation of version.go and gitref.go if Makefile changes
 $(VERSRC): Makefile
@@ -408,30 +461,30 @@ buildbox-grpc:
 
 	protoc -I=.:$$PROTO_INCLUDE \
 		--proto_path=api/types/events \
-		--gofast_out=plugins=grpc:api/types/events \
+		--gogofast_out=plugins=grpc:api/types/events \
 		events.proto
 
 	protoc -I=.:$$PROTO_INCLUDE \
 		--proto_path=api/types/wrappers \
-		--gofast_out=plugins=grpc:api/types/wrappers \
+		--gogofast_out=plugins=grpc:api/types/wrappers \
 		wrappers.proto
 
 	protoc -I=.:$$PROTO_INCLUDE \
 		--proto_path=api/types \
-		--gofast_out=plugins=grpc:api/types \
+		--gogofast_out=plugins=grpc:api/types \
 		types.proto
 
 	protoc -I=.:$$PROTO_INCLUDE \
 		--proto_path=api/client/proto \
-		--gofast_out=plugins=grpc:api/client/proto \
+		--gogofast_out=plugins=grpc:api/client/proto \
 		authservice.proto
 
 	cd lib/multiplexer/test && protoc -I=.:$$PROTO_INCLUDE \
-	  --gofast_out=plugins=grpc:.\
+	  --gogofast_out=plugins=grpc:.\
     *.proto
 
 	cd lib/web && protoc -I=.:$$PROTO_INCLUDE \
-	  --gofast_out=plugins=grpc:.\
+	  --gogofast_out=plugins=grpc:.\
     *.proto
 
 .PHONY: goinstall
@@ -584,3 +637,7 @@ init-submodules-e: init-webapps-submodules-e
 update-vendor:
 	go mod tidy
 	go mod vendor
+	# delete the vendored api package. In its place
+	# create a symlink to the the original api package
+	rm -r vendor/github.com/gravitational/teleport/api
+	ln -s -r $(shell readlink -f api) vendor/github.com/gravitational/teleport

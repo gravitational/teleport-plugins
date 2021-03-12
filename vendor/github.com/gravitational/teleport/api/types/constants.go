@@ -30,6 +30,9 @@ const (
 	// Wildcard is a special wildcard character matching everything
 	Wildcard = "*"
 
+	// True holds "true" string value
+	True = "true"
+
 	// KindNamespace is a namespace
 	KindNamespace = "namespace"
 
@@ -83,6 +86,9 @@ const (
 
 	// KindWebSession is a web session resource
 	KindWebSession = "web_session"
+
+	// KindWebToken is a web token resource
+	KindWebToken = "web_token"
 
 	// KindAppSession represents an application specific web session.
 	KindAppSession = "app_session"
@@ -181,6 +187,12 @@ const (
 	// KindKubeService is a kubernetes service resource
 	KindKubeService = "kube_service"
 
+	// KindMFADevice is an MFA device for a user.
+	KindMFADevice = "mfa_device"
+
+	// KindBilling represents access to cloud billing features
+	KindBilling = "billing"
+
 	// V3 is the third version of resources.
 	V3 = "v3"
 
@@ -215,6 +227,9 @@ const (
 	// used only internally
 	VerbRotate = "rotate"
 )
+
+// WebSessionSubKinds lists subkinds of web session resources
+var WebSessionSubKinds = []string{KindAppSession, KindWebSession}
 
 const (
 	// RecordAtNode is the default. Sessions are recorded at Teleport nodes.

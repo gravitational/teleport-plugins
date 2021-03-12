@@ -11,7 +11,6 @@ import (
 type Config struct {
 	Teleport lib.TeleportConfig `toml:"teleport"`
 	Slack    SlackConfig        `toml:"slack"`
-	HTTP     lib.HTTPConfig     `toml:"http"`
 	Log      logger.Config      `toml:"log"`
 }
 
@@ -19,14 +18,8 @@ type Config struct {
 type SlackConfig struct {
 	Token      string   `toml:"token"`
 	Secret     string   `toml:"secret"`
-	Channel    string   `toml:"channel"`
-	Direct     []string `toml:"direct"`
-	NotifyOnly bool     `toml:"notify_only"`
+	Recipients []string `toml:"recipients"`
 	APIURL     string
-
-	NotifyReviewers struct {
-		Enabled bool `toml:"enabled"`
-	} `toml:"notify_reviewers"`
 }
 
 const exampleConfig = `# example slack plugin configuration TOML file
@@ -39,14 +32,6 @@ root_cas = "/var/lib/teleport/plugins/slack/auth.cas"   # Teleport cluster CA ce
 [slack]
 token = "api_token"             # Slack Bot OAuth token
 secret = "signing-secret-value" # Slack API Signing Secret
-channel = "channel-name"        # Slack Channel name to post requests to
-notify_only = false                # Allow Approval / Denial actions on Slack, or use it as notification only
-
-[http]
-public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com
-# listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:8081
-https_key_file = "/var/lib/teleport/webproxy_key.pem"  # TLS private key
-https_cert_file = "/var/lib/teleport/webproxy_cert.pem" # TLS certificate
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/slack.log"
@@ -91,15 +76,6 @@ func (c *Config) CheckAndSetDefaults() error {
 	}
 	if c.Slack.Secret == "" {
 		return trace.BadParameter("missing required value slack.secret")
-	}
-	if c.Slack.Channel == "" && len(c.Slack.Direct) == 0 && !c.Slack.NotifyReviewers.Enabled {
-		return trace.BadParameter("missing at least one of the required values: slack.channel, slack.direct or slack.notify_reviewers.enabled")
-	}
-	if c.HTTP.ListenAddr == "" {
-		c.HTTP.ListenAddr = ":8081"
-	}
-	if err := c.HTTP.Check(); err != nil {
-		return trace.Wrap(err)
 	}
 	if c.Log.Output == "" {
 		c.Log.Output = "stderr"

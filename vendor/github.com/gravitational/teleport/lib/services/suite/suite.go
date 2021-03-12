@@ -31,6 +31,8 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/gravitational/teleport"
+	"github.com/gravitational/teleport/api/constants"
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/lib/auth/u2f"
 	"github.com/gravitational/teleport/lib/backend"
 	"github.com/gravitational/teleport/lib/defaults"
@@ -163,7 +165,7 @@ func userSlicesEqual(c *check.C, a []services.User, b []services.User) {
 
 func usersEqual(c *check.C, a services.User, b services.User) {
 	comment := check.Commentf("a: %#v b: %#v", a, b)
-	c.Assert(a.Equals(b), check.Equals, true, comment)
+	c.Assert(services.UsersEquals(a, b), check.Equals, true, comment)
 }
 
 func newUser(name string, roles []string) services.User {
@@ -547,39 +549,45 @@ func (s *ServicesTestSuite) PasswordHashCRUD(c *check.C) {
 }
 
 func (s *ServicesTestSuite) WebSessionCRUD(c *check.C) {
-	_, err := s.WebS.GetWebSession("user1", "sid1")
+	req := types.GetWebSessionRequest{User: "user1", SessionID: "sid1"}
+	_, err := s.WebS.WebSessions().Get(context.TODO(), req)
 	c.Assert(trace.IsNotFound(err), check.Equals, true, check.Commentf("%#v", err))
 
 	dt := s.Clock.Now().Add(1 * time.Minute)
-	ws := services.NewWebSession("sid1", services.KindWebSession, services.KindWebSession,
-		services.WebSessionSpecV2{
+	ws := types.NewWebSession("sid1", services.KindWebSession, services.KindWebSession,
+		types.WebSessionSpecV2{
+			User:    "user1",
 			Pub:     []byte("pub123"),
 			Priv:    []byte("priv123"),
 			Expires: dt,
 		})
-	err = s.WebS.UpsertWebSession("user1", "sid1", ws)
+	err = s.WebS.WebSessions().Upsert(context.TODO(), ws)
 	c.Assert(err, check.IsNil)
 
-	out, err := s.WebS.GetWebSession("user1", "sid1")
+	out, err := s.WebS.WebSessions().Get(context.TODO(), req)
 	c.Assert(err, check.IsNil)
 	c.Assert(out, check.DeepEquals, ws)
 
-	ws1 := services.NewWebSession("sid1", services.KindWebSession, services.KindWebSession,
-		services.WebSessionSpecV2{
+	ws1 := types.NewWebSession("sid1", services.KindWebSession, services.KindWebSession,
+		types.WebSessionSpecV2{
+			User:    "user1",
 			Pub:     []byte("pub321"),
 			Priv:    []byte("priv321"),
 			Expires: dt,
 		})
-	err = s.WebS.UpsertWebSession("user1", "sid1", ws1)
+	err = s.WebS.WebSessions().Upsert(context.TODO(), ws1)
 	c.Assert(err, check.IsNil)
 
-	out2, err := s.WebS.GetWebSession("user1", "sid1")
+	out2, err := s.WebS.WebSessions().Get(context.TODO(), req)
 	c.Assert(err, check.IsNil)
 	c.Assert(out2, check.DeepEquals, ws1)
 
-	c.Assert(s.WebS.DeleteWebSession("user1", "sid1"), check.IsNil)
+	c.Assert(s.WebS.WebSessions().Delete(context.TODO(), types.DeleteWebSessionRequest{
+		User:      req.User,
+		SessionID: req.SessionID,
+	}), check.IsNil)
 
-	_, err = s.WebS.GetWebSession("user1", "sid1")
+	_, err = s.WebS.WebSessions().Get(context.TODO(), req)
 	fixtures.ExpectNotFound(c, err)
 }
 
@@ -739,6 +747,7 @@ func (s *ServicesTestSuite) U2FCRUD(c *check.C) {
 	token := "tok1"
 	appID := "https://localhost"
 	user1 := "user1"
+	devID := "device1"
 
 	challenge, err := u2f.NewChallenge(appID, []string{appID})
 	c.Assert(err, check.IsNil)
@@ -753,10 +762,10 @@ func (s *ServicesTestSuite) U2FCRUD(c *check.C) {
 	c.Assert(challenge.AppID, check.Equals, challengeOut.AppID)
 	c.Assert(challenge.TrustedFacets, check.DeepEquals, challengeOut.TrustedFacets)
 
-	err = s.WebS.UpsertU2FSignChallenge(user1, challenge)
+	err = s.WebS.UpsertU2FSignChallenge(user1, devID, challenge)
 	c.Assert(err, check.IsNil)
 
-	challengeOut, err = s.WebS.GetU2FSignChallenge(user1)
+	challengeOut, err = s.WebS.GetU2FSignChallenge(user1, devID)
 	c.Assert(err, check.IsNil)
 	c.Assert(challenge.Challenge, check.DeepEquals, challengeOut.Challenge)
 	c.Assert(challenge.Timestamp.Unix(), check.Equals, challengeOut.Timestamp.Unix())
@@ -776,12 +785,34 @@ func (s *ServicesTestSuite) U2FCRUD(c *check.C) {
 		KeyHandle: []byte("gn49UWxiMRrReCfH6yJBrF2WS75T4nZbnlTk2s3WIYhzQCaH7QfCFtXZb3Qbv1zEhhLZJUgUB2pNMNe89clt4A=="),
 		PubKey:    *pubkey,
 	}
-	err = s.WebS.UpsertU2FRegistration(user1, &registration)
+	dev, err := u2f.NewDevice("u2f", &registration, s.Clock.Now())
+	c.Assert(err, check.IsNil)
+	ctx := context.Background()
+	err = s.WebS.UpsertMFADevice(ctx, user1, dev)
 	c.Assert(err, check.IsNil)
 
-	registrationOut, err := s.WebS.GetU2FRegistration(user1)
+	devs, err := s.WebS.GetMFADevices(ctx, user1)
+	c.Assert(err, check.IsNil)
+	c.Assert(devs, check.HasLen, 1)
+	// Raw registration output is not stored - it's not used for
+	// authentication.
+	registration.Raw = nil
+	registrationOut, err := u2f.DeviceToRegistration(devs[0].GetU2F())
 	c.Assert(err, check.IsNil)
 	c.Assert(&registration, check.DeepEquals, registrationOut)
+
+	// Attempt to upsert the same device name with a different ID.
+	dev.Id = uuid.New()
+	err = s.WebS.UpsertMFADevice(ctx, user1, dev)
+	c.Assert(trace.IsAlreadyExists(err), check.Equals, true)
+
+	// Attempt to upsert a new device with different name and ID.
+	dev.Metadata.Name = "u2f-2"
+	err = s.WebS.UpsertMFADevice(ctx, user1, dev)
+	c.Assert(err, check.IsNil)
+	devs, err = s.WebS.GetMFADevices(ctx, user1)
+	c.Assert(err, check.IsNil)
+	c.Assert(devs, check.HasLen, 2)
 }
 
 func (s *ServicesTestSuite) SAMLCRUD(c *check.C) {
@@ -1024,7 +1055,7 @@ func (s *ServicesTestSuite) AuthPreference(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	c.Assert(gotAP.GetType(), check.Equals, "local")
-	c.Assert(gotAP.GetSecondFactor(), check.Equals, "otp")
+	c.Assert(gotAP.GetSecondFactor(), check.Equals, constants.SecondFactorOTP)
 }
 
 func (s *ServicesTestSuite) StaticTokens(c *check.C) {

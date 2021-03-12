@@ -29,16 +29,6 @@ import (
 	"github.com/gravitational/trace"
 )
 
-const (
-	// ActionApprove uniquely identifies the approve button in events.
-	ActionApprove = "approve_request"
-	// ActionDeny uniquely identifies the deny button in events.
-	ActionDeny = "deny_request"
-	// DefaultDir is the directory to be used in various configurations.
-	// It's used across the files in main package, and in lib.
-	DefaultDir = "/var/lib/teleport/plugins/slack"
-)
-
 func main() {
 	logger.Init()
 	app := kingpin.New("teleport-slack", "Teleport plugin for access requests approval via Slack.")
@@ -54,9 +44,6 @@ func main() {
 	debug := startCmd.Flag("debug", "Enable verbose logging to stderr").
 		Short('d').
 		Bool()
-	insecure := startCmd.Flag("insecure-no-tls", "Disable TLS for the callback server").
-		Default("false").
-		Bool()
 
 	selectedCmd, err := app.Parse(os.Args[1:])
 	if err != nil {
@@ -69,7 +56,7 @@ func main() {
 	case "version":
 		lib.PrintVersion(app.Name, Version, Gitref)
 	case "start":
-		if err := run(*path, *insecure, *debug); err != nil {
+		if err := run(*path, *debug); err != nil {
 			lib.Bail(err)
 		} else {
 			logger.Standard().Info("Successfully shut down")
@@ -77,7 +64,7 @@ func main() {
 	}
 }
 
-func run(configPath string, insecure bool, debug bool) error {
+func run(configPath string, debug bool) error {
 	conf, err := LoadConfig(configPath)
 	if err != nil {
 		return trace.Wrap(err)
@@ -94,7 +81,6 @@ func run(configPath string, insecure bool, debug bool) error {
 		logger.Standard().Debugf("DEBUG logging enabled")
 	}
 
-	conf.HTTP.Insecure = insecure
 	app, err := NewApp(*conf)
 	if err != nil {
 		return trace.Wrap(err)

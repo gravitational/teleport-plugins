@@ -31,7 +31,7 @@ type Bot struct {
 
 // NewBot initializes the new Slack message generator (Bot)
 // takes SlackConfig as an argument.
-func NewBot(conf Config) (*Bot, error) {
+func NewBot(conf Config, clusterName, webProxyAddr string) (*Bot, error) {
 	httpClient := &http.Client{
 		Timeout: slackHTTPTimeout,
 		Transport: &http.Transport{
@@ -51,24 +51,28 @@ func NewBot(conf Config) (*Bot, error) {
 
 	respClient := resty.NewWithClient(httpClient)
 
-	webProxyURL, err := url.Parse(conf.Teleport.WebProxyAddr)
-	if err != nil {
-		return nil, err
+	var webProxyURL *url.URL
+	if webProxyAddr != "" {
+		var err error
+		if webProxyURL, err = url.Parse(webProxyAddr); err != nil {
+			return nil, err
+		}
 	}
 
 	return &Bot{
 		client:      slack.New(conf.Slack.Token, slackOptions...),
 		respClient:  respClient,
+		clusterName: clusterName,
 		webProxyURL: webProxyURL,
 	}, nil
 }
 
 // Broadcast posts request info to Slack with action buttons.
-func (b *Bot) Broadcast(ctx context.Context, channels []string, reqID string, reqData RequestData, notifyOnly bool) (SlackData, []error) {
+func (b *Bot) Broadcast(ctx context.Context, channels []string, reqID string, reqData RequestData) (SlackData, []error) {
 	var data SlackData
 	var errors []error
 
-	blocks := b.msgSections(reqID, reqData, "PENDING", !notifyOnly)
+	blocks := b.msgSections(reqID, reqData, "PENDING")
 
 	for _, channel := range channels {
 		channelID, timestamp, err := b.client.PostMessageContext(
@@ -96,14 +100,14 @@ func (b *Bot) LookupDirectChannelByEmail(ctx context.Context, email string) (str
 }
 
 // Expire updates request's Slack post with EXPIRED status and removes action buttons.
-func (b *Bot) Expire(ctx context.Context, reqID string, reqData RequestData, slackData SlackData) error {
+func (b *Bot) UpdateMessages(ctx context.Context, reqID string, reqData RequestData, slackData SlackData, status string) error {
 	var errors []error
 	for _, msg := range slackData {
 		_, _, _, err := b.client.UpdateMessageContext(
 			ctx,
 			msg.ChannelID,
 			msg.Timestamp,
-			slack.MsgOptionBlocks(b.msgSections(reqID, reqData, "EXPIRED", false)...),
+			slack.MsgOptionBlocks(b.msgSections(reqID, reqData, status)...),
 		)
 		if err != nil {
 			errors = append(errors, trace.Wrap(err))
@@ -132,7 +136,7 @@ func (b *Bot) GetUserEmail(ctx context.Context, id string) (string, error) {
 // Respond is used to send an updated message to Slack by "response_url" from interaction callback.
 func (b *Bot) Respond(ctx context.Context, reqID string, reqData RequestData, status string, responseURL string) error {
 	var message slack.Message
-	message.Blocks.BlockSet = b.msgSections(reqID, reqData, status, false)
+	message.Blocks.BlockSet = b.msgSections(reqID, reqData, status)
 	message.ReplaceOriginal = true
 
 	var result struct {
@@ -160,7 +164,7 @@ func (b *Bot) Respond(ctx context.Context, reqID string, reqData RequestData, st
 }
 
 // msgSection builds a slack message section (obeys markdown).
-func (b *Bot) msgSections(reqID string, reqData RequestData, status string, includeActionBlock bool) []slack.Block {
+func (b *Bot) msgSections(reqID string, reqData RequestData, status string) []slack.Block {
 	var builder strings.Builder
 	builder.Grow(128)
 
@@ -180,18 +184,23 @@ func (b *Bot) msgSections(reqID string, reqData RequestData, status string, incl
 		reqURL := *b.webProxyURL
 		reqURL.Path = lib.BuildURLPath("web", "requests", reqID)
 		msgFieldToBuilder(&builder, "Link", reqURL.String())
+	} else {
+		if status != "EXPIRED" {
+			msgFieldToBuilder(&builder, "Approve", fmt.Sprintf("tctl requests approve %s", reqID))
+			msgFieldToBuilder(&builder, "Deny", fmt.Sprintf("tctl requests deny %s", reqID))
+		}
 	}
 
 	var statusEmoji string
 	switch status {
 	case "PENDING":
-		statusEmoji = ":hourglass_flowing_sand:"
+		statusEmoji = "⏳"
 	case "APPROVED":
-		statusEmoji = ":white_check_mark:"
+		statusEmoji = "✅"
 	case "DENIED":
-		statusEmoji = ":x:"
+		statusEmoji = "❌"
 	case "EXPIRED":
-		statusEmoji = ":hourglass:"
+		statusEmoji = "⌛"
 	}
 
 	sections := []slack.Block{
@@ -220,28 +229,6 @@ func (b *Bot) msgSections(reqID string, reqData RequestData, status string, incl
 				},
 			},
 		},
-	}
-
-	// Only show buttons for pending requests, and if the plugin is
-	// working in interactive mode (i.e. notify-only)
-	if includeActionBlock {
-		sections = append(sections, slack.NewActionBlock(
-			"approve_or_deny",
-			&slack.ButtonBlockElement{
-				Type:     slack.METButton,
-				ActionID: ActionApprove,
-				Text:     slack.NewTextBlockObject("plain_text", "Approve", true, false),
-				Value:    reqID,
-				Style:    slack.StylePrimary,
-			},
-			&slack.ButtonBlockElement{
-				Type:     slack.METButton,
-				ActionID: ActionDeny,
-				Text:     slack.NewTextBlockObject("plain_text", "Deny", true, false),
-				Value:    reqID,
-				Style:    slack.StyleDanger,
-			},
-		))
 	}
 
 	return sections

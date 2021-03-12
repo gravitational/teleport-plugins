@@ -124,9 +124,6 @@ type (
 )
 
 var (
-	NewAccessRequest          = types.NewAccessRequest
-	GetAccessRequestMarshaler = types.GetAccessRequestMarshaler
-
 	RequestStrategyOptional = types.RequestStrategyOptional
 	RequestStrategyReason   = types.RequestStrategyReason
 	RequestStrategyAlways   = types.RequestStrategyAlways
@@ -141,10 +138,8 @@ type (
 )
 
 var (
-	NewAuthPreference          = types.NewAuthPreference
-	DefaultAuthPreference      = types.DefaultAuthPreference
-	GetAuthPreferenceMarshaler = types.GetAuthPreferenceMarshaler
-	SetAuthPreferenceMarshaler = types.SetAuthPreferenceMarshaler
+	NewAuthPreference     = types.NewAuthPreference
+	DefaultAuthPreference = types.DefaultAuthPreference
 )
 
 // authority.go
@@ -154,9 +149,7 @@ type (
 )
 
 var (
-	SetCertAuthorityMarshaler = types.SetCertAuthorityMarshaler
-	GetCertAuthorityMarshaler = types.GetCertAuthorityMarshaler
-	GenerateSchedule          = types.GenerateSchedule
+	GenerateSchedule = types.GenerateSchedule
 
 	RotationStateStandby       = types.RotationStateStandby
 	RotationStateInProgress    = types.RotationStateInProgress
@@ -168,20 +161,15 @@ var (
 	RotationModeManual         = types.RotationModeManual
 	RotationModeAuto           = types.RotationModeAuto
 
-	RotatePhases       = types.RotatePhases
-	RemoveCASecrets    = types.RemoveCASecrets
-	MarshalCertRoles   = types.MarshalCertRoles
-	UnmarshalCertRoles = types.UnmarshalCertRoles
-	RotationSchema     = types.RotationSchema
+	RotatePhases    = types.RotatePhases
+	RemoveCASecrets = types.RemoveCASecrets
 )
 
 // clusterconfig.go
 type ClusterConfig = types.ClusterConfig
 
 var (
-	NewClusterConfig          = types.NewClusterConfig
-	SetClusterConfigMarshaler = types.SetClusterConfigMarshaler
-	GetClusterConfigMarshaler = types.GetClusterConfigMarshaler
+	NewClusterConfig = types.NewClusterConfig
 
 	RecordAtNode      = types.RecordAtNode
 	RecordAtProxy     = types.RecordAtProxy
@@ -197,9 +185,7 @@ var (
 type ClusterName = types.ClusterName
 
 var (
-	NewClusterName          = types.NewClusterName
-	SetClusterNameMarshaler = types.SetClusterNameMarshaler
-	GetClusterNameMarshaler = types.GetClusterNameMarshaler
+	NewClusterName = types.NewClusterName
 )
 
 // duration.go
@@ -229,9 +215,7 @@ type (
 )
 
 var (
-	NewGithubConnector          = types.NewGithubConnector
-	SetGithubConnectorMarshaler = types.SetGithubConnectorMarshaler
-	GetGithubConnectorMarshaler = types.GetGithubConnectorMarshaler
+	NewGithubConnector = types.NewGithubConnector
 )
 
 // license.go
@@ -242,18 +226,13 @@ type (
 )
 
 var (
-	NewLicense       = types.NewLicense
-	UnmarshalLicense = types.UnmarshalLicense
-	MarshalLicense   = types.MarshalLicense
+	NewLicense = types.NewLicense
 )
 
 // namespace.go
 type SortedNamespaces = types.SortedNamespaces
 
 var (
-	MarshalNamespace   = types.MarshalNamespace
-	UnmarshalNamespace = types.UnmarshalNamespace
-
 	IsValidNamespace = types.IsValidNamespace
 )
 
@@ -265,23 +244,17 @@ type (
 	ClaimMapping        = types.ClaimMapping
 )
 
-var (
-	NewOIDCConnector          = types.NewOIDCConnector
-	SetOIDCConnectorMarshaler = types.SetOIDCConnectorMarshaler
-	GetOIDCConnectorMarshaler = types.GetOIDCConnectorMarshaler
-)
+var NewOIDCConnector = types.NewOIDCConnector
 
 // plugin_data.go
 type PluginData = types.PluginData
 
 var (
-	NewPluginData          = types.NewPluginData
-	GetPluginDataMarshaler = types.GetPluginDataMarshaler
+	NewPluginData = types.NewPluginData
 )
 
 // presence.go
 type (
-	Presence    = types.Presence
 	ProxyGetter = types.ProxyGetter
 	Site        = types.Site
 	KeepAliver  = types.KeepAliver
@@ -291,15 +264,11 @@ var NewNamespace = types.NewNamespace
 
 // provisioning.go
 type (
-	Provisioner    = types.Provisioner
 	ProvisionToken = types.ProvisionToken
 )
 
 var (
-	NewProvisionToken        = types.NewProvisionToken
-	MustCreateProvisionToken = types.MustCreateProvisionToken
-	MarshalProvisionToken    = types.MarshalProvisionToken
-	UnmarshalProvisionToken  = types.UnmarshalProvisionToken
+	NewProvisionToken = types.NewProvisionToken
 
 	ProvisionTokensToV1   = types.ProvisionTokensToV1
 	ProvisionTokensFromV1 = types.ProvisionTokensFromV1
@@ -309,18 +278,14 @@ var (
 type RemoteCluster = types.RemoteCluster
 
 var (
-	NewRemoteCluster       = types.NewRemoteCluster
-	UnmarshalRemoteCluster = types.UnmarshalRemoteCluster
-	MarshalRemoteCluster   = types.MarshalRemoteCluster
+	NewRemoteCluster = types.NewRemoteCluster
 )
 
 // resetpasswordtoken.go
 type ResetPasswordToken = types.ResetPasswordToken
 
 var (
-	NewResetPasswordToken          = types.NewResetPasswordToken
-	SetResetTokenMarshaler         = types.SetResetTokenMarshaler
-	GetResetPasswordTokenMarshaler = types.GetResetPasswordTokenMarshaler
+	NewResetPasswordToken = types.NewResetPasswordToken
 )
 
 // resetpasswordtokensecrets.go
@@ -328,35 +293,17 @@ var (
 type ResetPasswordTokenSecrets = types.ResetPasswordTokenSecrets
 
 var (
-	NewResetPasswordTokenSecrets          = types.NewResetPasswordTokenSecrets
-	UnmarshalResetPasswordTokenSecrets    = types.UnmarshalResetPasswordTokenSecrets
-	MarshalResetPasswordTokenSecrets      = types.MarshalResetPasswordTokenSecrets
-	SetResetTokenSecretsMarshaler         = types.SetResetTokenSecretsMarshaler
-	GetResetPasswordTokenSecretsMarshaler = types.GetResetPasswordTokenSecretsMarshaler
+	NewResetPasswordTokenSecrets = types.NewResetPasswordTokenSecrets
 )
 
 // resource.go
 type (
 	Resource            = types.Resource
 	ResourceWithSecrets = types.ResourceWithSecrets
-	MarshalConfig       = types.MarshalConfig
-	MarshalOption       = types.MarshalOption
-	ResourceMarshaler   = types.ResourceMarshaler
-	ResourceUnmarshaler = types.ResourceUnmarshaler
-	UnknownResource     = types.UnknownResource
 )
 
 var (
-	GetResourceMarshalerKinds   = types.GetResourceMarshalerKinds
-	IsValidLabelKey             = types.IsValidLabelKey
-	RegisterResourceMarshaler   = types.RegisterResourceMarshaler
-	RegisterResourceUnmarshaler = types.RegisterResourceUnmarshaler
-	CollectOptions              = types.CollectOptions
-	V2SchemaTemplate            = types.V2SchemaTemplate
-	MetadataSchema              = types.MetadataSchema
-	DefaultDefinitions          = types.DefaultDefinitions
-	MarshalResource             = types.MarshalResource
-	UnmarshalResource           = types.UnmarshalResource
+	IsValidLabelKey = types.IsValidLabelKey
 )
 
 // role.go
@@ -376,9 +323,6 @@ var (
 	NewBoolOption    = types.NewBoolOption
 	BoolDefaultTrue  = types.BoolDefaultTrue
 	ProcessNamespace = types.ProcessNamespace
-	UnmarshalRole    = types.UnmarshalRole
-	SetRoleMarshaler = types.SetRoleMarshaler
-	GetRoleMarshaler = types.GetRoleMarshaler
 )
 
 // saml.go
@@ -391,9 +335,7 @@ type (
 )
 
 var (
-	NewSAMLConnector          = types.NewSAMLConnector
-	SetSAMLConnectorMarshaler = types.SetSAMLConnectorMarshaler
-	GetSAMLConnectorMarshaler = types.GetSAMLConnectorMarshaler
+	NewSAMLConnector = types.NewSAMLConnector
 )
 
 // semaphore.go
@@ -404,7 +346,6 @@ type (
 
 var (
 	SemaphoreKindConnection = types.SemaphoreKindConnection
-	GetSemaphoreMarshaler   = types.GetSemaphoreMarshaler
 )
 
 // server.go
@@ -414,13 +355,10 @@ type (
 )
 
 var (
-	CombineLabels           = types.CombineLabels
-	LabelsAsString          = types.LabelsAsString
-	V2ToLabels              = types.V2ToLabels
-	LabelsToV2              = types.LabelsToV2
-	UnmarshalServerResource = types.UnmarshalServerResource
-	SetServerMarshaler      = types.SetServerMarshaler
-	GetServerMarshaler      = types.GetServerMarshaler
+	CombineLabels  = types.CombineLabels
+	LabelsAsString = types.LabelsAsString
+	V2ToLabels     = types.V2ToLabels
+	LabelsToV2     = types.LabelsToV2
 )
 
 // session.go
@@ -432,19 +370,14 @@ type (
 )
 
 var (
-	NewWebSession          = types.NewWebSession
-	SetWebSessionMarshaler = types.SetWebSessionMarshaler
-	GetWebSessionMarshaler = types.GetWebSessionMarshaler
+	NewWebSession = types.NewWebSession
 )
 
 // statictokens.go
 type StaticTokens = types.StaticTokens
 
 var (
-	NewStaticTokens          = types.NewStaticTokens
-	DefaultStaticTokens      = types.DefaultStaticTokens
-	SetStaticTokensMarshaler = types.SetStaticTokensMarshaler
-	GetStaticTokensMarshaler = types.GetStaticTokensMarshaler
+	NewStaticTokens = types.NewStaticTokens
 )
 
 // traits.go
@@ -455,7 +388,6 @@ type (
 
 // trust.go
 type (
-	Trust        = types.Trust
 	CertAuthType = types.CertAuthType
 	CertAuthID   = types.CertAuthID
 )
@@ -476,9 +408,7 @@ type (
 )
 
 var (
-	NewTrustedCluster          = types.NewTrustedCluster
-	SetTrustedClusterMarshaler = types.SetTrustedClusterMarshaler
-	GetTrustedClusterMarshaler = types.GetTrustedClusterMarshaler
+	NewTrustedCluster = types.NewTrustedCluster
 )
 
 // tunnel.go
@@ -488,10 +418,7 @@ type (
 )
 
 var (
-	NewReverseTunnel          = types.NewReverseTunnel
-	UnmarshalReverseTunnel    = types.UnmarshalReverseTunnel
-	SetReverseTunnelMarshaler = types.SetReverseTunnelMarshaler
-	GetReverseTunnelMarshaler = types.GetReverseTunnelMarshaler
+	NewReverseTunnel = types.NewReverseTunnel
 
 	NodeTunnel  = types.NodeTunnel
 	ProxyTunnel = types.ProxyTunnel
@@ -505,18 +432,14 @@ type (
 )
 
 var (
-	NewTunnelConnection       = types.NewTunnelConnection
-	UnmarshalTunnelConnection = types.UnmarshalTunnelConnection
-	MarshalTunnelConnection   = types.MarshalTunnelConnection
+	NewTunnelConnection = types.NewTunnelConnection
 )
 
 // user.go
 type User = types.User
 
 var (
-	NewUser          = types.NewUser
-	SetUserMarshaler = types.SetUserMarshaler
-	GetUserMarshaler = types.GetUserMarshaler
+	NewUser = types.NewUser
 )
 
 // The following constants are imported from api/constants to simplify
@@ -544,6 +467,7 @@ const (
 	KindSession                   = types.KindSession
 	KindSSHSession                = types.KindSSHSession
 	KindWebSession                = types.KindWebSession
+	KindWebToken                  = types.KindWebToken
 	KindAppSession                = types.KindAppSession
 	KindEvent                     = types.KindEvent
 	KindAuthServer                = types.KindAuthServer
@@ -560,6 +484,7 @@ const (
 	KindClusterAuthPreference     = types.KindClusterAuthPreference
 	MetaNameClusterAuthPreference = types.MetaNameClusterAuthPreference
 	KindClusterConfig             = types.KindClusterConfig
+	KindBilling                   = types.KindBilling
 	KindSemaphore                 = types.KindSemaphore
 	MetaNameClusterConfig         = types.MetaNameClusterConfig
 	KindClusterName               = types.KindClusterName

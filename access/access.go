@@ -32,12 +32,11 @@ import (
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/trace"
 )
 
 // State represents the state of an access request.
-type State = services.RequestState
+type State = types.RequestState
 
 // StatePending is the state of a pending request.
 const StatePending State = types.RequestState_PENDING
@@ -64,7 +63,10 @@ type DialOption = grpc.DialOption
 type CallOption = grpc.CallOption
 
 // Filter encodes request filtering parameters.
-type Filter = services.AccessRequestFilter
+type Filter = types.AccessRequestFilter
+
+// Features contains flags of features supported by auth server.
+type Features = proto.Features
 
 // Event is a request event.
 type Event struct {
@@ -113,8 +115,10 @@ type RequestStateParams struct {
 
 // Pong describes a ping response.
 type Pong struct {
-	ServerVersion string
-	ClusterName   string
+	ServerVersion   string
+	ClusterName     string
+	PublicProxyAddr string
+	ServerFeatures  *Features
 }
 
 // PluginDataMap is a custom user data associated with access request.
@@ -192,8 +196,10 @@ func (c *clt) Ping(ctx context.Context) (Pong, error) {
 		return Pong{}, lib.FromGRPC(err)
 	}
 	return Pong{
-		rsp.ServerVersion,
-		rsp.ClusterName,
+		ServerVersion:   rsp.ServerVersion,
+		ClusterName:     rsp.ClusterName,
+		PublicProxyAddr: rsp.PublicProxyAddr,
+		ServerFeatures:  rsp.ServerFeatures,
 	}, nil
 }
 
@@ -214,16 +220,16 @@ func (c *clt) GetRequests(ctx context.Context, fltr Filter) ([]Request, error) {
 }
 
 func (c *clt) CreateRequest(ctx context.Context, user string, roles ...string) (Request, error) {
-	req := &services.AccessRequestV3{
-		Kind:    services.KindAccessRequest,
-		Version: services.V3,
-		Metadata: services.Metadata{
+	req := &types.AccessRequestV3{
+		Kind:    types.KindAccessRequest,
+		Version: types.V3,
+		Metadata: types.Metadata{
 			Name: uuid.New(),
 		},
-		Spec: services.AccessRequestSpecV3{
+		Spec: types.AccessRequestSpecV3{
 			User:  user,
 			Roles: roles,
-			State: services.RequestState_PENDING,
+			State: types.RequestState_PENDING,
 		},
 	}
 	_, err := c.clt.CreateAccessRequest(ctx, req)
@@ -263,8 +269,8 @@ func (c *clt) SetRequestStateExt(ctx context.Context, reqID string, params Reque
 }
 
 func (c *clt) GetPluginData(ctx context.Context, reqID string) (PluginDataMap, error) {
-	dataSeq, err := c.clt.GetPluginData(ctx, &services.PluginDataFilter{
-		Kind:     services.KindAccessRequest,
+	dataSeq, err := c.clt.GetPluginData(ctx, &types.PluginDataFilter{
+		Kind:     types.KindAccessRequest,
 		Resource: reqID,
 		Plugin:   c.plugin,
 	})
@@ -276,7 +282,7 @@ func (c *clt) GetPluginData(ctx context.Context, reqID string) (PluginDataMap, e
 		return PluginDataMap{}, nil
 	}
 
-	var pluginData services.PluginData = pluginDatas[0]
+	var pluginData types.PluginData = pluginDatas[0]
 	entry := pluginData.Entries()[c.plugin]
 	if entry == nil {
 		return PluginDataMap{}, nil
@@ -285,8 +291,8 @@ func (c *clt) GetPluginData(ctx context.Context, reqID string) (PluginDataMap, e
 }
 
 func (c *clt) UpdatePluginData(ctx context.Context, reqID string, set PluginDataMap, expect PluginDataMap) (err error) {
-	_, err = c.clt.UpdatePluginData(ctx, &services.PluginDataUpdateParams{
-		Kind:     services.KindAccessRequest,
+	_, err = c.clt.UpdatePluginData(ctx, &types.PluginDataUpdateParams{
+		Kind:     types.KindAccessRequest,
 		Resource: reqID,
 		Plugin:   c.plugin,
 		Set:      set,
@@ -327,7 +333,7 @@ func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, callOpts
 	stream, err := clt.WatchEvents(ctx, &proto.Watch{
 		Kinds: []proto.WatchKind{
 			proto.WatchKind{
-				Kind:   services.KindAccessRequest,
+				Kind:   types.KindAccessRequest,
 				Filter: fltr.IntoMap(),
 			},
 		},
@@ -429,7 +435,7 @@ func (p Pong) AssertServerVersion(minVersion string) error {
 	return nil
 }
 
-func requestFromV3(req *services.AccessRequestV3) Request {
+func requestFromV3(req *types.AccessRequestV3) Request {
 	return Request{
 		ID:                 req.GetName(),
 		User:               req.GetUser(),

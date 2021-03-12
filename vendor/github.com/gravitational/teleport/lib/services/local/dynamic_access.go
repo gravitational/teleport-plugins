@@ -42,7 +42,7 @@ func NewDynamicAccessService(backend backend.Backend) *DynamicAccessService {
 
 // CreateAccessRequest stores a new access request.
 func (s *DynamicAccessService) CreateAccessRequest(ctx context.Context, req services.AccessRequest) error {
-	if err := req.CheckAndSetDefaults(); err != nil {
+	if err := services.ValidateAccessRequest(req); err != nil {
 		return trace.Wrap(err)
 	}
 	item, err := itemFromAccessRequest(req)
@@ -126,9 +126,9 @@ func (s *DynamicAccessService) SetAccessRequestState(ctx context.Context, params
 
 // ApplyAccessReview applies a review to a request and returns the post-application state.
 func (s *DynamicAccessService) ApplyAccessReview(ctx context.Context, params types.AccessReviewSubmission, checker services.ReviewPermissionChecker) (services.AccessRequest, error) {
-	//if err := params.Check(); err != nil {
-	//	return trace.Wrap(err)
-	//}
+	if err := params.Check(); err != nil {
+		return nil, trace.Wrap(err)
+	}
 	retryPeriod := retryPeriodMs * time.Millisecond
 	retry, err := utils.NewLinear(utils.LinearConfig{
 		Step: retryPeriod / 7,
@@ -160,8 +160,7 @@ func (s *DynamicAccessService) ApplyAccessReview(ctx context.Context, params typ
 		}
 
 		// run the application logic
-		_, err = services.ApplyAccessReview(req, params.Review, checker.User)
-		if err != nil {
+		if err := services.ApplyAccessReview(req, params.Review, checker.User); err != nil {
 			return nil, trace.Wrap(err)
 		}
 
@@ -262,7 +261,7 @@ func (s *DynamicAccessService) DeleteAllAccessRequests(ctx context.Context) erro
 }
 
 func (s *DynamicAccessService) UpsertAccessRequest(ctx context.Context, req services.AccessRequest) error {
-	if err := req.CheckAndSetDefaults(); err != nil {
+	if err := services.ValidateAccessRequest(req); err != nil {
 		return trace.Wrap(err)
 	}
 	item, err := itemFromAccessRequest(req)
@@ -430,7 +429,7 @@ func (s *DynamicAccessService) updateAccessRequestPluginData(ctx context.Context
 }
 
 func itemFromAccessRequest(req services.AccessRequest) (backend.Item, error) {
-	value, err := services.GetAccessRequestMarshaler().MarshalAccessRequest(req)
+	value, err := services.MarshalAccessRequest(req)
 	if err != nil {
 		return backend.Item{}, trace.Wrap(err)
 	}
@@ -448,7 +447,7 @@ func itemToAccessRequest(item backend.Item, opts ...services.MarshalOption) (ser
 		services.WithResourceID(item.ID),
 		services.WithExpires(item.Expires),
 	)
-	req, err := services.GetAccessRequestMarshaler().UnmarshalAccessRequest(
+	req, err := services.UnmarshalAccessRequest(
 		item.Value,
 		opts...,
 	)
@@ -459,7 +458,7 @@ func itemToAccessRequest(item backend.Item, opts ...services.MarshalOption) (ser
 }
 
 func itemFromPluginData(data services.PluginData) (backend.Item, error) {
-	value, err := services.GetPluginDataMarshaler().MarshalPluginData(data)
+	value, err := services.MarshalPluginData(data)
 	if err != nil {
 		return backend.Item{}, trace.Wrap(err)
 	}
@@ -477,7 +476,7 @@ func itemFromPluginData(data services.PluginData) (backend.Item, error) {
 }
 
 func itemToPluginData(item backend.Item) (services.PluginData, error) {
-	data, err := services.GetPluginDataMarshaler().UnmarshalPluginData(
+	data, err := services.UnmarshalPluginData(
 		item.Value,
 		services.WithResourceID(item.ID),
 		services.WithExpires(item.Expires),

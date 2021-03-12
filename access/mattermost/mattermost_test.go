@@ -21,6 +21,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/backend"
 	"github.com/gravitational/teleport/lib/events"
@@ -63,8 +64,8 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	s.me, err = user.Current()
 	c.Assert(err, IsNil)
-	userRole, err := services.NewRole("foo", services.RoleSpecV3{
-		Allow: services.RoleConditions{
+	userRole, err := types.NewRole("foo", types.RoleSpecV3{
+		Allow: types.RoleConditions{
 			Logins:  []string{s.me.Username}, // cannot be empty
 			Request: &services.AccessRequestConditions{Roles: []string{"admin"}},
 		},
@@ -72,11 +73,11 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 	t.AddUserWithRole(s.me.Username, userRole)
 
-	accessPluginRole, err := services.NewRole("access-plugin", services.RoleSpecV3{
-		Allow: services.RoleConditions{
+	accessPluginRole, err := types.NewRole("access-plugin", types.RoleSpecV3{
+		Allow: types.RoleConditions{
 			Logins: []string{"access-plugin"}, // cannot be empty
-			Rules: []services.Rule{
-				services.NewRule("access_request", []string{"list", "read", "update"}),
+			Rules: []types.Rule{
+				types.NewRule("access_request", []string{"list", "read", "update"}),
 			},
 		},
 	})
@@ -186,14 +187,22 @@ func (s *MattermostSuite) shutdownApp(c *C) {
 	c.Assert(s.app.Err(), IsNil)
 }
 
+func (s *MattermostSuite) newAccessRequest(c *C) services.AccessRequest {
+	req, err := services.NewAccessRequest(s.me.Username, "admin")
+	c.Assert(err, IsNil)
+	return req
+}
+
 func (s *MattermostSuite) createAccessRequest(c *C) services.AccessRequest {
-	req, err := s.teleport.CreateAccessRequest(s.ctx, s.me.Username, "admin")
+	req := s.newAccessRequest(c)
+	err := s.teleport.CreateAccessRequest(s.ctx, req)
 	c.Assert(err, IsNil)
 	return req
 }
 
 func (s *MattermostSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
-	req, err := s.teleport.CreateExpiredAccessRequest(s.ctx, s.me.Username, "admin")
+	req := s.newAccessRequest(c)
+	err := s.teleport.CreateExpiredAccessRequest(s.ctx, req)
 	c.Assert(err, IsNil)
 	return req
 }
@@ -291,7 +300,7 @@ func (s *MattermostSuite) TestApproval(c *C) {
 
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
-	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
+	c.Assert(request.GetState(), Equals, types.RequestState_APPROVED)
 
 	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdateEvent, "id": request.GetName()})
 	c.Assert(err, IsNil)
@@ -317,7 +326,7 @@ func (s *MattermostSuite) TestDenial(c *C) {
 
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
-	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
+	c.Assert(request.GetState(), Equals, types.RequestState_DENIED)
 
 	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdateEvent, "id": request.GetName()})
 	c.Assert(err, IsNil)
@@ -396,7 +405,7 @@ func (s *MattermostSuite) TestRace(c *C) {
 	watcher, err := s.teleport.Process.GetAuthServer().NewWatcher(s.ctx, services.Watch{
 		Kinds: []services.WatchKind{
 			{
-				Kind: services.KindAccessRequest,
+				Kind: types.KindAccessRequest,
 			},
 		},
 	})
@@ -407,9 +416,12 @@ func (s *MattermostSuite) TestRace(c *C) {
 	process := lib.NewProcess(s.ctx)
 	for i := 0; i < s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			_, err := s.teleport.CreateAccessRequest(ctx, s.me.Username, "admin")
-			if err := trace.Wrap(err); err != nil {
-				return setRaceErr(err)
+			req, err := services.NewAccessRequest(s.me.Username, "admin")
+			if err != nil {
+				return setRaceErr(trace.Wrap(err))
+			}
+			if err := s.teleport.CreateAccessRequest(ctx, req); err != nil {
+				return setRaceErr(trace.Wrap(err))
 			}
 			return nil
 		})
@@ -492,9 +504,9 @@ func (s *MattermostSuite) TestRace(c *C) {
 			var newCounter int64
 			val, _ := requests.LoadOrStore(req.GetName(), &newCounter)
 			switch state := req.GetState(); state {
-			case services.RequestState_PENDING:
+			case types.RequestState_PENDING:
 				atomic.AddInt64(val.(*int64), 1)
-			case services.RequestState_APPROVED:
+			case types.RequestState_APPROVED:
 				atomic.AddInt64(val.(*int64), -1)
 			default:
 				return setRaceErr(trace.Errorf("wrong request state %v", state))

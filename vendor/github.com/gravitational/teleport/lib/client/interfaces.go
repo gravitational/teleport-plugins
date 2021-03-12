@@ -329,16 +329,23 @@ func (k *Key) AsAuthMethod() (ssh.AuthMethod, error) {
 
 // SSHCert returns parsed SSH certificate
 func (k *Key) SSHCert() (*ssh.Certificate, error) {
-	key, _, _, _, err := ssh.ParseAuthorizedKey(k.Cert)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
+	return sshutils.ParseCertificate(k.Cert)
+}
 
-	cert, ok := key.(*ssh.Certificate)
-	if !ok {
-		return nil, trace.BadParameter("found key, not certificate")
+// ActiveRequests gets the active requests associated with this key.
+func (k *Key) ActiveRequests() (services.RequestIDs, error) {
+	var activeRequests services.RequestIDs
+	sshCert, err := k.SSHCert()
+	if err != nil {
+		return activeRequests, trace.Wrap(err)
 	}
-	return cert, nil
+	rawRequests, ok := sshCert.Extensions[teleport.CertExtensionTeleportActiveRequests]
+	if ok {
+		if err := activeRequests.Unmarshal([]byte(rawRequests)); err != nil {
+			return activeRequests, trace.Wrap(err)
+		}
+	}
+	return activeRequests, nil
 }
 
 // CheckCert makes sure the SSH certificate is valid.
