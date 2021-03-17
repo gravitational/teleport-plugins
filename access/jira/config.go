@@ -7,16 +7,17 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 	"github.com/pelletier/go-toml"
 )
 
 type Config struct {
-	Teleport utils.TeleportConfig `toml:"teleport"`
-	JIRA     JIRAConfig           `toml:"jira"`
-	HTTP     utils.HTTPConfig     `toml:"http"`
-	Log      utils.LogConfig      `toml:"log"`
+	Teleport lib.TeleportConfig `toml:"teleport"`
+	JIRA     JIRAConfig         `toml:"jira"`
+	HTTP     lib.HTTPConfig     `toml:"http"`
+	Log      logger.Config      `toml:"log"`
 }
 
 type JIRAConfig struct {

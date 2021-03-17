@@ -29,14 +29,11 @@ import (
 	"github.com/hashicorp/go-version"
 	"github.com/pborman/uuid"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport/lib/auth/proto"
 	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/trace"
 )
-
-// MinServerVersion is the minimal teleport version the plugin supports.
-const MinServerVersion = "4.3.0"
 
 // State represents the state of an access request.
 type State = services.RequestState
@@ -61,8 +58,6 @@ const OpPut = proto.Operation_PUT
 
 // OpDelete indicates deletion or expiry.
 const OpDelete = proto.Operation_DELETE
-
-type RequestStateSetter = proto.RequestStateSetter
 
 type DialOption = grpc.DialOption
 type CallOption = grpc.CallOption
@@ -106,6 +101,13 @@ type Request struct {
 	SystemAnnotations map[string][]string
 }
 
+type RequestStateParams struct {
+	State       State
+	Delegator   string
+	Reason      string
+	Annotations map[string][]string
+}
+
 // Pong describes a ping response.
 type Pong struct {
 	ServerVersion string
@@ -142,7 +144,7 @@ type Client interface {
 	// SetRequestStateExt is an advanced version of SetRequestState which
 	// supports extra features like overriding the requet's role list and
 	// attaching annotations (requires teleport v4.4.4 or later).
-	SetRequestStateExt(ctx context.Context, params RequestStateSetter) error
+	SetRequestStateExt(ctx context.Context, reqID string, params RequestStateParams) error
 	// GetPluginData fetches plugin data of the specific request.
 	GetPluginData(ctx context.Context, reqID string) (PluginDataMap, error)
 	// UpdatePluginData updates plugin data of the specific request comparing it with a previous value.
@@ -165,7 +167,7 @@ func NewClient(ctx context.Context, plugin string, addr string, tc *tls.Config, 
 	conn, err := grpc.DialContext(ctx, addr, dialOptions...)
 	if err != nil {
 		cancel()
-		return nil, utils.FromGRPC(err)
+		return nil, lib.FromGRPC(err)
 	}
 	authClient := proto.NewAuthServiceClient(conn)
 	return &clt{
@@ -184,7 +186,7 @@ func (c *clt) WithCallOptions(options ...CallOption) Client {
 func (c *clt) Ping(ctx context.Context) (Pong, error) {
 	rsp, err := c.clt.Ping(ctx, &proto.PingRequest{}, c.callOpts...)
 	if err != nil {
-		return Pong{}, utils.FromGRPC(err)
+		return Pong{}, lib.FromGRPC(err)
 	}
 	return Pong{
 		rsp.ServerVersion,
@@ -199,7 +201,7 @@ func (c *clt) WatchRequests(ctx context.Context, fltr Filter) Watcher {
 func (c *clt) GetRequests(ctx context.Context, fltr Filter) ([]Request, error) {
 	rsp, err := c.clt.GetAccessRequests(ctx, &fltr, c.callOpts...)
 	if err != nil {
-		return nil, utils.FromGRPC(err)
+		return nil, lib.FromGRPC(err)
 	}
 	var reqs []Request
 	for _, req := range rsp.AccessRequests {
@@ -244,12 +246,17 @@ func (c *clt) SetRequestState(ctx context.Context, reqID string, state State, de
 		State:     state,
 		Delegator: fmt.Sprintf("%s:%s", c.plugin, delegator),
 	})
-	return utils.FromGRPC(err)
+	return lib.FromGRPC(err)
 }
 
-func (c *clt) SetRequestStateExt(ctx context.Context, params RequestStateSetter) error {
-	_, err := c.clt.SetAccessRequestState(ctx, &params)
-	return utils.FromGRPC(err)
+func (c *clt) SetRequestStateExt(ctx context.Context, reqID string, params RequestStateParams) error {
+	_, err := c.clt.SetAccessRequestState(ctx, &proto.RequestStateSetter{
+		ID:        reqID,
+		State:     params.State,
+		Delegator: fmt.Sprintf("%s:%s", c.plugin, params.Delegator),
+		Reason:    params.Reason,
+	})
+	return lib.FromGRPC(err)
 }
 
 func (c *clt) GetPluginData(ctx context.Context, reqID string) (PluginDataMap, error) {
@@ -259,7 +266,7 @@ func (c *clt) GetPluginData(ctx context.Context, reqID string) (PluginDataMap, e
 		Plugin:   c.plugin,
 	})
 	if err != nil {
-		return nil, utils.FromGRPC(err)
+		return nil, lib.FromGRPC(err)
 	}
 	pluginDatas := dataSeq.GetPluginData()
 	if len(pluginDatas) == 0 {
@@ -282,7 +289,7 @@ func (c *clt) UpdatePluginData(ctx context.Context, reqID string, set PluginData
 		Set:      set,
 		Expect:   expect,
 	})
-	return utils.FromGRPC(err)
+	return lib.FromGRPC(err)
 }
 
 func (c *clt) Close() {
@@ -323,14 +330,14 @@ func (w *watcher) run(ctx context.Context, clt proto.AuthServiceClient, callOpts
 		},
 	}, callOpts...)
 	if err != nil {
-		w.setError(utils.FromGRPC(err))
+		w.setError(lib.FromGRPC(err))
 		return
 	}
 
 	for {
 		event, err := stream.Recv()
 		if err != nil {
-			w.setError(utils.FromGRPC(err))
+			w.setError(lib.FromGRPC(err))
 			return
 		}
 		var req Request
@@ -404,17 +411,17 @@ func (w *watcher) Close() {
 
 // AssertServerVersion returns an error if server version in ping response is
 // less than minimum required version.
-func (p *Pong) AssertServerVersion() error {
+func (p Pong) AssertServerVersion(minVersion string) error {
 	actual, err := version.NewVersion(p.ServerVersion)
 	if err != nil {
 		return trace.Wrap(err)
 	}
-	required, err := version.NewVersion(MinServerVersion)
+	required, err := version.NewVersion(minVersion)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 	if actual.LessThan(required) {
-		return trace.Errorf("server version %s is less than %s", p.ServerVersion, MinServerVersion)
+		return trace.Errorf("server version %s is less than %s", p.ServerVersion, minVersion)
 	}
 	return nil
 }

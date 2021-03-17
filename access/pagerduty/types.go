@@ -6,11 +6,7 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
-
-	log "github.com/sirupsen/logrus"
 )
-
-type logFields = log.Fields
 
 // Plugin data
 

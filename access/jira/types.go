@@ -6,14 +6,13 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type RequestData struct {
-	User    string
-	Roles   []string
-	Created time.Time
+	User          string
+	Roles         []string
+	Created       time.Time
+	RequestReason string
 }
 
 type JiraData struct {
@@ -25,8 +24,6 @@ type PluginData struct {
 	RequestData
 	JiraData
 }
-
-type logFields = log.Fields
 
 func DecodePluginData(dataMap map[string]string) (data PluginData) {
 	var created int64

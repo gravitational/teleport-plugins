@@ -388,12 +388,6 @@ func (o *SAMLConnectorV2) Equals(other SAMLConnector) bool {
 		if a.Name != b.Name || a.Value != b.Value || !utils.StringSlicesEqual(a.Roles, b.Roles) {
 			return false
 		}
-		if (a.RoleTemplate != nil && b.RoleTemplate == nil) || (a.RoleTemplate == nil && b.RoleTemplate != nil) {
-			return false
-		}
-		if a.RoleTemplate != nil && !a.RoleTemplate.Equals(b.RoleTemplate.V3()) {
-			return false
-		}
 	}
 	return o.GetSSO() == other.GetSSO()
 }
@@ -555,7 +549,9 @@ func (o *SAMLConnectorV2) GetServiceProvider(clock clockwork.Clock) (*saml2.SAML
 			}
 		}
 		o.Spec.Issuer = metadata.EntityID
-		o.Spec.SSO = metadata.IDPSSODescriptor.SingleSignOnService.Location
+		if len(metadata.IDPSSODescriptor.SingleSignOnServices) > 0 {
+			o.Spec.SSO = metadata.IDPSSODescriptor.SingleSignOnServices[0].Location
+		}
 	}
 	if o.Spec.Issuer == "" {
 		return nil, trace.BadParameter("no issuer or entityID set, either set issuer as a parameter or via entity_descriptor spec")
@@ -593,19 +589,8 @@ func (o *SAMLConnectorV2) GetServiceProvider(clock clockwork.Clock) (*saml2.SAML
 	}
 	// make sure claim mappings have either roles or a role template
 	for _, v := range o.Spec.AttributesToRoles {
-		hasRoles := false
-		if len(v.Roles) > 0 {
-			hasRoles = true
-		}
-		hasRoleTemplate := false
-		if v.RoleTemplate != nil {
-			hasRoleTemplate = true
-		}
-
-		// we either need to have roles or role templates not both or neither
-		// ! ( hasRoles XOR hasRoleTemplate )
-		if hasRoles == hasRoleTemplate {
-			return nil, trace.BadParameter("need roles or role template (not both or none)")
+		if len(v.Roles) == 0 {
+			return nil, trace.BadParameter("need roles field in attributes_to_roles")
 		}
 	}
 	log.Debugf("[SAML] SSO: %v", o.Spec.SSO)
@@ -754,9 +739,6 @@ type AttributeMapping struct {
 	Value string `json:"value"`
 	// Roles is a list of teleport roles to map to
 	Roles []string `json:"roles,omitempty"`
-	// RoleTemplate is a template for a role that will be filled
-	// with data from claims.
-	RoleTemplate *RoleV2 `json:"role_template,omitempty"`
 }
 
 func SAMLAssertionsToTraits(assertions saml2.AssertionInfo) map[string][]string {
@@ -773,8 +755,8 @@ func SAMLAssertionsToTraits(assertions saml2.AssertionInfo) map[string][]string 
 	return traits
 }
 
-// AttribueMappingSchema is JSON schema for claim mapping
-var AttributeMappingSchema = fmt.Sprintf(`{
+// AttributeMappingSchema is JSON schema for claim mapping
+var AttributeMappingSchema = `{
   "type": "object",
   "additionalProperties": false,
   "required": ["name", "value" ],
@@ -786,12 +768,11 @@ var AttributeMappingSchema = fmt.Sprintf(`{
       "items": {
         "type": "string"
       }
-    },
-    "role_template": %v
+    }
   }
-}`, GetRoleSchema(V2, ""))
+}`
 
-// SigningKeyPairSchema
+// SigningKeyPairSchema is the JSON schema for signing key pair.
 var SigningKeyPairSchema = `{
   "type": "object",
   "additionalProperties": false,

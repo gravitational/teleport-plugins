@@ -34,6 +34,8 @@ import (
 	"github.com/gravitational/teleport/lib/tlsca"
 	"github.com/gravitational/teleport/lib/utils"
 
+	"github.com/coreos/go-semver/semver"
+	"github.com/gravitational/teleport"
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
 	"github.com/prometheus/client_golang/prometheus"
@@ -41,6 +43,7 @@ import (
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/etcdserver/api/v3rpc/rpctypes"
 	"go.etcd.io/etcd/mvcc/mvccpb"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -162,6 +165,9 @@ type Config struct {
 	// PasswordFile is an optional password file for HTTPS basic authentication,
 	// expects path to a file
 	PasswordFile string `json:"password_file,omitempty"`
+	// MaxClientMsgSizeBytes optionally specifies the size limit on client send message size.
+	// See https://github.com/etcd-io/etcd/blob/221f0cc107cb3497eeb20fb241e1bcafca2e9115/clientv3/config.go#L49
+	MaxClientMsgSizeBytes int `json:"etcd_max_client_msg_size_bytes,omitempty"`
 }
 
 // legacyDefaultPrefix was used instead of Config.Key prior to 4.3. It's used
@@ -217,9 +223,28 @@ func New(ctx context.Context, params backend.Params) (*EtcdBackend, error) {
 		watchDone:        make(chan struct{}),
 		buf:              buf,
 	}
-	if err = b.reconnect(); err != nil {
+
+	if err = b.reconnect(ctx); err != nil {
 		return nil, trace.Wrap(err)
 	}
+
+	// Check that the etcd nodes are at least the minimum version supported
+	timeout, cancel := context.WithTimeout(ctx, time.Second*3*time.Duration(len(cfg.Nodes)))
+	defer cancel()
+	for _, n := range cfg.Nodes {
+		status, err := b.client.Status(timeout, n)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		ver := semver.New(status.Version)
+		min := semver.New(teleport.MinimumEtcdVersion)
+		if ver.LessThan(*min) {
+			return nil, trace.BadParameter("unsupported version of etcd %v for node %v, must be %v or greater",
+				status.Version, n, teleport.MinimumEtcdVersion)
+		}
+	}
+
 	// Wrap backend in a input sanitizer and return it.
 	return b, nil
 }
@@ -274,7 +299,7 @@ func (b *EtcdBackend) CloseWatchers() {
 	b.buf.Reset()
 }
 
-func (b *EtcdBackend) reconnect() error {
+func (b *EtcdBackend) reconnect(ctx context.Context) error {
 	tlsConfig := utils.TLSConfig(nil)
 
 	if b.cfg.TLSCertFile != "" {
@@ -313,11 +338,13 @@ func (b *EtcdBackend) reconnect() error {
 	tlsConfig.ClientCAs = certPool
 
 	clt, err := clientv3.New(clientv3.Config{
-		Endpoints:   b.nodes,
-		TLS:         tlsConfig,
-		DialTimeout: b.cfg.DialTimeout,
-		Username:    b.cfg.Username,
-		Password:    b.cfg.Password,
+		Endpoints:          b.nodes,
+		TLS:                tlsConfig,
+		DialTimeout:        b.cfg.DialTimeout,
+		DialOptions:        []grpc.DialOption{grpc.WithBlock()},
+		Username:           b.cfg.Username,
+		Password:           b.cfg.Password,
+		MaxCallSendMsgSize: b.cfg.MaxClientMsgSizeBytes,
 	})
 	if err != nil {
 		return trace.Wrap(err)
@@ -490,6 +517,7 @@ func (b *EtcdBackend) CompareAndSwap(ctx context.Context, expected backend.Item,
 		if trace.IsNotFound(err) {
 			return nil, trace.CompareFailed(err.Error())
 		}
+		return nil, trace.Wrap(err)
 	}
 	if !re.Succeeded {
 		return nil, trace.CompareFailed("key %q did not match expected value", string(expected.Key))
@@ -803,6 +831,8 @@ func convertErr(err error) error {
 			return trace.AlreadyExists(err.Error())
 		case codes.FailedPrecondition:
 			return trace.CompareFailed(err.Error())
+		case codes.ResourceExhausted:
+			return trace.LimitExceeded(err.Error())
 		default:
 			return trace.BadParameter(err.Error())
 		}

@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
@@ -35,13 +35,13 @@ type CallbackFunc func(ctx context.Context, callback Callback) error
 // CallbackServer is a wrapper around http.Server that processes Slack interaction events.
 // It verifies incoming requests and calls onCallback for valid ones
 type CallbackServer struct {
-	http       *utils.HTTP
+	http       *lib.HTTP
 	onCallback CallbackFunc
 }
 
 // NewCallbackServer initializes and returns an HTTP server that handles Slack callback (webhook) requests.
-func NewCallbackServer(conf utils.HTTPConfig, onCallback CallbackFunc) (*CallbackServer, error) {
-	httpSrv, err := utils.NewHTTP(conf)
+func NewCallbackServer(conf lib.HTTPConfig, onCallback CallbackFunc) (*CallbackServer, error) {
+	httpSrv, err := lib.NewHTTP(conf)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +54,7 @@ func NewCallbackServer(conf utils.HTTPConfig, onCallback CallbackFunc) (*Callbac
 }
 
 // ServiceJob returns a service job object from the Callback HTTP server.
-func (s *CallbackServer) ServiceJob() utils.ServiceJob {
+func (s *CallbackServer) ServiceJob() lib.ServiceJob {
 	return s.http.ServiceJob()
 }
 
@@ -96,7 +96,7 @@ func (s *CallbackServer) handleCallback(rw http.ResponseWriter, r *http.Request,
 		log.Debugf("%v", trace.DebugReport(err))
 		var code int
 		switch {
-		case utils.IsCanceled(err) || utils.IsDeadline(err):
+		case lib.IsCanceled(err) || lib.IsDeadline(err):
 			code = http.StatusServiceUnavailable
 		default:
 			code = http.StatusInternalServerError

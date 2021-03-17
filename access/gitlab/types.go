@@ -12,8 +12,6 @@ import (
 	"unicode"
 
 	"github.com/gravitational/teleport-plugins/access"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -38,8 +36,6 @@ type PluginData struct {
 	RequestData
 	GitlabData
 }
-
-type logFields = log.Fields
 
 type ActionID int
 
@@ -122,8 +118,7 @@ type IssueEvent struct {
 }
 
 type Webhook struct {
-	HTTPID string
-	Event  interface{}
+	Event interface{}
 }
 
 type WebhookFunc func(ctx context.Context, hook Webhook) error

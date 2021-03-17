@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/julienschmidt/httprouter"
-	log "github.com/sirupsen/logrus"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 )
 
@@ -22,14 +22,14 @@ const (
 )
 
 type WebhookServer struct {
-	http      *utils.HTTP
+	http      *lib.HTTP
 	onWebhook WebhookFunc
 	secret    string
 	counter   uint64
 }
 
-func NewWebhookServer(conf utils.HTTPConfig, secret string, onWebhook WebhookFunc) (*WebhookServer, error) {
-	httpSrv, err := utils.NewHTTP(conf)
+func NewWebhookServer(conf lib.HTTPConfig, secret string, onWebhook WebhookFunc) (*WebhookServer, error) {
+	httpSrv, err := lib.NewHTTP(conf)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -42,7 +42,7 @@ func NewWebhookServer(conf utils.HTTPConfig, secret string, onWebhook WebhookFun
 	return srv, nil
 }
 
-func (s *WebhookServer) ServiceJob() utils.ServiceJob {
+func (s *WebhookServer) ServiceJob() lib.ServiceJob {
 	return s.http.ServiceJob()
 }
 
@@ -64,7 +64,7 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 	defer cancel()
 
 	httpRequestID := fmt.Sprintf("%v-%v", time.Now().Unix(), atomic.AddUint64(&s.counter, 1))
-	log := log.WithField("gitlab_http_id", httpRequestID)
+	ctx, log := logger.WithField(ctx, "gitlab_http_id", httpRequestID)
 
 	if contentType := r.Header.Get("Content-Type"); contentType != "application/json" {
 		log.Errorf(`Invalid "Content-Type" header %q`, contentType)
@@ -100,12 +100,12 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	if err := s.onWebhook(ctx, Webhook{HTTPID: httpRequestID, Event: event}); err != nil {
+	if err := s.onWebhook(ctx, Webhook{Event: event}); err != nil {
 		log.WithError(err).Error("Failed to process webhook")
 		log.Debugf("%v", trace.DebugReport(err))
 		var code int
 		switch {
-		case utils.IsCanceled(err) || utils.IsDeadline(err):
+		case lib.IsCanceled(err) || lib.IsDeadline(err):
 			code = http.StatusServiceUnavailable
 		default:
 			code = http.StatusInternalServerError

@@ -203,7 +203,6 @@ func (u *Uploader) Serve() error {
 			if u.cfg.EventsC != nil {
 				select {
 				case u.cfg.EventsC <- event:
-					u.log.Warningf("Forwarded the event to the channel.")
 				default:
 					u.log.Warningf("Skip send event on a blocked channel.")
 				}

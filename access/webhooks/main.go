@@ -22,7 +22,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/utils"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 
 	"github.com/gravitational/kingpin"
 	"github.com/gravitational/trace"
@@ -32,12 +33,12 @@ import (
 
 const (
 	// DefaultDir is the directory to be used in various configurations.
-	// It's used across the files in main package, and in utils.
+	// It's used across the files in main package, and in lib.
 	DefaultDir = "/var/lib/teleport/plugins/webhooks"
 )
 
 func main() {
-	utils.InitLogger()
+	logger.Init()
 	app := kingpin.New("teleport-webhooks", "Teleport plugin for access requests approval via webhooks.")
 
 	app.Command("configure", "Prints an example .TOML configuration file.")
@@ -57,17 +58,17 @@ func main() {
 
 	selectedCmd, err := app.Parse(os.Args[1:])
 	if err != nil {
-		utils.Bail(err)
+		lib.Bail(err)
 	}
 
 	switch selectedCmd {
 	case "configure":
 		fmt.Print(exampleConfig)
 	case "version":
-		utils.PrintVersion(app.Name, Version, Gitref)
+		lib.PrintVersion(app.Name, Version, Gitref)
 	case "start":
 		if err := run(*path, *insecure, *debug); err != nil {
-			utils.Bail(err)
+			lib.Bail(err)
 		} else {
 			log.Info("Successfully shut down")
 		}
@@ -80,7 +81,7 @@ func run(configPath string, insecure bool, debug bool) error {
 		return trace.Wrap(err)
 	}
 
-	err = utils.SetupLogger(conf.Log)
+	err = logger.Setup(conf.Log)
 	if err != nil {
 		return err
 	}
@@ -95,7 +96,7 @@ func run(configPath string, insecure bool, debug bool) error {
 		return trace.Wrap(err)
 	}
 
-	go utils.ServeSignals(app, 15*time.Second)
+	go lib.ServeSignals(app, 15*time.Second)
 
 	return trace.Wrap(
 		app.Run(context.Background()),
