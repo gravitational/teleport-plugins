@@ -182,8 +182,8 @@ func (s *FakeSlack) Close() {
 
 func (s *FakeSlack) StoreMessage(msg slack.Msg) slack.Msg {
 	if msg.Timestamp == "" {
-		now := s.startTime.Add(time.Now().Sub(s.startTime)) // get monotonic timestamp
-		uniq := atomic.AddUint64(&s.messageCounter, 1)      // generate uniq int to prevent races
+		now := s.startTime.Add(time.Since(s.startTime)) // get monotonic timestamp
+		uniq := atomic.AddUint64(&s.messageCounter, 1)  // generate uniq int to prevent races
 		msg.Timestamp = fmt.Sprintf("%d.%d", now.UnixNano(), uniq)
 	}
 	s.objects.Store(fmt.Sprintf("msg-%s", msg.Timestamp), msg)
