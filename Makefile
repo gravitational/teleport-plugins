@@ -1,5 +1,3 @@
-GO_LINTERS ?= "golint,unused,govet,typecheck,deadcode,goimports,varcheck,structcheck,bodyclose,staticcheck,ineffassign,unconvert,misspell"
-
 .PHONY: access-slack
 access-slack:
 	make -C access/slack
@@ -67,19 +65,10 @@ build-all: access-slack access-jira access-mattermost access-pagerduty access-gi
 
 #
 # Lint the Go code.
-# By default lint scans the entire repo. Pass FLAGS='--new' to only scan local
+# By default lint scans the entire repo. Pass GO_LINT_FLAGS='--new' to only scan local
 # changes (or last commit).
 #
 .PHONY: lint
-lint: FLAGS ?=
+lint: GO_LINT_FLAGS ?=
 lint:
-	golangci-lint run \
-		--disable-all \
-		--exclude-use-default \
-		--skip-dirs vendor \
-		--uniq-by-line=false \
-		--max-same-issues=0 \
-		--max-issues-per-linter 0 \
-		--timeout=5m \
-		--enable $(GO_LINTERS) \
-		$(FLAGS)
+	golangci-lint run -c .golangci.yml $(GO_LINT_FLAGS)
