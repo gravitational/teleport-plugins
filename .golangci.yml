@@ -1,6 +1,6 @@
 issues:
   exclude-rules:
-    - linters: staticcheck
+    - linters: gosimple
       text: "S1002: should omit comparison to bool constant"
   exclude-use-default: true
   max-same-issues: 0
