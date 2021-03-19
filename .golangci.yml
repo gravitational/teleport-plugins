@@ -1,6 +1,6 @@
 issues:
   exclude-rules:
-    - linters: staticcheck
+    - linters: gosimple
       text: "S1002: should omit comparison to bool constant"
   exclude-use-default: true
   max-same-issues: 0
@@ -28,4 +28,7 @@ output:
   uniq-by-line: false
 
 run:
+  skip-dirs:
+    - vendor
+  skip-dirs-use-default: false
   timeout: 5m
