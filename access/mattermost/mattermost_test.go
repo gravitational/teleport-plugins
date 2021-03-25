@@ -1,30 +1,23 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"net/http"
 	"os"
 	"os/user"
+	"regexp"
 	"runtime"
-	"strings"
+	"sort"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
-	mm "github.com/mattermost/mattermost-server/v5/model"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
-	"github.com/gravitational/teleport/lib/backend"
-	"github.com/gravitational/teleport/lib/events"
 	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/trace"
 
@@ -37,15 +30,17 @@ const (
 	Site   = "local-site"
 )
 
+var msgFieldRegexp = regexp.MustCompile(`(?im)^\*\*([a-zA-Z ]+)\*\*:\ +(.+)$`)
+
 type MattermostSuite struct {
 	ctx            context.Context
 	cancel         context.CancelFunc
+	appConfig      Config
 	app            *App
-	publicURL      string
 	raceNumber     int
 	me             *user.User
 	fakeMattermost *FakeMattermost
-	mmUser         mm.User
+	mmUser         User
 	teleport       *integration.TeleInstance
 	tmpFiles       []*os.File
 }
@@ -67,7 +62,7 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 	userRole, err := types.NewRole("foo", types.RoleSpecV3{
 		Allow: types.RoleConditions{
 			Logins:  []string{s.me.Username}, // cannot be empty
-			Request: &services.AccessRequestConditions{Roles: []string{"admin"}},
+			Request: &types.AccessRequestConditions{Roles: []string{"admin"}},
 		},
 	})
 	c.Assert(err, IsNil)
@@ -77,7 +72,8 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 		Allow: types.RoleConditions{
 			Logins: []string{"access-plugin"}, // cannot be empty
 			Rules: []types.Rule{
-				types.NewRule("access_request", []string{"list", "read", "update"}),
+				types.NewRule("access_request", []string{"list", "read"}),
+				types.NewRule("access_plugin_data", []string{"update"}),
 			},
 		},
 	})
@@ -94,35 +90,14 @@ func (s *MattermostSuite) SetUpSuite(c *C) {
 
 func (s *MattermostSuite) SetUpTest(c *C) {
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), 5*time.Second)
-	s.publicURL = ""
-	s.fakeMattermost = NewFakeMattermost(s.raceNumber)
-	s.mmUser = s.fakeMattermost.StoreUser(mm.User{
+	s.fakeMattermost = NewFakeMattermost(User{Username: "bot", Email: "bot@example.com"}, s.raceNumber)
+	s.mmUser = s.fakeMattermost.StoreUser(User{
 		FirstName: "User",
 		LastName:  "Test",
 		Username:  s.me.Username,
 		Email:     s.me.Username + "@example.com",
 	})
-}
 
-func (s *MattermostSuite) TearDownTest(c *C) {
-	s.shutdownApp(c)
-	s.fakeMattermost.Close()
-	s.cancel()
-	for _, tmp := range s.tmpFiles {
-		err := os.Remove(tmp.Name())
-		c.Assert(err, IsNil)
-	}
-	s.tmpFiles = []*os.File{}
-}
-
-func (s *MattermostSuite) newTmpFile(c *C, pattern string) (file *os.File) {
-	file, err := ioutil.TempFile("", pattern)
-	c.Assert(err, IsNil)
-	s.tmpFiles = append(s.tmpFiles, file)
-	return
-}
-
-func (s *MattermostSuite) startApp(c *C) {
 	auth := s.teleport.Process.GetAuthServer()
 	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
 	c.Assert(err, IsNil)
@@ -156,16 +131,32 @@ func (s *MattermostSuite) startApp(c *C) {
 	conf.Teleport.ClientKey = keyFile.Name()
 	conf.Teleport.RootCAs = casFile.Name()
 	conf.Mattermost.URL = s.fakeMattermost.URL()
-	conf.Mattermost.Team = "test-team"
-	conf.Mattermost.Channel = "test-channel"
-	conf.Mattermost.Secret = "1234567812345678123456781234567812345678123456781234567812345678"
-	conf.HTTP.ListenAddr = ":0"
-	if s.publicURL != "" {
-		conf.HTTP.PublicAddr = s.publicURL
-	}
-	conf.HTTP.Insecure = true
 
-	s.app, err = NewApp(conf)
+	s.appConfig = conf
+}
+
+func (s *MattermostSuite) TearDownTest(c *C) {
+	s.shutdownApp(c)
+	s.fakeMattermost.Close()
+	s.cancel()
+	for _, tmp := range s.tmpFiles {
+		err := os.Remove(tmp.Name())
+		c.Assert(err, IsNil)
+	}
+	s.tmpFiles = []*os.File{}
+}
+
+func (s *MattermostSuite) newTmpFile(c *C, pattern string) (file *os.File) {
+	file, err := ioutil.TempFile("", pattern)
+	c.Assert(err, IsNil)
+	s.tmpFiles = append(s.tmpFiles, file)
+	return
+}
+
+func (s *MattermostSuite) startApp(c *C) {
+	var err error
+
+	s.app, err = NewApp(s.appConfig)
 	c.Assert(err, IsNil)
 
 	go func() {
@@ -176,9 +167,6 @@ func (s *MattermostSuite) startApp(c *C) {
 	ok, err := s.app.WaitReady(s.ctx)
 	c.Assert(err, IsNil)
 	c.Assert(ok, Equals, true)
-	if s.publicURL == "" {
-		s.publicURL = s.app.PublicURL().String()
-	}
 }
 
 func (s *MattermostSuite) shutdownApp(c *C) {
@@ -187,21 +175,27 @@ func (s *MattermostSuite) shutdownApp(c *C) {
 	c.Assert(s.app.Err(), IsNil)
 }
 
-func (s *MattermostSuite) newAccessRequest(c *C) services.AccessRequest {
+func (s *MattermostSuite) newAccessRequest(c *C, reviewers []User) types.AccessRequest {
 	req, err := services.NewAccessRequest(s.me.Username, "admin")
 	c.Assert(err, IsNil)
+	req.SetRequestReason("because of")
+	var suggestedReviewers []string
+	for _, user := range reviewers {
+		suggestedReviewers = append(suggestedReviewers, user.Email)
+	}
+	req.SetSuggestedReviewers(suggestedReviewers)
 	return req
 }
 
-func (s *MattermostSuite) createAccessRequest(c *C) services.AccessRequest {
-	req := s.newAccessRequest(c)
+func (s *MattermostSuite) createAccessRequest(c *C, reviewers []User) types.AccessRequest {
+	req := s.newAccessRequest(c, reviewers)
 	err := s.teleport.CreateAccessRequest(s.ctx, req)
 	c.Assert(err, IsNil)
 	return req
 }
 
-func (s *MattermostSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
-	req := s.newAccessRequest(c)
+func (s *MattermostSuite) createExpiredAccessRequest(c *C, reviewers []User) types.AccessRequest {
+	req := s.newAccessRequest(c, reviewers)
 	err := s.teleport.CreateExpiredAccessRequest(s.ctx, req)
 	c.Assert(err, IsNil)
 	return req
@@ -213,178 +207,132 @@ func (s *MattermostSuite) checkPluginData(c *C, reqID string) PluginData {
 	return DecodePluginData(rawData)
 }
 
-func (s *MattermostSuite) postWebhook(ctx context.Context, post Post, actionName string) (*http.Response, error) {
-	attachments := post.Attachments()
-	if size := len(attachments); size != 1 {
-		return nil, trace.Errorf("ambigous attachments array: expected exactly 1 element, got %v", size)
-	}
-	var action *PostAction
-	for _, a := range attachments[0].Actions {
-		if a.Name == actionName {
-			action = &a
-			break
-		}
-	}
-	if action == nil {
-		return nil, trace.Errorf("cannot find action %q in the attachments", actionName)
-	}
-
-	payload := mm.PostActionIntegrationRequest{
-		PostId:    post.ID,
-		TeamId:    "1111",
-		ChannelId: "2222",
-		UserId:    s.mmUser.Id,
-		Context:   action.Integration.Context,
-	}
-
-	var buf bytes.Buffer
-	err := json.NewEncoder(&buf).Encode(&payload)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, action.Integration.URL, &buf)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	request.Header.Add("Content-Type", "application/json")
-
-	response, err := http.DefaultClient.Do(request)
-	return response, trace.Wrap(err)
-
-}
-
-func (s *MattermostSuite) postWebhookAndCheck(c *C, post Post, actionName string) ActionResponse {
-	response, err := s.postWebhook(s.ctx, post, actionName)
-	c.Assert(err, IsNil)
-	c.Assert(response.StatusCode, Equals, http.StatusOK)
-
-	var actionResponse ActionResponse
-	c.Assert(json.NewDecoder(response.Body).Decode(&actionResponse), IsNil)
-	c.Assert(response.Body.Close(), IsNil)
-
-	return actionResponse
-}
-
 func (s *MattermostSuite) TestMattermostMessagePosting(c *C) {
+	reviewer1 := s.fakeMattermost.StoreUser(User{Email: "user1@example.com"})
+	reviewer2 := s.fakeMattermost.StoreUser(User{Email: "user2@example.com"})
+	directChannel1 := s.fakeMattermost.GetDirectChannel(s.fakeMattermost.GetBotUser(), reviewer1)
+	directChannel2 := s.fakeMattermost.GetDirectChannel(s.fakeMattermost.GetBotUser(), reviewer2)
+
 	s.startApp(c)
-	request := s.createAccessRequest(c)
-	post, err := s.fakeMattermost.CheckNewPost(s.ctx)
-	c.Assert(err, IsNil, Commentf("no new messages posted"))
+	request := s.createAccessRequest(c, []User{reviewer2, reviewer1})
 
 	pluginData := s.checkPluginData(c, request.GetName())
-	c.Assert(pluginData.PostID, Equals, post.ID)
+	c.Assert(pluginData.MattermostData, HasLen, 2)
 
-	attachments := post.Attachments()
-	c.Assert(attachments, HasLen, 1)
-	attachment := attachments[0]
-	c.Assert(attachment.Actions, HasLen, 2)
-	c.Assert(attachment.Actions[0].Name, Equals, "Approve")
-	c.Assert(attachment.Actions[1].Name, Equals, "Deny")
+	var posts []Post
+	postSet := make(MattermostDataPostSet)
+	for i := 0; i < 2; i++ {
+		post, err := s.fakeMattermost.CheckNewPost(s.ctx)
+		c.Assert(err, IsNil, Commentf("no new messages posted"))
+		postSet.Add(MattermostDataPost{ChannelID: post.ChannelID, PostID: post.ID})
+		posts = append(posts, post)
+	}
+
+	c.Assert(postSet, HasLen, 2)
+	c.Assert(postSet.Contains(pluginData.MattermostData[0]), Equals, true)
+	c.Assert(postSet.Contains(pluginData.MattermostData[1]), Equals, true)
+
+	sort.Sort(MattermostPostSlice(posts))
+
+	c.Assert(posts[0].ChannelID, Equals, directChannel1.ID)
+	c.Assert(posts[1].ChannelID, Equals, directChannel2.ID)
+
+	post := posts[0]
+	reqID, err := parsePostField(post, "Request ID")
+	c.Assert(err, IsNil)
+	c.Assert(reqID, Equals, request.GetName())
+
+	username, err := parsePostField(post, "User")
+	c.Assert(err, IsNil)
+	c.Assert(username, Equals, s.me.Username)
+
+	reason, err := parsePostField(post, "Reason")
+	c.Assert(err, IsNil)
+	c.Assert(reason, Equals, "because of")
+
+	statusLine, err := parsePostField(post, "Status")
+	c.Assert(err, IsNil)
+	c.Assert(statusLine, Equals, "⏳ PENDING")
 }
 
 func (s *MattermostSuite) TestApproval(c *C) {
-	s.startApp(c)
-	request := s.createAccessRequest(c)
-	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
+	reviewer := s.fakeMattermost.StoreUser(User{Email: "user@example.com"})
 
+	s.startApp(c)
+
+	req := s.createAccessRequest(c, []User{reviewer})
 	post, err := s.fakeMattermost.CheckNewPost(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new messages posted"))
+	c.Assert(post.ChannelID, Equals, s.fakeMattermost.GetDirectChannel(s.fakeMattermost.GetBotUser(), reviewer).ID)
 
-	response := s.postWebhookAndCheck(c, post, "Approve")
-	c.Assert(response.EphemeralText, Equals, fmt.Sprintf("You have **approved** the request %s", request.GetName()))
-	c.Assert(response.Update, NotNil)
-	attachments := response.Update.Attachments()
-	c.Assert(attachments, HasLen, 1)
-	c.Assert(attachments[0].Actions, HasLen, 0)
-
-	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
+	err = s.teleport.SetAccessRequestState(s.ctx, types.AccessRequestUpdate{
+		RequestID: req.GetName(),
+		State:     types.RequestState_APPROVED,
+	})
 	c.Assert(err, IsNil)
-	c.Assert(request.GetState(), Equals, types.RequestState_APPROVED)
 
-	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdateEvent, "id": request.GetName()})
+	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.ctx)
+	c.Assert(err, IsNil, Commentf("no messages updated"))
+	c.Assert(postUpdate.ID, Equals, post.ID)
+	c.Assert(postUpdate.ChannelID, Equals, post.ChannelID)
+
+	statusLine, err := parsePostField(postUpdate, "Status")
 	c.Assert(err, IsNil)
-	c.Assert(auditLog, HasLen, 1)
-	c.Assert(auditLog[0].GetString("state"), Equals, "APPROVED")
-	c.Assert(auditLog[0].GetString("delegator"), Equals, "mattermost:"+s.mmUser.Email)
+	c.Assert(statusLine, Equals, "✅ APPROVED")
 }
 
 func (s *MattermostSuite) TestDenial(c *C) {
-	s.startApp(c)
-	request := s.createAccessRequest(c)
-	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
+	reviewer := s.fakeMattermost.StoreUser(User{Email: "user@example.com"})
 
+	s.startApp(c)
+
+	req := s.createAccessRequest(c, []User{reviewer})
 	post, err := s.fakeMattermost.CheckNewPost(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new messages posted"))
+	c.Assert(post.ChannelID, Equals, s.fakeMattermost.GetDirectChannel(s.fakeMattermost.GetBotUser(), reviewer).ID)
 
-	response := s.postWebhookAndCheck(c, post, "Deny")
-	c.Assert(response.EphemeralText, Equals, fmt.Sprintf("You have **denied** the request %s", request.GetName()))
-	c.Assert(response.Update, NotNil)
-	attachments := response.Update.Attachments()
-	c.Assert(attachments, HasLen, 1)
-	c.Assert(attachments[0].Actions, HasLen, 0)
-
-	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
+	err = s.teleport.SetAccessRequestState(s.ctx, types.AccessRequestUpdate{
+		RequestID: req.GetName(),
+		State:     types.RequestState_DENIED,
+	})
 	c.Assert(err, IsNil)
-	c.Assert(request.GetState(), Equals, types.RequestState_DENIED)
 
-	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdateEvent, "id": request.GetName()})
+	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.ctx)
+	c.Assert(err, IsNil, Commentf("no messages updated"))
+	c.Assert(postUpdate.ID, Equals, post.ID)
+	c.Assert(postUpdate.ChannelID, Equals, post.ChannelID)
+
+	statusLine, err := parsePostField(postUpdate, "Status")
 	c.Assert(err, IsNil)
-	c.Assert(auditLog, HasLen, 1)
-	c.Assert(auditLog[0].GetString("state"), Equals, "DENIED")
-	c.Assert(auditLog[0].GetString("delegator"), Equals, "mattermost:"+s.mmUser.Email)
+	c.Assert(statusLine, Equals, "❌ DENIED")
 }
 
 func (s *MattermostSuite) TestExpiration(c *C) {
+	reviewer := s.fakeMattermost.StoreUser(User{Email: "user@example.com"})
+
 	s.startApp(c)
-	s.createExpiredAccessRequest(c)
+	s.createExpiredAccessRequest(c, []User{reviewer})
 
 	post, err := s.fakeMattermost.CheckNewPost(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new messages posted"))
-	postID := post.ID
+	c.Assert(post.ChannelID, Equals, s.fakeMattermost.GetDirectChannel(s.fakeMattermost.GetBotUser(), reviewer).ID)
 
-	post, err = s.fakeMattermost.CheckPostUpdate(s.ctx)
+	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.ctx)
 	c.Assert(err, IsNil, Commentf("no messages updated"))
-	c.Assert(post.ID, Equals, postID)
-	attachments := post.Attachments()
-	c.Assert(attachments, HasLen, 1)
-	c.Assert(attachments[0].Actions, HasLen, 0)
-}
+	c.Assert(postUpdate.ID, Equals, post.ID)
+	c.Assert(postUpdate.ChannelID, Equals, post.ChannelID)
 
-func (s *MattermostSuite) TestApproveExpired(c *C) {
-	s.startApp(c)
-	req := s.createExpiredAccessRequest(c)
-
-	post, err := s.fakeMattermost.CheckNewPost(s.ctx)
-	c.Assert(err, IsNil, Commentf("no new messages posted"))
-
-	response := s.postWebhookAndCheck(c, post, "Approve")
-	c.Assert(response.EphemeralText, Equals, fmt.Sprintf(`Request %s had been **expired**`, req.GetName()))
-	c.Assert(response.Update, NotNil)
-	attachments := response.Update.Attachments()
-	c.Assert(attachments, HasLen, 1)
-	c.Assert(attachments[0].Actions, HasLen, 0)
-}
-
-func (s *MattermostSuite) TestDenyExpired(c *C) {
-	s.startApp(c)
-	req := s.createExpiredAccessRequest(c)
-
-	post, err := s.fakeMattermost.CheckNewPost(s.ctx)
-	c.Assert(err, IsNil, Commentf("no new messages posted"))
-
-	response := s.postWebhookAndCheck(c, post, "Deny")
-	c.Assert(response.EphemeralText, Equals, fmt.Sprintf(`Request %s had been **expired**`, req.GetName()))
-	c.Assert(response.Update, NotNil)
-	attachments := response.Update.Attachments()
-	c.Assert(attachments, HasLen, 1)
-	c.Assert(attachments[0].Actions, HasLen, 0)
+	statusLine, err := parsePostField(postUpdate, "Status")
+	c.Assert(err, IsNil)
+	c.Assert(statusLine, Equals, "⌛ EXPIRED")
 }
 
 func (s *MattermostSuite) TestRace(c *C) {
 	prevLogLevel := log.GetLevel()
 	log.SetLevel(log.InfoLevel) // Turn off noisy debug logging
 	defer log.SetLevel(prevLogLevel)
+
+	reviewer := s.fakeMattermost.StoreUser(User{Email: "user@example.com"})
 
 	s.cancel() // Cancel the default timeout
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), 10*time.Second)
@@ -393,7 +341,6 @@ func (s *MattermostSuite) TestRace(c *C) {
 	var (
 		raceErr     error
 		raceErrOnce sync.Once
-		requests    sync.Map
 	)
 	setRaceErr := func(err error) error {
 		raceErrOnce.Do(func() {
@@ -402,17 +349,6 @@ func (s *MattermostSuite) TestRace(c *C) {
 		return err
 	}
 
-	watcher, err := s.teleport.Process.GetAuthServer().NewWatcher(s.ctx, services.Watch{
-		Kinds: []services.WatchKind{
-			{
-				Kind: types.KindAccessRequest,
-			},
-		},
-	})
-	c.Assert(err, IsNil)
-	defer watcher.Close()
-	c.Assert((<-watcher.Events()).Type, Equals, backend.OpInit)
-
 	process := lib.NewProcess(s.ctx)
 	for i := 0; i < s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
@@ -420,6 +356,7 @@ func (s *MattermostSuite) TestRace(c *C) {
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
+			req.SetSuggestedReviewers([]string{reviewer.Email})
 			if err := s.teleport.CreateAccessRequest(ctx, req); err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
@@ -430,86 +367,28 @@ func (s *MattermostSuite) TestRace(c *C) {
 			if err := trace.Wrap(err); err != nil {
 				return setRaceErr(err)
 			}
-			attachments := post.Attachments()
-			if obtained, expected := len(attachments), 1; obtained != expected {
-				return setRaceErr(trace.Errorf("wrong attachments size. expected %v, obtained %v", expected, obtained))
-			}
-			attachment := attachments[0]
-			if obtained, expected := len(attachment.Actions), 2; obtained != expected {
-				return setRaceErr(trace.Errorf("wrong attachment actions size. expected %v, obtained %v", expected, obtained))
-			}
-			if obtained, expected := attachment.Actions[0].Name, "Approve"; obtained != expected {
-				return setRaceErr(trace.Errorf("wrong attachment action. expected %q, obtained %q", expected, obtained))
-			}
-			if obtained, expected := attachment.Actions[1].Name, "Deny"; obtained != expected {
-				return setRaceErr(trace.Errorf("wrong attachment action. expected %q, obtained %q", expected, obtained))
-			}
-			ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-			defer cancel()
-			var lastErr error
-			for {
-				log.Infof("Trying to approve post %q", post.ID)
-				resp, err := s.postWebhook(ctx, post, "Approve")
-				if err != nil {
-					if lib.IsDeadline(err) {
-						return setRaceErr(lastErr)
-					}
-					return setRaceErr(trace.Wrap(err))
-				}
-				if status := resp.StatusCode; status != http.StatusOK {
-					if err := resp.Body.Close(); err != nil {
-						return setRaceErr(trace.Wrap(err))
-					}
-					lastErr = trace.Errorf("got %v http code from webhook server", status)
-					continue
-				}
-				var actionResponse ActionResponse
-				if err := json.NewDecoder(resp.Body).Decode(&actionResponse); err != nil {
-					return setRaceErr(trace.Wrap(err))
-				}
-				if err := resp.Body.Close(); err != nil {
-					return setRaceErr(trace.Wrap(err))
-				}
-				if !strings.HasPrefix(actionResponse.EphemeralText, "You have **approved** the request") {
-					return setRaceErr(trace.Errorf(`action response contains wrong "ephemeral_text" field: %q`, actionResponse.EphemeralText))
-				}
-				update := actionResponse.Update
-				if update == nil {
-					return setRaceErr(trace.Errorf(`action response does not have an "update" field`))
-				}
-				updateAttachments := update.Attachments()
-				if obtained, expected := len(updateAttachments), 1; obtained != expected {
-					return setRaceErr(trace.Errorf("wrong attachments size. expected %v, obtained %v", expected, obtained))
-				}
-				if obtained, expected := len(updateAttachments[0].Actions), 0; obtained != expected {
-					return setRaceErr(trace.Errorf("wrong attachment actions size. expected %v, obtained %v", expected, obtained))
-				}
 
-				return nil
+			reqID, err := parsePostField(post, "Request ID")
+			if err != nil {
+				return setRaceErr(trace.Wrap(err))
 			}
+
+			if _, err := s.teleport.PollAccessRequestPluginData(s.ctx, "mattermost", reqID); err != nil {
+				return setRaceErr(trace.Wrap(err))
+			}
+
+			if err = s.teleport.SetAccessRequestState(ctx, types.AccessRequestUpdate{
+				RequestID: reqID,
+				State:     types.RequestState_APPROVED,
+			}); err != nil {
+				return setRaceErr(trace.Wrap(err))
+			}
+
+			return nil
 		})
-	}
-	for i := 0; i < 2*s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			var event services.Event
-			select {
-			case event = <-watcher.Events():
-			case <-ctx.Done():
-				return setRaceErr(trace.Wrap(ctx.Err()))
-			}
-			if obtained, expected := event.Type, backend.OpPut; obtained != expected {
-				return setRaceErr(trace.Errorf("wrong event type. expected %v, obtained %v", expected, obtained))
-			}
-			req := event.Resource.(services.AccessRequest)
-			var newCounter int64
-			val, _ := requests.LoadOrStore(req.GetName(), &newCounter)
-			switch state := req.GetState(); state {
-			case types.RequestState_PENDING:
-				atomic.AddInt64(val.(*int64), 1)
-			case types.RequestState_APPROVED:
-				atomic.AddInt64(val.(*int64), -1)
-			default:
-				return setRaceErr(trace.Errorf("wrong request state %v", state))
+			if _, err := s.fakeMattermost.CheckPostUpdate(ctx); err != nil {
+				return setRaceErr(trace.Wrap(err))
 			}
 			return nil
 		})
@@ -517,12 +396,20 @@ func (s *MattermostSuite) TestRace(c *C) {
 	process.Terminate()
 	<-process.Done()
 	c.Assert(raceErr, IsNil)
+}
 
-	var count int
-	requests.Range(func(key, val interface{}) bool {
-		count++
-		c.Assert(*val.(*int64), Equals, int64(0))
-		return true
-	})
-	c.Assert(count, Equals, s.raceNumber)
+func parsePostField(post Post, field string) (string, error) {
+	text := post.Message
+	matches := msgFieldRegexp.FindAllStringSubmatch(text, -1)
+	if matches == nil {
+		return "", trace.Errorf("cannot parse fields from text %q", text)
+	}
+	var fields []string
+	for _, match := range matches {
+		if match[1] == field {
+			return match[2], nil
+		}
+		fields = append(fields, match[1])
+	}
+	return "", trace.Errorf("cannot find field %q in %v", field, fields)
 }

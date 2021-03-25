@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"net/url"
+	"strings"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/api/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 
@@ -15,15 +16,14 @@ import (
 )
 
 // MinServerVersion is the minimal teleport version the plugin supports.
-const MinServerVersion = "4.3.0"
+const MinServerVersion = "6.1.0-beta.1"
 
 // App contains global application state.
 type App struct {
 	conf Config
 
 	accessClient access.Client
-	bot          *Bot
-	actionSrv    *ActionServer
+	bot          Bot
 	mainJob      lib.ServiceJob
 
 	*lib.Process
@@ -54,29 +54,9 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 	return a.mainJob.WaitReady(ctx)
 }
 
-func (a *App) PublicURL() *url.URL {
-	if !a.mainJob.IsReady() {
-		panic("app is not running")
-	}
-	return a.actionSrv.BaseURL()
-}
-
-func (a *App) run(ctx context.Context) (err error) {
+func (a *App) run(ctx context.Context) error {
 	log := logger.Get(ctx)
 	log.Infof("Starting Teleport Access Mattermost Bot %s:%s", Version, Gitref)
-
-	auth := &ActionAuth{a.conf.Mattermost.Secret}
-
-	a.actionSrv, err = NewActionServer(
-		a.conf.HTTP,
-		auth,
-		a.onMattermostAction,
-	)
-	if err != nil {
-		return
-	}
-
-	a.bot = NewBot(a.conf.Mattermost, a.actionSrv, auth)
 
 	tlsConf, err := access.LoadTLSConfig(
 		a.conf.Teleport.ClientCrt,
@@ -86,9 +66,8 @@ func (a *App) run(ctx context.Context) (err error) {
 	if trace.Unwrap(err) == access.ErrInvalidCertificate {
 		log.WithError(err).Warning("Auth client TLS configuration error")
 	} else if err != nil {
-		return
+		return trace.Wrap(err)
 	}
-
 	bk := backoff.DefaultConfig
 	bk.MaxDelay = time.Second * 2
 	a.accessClient, err = access.NewClient(
@@ -101,50 +80,48 @@ func (a *App) run(ctx context.Context) (err error) {
 		}),
 	)
 	if err != nil {
-		return
+		return trace.Wrap(err)
 	}
-	if err = a.checkTeleportVersion(ctx); err != nil {
-		return
+
+	var pong access.Pong
+	if pong, err = a.checkTeleportVersion(ctx); err != nil {
+		return trace.Wrap(err)
+	}
+
+	var webProxyAddr string
+	if pong.ServerFeatures.AdvancedAccessWorkflows {
+		webProxyAddr = pong.ProxyPublicAddr
+	}
+	a.bot, err = NewBot(a.conf.Mattermost, pong.ClusterName, webProxyAddr)
+	if err != nil {
+		return trace.Wrap(err)
 	}
 
 	log.Debug("Starting Mattermost API health check...")
-	if err = a.bot.HealthCheck(); err != nil {
-		log.WithError(err).Error("Mattermost API health check failed. Check your token and make sure that bot is added to your team")
-		return
+	if err = a.bot.HealthCheck(ctx); err != nil {
+		return trace.Wrap(err, "api health check failed. Check your token and make sure that bot is added to your team")
 	}
 	log.Debug("Mattermost API health check finished ok")
 
-	err = a.actionSrv.EnsureCert()
-	if err != nil {
-		return
-	}
-	httpJob := a.actionSrv.ServiceJob()
-	a.SpawnCriticalJob(httpJob)
-	httpOk, err := httpJob.WaitReady(ctx)
-	if err != nil {
-		return
-	}
-
 	watcherJob := access.NewWatcherJob(
 		a.accessClient,
-		access.Filter{State: access.StatePending},
+		access.Filter{},
 		a.onWatcherEvent,
 	)
 	a.SpawnCriticalJob(watcherJob)
 	watcherOk, err := watcherJob.WaitReady(ctx)
 	if err != nil {
-		return
+		return trace.Wrap(err)
 	}
 
-	a.mainJob.SetReady(httpOk && watcherOk)
+	a.mainJob.SetReady(watcherOk)
 
-	<-httpJob.Done()
 	<-watcherJob.Done()
 
-	return trace.NewAggregate(httpJob.Err(), watcherJob.Err())
+	return trace.Wrap(watcherJob.Err())
 }
 
-func (a *App) checkTeleportVersion(ctx context.Context) error {
+func (a *App) checkTeleportVersion(ctx context.Context) (access.Pong, error) {
 	log := logger.Get(ctx)
 	log.Debug("Checking Teleport server version")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -152,14 +129,13 @@ func (a *App) checkTeleportVersion(ctx context.Context) error {
 	pong, err := a.accessClient.Ping(ctx)
 	if err != nil {
 		if trace.IsNotImplemented(err) {
-			return trace.Wrap(err, "server version must be at least %s", MinServerVersion)
+			return pong, trace.Wrap(err, "server version must be at least %s", MinServerVersion)
 		}
 		log.Error("Unable to get Teleport server version")
-		return trace.Wrap(err)
+		return pong, trace.Wrap(err)
 	}
-	a.bot.clusterName = pong.ClusterName
 	err = pong.AssertServerVersion(MinServerVersion)
-	return trace.Wrap(err)
+	return pong, trace.Wrap(err)
 }
 
 func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
@@ -170,26 +146,31 @@ func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 	case access.OpPut:
 		ctx, log := logger.WithField(ctx, "request_op", "put")
 
-		if !req.State.IsPending() {
-			log.WithField("event", event).Warn("non-pending request event")
+		var err error
+		switch {
+		case req.State.IsPending():
+			err = a.onPendingRequest(ctx, req)
+		case req.State.IsApproved():
+			err = a.onResolvedRequest(ctx, req)
+		case req.State.IsDenied():
+			err = a.onResolvedRequest(ctx, req)
+		default:
+			log.WithField("event", event).Warn("Unknown request state")
 			return nil
 		}
 
-		if err := a.onPendingRequest(ctx, req); err != nil {
-			log := log.WithError(err)
-			log.Errorf("Failed to process pending request")
-			log.Debugf("%v", trace.DebugReport(err))
-			return err
+		if err != nil {
+			log.WithError(err).Errorf("Failed to process request")
+			return trace.Wrap(err)
 		}
+
 		return nil
 	case access.OpDelete:
 		ctx, log := logger.WithField(ctx, "request_op", "delete")
 
-		if err := a.onDeletedRequest(ctx, req); err != nil {
-			log := log.WithError(err)
-			log.Errorf("Failed to process deleted request")
-			log.Debugf("%v", trace.DebugReport(err))
-			return err
+		if err := a.onDeletedRequest(ctx, req.ID); err != nil {
+			log.WithError(err).Errorf("Failed to process deleted request")
+			return trace.Wrap(err)
 		}
 		return nil
 	default:
@@ -197,128 +178,154 @@ func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 	}
 }
 
-func (a *App) onMattermostAction(ctx context.Context, data ActionData) (*ActionResponse, error) {
-	action := data.Action
-	reqID := data.ReqID
-	ctx, _ = logger.WithField(ctx, "request_id", reqID)
+func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
+	log := logger.Get(ctx)
 
-	var mmStatus string
-
-	req, err := a.accessClient.GetRequest(ctx, reqID)
-	var reqData RequestData
-
-	if err != nil {
-		if trace.IsNotFound(err) {
-			// Request wasn't found, need to expire it's post in Mattermost
-			mmStatus = "EXPIRED"
-
-			// And try to fetch its request data if it exists
-			var pluginData PluginData
-			pluginData, _ = a.getPluginData(ctx, reqID)
-			reqData = pluginData.RequestData
-		} else {
-			return nil, trace.Wrap(err)
-		}
-	} else {
-		ctx, log := logger.WithFields(ctx, logger.Fields{
-			"mm_channel_id": data.ChannelID,
-			"mm_post_id":    data.PostID,
-			"mm_user_id":    data.UserID,
-		})
-
-		if req.State != access.StatePending {
-			return nil, trace.Errorf("cannot process not pending request: %+v", req)
-		}
-
-		pluginData, err := a.getPluginData(ctx, reqID)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-
-		if pluginData.MattermostData.PostID == "" {
-			return nil, trace.Errorf("plugin data is empty")
-		}
-
-		if pluginData.MattermostData.PostID != data.PostID {
-			log.WithField("plugin_data_post_id", pluginData.MattermostData.PostID).Debug("plugin_data.post_id does not match post.id")
-			return nil, trace.Errorf("post_id from request's plugin_data does not match")
-		}
-
-		user, err := a.bot.GetUser(ctx, data.UserID)
-		if err != nil {
-			log.WithError(err).Warning("Failed to fetch user info")
-		}
-		ctx, log = logger.WithFields(ctx, logger.Fields{
-			"mm_user_name":  user.Username,
-			"mm_user_email": user.Email,
-		})
-
-		var (
-			reqState   access.State
-			resolution string
-		)
-
-		switch action {
-		case "approve":
-			reqState = access.StateApproved
-			mmStatus = "APPROVED"
-			resolution = "approved"
-		case "deny":
-			reqState = access.StateDenied
-			mmStatus = "DENIED"
-			resolution = "denied"
-		default:
-			return nil, trace.BadParameter("Unknown Action: %s", action)
-		}
-
-		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState, user.Email); err != nil {
-			return nil, trace.Wrap(err)
-		}
-		log.Infof("Mattermost user %s the request", resolution)
-
-		reqData = pluginData.RequestData
+	channels := a.getPostRecipients(ctx, req.SuggestedReviewers)
+	if len(channels) == 0 {
+		log.Warning("No channel to post")
+		return nil
 	}
 
-	return a.bot.NewActionResponse(data.PostID, reqID, reqData, mmStatus)
-}
+	reqData := RequestData{User: req.User, Roles: req.Roles, RequestReason: req.RequestReason}
+	mmData, err := a.bot.Broadcast(ctx, channels, req.ID, reqData)
+	if len(mmData) == 0 && err != nil {
+		return err
+	}
 
-func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
-	reqData := RequestData{User: req.User, Roles: req.Roles}
-	mmData, err := a.bot.CreatePost(ctx, req.ID, reqData)
+	for _, data := range mmData {
+		logger.Get(ctx).WithField("mm_post_id", data.PostID).
+			Info("Successfully posted to Mattermost")
+	}
+
 	if err != nil {
+		log.WithError(err).Error("Failed to post one or more messages to Mattermost")
+	}
+
+	if err := a.setPluginData(ctx, req.ID, PluginData{reqData, mmData}); err != nil {
+		if trace.IsNotFound(err) {
+			return trace.Wrap(err, "failed to save plugin data, perhaps due to lack of permissions")
+		}
 		return trace.Wrap(err)
 	}
 
-	logger.Get(ctx).WithField("mm_post_id", mmData.PostID).Info("Successfully posted to Mattermost")
-
-	err = a.setPluginData(ctx, req.ID, PluginData{reqData, mmData})
-	return trace.Wrap(err)
+	return nil
 }
 
-func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
+func (a *App) onResolvedRequest(ctx context.Context, req access.Request) error {
+	switch req.State {
+	case types.RequestState_APPROVED:
+		return a.updatePosts(ctx, req.ID, "APPROVED")
+	case types.RequestState_DENIED:
+		return a.updatePosts(ctx, req.ID, "DENIED")
+	default:
+		return nil
+	}
+}
+
+func (a *App) onDeletedRequest(ctx context.Context, reqID string) error {
+	return a.updatePosts(ctx, reqID, "EXPIRED")
+}
+
+func (a *App) tryLookupDirectChannel(ctx context.Context, userEmail string) string {
+	log := logger.Get(ctx).WithField("mm_user_email", userEmail)
+	channel, err := a.bot.LookupDirectChannel(ctx, userEmail)
+	if err != nil {
+		if errResult, ok := trace.Unwrap(err).(*ErrorResult); ok {
+			log.Warningf("Failed to lookup direct channel info: %q", errResult.Message)
+		} else {
+			log.WithError(err).Error("Failed to lookup direct channel info")
+		}
+		return ""
+	}
+	return channel
+}
+
+func (a *App) tryLookupChannel(ctx context.Context, team, name string) string {
+	log := logger.Get(ctx).WithFields(logger.Fields{
+		"mm_team":    team,
+		"mm_channel": name,
+	})
+	channel, err := a.bot.LookupChannel(ctx, team, name)
+	if err != nil {
+		if errResult, ok := trace.Unwrap(err).(*ErrorResult); ok {
+			log.Warningf("Failed to lookup channel info: %q", errResult.Message)
+		} else {
+			log.WithError(err).Error("Failed to lookup channel info")
+		}
+		return ""
+	}
+	return channel
+}
+
+func (a *App) getPostRecipients(ctx context.Context, suggestedReviewers []string) []string {
 	log := logger.Get(ctx)
-	reqID := req.ID // This is the only available field
+
+	channelSet := make(map[string]struct{})
+
+	for _, recipient := range suggestedReviewers {
+		// We require SuggestedReviewers to contain email-like data. Anything else is not supported.
+		if !lib.IsEmail(recipient) {
+			log.Warningf("Failed to notify a suggested reviewer: %q does not look like a valid email", recipient)
+			continue
+		}
+		channel := a.tryLookupDirectChannel(ctx, recipient)
+		if channel == "" {
+			continue
+		}
+		channelSet[channel] = struct{}{}
+	}
+
+	for _, recipient := range a.conf.Mattermost.Recipients {
+		var channel string
+		// Recipients from config file could contain either email or team and channel names separated by '/' symbol. It's up to user what format to use.
+		if lib.IsEmail(recipient) {
+			channel = a.tryLookupDirectChannel(ctx, recipient)
+		} else {
+			parts := strings.Split(recipient, "/")
+			if len(parts) == 2 {
+				channel = a.tryLookupChannel(ctx, parts[0], parts[1])
+			} else {
+				log.Warningf("Recipient must be either a user email or a channel in the format \"team/channel\" but got %q", recipient)
+			}
+		}
+		if channel == "" {
+			continue
+		}
+		channelSet[channel] = struct{}{}
+	}
+
+	var channels []string
+	for channel := range channelSet {
+		channels = append(channels, channel)
+	}
+
+	return channels
+}
+
+func (a *App) updatePosts(ctx context.Context, reqID string, status string) error {
+	log := logger.Get(ctx)
 
 	pluginData, err := a.getPluginData(ctx, reqID)
 	if err != nil {
 		if trace.IsNotFound(err) {
-			log.WithError(err).Warn("Cannot expire unknown request")
+			log.WithError(err).Warn("Cannot process unknown request")
 			return nil
 		}
 		return trace.Wrap(err)
 	}
 
 	reqData, mmData := pluginData.RequestData, pluginData.MattermostData
-	if mmData.PostID == "" {
-		log.Warn("Plugin data is either missing or expired")
+	if len(mmData) == 0 {
+		log.Warn("Failed to update messages. Plugin data is either missing or expired")
 		return nil
 	}
 
-	if err := a.bot.ExpirePost(ctx, reqID, reqData, mmData); err != nil {
+	if err := a.bot.UpdatePosts(ctx, reqID, reqData, mmData, status); err != nil {
 		return trace.Wrap(err)
 	}
 
-	log.Info("Successfully marked request as expired")
+	log.Infof("Successfully marked request as %s in all messages", status)
 
 	return nil
 }

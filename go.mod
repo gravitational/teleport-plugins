@@ -14,7 +14,7 @@ require (
 	github.com/hashicorp/go-version v1.2.1
 	github.com/jonboulle/clockwork v0.2.2
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/mattermost/mattermost-server/v5 v5.28.1
+	github.com/mailgun/holster/v3 v3.15.2
 	github.com/nlopes/slack v0.0.0-00010101000000-000000000000
 	github.com/pborman/uuid v1.2.1
 	github.com/pelletier/go-toml v1.8.0
@@ -34,6 +34,7 @@ replace (
 	github.com/gravitational/teleport => github.com/gravitational/teleport v1.3.3-0.20210408010938-1115eb1e6cbe
 	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20210408010938-1115eb1e6cbe
 	github.com/iovisor/gobpf => github.com/gravitational/gobpf v0.0.1
+	github.com/julienschmidt/httprouter => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 	github.com/siddontang/go-mysql v1.1.0 => github.com/gravitational/go-mysql v1.1.1-0.20210212011549-886316308a77
 	google.golang.org/grpc => google.golang.org/grpc v1.29.0
 )
