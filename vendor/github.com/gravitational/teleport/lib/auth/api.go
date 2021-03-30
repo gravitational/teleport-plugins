@@ -20,6 +20,7 @@ import (
 	"context"
 	"io"
 
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/lib/events"
 	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/teleport/lib/session"
@@ -50,6 +51,9 @@ type Announcer interface {
 
 	// UpsertAppServer adds an application server.
 	UpsertAppServer(context.Context, services.Server) (*services.KeepAlive, error)
+
+	// UpsertDatabaseServer registers a database proxy server.
+	UpsertDatabaseServer(context.Context, types.DatabaseServer) (*services.KeepAlive, error)
 }
 
 // ReadAccessPoint is an API interface implemented by a certificate authority (CA)
@@ -68,6 +72,9 @@ type ReadAccessPoint interface {
 
 	// GetClusterConfig returns cluster level configuration.
 	GetClusterConfig(opts ...services.MarshalOption) (services.ClusterConfig, error)
+
+	// GetAuthPreference returns the cluster authentication configuration.
+	GetAuthPreference() (services.AuthPreference, error)
 
 	// GetNamespaces returns a list of namespaces
 	GetNamespaces() ([]services.Namespace, error)
@@ -97,10 +104,10 @@ type ReadAccessPoint interface {
 	GetUsers(withSecrets bool) ([]services.User, error)
 
 	// GetRole returns role by name
-	GetRole(name string) (services.Role, error)
+	GetRole(ctx context.Context, name string) (services.Role, error)
 
 	// GetRoles returns a list of roles
-	GetRoles() ([]services.Role, error)
+	GetRoles(ctx context.Context) ([]services.Role, error)
 
 	// GetAllTunnelConnections returns all tunnel connections
 	GetAllTunnelConnections(opts ...services.MarshalOption) ([]services.TunnelConnection, error)
@@ -114,6 +121,12 @@ type ReadAccessPoint interface {
 	// GetAppSession gets an application web session.
 	GetAppSession(context.Context, services.GetAppSessionRequest) (services.WebSession, error)
 
+	// GetWebSession gets a web session for the given request
+	GetWebSession(context.Context, types.GetWebSessionRequest) (types.WebSession, error)
+
+	// GetWebToken gets a web token for the given request
+	GetWebToken(context.Context, types.GetWebTokenRequest) (types.WebToken, error)
+
 	// GetRemoteClusters returns a list of remote clusters
 	GetRemoteClusters(opts ...services.MarshalOption) ([]services.RemoteCluster, error)
 
@@ -122,6 +135,9 @@ type ReadAccessPoint interface {
 
 	// GetKubeServices returns a list of kubernetes services registered in the cluster
 	GetKubeServices(context.Context) ([]services.Server, error)
+
+	// GetDatabaseServers returns all registered database proxy servers.
+	GetDatabaseServers(ctx context.Context, namespace string, opts ...services.MarshalOption) ([]types.DatabaseServer, error)
 }
 
 // AccessPoint is an API interface implemented by a certificate authority (CA)
@@ -167,10 +183,10 @@ type Cache interface {
 	GetStaticTokens() (services.StaticTokens, error)
 
 	// GetTokens returns all active (non-expired) provisioning tokens
-	GetTokens(opts ...services.MarshalOption) ([]services.ProvisionToken, error)
+	GetTokens(ctx context.Context, opts ...services.MarshalOption) ([]services.ProvisionToken, error)
 
 	// GetToken finds and returns token by ID
-	GetToken(token string) (services.ProvisionToken, error)
+	GetToken(ctx context.Context, token string) (services.ProvisionToken, error)
 
 	// NewWatcher returns a new event watcher
 	NewWatcher(ctx context.Context, watch services.Watch) (services.Watcher, error)
@@ -271,6 +287,11 @@ func (w *Wrapper) UpsertKubeService(ctx context.Context, s services.Server) erro
 // UpsertAppServer adds an application server.
 func (w *Wrapper) UpsertAppServer(ctx context.Context, server services.Server) (*services.KeepAlive, error) {
 	return w.NoCache.UpsertAppServer(ctx, server)
+}
+
+// UpsertDatabaseServer registers a database proxy server.
+func (w *Wrapper) UpsertDatabaseServer(ctx context.Context, server types.DatabaseServer) (*services.KeepAlive, error) {
+	return w.NoCache.UpsertDatabaseServer(ctx, server)
 }
 
 // NewCachingAcessPoint returns new caching access point using

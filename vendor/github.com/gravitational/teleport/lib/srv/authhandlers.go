@@ -24,13 +24,16 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/gravitational/teleport"
+	apisshutils "github.com/gravitational/teleport/api/utils/sshutils"
 	"github.com/gravitational/teleport/lib/auth"
 	"github.com/gravitational/teleport/lib/events"
 	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/teleport/lib/sshutils"
 	"github.com/gravitational/teleport/lib/utils"
+
 	"github.com/gravitational/trace"
 
+	"github.com/jonboulle/clockwork"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -54,6 +57,11 @@ type AuthHandlers struct {
 	// FIPS mode means Teleport started in a FedRAMP/FIPS 140-2 compliant
 	// configuration.
 	FIPS bool
+
+	// Clock specifies the time provider. Will be used to override the time anchor
+	// for TLS certificate verification.
+	// Defaults to real clock if unspecified
+	Clock clockwork.Clock
 }
 
 // CreateIdentityContext returns an IdentityContext populated with information
@@ -61,7 +69,6 @@ type AuthHandlers struct {
 func (h *AuthHandlers) CreateIdentityContext(sconn *ssh.ServerConn) (IdentityContext, error) {
 	identity := IdentityContext{
 		TeleportUser: sconn.Permissions.Extensions[utils.CertTeleportUser],
-		Certificate:  []byte(sconn.Permissions.Extensions[utils.CertTeleportUserCertificate]),
 		Login:        sconn.User(),
 	}
 
@@ -70,10 +77,12 @@ func (h *AuthHandlers) CreateIdentityContext(sconn *ssh.ServerConn) (IdentityCon
 		return IdentityContext{}, trace.Wrap(err)
 	}
 
-	certificate, err := identity.GetCertificate()
+	certRaw := []byte(sconn.Permissions.Extensions[utils.CertTeleportUserCertificate])
+	certificate, err := sshutils.ParseCertificate(certRaw)
 	if err != nil {
 		return IdentityContext{}, trace.Wrap(err)
 	}
+	identity.Certificate = certificate
 	identity.RouteToCluster = certificate.Extensions[teleport.CertExtensionTeleportRouteToCluster]
 	if certificate.ValidBefore != 0 {
 		identity.CertValidBefore = time.Unix(int64(certificate.ValidBefore), 0)
@@ -89,6 +98,7 @@ func (h *AuthHandlers) CreateIdentityContext(sconn *ssh.ServerConn) (IdentityCon
 		return IdentityContext{}, trace.Wrap(err)
 	}
 	identity.RoleSet = roleSet
+	identity.Impersonator = certificate.Extensions[teleport.CertExtensionImpersonator]
 
 	return identity, nil
 }
@@ -115,8 +125,9 @@ func (h *AuthHandlers) CheckPortForward(addr string, ctx *ServerContext) error {
 				Code: events.PortForwardFailureCode,
 			},
 			UserMetadata: events.UserMetadata{
-				Login: ctx.Identity.Login,
-				User:  ctx.Identity.TeleportUser,
+				Login:        ctx.Identity.Login,
+				User:         ctx.Identity.TeleportUser,
+				Impersonator: ctx.Identity.Impersonator,
 			},
 			ConnectionMetadata: events.ConnectionMetadata{
 				LocalAddr:  ctx.ServerConn.LocalAddr().String(),
@@ -198,9 +209,14 @@ func (h *AuthHandlers) UserKeyAuth(conn ssh.ConnMetadata, key ssh.PublicKey) (*s
 	// Check that the user certificate uses supported public key algorithms, was
 	// issued by Teleport, and check the certificate metadata (principals,
 	// timestamp, etc). Fallback to keys is not supported.
+	clock := time.Now
+	if h.Clock != nil {
+		clock = h.Clock.Now
+	}
 	certChecker := utils.CertChecker{
 		CertChecker: ssh.CertChecker{
 			IsUserAuthority: h.IsUserAuthority,
+			Clock:           clock,
 		},
 		FIPS: h.FIPS,
 	}
@@ -337,8 +353,18 @@ func (h *AuthHandlers) canLoginWithRBAC(cert *ssh.Certificate, clusterName strin
 		return trace.Wrap(err)
 	}
 
+	ap, err := h.AccessPoint.GetAuthPreference()
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	_, mfaVerified := cert.Extensions[teleport.CertExtensionMFAVerified]
+	mfaParams := services.AccessMFAParams{
+		Verified:       mfaVerified,
+		AlwaysRequired: ap.GetRequireSessionMFA(),
+	}
+
 	// check if roles allow access to server
-	if err := roles.CheckAccessToServer(osUser, h.Server.GetInfo()); err != nil {
+	if err := roles.CheckAccessToServer(osUser, h.Server.GetInfo(), mfaParams); err != nil {
 		return trace.AccessDenied("user %s@%s is not authorized to login as %v@%s: %v",
 			teleportUser, ca.GetClusterName(), osUser, clusterName, err)
 	}
@@ -366,7 +392,7 @@ func (h *AuthHandlers) fetchRoleSet(cert *ssh.Certificate, ca services.CertAutho
 		if err != nil {
 			return nil, trace.AccessDenied("failed to parse certificate roles")
 		}
-		roleNames, err := ca.CombinedMapping().Map(roles)
+		roleNames, err := services.MapRoles(ca.CombinedMapping(), roles)
 		if err != nil {
 			return nil, trace.AccessDenied("failed to map roles")
 		}
@@ -397,7 +423,7 @@ func (h *AuthHandlers) authorityForCert(caType services.CertAuthType, key ssh.Pu
 	// find the one that signed our certificate
 	var ca services.CertAuthority
 	for i := range cas {
-		checkers, err := cas[i].Checkers()
+		checkers, err := sshutils.GetCheckers(cas[i])
 		if err != nil {
 			h.Warnf("%v", err)
 			return nil, trace.Wrap(err)
@@ -409,12 +435,12 @@ func (h *AuthHandlers) authorityForCert(caType services.CertAuthType, key ssh.Pu
 			// host checkers.
 			switch v := key.(type) {
 			case *ssh.Certificate:
-				if sshutils.KeysEqual(v.SignatureKey, checker) {
+				if apisshutils.KeysEqual(v.SignatureKey, checker) {
 					ca = cas[i]
 					break
 				}
 			default:
-				if sshutils.KeysEqual(key, checker) {
+				if apisshutils.KeysEqual(key, checker) {
 					ca = cas[i]
 					break
 				}
