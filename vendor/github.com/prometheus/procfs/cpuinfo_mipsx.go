@@ -12,20 +12,8 @@
 // limitations under the License.
 
 // +build linux
-<<<<<<< HEAD
 // +build mips mipsle mips64 mips64le
 
 package procfs
 
 var parseCPUInfo = parseCPUInfoMips
-=======
-<<<<<<< HEAD:vendor/github.com/prometheus/procfs/cpuinfo_others.go
-// +build !386,!amd64,!arm,!arm64,!mips,!mips64,!mips64le,!mipsle,!ppc64,!ppc64le,!riscv64,!s390x
-=======
-// +build mips mipsle mips64 mips64le
->>>>>>> 9675161e (Upgrade Teleport dependency to v6):vendor/github.com/prometheus/procfs/cpuinfo_mipsx.go
-
-package procfs
-
-var parseCPUInfo = parseCPUInfoDummy
->>>>>>> 9675161e (Upgrade Teleport dependency to v6)

@@ -2,29 +2,39 @@ package main
 
 import (
 	"context"
-	"net/url"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/access"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/api/client"
+	"github.com/gravitational/teleport/api/client/proto"
+	"github.com/gravitational/teleport/api/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 
 	"github.com/gravitational/trace"
 )
 
-// MinServerVersion is the minimal teleport version the plugin supports.
-const MinServerVersion = "5.0.0"
+const (
+	// minServerVersion is the minimal teleport version the plugin supports.
+	minServerVersion = "6.1.0-beta.1"
+	// pluginName is used to tag PluginData and as a Delegator in Audit log.
+	pluginName = "slack"
+	// backoffMaxDelay is a maximum time GRPC client waits before reconnection attempt.
+	backoffMaxDelay = time.Second * 2
+	// initTimeout is used to bound execution time of health check and teleport version check.
+	initTimeout = time.Second * 5
+	// handlerTimeout is used to bound the execution time of watcher event handler.
+	handlerTimeout = time.Second * 5
+)
 
 // App contains global application state.
 type App struct {
 	conf Config
 
-	accessClient access.Client
-	bot          *Bot
-	callbackSrv  *CallbackServer
-	mainJob      lib.ServiceJob
+	apiClient *client.Client
+	bot       Bot
+	mainJob   lib.ServiceJob
 
 	*lib.Process
 }
@@ -55,133 +65,140 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 	return a.mainJob.WaitReady(ctx)
 }
 
-// PublicURL checks if the app is running, and if it is —
-// returns the public callback URL for Slack.
-func (a *App) PublicURL() *url.URL {
-	if !a.mainJob.IsReady() {
-		panic("app is not running")
-	}
-	return a.callbackSrv.BaseURL()
-}
+func (a *App) run(ctx context.Context) error {
+	var err error
 
-func (a *App) run(ctx context.Context) (err error) {
 	log := logger.Get(ctx)
-	log.Infof("Starting Teleport Access Slackbot %s:%s", Version, Gitref)
+	log.Infof("Starting Teleport Access Slack Plugin %s:%s", Version, Gitref)
 
-	a.bot = NewBot(a.conf.Slack)
-
-	// Create callback server providing a.onSlackCallback as a callback function.
-	a.callbackSrv, err = NewCallbackServer(a.conf.HTTP, a.conf.Slack.Secret, a.conf.Slack.NotifyOnly, a.onSlackCallback)
-	if err != nil {
-		return
-	}
-
-	tlsConf, err := access.LoadTLSConfig(
-		a.conf.Teleport.ClientCrt,
-		a.conf.Teleport.ClientKey,
-		a.conf.Teleport.RootCAs,
-	)
-	if trace.Unwrap(err) == access.ErrInvalidCertificate {
-		log.WithError(err).Warning("Auth client TLS configuration error")
-	} else if err != nil {
-		return
-	}
 	bk := backoff.DefaultConfig
-	bk.MaxDelay = time.Second * 2
-	a.accessClient, err = access.NewClient(
-		ctx,
-		"slack",
-		a.conf.Teleport.AuthServer,
-		tlsConf,
-		grpc.WithConnectParams(grpc.ConnectParams{
-			Backoff: bk,
-		}),
-	)
+	bk.MaxDelay = backoffMaxDelay
+
+	a.apiClient, err = client.New(client.WithDelegator(ctx, pluginName), client.Config{
+		Addrs: []string{a.conf.Teleport.AuthServer},
+		Credentials: []client.Credentials{client.LoadKeyPair(
+			a.conf.Teleport.ClientCrt,
+			a.conf.Teleport.ClientKey,
+			a.conf.Teleport.RootCAs,
+		)},
+		DialInBackground: true,
+		DialOpts:         []grpc.DialOption{grpc.WithConnectParams(grpc.ConnectParams{Backoff: bk})},
+	})
 	if err != nil {
-		return
-	}
-	if err = a.checkTeleportVersion(ctx); err != nil {
-		return
+		return trace.Wrap(err)
 	}
 
-	err = a.callbackSrv.EnsureCert()
-	if err != nil {
-		return
+	if err = a.init(ctx); err != nil {
+		return trace.Wrap(err)
 	}
-	httpJob := a.callbackSrv.ServiceJob()
-	a.SpawnCriticalJob(httpJob)
-	httpOk, err := httpJob.WaitReady(ctx)
-	if err != nil {
-		return
-	}
-
-	watcherJob := access.NewWatcherJob(
-		a.accessClient,
-		access.Filter{State: access.StatePending},
+	watcherJob := lib.NewWatcherJob(
+		a.apiClient,
+		types.Watch{Kinds: []types.WatchKind{types.WatchKind{Kind: types.KindAccessRequest}}},
 		a.onWatcherEvent,
 	)
 	a.SpawnCriticalJob(watcherJob)
 	watcherOk, err := watcherJob.WaitReady(ctx)
 	if err != nil {
-		return
-	}
-
-	a.mainJob.SetReady(httpOk && watcherOk)
-
-	<-httpJob.Done()
-	<-watcherJob.Done()
-
-	return trace.NewAggregate(httpJob.Err(), watcherJob.Err())
-}
-
-// checkTeleportVersion checks if the Teleport Auth server
-// is compatible with this plugin version.
-func (a *App) checkTeleportVersion(ctx context.Context) error {
-	log := logger.Get(ctx)
-
-	log.Debug("Checking Teleport server version")
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	pong, err := a.accessClient.Ping(ctx)
-	if err != nil {
-		if trace.IsNotImplemented(err) {
-			return trace.Wrap(err, "server version must be at least %s", MinServerVersion)
-		}
-		log.WithError(err).Error("Unable to get Teleport server version")
 		return trace.Wrap(err)
 	}
-	a.bot.clusterName = pong.ClusterName
-	err = pong.AssertServerVersion(MinServerVersion)
-	return trace.Wrap(err)
+
+	a.mainJob.SetReady(watcherOk)
+
+	<-watcherJob.Done()
+
+	return trace.Wrap(watcherJob.Err())
 }
 
-func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
-	req, op := event.Request, event.Type
-	ctx, _ = logger.WithField(ctx, "request_id", req.ID)
+func (a *App) init(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, initTimeout)
+	defer cancel()
+	log := logger.Get(ctx)
+
+	var (
+		err  error
+		pong proto.PingResponse
+	)
+	if pong, err = a.checkTeleportVersion(ctx); err != nil {
+		return trace.Wrap(err)
+	}
+
+	var webProxyAddr string
+	if pong.ServerFeatures.AdvancedAccessWorkflows {
+		webProxyAddr = pong.ProxyPublicAddr
+	}
+	a.bot, err = NewBot(a.conf, pong.ClusterName, webProxyAddr)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	log.Debug("Starting Slack API health check...")
+	if err = a.bot.HealthCheck(ctx); err != nil {
+		return trace.Wrap(err, "Slack API health check failed")
+	}
+
+	log.Debug("Slack API health check finished ok")
+	return nil
+}
+
+func (a *App) checkTeleportVersion(ctx context.Context) (proto.PingResponse, error) {
+	log := logger.Get(ctx)
+	log.Debug("Checking Teleport server version")
+	pong, err := a.apiClient.WithCallOptions(grpc.WaitForReady(true)).Ping(ctx)
+	if err != nil {
+		if trace.IsNotImplemented(err) {
+			return pong, trace.Wrap(err, "server version must be at least %s", minServerVersion)
+		}
+		log.Error("Unable to get Teleport server version")
+		return pong, trace.Wrap(err)
+	}
+	err = lib.AssertServerVersion(pong, minServerVersion)
+	return pong, trace.Wrap(err)
+}
+
+func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
+	ctx, cancel := context.WithTimeout(ctx, handlerTimeout)
+	defer cancel()
+
+	if kind := event.Resource.GetKind(); kind != types.KindAccessRequest {
+		return trace.Errorf("unexpected kind %q", kind)
+	}
+	op := event.Type
+	reqID := event.Resource.GetName()
+	ctx, _ = logger.WithField(ctx, "request_id", reqID)
 
 	switch op {
-	case access.OpPut:
+	case types.OpPut:
 		ctx, log := logger.WithField(ctx, "request_op", "put")
+		req, ok := event.Resource.(types.AccessRequest)
+		if !ok {
+			return trace.Errorf("unexpected resource type %T", event.Resource)
+		}
 
-		if !req.State.IsPending() {
-			log.WithField("event", event).Warn("non-pending request event")
+		var err error
+		switch {
+		case req.GetState().IsPending():
+			err = a.onPendingRequest(ctx, req)
+		case req.GetState().IsApproved():
+			err = a.onResolvedRequest(ctx, req)
+		case req.GetState().IsDenied():
+			err = a.onResolvedRequest(ctx, req)
+		default:
+			log.WithField("event", event).Warn("Unknown request state")
 			return nil
 		}
 
-		if err := a.onPendingRequest(ctx, req); err != nil {
-			log := log.WithError(err)
-			log.Errorf("Failed to process pending request")
-			log.Debugf("%v", trace.DebugReport(err))
+		if err != nil {
+			log.WithError(err).Errorf("Failed to process request")
 			return err
 		}
+
 		return nil
-	case access.OpDelete:
+
+	case types.OpDelete:
 		ctx, log := logger.WithField(ctx, "request_op", "delete")
 
-		if err := a.onDeletedRequest(ctx, req); err != nil {
-			log := log.WithError(err)
-			log.Errorf("Failed to process deleted request")
-			log.Debugf("%v", trace.DebugReport(err))
+		if err := a.onDeletedRequest(ctx, reqID); err != nil {
+			log.WithError(err).Errorf("Failed to process deleted request")
 			return err
 		}
 		return nil
@@ -190,151 +207,157 @@ func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 	}
 }
 
-// OnSlackCallback processes Slack actions and updates original Slack message with a new status
-func (a *App) onSlackCallback(ctx context.Context, cb Callback) error {
-	if len(cb.ActionCallback.BlockActions) != 1 {
-		logger.Get(ctx).WithField("slack_block_actions", cb.ActionCallback.BlockActions).Warn("Received more than one Slack action")
-		return trace.Errorf("expected exactly one block action")
+func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) error {
+	log := logger.Get(ctx)
+
+	channels := a.getMessageRecipients(ctx, req.GetSuggestedReviewers())
+	if len(channels) == 0 {
+		log.Warning("No channel to post")
+		return nil
 	}
 
-	action := cb.ActionCallback.BlockActions[0]
-	reqID := action.Value
-	actionID := action.ActionID
+	reqData := RequestData{User: req.GetUser(), Roles: req.GetRoles(), RequestReason: req.GetRequestReason()}
+	slackData, err := a.bot.Broadcast(ctx, channels, req.GetName(), reqData)
+	if len(slackData) == 0 && err != nil {
+		return trace.Wrap(err)
+	}
 
-	var slackStatus string
-
-	ctx, _ = logger.WithField(ctx, "request_id", reqID)
-	req, err := a.accessClient.GetRequest(ctx, reqID)
-	var reqData RequestData
+	for _, data := range slackData {
+		log.WithFields(logger.Fields{"slack_channel": data.ChannelID, "slack_timestamp": data.Timestamp}).
+			Info("Successfully posted to Slack")
+	}
 
 	if err != nil {
-		if trace.IsNotFound(err) {
-			// Request wasn't found, need to expire it's post in Slack
-			slackStatus = "EXPIRED"
-
-			// And try to fetch its request data if it exists
-			var pluginData PluginData
-			pluginData, _ = a.getPluginData(ctx, reqID)
-			reqData = pluginData.RequestData
-		} else {
-			return trace.Wrap(err)
-		}
-	} else {
-		if req.State != access.StatePending {
-			return trace.Errorf("cannot process not pending request: %+v", req)
-		}
-
-		userEmail := a.tryFetchEmail(logger.SetFields(ctx, logger.Fields{
-			"slack_user":    cb.User.Name,
-			"slack_channel": cb.Channel.Name,
-		}), cb.User.ID)
-
-		var (
-			reqState   access.State
-			resolution string
-		)
-
-		switch actionID {
-		case ActionApprove:
-			reqState = access.StateApproved
-			slackStatus = "APPROVED"
-			resolution = "approved"
-		case ActionDeny:
-			reqState = access.StateDenied
-			slackStatus = "DENIED"
-			resolution = "denied"
-		default:
-			return trace.BadParameter("Unknown ActionID: %s", actionID)
-		}
-
-		if err := a.accessClient.SetRequestState(ctx, req.ID, reqState, userEmail); err != nil {
-			return trace.Wrap(err)
-		}
-		logger.Get(ctx).WithFields(
-			logger.Fields{
-				"slack_user_email": userEmail,
-				"request_user":     req.User,
-				"request_roles":    req.Roles,
-			},
-		).Infof("Slack user %s the request", resolution)
-
-		// Simply fill reqData from the request itself.
-		reqData = RequestData{User: req.User, Roles: req.Roles}
+		log.WithError(err).Error("Failed to post one or more messages to Mattermost")
 	}
 
-	a.Spawn(func(ctx context.Context) error {
-		ctx, log := logger.WithField(ctx, "request_id", req.ID)
-		if err := a.bot.Respond(ctx, req.ID, reqData, slackStatus, cb.ResponseURL); err != nil {
-			log.WithError(err).Error("Failed to update Slack message")
-			return err
+	if err := a.setPluginData(ctx, req.GetName(), PluginData{reqData, slackData}); err != nil {
+		if trace.IsNotFound(err) {
+			return trace.Wrap(err, "failed to save plugin data, perhaps due to lack of permissions")
 		}
-		log.Info("Successfully updated Slack message")
-		return nil
-	})
+		return trace.Wrap(err, "failed to save plugin data")
+	}
 
 	return nil
 }
 
-func (a *App) tryFetchEmail(ctx context.Context, userID string) string {
-	userEmail, err := a.bot.GetUserEmail(ctx, userID)
-	if err != nil {
-		logger.Get(ctx).WithError(err).Warning("Failed to fetch slack user email")
+func (a *App) onResolvedRequest(ctx context.Context, req types.AccessRequest) error {
+	switch req.GetState() {
+	case types.RequestState_APPROVED:
+		return a.updateMessages(ctx, req.GetName(), "APPROVED")
+	case types.RequestState_DENIED:
+		return a.updateMessages(ctx, req.GetName(), "DENIED")
+	default:
+		return nil
 	}
-	return userEmail
 }
 
-func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
-	reqData := RequestData{User: req.User, Roles: req.Roles, RequestReason: req.RequestReason}
-	slackData, err := a.bot.Post(ctx, req.ID, reqData)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-	logger.Get(ctx).WithFields(logger.Fields{
-		"slack_channel":   slackData.ChannelID,
-		"slack_timestamp": slackData.Timestamp,
-	}).Info("Successfully posted to Slack")
-
-	err = a.setPluginData(ctx, req.ID, PluginData{reqData, slackData})
-
-	return trace.Wrap(err)
+func (a *App) onDeletedRequest(ctx context.Context, reqID string) error {
+	return a.updateMessages(ctx, reqID, "EXPIRED")
 }
 
-func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
+func (a *App) tryLookupDirectChannelByEmail(ctx context.Context, userEmail string) string {
 	log := logger.Get(ctx)
-	reqID := req.ID // This is the only available field
+	channel, err := a.bot.LookupDirectChannelByEmail(ctx, userEmail)
+	if err != nil {
+		if err.Error() == "users_not_found" {
+			log.Warningf("Failed to find a user with email %q in Slack", userEmail)
+		} else {
+			log.WithError(err).Errorf("Failed to load user profile by email %q", userEmail)
+		}
+		return ""
+	}
+	return channel
+}
+
+func (a *App) getMessageRecipients(ctx context.Context, suggestedReviewers []string) []string {
+	log := logger.Get(ctx)
+
+	channelSet := make(map[string]struct{})
+	for _, recipient := range suggestedReviewers {
+		// We require SuggestedReviewers to contain email-like data. Anything else is not supported.
+		if !lib.IsEmail(recipient) {
+			log.Warningf("Failed to notify a suggested reviewer: %q does not look like a valid email", recipient)
+			continue
+		}
+		channel := a.tryLookupDirectChannelByEmail(ctx, recipient)
+		if channel == "" {
+			continue
+		}
+		channelSet[channel] = struct{}{}
+	}
+	for _, recipient := range a.conf.Slack.Recipients {
+		var channel string
+		// Recipients from config file could contain either email or channel name or channel ID. It's up to user what format to use.
+		if lib.IsEmail(recipient) {
+			channel = a.tryLookupDirectChannelByEmail(ctx, recipient)
+		} else {
+			channel = recipient
+		}
+		if channel == "" {
+			continue
+		}
+		channelSet[channel] = struct{}{}
+	}
+
+	var channels []string
+	for channel := range channelSet {
+		channels = append(channels, channel)
+	}
+	return channels
+}
+
+func (a *App) updateMessages(ctx context.Context, reqID string, status string) error {
+	log := logger.Get(ctx)
 
 	pluginData, err := a.getPluginData(ctx, reqID)
 	if err != nil {
 		if trace.IsNotFound(err) {
-			log.WithError(err).Warn("Cannot expire unknown request")
+			log.WithError(err).Warn("Cannot process unknown request")
 			return nil
 		}
 		return trace.Wrap(err)
 	}
 
 	reqData, slackData := pluginData.RequestData, pluginData.SlackData
-	if len(slackData.ChannelID) == 0 || len(slackData.Timestamp) == 0 {
-		log.Warn("Plugin data is either missing or expired")
+	if len(slackData) == 0 {
+		log.Warn("Failed to update messages. Plugin data is either missing or expired")
 		return nil
 	}
 
-	if err := a.bot.Expire(ctx, reqID, reqData, slackData); err != nil {
+	if err := a.bot.UpdateMessages(ctx, reqID, reqData, slackData, status); err != nil {
 		return trace.Wrap(err)
 	}
 
-	log.Info("Successfully marked request as expired")
+	log.Infof("Successfully marked request as %s in all messages", status)
 
 	return nil
 }
 
 func (a *App) getPluginData(ctx context.Context, reqID string) (PluginData, error) {
-	dataMap, err := a.accessClient.GetPluginData(ctx, reqID)
+	data, err := a.apiClient.GetPluginData(ctx, types.PluginDataFilter{
+		Kind:     types.KindAccessRequest,
+		Resource: reqID,
+		Plugin:   pluginName,
+	})
 	if err != nil {
 		return PluginData{}, trace.Wrap(err)
 	}
-	return DecodePluginData(dataMap), nil
+	if len(data) == 0 {
+		return PluginData{}, nil
+	}
+	entry := data[0].Entries()[pluginName]
+	if entry == nil {
+		return PluginData{}, nil
+	}
+	return DecodePluginData(entry.Data), nil
 }
 
 func (a *App) setPluginData(ctx context.Context, reqID string, data PluginData) error {
-	return a.accessClient.UpdatePluginData(ctx, reqID, EncodePluginData(data), nil)
+	return a.apiClient.UpdatePluginData(ctx, types.PluginDataUpdateParams{
+		Kind:     types.KindAccessRequest,
+		Resource: reqID,
+		Plugin:   pluginName,
+		Set:      EncodePluginData(data),
+	})
 }

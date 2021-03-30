@@ -100,14 +100,6 @@ func (s *Status) Err() error {
 	return (*Error)(s.Proto())
 }
 
-<<<<<<< HEAD
-=======
-func (s *Status) Error() string {
-	p := s.Proto()
-	return fmt.Sprintf("rpc error: code = %s desc = %s", codes.Code(p.GetCode()), p.GetMessage())
-}
-
->>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 // WithDetails returns a new status with the provided details messages appended to the status.
 // If any errors are encountered, it returns nil and the first error encountered.
 func (s *Status) WithDetails(details ...proto.Message) (*Status, error) {
