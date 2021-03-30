@@ -19,4 +19,8 @@
 package grpc
 
 // Version is the current grpc version.
+<<<<<<< HEAD
 const Version = "1.29.1"
+=======
+const Version = "1.29.0"
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)

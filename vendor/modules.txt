@@ -34,8 +34,11 @@ github.com/Azure/go-autorest/autorest/date
 github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.6.0
 github.com/Azure/go-autorest/tracing
+<<<<<<< HEAD
 # github.com/BurntSushi/toml v0.3.1
 github.com/BurntSushi/toml
+=======
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 # github.com/Microsoft/go-winio v0.4.16
 github.com/Microsoft/go-winio
 github.com/Microsoft/go-winio/pkg/guid
@@ -44,6 +47,12 @@ github.com/alecthomas/template
 github.com/alecthomas/template/parse
 # github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15
 github.com/alecthomas/units
+<<<<<<< HEAD
+=======
+# github.com/andygrunwald/go-jira v1.13.0
+## explicit
+github.com/andygrunwald/go-jira
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 # github.com/armon/go-radix v1.0.0
 github.com/armon/go-radix
 # github.com/aws/aws-sdk-go v1.37.17
@@ -108,6 +117,11 @@ github.com/aws/aws-sdk-go/service/sts/stsiface
 github.com/beevik/etree
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
+<<<<<<< HEAD
+=======
+# github.com/blang/semver v3.5.1+incompatible
+github.com/blang/semver
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 # github.com/boombuler/barcode v1.0.1
 github.com/boombuler/barcode
 github.com/boombuler/barcode/qr
@@ -133,9 +147,21 @@ github.com/coreos/pkg/timeutil
 github.com/creack/pty
 # github.com/davecgh/go-spew v1.1.1
 github.com/davecgh/go-spew/spew
+<<<<<<< HEAD
 # github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29
 github.com/docker/spdystream
 github.com/docker/spdystream/spdy
+=======
+# github.com/dgrijalva/jwt-go v3.2.0+incompatible
+github.com/dgrijalva/jwt-go
+# github.com/docker/spdystream v0.0.0-20170912183627-bc6354cbbc29
+github.com/docker/spdystream
+github.com/docker/spdystream/spdy
+# github.com/dyatlov/go-opengraph v0.0.0-20180429202543-816b6608b3c8
+github.com/dyatlov/go-opengraph/opengraph
+# github.com/fatih/structs v1.1.0
+github.com/fatih/structs
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 # github.com/flynn/hid v0.0.0-20190502022136-f1b9b6cc019a
 github.com/flynn/hid
 # github.com/flynn/u2f v0.0.0-20180613185708-15554eb68e5d
@@ -143,8 +169,17 @@ github.com/flynn/u2f/u2fhid
 github.com/flynn/u2f/u2ftoken
 # github.com/form3tech-oss/jwt-go v3.2.2+incompatible
 github.com/form3tech-oss/jwt-go
+<<<<<<< HEAD
 # github.com/ghodss/yaml v1.0.0
 github.com/ghodss/yaml
+=======
+# github.com/francoispqt/gojay v1.2.13
+github.com/francoispqt/gojay
+# github.com/ghodss/yaml v1.0.0
+github.com/ghodss/yaml
+# github.com/go-asn1-ber/asn1-ber v1.5.1
+github.com/go-asn1-ber/asn1-ber
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 # github.com/go-logr/logr v0.2.0
 github.com/go-logr/logr
 # github.com/go-resty/resty/v2 v2.3.0
@@ -304,6 +339,13 @@ github.com/gravitational/trace/internal
 github.com/gravitational/trace/trail
 # github.com/gravitational/ttlmap v0.0.0-20171116003245-91fd36b9004c
 github.com/gravitational/ttlmap
+<<<<<<< HEAD
+=======
+# github.com/hashicorp/errwrap v1.0.0
+github.com/hashicorp/errwrap
+# github.com/hashicorp/go-multierror v1.1.0
+github.com/hashicorp/go-multierror
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 # github.com/hashicorp/go-version v1.2.1
 ## explicit
 github.com/hashicorp/go-version
@@ -352,11 +394,14 @@ github.com/kr/pty
 github.com/kr/text
 # github.com/kylelemons/godebug v1.1.0
 github.com/kylelemons/godebug/diff
+<<<<<<< HEAD
 # github.com/mailgun/holster/v3 v3.15.2
 ## explicit
 github.com/mailgun/holster/v3/clock
 github.com/mailgun/holster/v3/collections
 github.com/mailgun/holster/v3/syncutil
+=======
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 # github.com/mailgun/lemma v0.0.0-20170619173223-4214099fb348
 github.com/mailgun/lemma/random
 github.com/mailgun/lemma/secret
@@ -368,9 +413,33 @@ github.com/mailgun/minheap
 github.com/mailgun/timetools
 # github.com/mailgun/ttlmap v0.0.0-20170619185759-c1c17f74874f
 github.com/mailgun/ttlmap
+<<<<<<< HEAD
 # github.com/mattermost/xml-roundtrip-validator v0.1.0
 github.com/mattermost/xml-roundtrip-validator
 # github.com/mattn/go-sqlite3 v1.14.6
+=======
+# github.com/mattermost/go-i18n v1.11.0
+github.com/mattermost/go-i18n/i18n
+github.com/mattermost/go-i18n/i18n/bundle
+github.com/mattermost/go-i18n/i18n/language
+github.com/mattermost/go-i18n/i18n/translation
+# github.com/mattermost/ldap v0.0.0-20191128190019-9f62ba4b8d4d
+github.com/mattermost/ldap
+# github.com/mattermost/logr v1.0.13
+github.com/mattermost/logr
+github.com/mattermost/logr/format
+github.com/mattermost/logr/target
+# github.com/mattermost/mattermost-server/v5 v5.28.1
+## explicit
+github.com/mattermost/mattermost-server/v5/mlog
+github.com/mattermost/mattermost-server/v5/model
+github.com/mattermost/mattermost-server/v5/services/timezones
+github.com/mattermost/mattermost-server/v5/utils/jsonutils
+github.com/mattermost/mattermost-server/v5/utils/markdown
+# github.com/mattermost/xml-roundtrip-validator v0.1.0
+github.com/mattermost/xml-roundtrip-validator
+# github.com/mattn/go-sqlite3 v2.0.3+incompatible
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 github.com/mattn/go-sqlite3
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
@@ -397,7 +466,13 @@ github.com/pborman/uuid
 # github.com/pelletier/go-toml v1.8.0
 ## explicit
 github.com/pelletier/go-toml
+<<<<<<< HEAD
 # github.com/pingcap/errors v0.11.0
+=======
+# github.com/philhofer/fwd v1.0.0
+github.com/philhofer/fwd
+# github.com/pingcap/errors v0.11.4
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 github.com/pingcap/errors
 # github.com/pkg/errors v0.9.1
 github.com/pkg/errors
@@ -447,11 +522,31 @@ github.com/sirupsen/logrus
 github.com/sirupsen/logrus/hooks/syslog
 # github.com/spf13/pflag v1.0.5
 github.com/spf13/pflag
+<<<<<<< HEAD
+=======
+# github.com/tinylib/msgp v1.1.2
+github.com/tinylib/msgp/msgp
+# github.com/trivago/tgo v1.0.7
+## explicit
+github.com/trivago/tgo/tcontainer
+github.com/trivago/tgo/treflect
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 # github.com/tstranex/u2f v0.0.0-20160508205855-eb799ce68da4
 github.com/tstranex/u2f
 # github.com/vulcand/predicate v1.1.0
 github.com/vulcand/predicate
 github.com/vulcand/predicate/builder
+<<<<<<< HEAD
+=======
+# github.com/wiggin77/cfg v1.0.2
+github.com/wiggin77/cfg
+github.com/wiggin77/cfg/ini
+github.com/wiggin77/cfg/timeconv
+# github.com/wiggin77/merror v1.0.2
+github.com/wiggin77/merror
+# github.com/wiggin77/srslog v1.0.1
+github.com/wiggin77/srslog
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 # github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb
 ## explicit
 github.com/xeipuuv/gojsonpointer
@@ -504,9 +599,13 @@ go.opencensus.io/trace/tracestate
 go.uber.org/atomic
 # go.uber.org/multierr v1.3.0
 go.uber.org/multierr
+<<<<<<< HEAD
 # go.uber.org/tools v0.0.0-20190618225709-2cfd321de3ee
 go.uber.org/tools/update-license
 # go.uber.org/zap v1.13.0
+=======
+# go.uber.org/zap v1.15.0
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 go.uber.org/zap
 go.uber.org/zap/buffer
 go.uber.org/zap/internal/bufferpool
@@ -589,20 +688,9 @@ golang.org/x/text/width
 golang.org/x/time/rate
 # golang.org/x/tools v0.1.0
 golang.org/x/tools/cmd/goimports
-golang.org/x/tools/go/analysis
-golang.org/x/tools/go/analysis/passes/inspect
 golang.org/x/tools/go/ast/astutil
-golang.org/x/tools/go/ast/inspector
-golang.org/x/tools/go/buildutil
 golang.org/x/tools/go/gcexportdata
-golang.org/x/tools/go/internal/cgo
 golang.org/x/tools/go/internal/gcimporter
-golang.org/x/tools/go/internal/packagesdriver
-golang.org/x/tools/go/loader
-golang.org/x/tools/go/packages
-golang.org/x/tools/go/types/objectpath
-golang.org/x/tools/go/types/typeutil
-golang.org/x/tools/internal/analysisinternal
 golang.org/x/tools/internal/event
 golang.org/x/tools/internal/event/core
 golang.org/x/tools/internal/event/keys
@@ -611,9 +699,6 @@ golang.org/x/tools/internal/fastwalk
 golang.org/x/tools/internal/gocommand
 golang.org/x/tools/internal/gopathwalk
 golang.org/x/tools/internal/imports
-golang.org/x/tools/internal/lsp/fuzzy
-golang.org/x/tools/internal/packagesinternal
-golang.org/x/tools/internal/typesinternal
 # golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1
 golang.org/x/xerrors
 golang.org/x/xerrors/internal
@@ -656,7 +741,11 @@ google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/type/expr
 google.golang.org/genproto/googleapis/type/latlng
+<<<<<<< HEAD
 # google.golang.org/grpc v1.31.0 => google.golang.org/grpc v1.29.1
+=======
+# google.golang.org/grpc v1.31.0 => google.golang.org/grpc v1.29.0
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 ## explicit
 google.golang.org/grpc
 google.golang.org/grpc/attributes
@@ -760,6 +849,11 @@ gopkg.in/inf.v0
 # gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
 gopkg.in/mgo.v2/bson
 gopkg.in/mgo.v2/internal/json
+<<<<<<< HEAD
+=======
+# gopkg.in/natefinch/lumberjack.v2 v2.0.0
+gopkg.in/natefinch/lumberjack.v2
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 # gopkg.in/resty.v1 v1.12.0
 ## explicit
 gopkg.in/resty.v1
@@ -770,6 +864,7 @@ gopkg.in/square/go-jose.v2/json
 gopkg.in/square/go-jose.v2/jwt
 # gopkg.in/yaml.v2 v2.4.0
 gopkg.in/yaml.v2
+<<<<<<< HEAD
 # honnef.co/go/tools v0.0.1-2020.1.5
 honnef.co/go/tools/arg
 honnef.co/go/tools/cmd/staticcheck
@@ -800,6 +895,8 @@ honnef.co/go/tools/staticcheck
 honnef.co/go/tools/stylecheck
 honnef.co/go/tools/unused
 honnef.co/go/tools/version
+=======
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 # k8s.io/api v0.0.0-20200821051526-051d027c14e1
 k8s.io/api/admissionregistration/v1
 k8s.io/api/admissionregistration/v1beta1
@@ -968,6 +1065,10 @@ sigs.k8s.io/yaml
 # github.com/gravitational/teleport => github.com/gravitational/teleport v1.3.3-0.20210408010938-1115eb1e6cbe
 # github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20210408010938-1115eb1e6cbe
 # github.com/iovisor/gobpf => github.com/gravitational/gobpf v0.0.1
+<<<<<<< HEAD
 # github.com/julienschmidt/httprouter => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 # google.golang.org/grpc => google.golang.org/grpc v1.29.1
+=======
+# google.golang.org/grpc => google.golang.org/grpc v1.29.0
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 # github.com/nlopes/slack => github.com/marshall-lee/slack v0.6.1-0.20200130120608-5efb9dafdf1b

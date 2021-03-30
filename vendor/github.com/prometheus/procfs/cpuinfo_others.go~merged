@@ -1,10 +1,18 @@
+<<<<<<< HEAD
+// Copyright 2020 The Prometheus Authors
+=======
 // Copyright 2015 CoreOS, Inc.
 //
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
+<<<<<<< HEAD
+// http://www.apache.org/licenses/LICENSE-2.0
+=======
 //     http://www.apache.org/licenses/LICENSE-2.0
+>>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,6 +21,13 @@
 // limitations under the License.
 
 <<<<<<< HEAD
+// +build linux
+// +build !386,!amd64,!arm,!arm64,!mips,!mips64,!mips64le,!mipsle,!ppc64,!ppc64le,!riscv64,!s390x
+
+package procfs
+
+var parseCPUInfo = parseCPUInfoDummy
+=======
 <<<<<<< HEAD:vendor/github.com/coreos/pkg/capnslog/init_windows.go
 package capnslog
 
@@ -21,26 +36,16 @@ import "os"
 // +build linux
 // +build !386,!amd64,!arm,!arm64,!mips,!mips64,!mips64le,!mipsle,!ppc64,!ppc64le,!riscv64,!s390x
 >>>>>>> 9675161e (Upgrade Teleport dependency to v6):vendor/github.com/prometheus/procfs/cpuinfo_others.go
-=======
-package capnslog
-
-import "os"
->>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 
 func init() {
 	initHijack()
 
-<<<<<<< HEAD
 <<<<<<< HEAD:vendor/github.com/coreos/pkg/capnslog/init_windows.go
-=======
->>>>>>> 9675161e (Upgrade Teleport dependency to v6)
 	// Go `log` package uses os.Stderr.
 	SetFormatter(NewPrettyFormatter(os.Stderr, false))
 	SetGlobalLogLevel(INFO)
 }
-<<<<<<< HEAD
 =======
 var parseCPUInfo = parseCPUInfoDummy
 >>>>>>> 9675161e (Upgrade Teleport dependency to v6):vendor/github.com/prometheus/procfs/cpuinfo_others.go
-=======
 >>>>>>> 9675161e (Upgrade Teleport dependency to v6)
