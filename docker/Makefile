@@ -8,9 +8,9 @@ MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 
 # Teleport Enterprise Binary release name. Can be any teleport
 # enterprise version, but has to be available on get.gravitational.com
-RELEASE ?= teleport-ent-v6.0.0-alpha.2-linux-amd64-bin
+RELEASE ?= teleport-ent-v6.0.2-linux-amd64-bin
 
-RUNTIME ?= go1.15.5
+RUNTIME ?= go1.16.2
 BBOX ?= quay.io/gravitational/teleport-buildbox:$(RUNTIME)
 
 # Teleport CLI and plugins CLI flags to pass to them on start

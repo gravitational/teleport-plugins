@@ -1,5 +1,5 @@
 # Defines Teleport Slack image, based on Teleport OSS image.
-ARG RUNTIME="go1.15.5"
+ARG RUNTIME="go1.16.2"
 ARG BBOX="quay.io/gravitational/teleport-buildbox"
 FROM $BBOX:$RUNTIME
 

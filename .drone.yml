@@ -20,12 +20,12 @@ workspace:
 
 steps:
   - name: Run linter
-    image: golangci/golangci-lint:v1.27.0
+    image: golangci/golangci-lint:v1.39.0
     commands:
       - make lint
 
   - name: Run tests
-    image: golang:1.15.5
+    image: golang:1.16.2
     commands:
       - make test
 
@@ -99,7 +99,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.15.5
+    image: golang:1.16.2
     commands:
       - make build-all
 
@@ -170,7 +170,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.15.5
+    image: golang:1.16.2
     commands:
       - mkdir -p build/
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
@@ -242,6 +242,6 @@ steps:
 
 ---
 kind: signature
-hmac: 488b49769a5fa00dc1cf55d7e982d0f49d0ac004c2ba056ada96b8c3570943dd
+hmac: 80cf45ae20e0f6380385236a69ef16935fa8826147950147372a5306d8b059d7
 
 ...

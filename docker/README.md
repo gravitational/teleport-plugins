@@ -59,7 +59,7 @@ cd ../teleport
 make -C docker build
 ```
 
-**_Note_**: For example, it might use `go1.15.5` — make sure you use the same
+**_Note_**: For example, it might use `go1.16.2` — make sure you use the same
 runtime version in the whole guide. You might need to adjust the runtime version
 in the makefile and docker compose file yourself.
 
