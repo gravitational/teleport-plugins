@@ -15,7 +15,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/andygrunwald/go-jira"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gravitational/teleport-plugins/access/integration"
@@ -42,6 +41,8 @@ type JiraSuite struct {
 	publicURL  string
 	raceNumber int
 	me         *user.User
+	authorUser UserDetails
+	otherUser  UserDetails
 	fakeJira   *FakeJIRA
 	teleport   *integration.TeleInstance
 	tmpFiles   []*os.File
@@ -61,6 +62,10 @@ func (s *JiraSuite) SetUpSuite(c *C) {
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	s.me, err = user.Current()
 	c.Assert(err, IsNil)
+
+	s.authorUser = UserDetails{AccountID: "USER-1", DisplayName: s.me.Username, EmailAddress: s.me.Username + "@example.com"}
+	s.otherUser = UserDetails{AccountID: "USER-2", DisplayName: s.me.Username + " evil twin", EmailAddress: s.me.Username + ".evil@example.com"}
+
 	userRole, err := services.NewRole("foo", services.RoleSpecV3{
 		Allow: services.RoleConditions{
 			Logins:  []string{s.me.Username}, // cannot be empty
@@ -92,7 +97,7 @@ func (s *JiraSuite) SetUpSuite(c *C) {
 func (s *JiraSuite) SetUpTest(c *C) {
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), 5*time.Second)
 	s.publicURL = ""
-	s.fakeJira = NewFakeJIRA(jira.User{Name: "Test User", EmailAddress: s.me.Username + "@example.com"}, s.raceNumber)
+	s.fakeJira = NewFakeJIRA(s.authorUser, s.raceNumber)
 }
 
 func (s *JiraSuite) TearDownTest(c *C) {
@@ -231,6 +236,7 @@ func (s *JiraSuite) TestIssueCreation(c *C) {
 	pluginData := s.checkPluginData(c, request.GetName())
 
 	issue, err := s.fakeJira.CheckNewIssue(s.ctx)
+	c.Assert(issue.Fields.Project.Key, Equals, "PROJ")
 	c.Assert(err, IsNil, Commentf("no new issue stored"))
 	c.Assert(issue.Properties[RequestIDPropertyKey], Equals, request.GetName())
 	c.Assert(pluginData.ID, Equals, issue.ID)
@@ -272,7 +278,7 @@ func (s *JiraSuite) TestApproval(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(auditLog, HasLen, 1)
 	c.Assert(auditLog[0].GetString("state"), Equals, "APPROVED")
-	c.Assert(auditLog[0].GetString("delegator"), Equals, "jira:"+s.fakeJira.GetAuthor().EmailAddress)
+	c.Assert(auditLog[0].GetString("delegator"), Equals, "jira:"+s.authorUser.EmailAddress)
 }
 
 func (s *JiraSuite) TestDenial(c *C) {
@@ -293,7 +299,75 @@ func (s *JiraSuite) TestDenial(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(auditLog, HasLen, 1)
 	c.Assert(auditLog[0].GetString("state"), Equals, "DENIED")
-	c.Assert(auditLog[0].GetString("delegator"), Equals, "jira:"+s.fakeJira.GetAuthor().EmailAddress)
+	c.Assert(auditLog[0].GetString("delegator"), Equals, "jira:"+s.authorUser.EmailAddress)
+}
+
+func (s *JiraSuite) TestApprovalWithReason(c *C) {
+	s.startApp(c)
+	request := s.createAccessRequest(c)
+	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
+
+	issue, err := s.fakeJira.CheckNewIssue(s.ctx)
+	c.Assert(err, IsNil, Commentf("no new issue stored"))
+
+	issue = s.fakeJira.StoreIssueComment(issue, Comment{
+		Author: s.authorUser,
+		Body:   "hi! i'm going to approve this request.\nReason:\n\nfoo\nbar\nbaz",
+	})
+
+	s.fakeJira.TransitionIssue(issue, "Approved")
+	s.postWebhookAndCheck(c, issue.ID)
+
+	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
+	c.Assert(err, IsNil)
+	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
+	c.Assert(request.GetResolveReason(), Equals, "foo\nbar\nbaz")
+
+	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdateEvent, "id": request.GetName()})
+	c.Assert(err, IsNil)
+	c.Assert(auditLog, HasLen, 1)
+	c.Assert(auditLog[0].GetString("state"), Equals, "APPROVED")
+	c.Assert(auditLog[0].GetString("delegator"), Equals, "jira:"+s.authorUser.EmailAddress)
+}
+
+func (s *JiraSuite) TestDenialWithReason(c *C) {
+	s.startApp(c)
+	request := s.createAccessRequest(c)
+	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
+
+	issue, err := s.fakeJira.CheckNewIssue(s.ctx)
+	c.Assert(err, IsNil, Commentf("no new issue stored"))
+
+	issue = s.fakeJira.StoreIssueComment(issue, Comment{
+		Author: s.otherUser,
+		Body:   "comment 1", // just ignored.
+	})
+	issue = s.fakeJira.StoreIssueComment(issue, Comment{
+		Author: s.authorUser,
+		Body:   "hi! i'm rejecting the request.\nreason: bar baz", // reason is "bar baz" but the next comment will override it.
+	})
+	issue = s.fakeJira.StoreIssueComment(issue, Comment{
+		Author: s.authorUser,
+		Body:   "hi! i'm rejecting the request.\nreason: foo bar baz", // reason is "foo bar baz".
+	})
+	issue = s.fakeJira.StoreIssueComment(issue, Comment{
+		Author: s.otherUser,
+		Body:   "reason: test", // has reason too but ignored because it's not the same user that did transition.
+	})
+
+	s.fakeJira.TransitionIssue(issue, "Denied")
+	s.postWebhookAndCheck(c, issue.ID)
+
+	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
+	c.Assert(err, IsNil)
+	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
+	c.Assert(request.GetResolveReason(), Equals, "foo bar baz")
+
+	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdateEvent, "id": request.GetName()})
+	c.Assert(err, IsNil)
+	c.Assert(auditLog, HasLen, 1)
+	c.Assert(auditLog[0].GetString("state"), Equals, "DENIED")
+	c.Assert(auditLog[0].GetString("delegator"), Equals, "jira:"+s.authorUser.EmailAddress)
 }
 
 func (s *JiraSuite) TestExpiration(c *C) {

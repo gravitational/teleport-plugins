@@ -10,7 +10,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/andygrunwald/go-jira"
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
 
@@ -22,11 +21,11 @@ type FakeJIRA struct {
 	issues           sync.Map
 	newIssues        chan Issue
 	issueTransitions chan Issue
-	author           jira.User
+	author           UserDetails
 	issueIDCounter   uint64
 }
 
-func NewFakeJIRA(author jira.User, concurrency int) *FakeJIRA {
+func NewFakeJIRA(author UserDetails, concurrency int) *FakeJIRA {
 	router := httprouter.New()
 
 	self := &FakeJIRA{
@@ -41,7 +40,7 @@ func NewFakeJIRA(author jira.User, concurrency int) *FakeJIRA {
 		rw.WriteHeader(http.StatusOK)
 	})
 	router.GET("/rest/api/2/project/PROJ", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		project := jira.Project{
+		project := Project{
 			Key:  "PROJ",
 			Name: "The Project",
 		}
@@ -71,25 +70,28 @@ func NewFakeJIRA(author jira.User, concurrency int) *FakeJIRA {
 		panicIf(err)
 
 		issue := Issue{
-			Fields:     issueInput.Fields,
+			Fields: IssueFields{
+				Summary:     issueInput.Fields.Summary,
+				Description: issueInput.Fields.Description,
+			},
 			Properties: make(map[string]interface{}),
+		}
+		if issueInput.Fields.Project != nil {
+			issue.Fields.Project = *issueInput.Fields.Project
 		}
 		for _, property := range issueInput.Properties {
 			issue.Properties[property.Key] = property.Value
 		}
-		if issue.Fields == nil {
-			issue.Fields = &jira.IssueFields{}
-		}
-		issue.Fields.Status = &jira.Status{Name: "Pending"}
-		issue.Transitions = []jira.Transition{
+		issue.Fields.Status = StatusDetails{Name: "Pending"}
+		issue.Transitions = []IssueTransition{
 			{
-				ID: "100001", To: jira.Status{Name: "Approved"},
+				ID: "100001", To: StatusDetails{Name: "Approved"},
 			},
 			{
-				ID: "100002", To: jira.Status{Name: "Denied"},
+				ID: "100002", To: StatusDetails{Name: "Denied"},
 			},
 			{
-				ID: "100003", To: jira.Status{Name: "Expired"},
+				ID: "100003", To: StatusDetails{Name: "Expired"},
 			},
 		}
 		issue = self.StoreIssue(issue)
@@ -111,6 +113,24 @@ func NewFakeJIRA(author jira.User, concurrency int) *FakeJIRA {
 		err := json.NewEncoder(rw).Encode(issue)
 		panicIf(err)
 	})
+	router.GET("/rest/api/2/issue/:id/comment", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		issue, found := self.GetIssue(ps.ByName("id"))
+		if !found {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		page := issue.Fields.Comment
+		descendingComments := make([]Comment, len(page.Comments))
+		for i, comment := range page.Comments {
+			descendingComments[len(page.Comments)-i-1] = comment
+		}
+		page.Comments = descendingComments
+
+		rw.Header().Add("Content-Type", "application/json")
+		err := json.NewEncoder(rw).Encode(page)
+		panicIf(err)
+	})
 	router.POST("/rest/api/2/issue/:id/transitions", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		issue, found := self.GetIssue(ps.ByName("id"))
 		if !found {
@@ -118,7 +138,7 @@ func NewFakeJIRA(author jira.User, concurrency int) *FakeJIRA {
 			return
 		}
 
-		var payload jira.CreateTransitionPayload
+		var payload IssueTransitionInput
 		err := json.NewDecoder(r.Body).Decode(&payload)
 		panicIf(err)
 
@@ -149,7 +169,7 @@ func (s *FakeJIRA) Close() {
 	close(s.issueTransitions)
 }
 
-func (s *FakeJIRA) GetAuthor() jira.User {
+func (s *FakeJIRA) GetAuthor() UserDetails {
 	return s.author
 }
 
@@ -172,23 +192,11 @@ func (s *FakeJIRA) GetIssue(idOrKey string) (Issue, bool) {
 }
 
 func (s *FakeJIRA) TransitionIssue(issue Issue, status string) Issue {
-	if issue.Fields == nil {
-		issue.Fields = &jira.IssueFields{}
-	} else {
-		copy := *issue.Fields
-		issue.Fields = &copy
-	}
-	issue.Fields.Status = &jira.Status{Name: status}
-	if issue.Changelog == nil {
-		issue.Changelog = &jira.Changelog{}
-	} else {
-		copy := *issue.Changelog
-		issue.Changelog = &copy
-	}
+	issue.Fields.Status = StatusDetails{Name: status}
 
-	history := jira.ChangelogHistory{
+	changelog := Changelog{
 		Author: s.author,
-		Items: []jira.ChangelogItems{
+		Items: []ChangeDetails{
 			{
 				FieldType: "jira",
 				Field:     "status",
@@ -196,10 +204,20 @@ func (s *FakeJIRA) TransitionIssue(issue Issue, status string) Issue {
 			},
 		},
 	}
-	issue.Changelog.Histories = append([]jira.ChangelogHistory{history}, issue.Changelog.Histories...)
+	issue.Changelog.Histories = append([]Changelog{changelog}, issue.Changelog.Histories...)
 	issue = s.StoreIssue(issue)
 	s.issueTransitions <- issue
 	return issue
+}
+
+func (s *FakeJIRA) StoreIssueComment(issue Issue, comment Comment) Issue {
+	comments := issue.Fields.Comment.Comments
+	newComments := make([]Comment, len(comments), len(comments)+1)
+	copy(newComments, comments)
+	newComments = append(newComments, comment)
+	issue.Fields.Comment.Comments = newComments
+	issue.Fields.Comment.MaxResults = len(newComments) + 1 // To avoid infinite loop in page iteration
+	return s.StoreIssue(issue)
 }
 
 func (s *FakeJIRA) CheckNewIssue(ctx context.Context) (Issue, error) {
