@@ -5,9 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/access"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/api/client"
+	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
@@ -15,16 +16,26 @@ import (
 	"github.com/gravitational/trace"
 )
 
-// MinServerVersion is the minimal teleport version the plugin supports.
-const MinServerVersion = "6.1.0-beta.1"
+const (
+	// minServerVersion is the minimal teleport version the plugin supports.
+	minServerVersion = "6.1.0-beta.1"
+	// pluginName is used to tag PluginData and as a Delegator in Audit log.
+	pluginName = "mattermost"
+	// backoffMaxDelay is a maximum time GRPC client waits before reconnection attempt.
+	backoffMaxDelay = time.Second * 2
+	// initTimeout is used to bound execution time of health check and teleport version check.
+	initTimeout = time.Second * 5
+	// handlerTimeout is used to bound the execution time of watcher event handler.
+	handlerTimeout = time.Second * 5
+)
 
 // App contains global application state.
 type App struct {
 	conf Config
 
-	accessClient access.Client
-	bot          Bot
-	mainJob      lib.ServiceJob
+	apiClient *client.Client
+	bot       Bot
+	mainJob   lib.ServiceJob
 
 	*lib.Process
 }
@@ -55,35 +66,59 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 }
 
 func (a *App) run(ctx context.Context) error {
-	log := logger.Get(ctx)
-	log.Infof("Starting Teleport Access Mattermost Bot %s:%s", Version, Gitref)
+	var err error
 
-	tlsConf, err := access.LoadTLSConfig(
-		a.conf.Teleport.ClientCrt,
-		a.conf.Teleport.ClientKey,
-		a.conf.Teleport.RootCAs,
-	)
-	if trace.Unwrap(err) == access.ErrInvalidCertificate {
-		log.WithError(err).Warning("Auth client TLS configuration error")
-	} else if err != nil {
-		return trace.Wrap(err)
-	}
+	log := logger.Get(ctx)
+	log.Infof("Starting Teleport Access Mattermost Plugin %s:%s", Version, Gitref)
+
 	bk := backoff.DefaultConfig
-	bk.MaxDelay = time.Second * 2
-	a.accessClient, err = access.NewClient(
-		ctx,
-		"mattermost",
-		a.conf.Teleport.AuthServer,
-		tlsConf,
-		grpc.WithConnectParams(grpc.ConnectParams{
-			Backoff: bk,
-		}),
-	)
+	bk.MaxDelay = backoffMaxDelay
+
+	a.apiClient, err = client.New(client.WithDelegator(ctx, pluginName), client.Config{
+		Addrs: []string{a.conf.Teleport.AuthServer},
+		Credentials: []client.Credentials{client.LoadKeyPair(
+			a.conf.Teleport.ClientCrt,
+			a.conf.Teleport.ClientKey,
+			a.conf.Teleport.RootCAs,
+		)},
+		DialInBackground: true,
+		DialOpts:         []grpc.DialOption{grpc.WithConnectParams(grpc.ConnectParams{Backoff: bk})},
+	})
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	var pong access.Pong
+	if err = a.init(ctx); err != nil {
+		return trace.Wrap(err)
+	}
+
+	watcherJob := lib.NewWatcherJob(
+		a.apiClient,
+		types.Watch{Kinds: []types.WatchKind{types.WatchKind{Kind: types.KindAccessRequest}}},
+		a.onWatcherEvent,
+	)
+	a.SpawnCriticalJob(watcherJob)
+	watcherOk, err := watcherJob.WaitReady(ctx)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	a.mainJob.SetReady(watcherOk)
+
+	<-watcherJob.Done()
+
+	return trace.Wrap(watcherJob.Err())
+}
+
+func (a *App) init(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, initTimeout)
+	defer cancel()
+	log := logger.Get(ctx)
+
+	var (
+		err  error
+		pong proto.PingResponse
+	)
 	if pong, err = a.checkTeleportVersion(ctx); err != nil {
 		return trace.Wrap(err)
 	}
@@ -101,58 +136,52 @@ func (a *App) run(ctx context.Context) error {
 	if err = a.bot.HealthCheck(ctx); err != nil {
 		return trace.Wrap(err, "api health check failed. Check your token and make sure that bot is added to your team")
 	}
+
 	log.Debug("Mattermost API health check finished ok")
-
-	watcherJob := access.NewWatcherJob(
-		a.accessClient,
-		access.Filter{},
-		a.onWatcherEvent,
-	)
-	a.SpawnCriticalJob(watcherJob)
-	watcherOk, err := watcherJob.WaitReady(ctx)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	a.mainJob.SetReady(watcherOk)
-
-	<-watcherJob.Done()
-
-	return trace.Wrap(watcherJob.Err())
+	return nil
 }
 
-func (a *App) checkTeleportVersion(ctx context.Context) (access.Pong, error) {
+func (a *App) checkTeleportVersion(ctx context.Context) (proto.PingResponse, error) {
 	log := logger.Get(ctx)
 	log.Debug("Checking Teleport server version")
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	pong, err := a.accessClient.Ping(ctx)
+	pong, err := a.apiClient.WithCallOptions(grpc.WaitForReady(true)).Ping(ctx)
 	if err != nil {
 		if trace.IsNotImplemented(err) {
-			return pong, trace.Wrap(err, "server version must be at least %s", MinServerVersion)
+			return pong, trace.Wrap(err, "server version must be at least %s", minServerVersion)
 		}
 		log.Error("Unable to get Teleport server version")
 		return pong, trace.Wrap(err)
 	}
-	err = pong.AssertServerVersion(MinServerVersion)
+	err = lib.AssertServerVersion(pong, minServerVersion)
 	return pong, trace.Wrap(err)
 }
 
-func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
-	req, op := event.Request, event.Type
-	ctx, _ = logger.WithField(ctx, "request_id", req.ID)
+func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
+	ctx, cancel := context.WithTimeout(ctx, handlerTimeout)
+	defer cancel()
+
+	if kind := event.Resource.GetKind(); kind != types.KindAccessRequest {
+		return trace.Errorf("unexpected kind %q", kind)
+	}
+	op := event.Type
+	reqID := event.Resource.GetName()
+	ctx, _ = logger.WithField(ctx, "request_id", reqID)
 
 	switch op {
-	case access.OpPut:
+	case types.OpPut:
 		ctx, log := logger.WithField(ctx, "request_op", "put")
+		req, ok := event.Resource.(types.AccessRequest)
+		if !ok {
+			return trace.Errorf("unexpected resource type %T", event.Resource)
+		}
 
 		var err error
 		switch {
-		case req.State.IsPending():
+		case req.GetState().IsPending():
 			err = a.onPendingRequest(ctx, req)
-		case req.State.IsApproved():
+		case req.GetState().IsApproved():
 			err = a.onResolvedRequest(ctx, req)
-		case req.State.IsDenied():
+		case req.GetState().IsDenied():
 			err = a.onResolvedRequest(ctx, req)
 		default:
 			log.WithField("event", event).Warn("Unknown request state")
@@ -165,10 +194,9 @@ func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 		}
 
 		return nil
-	case access.OpDelete:
+	case types.OpDelete:
 		ctx, log := logger.WithField(ctx, "request_op", "delete")
-
-		if err := a.onDeletedRequest(ctx, req.ID); err != nil {
+		if err := a.onDeletedRequest(ctx, reqID); err != nil {
 			log.WithError(err).Errorf("Failed to process deleted request")
 			return trace.Wrap(err)
 		}
@@ -178,23 +206,23 @@ func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 	}
 }
 
-func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
+func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) error {
 	log := logger.Get(ctx)
 
-	channels := a.getPostRecipients(ctx, req.SuggestedReviewers)
+	channels := a.getPostRecipients(ctx, req.GetSuggestedReviewers())
 	if len(channels) == 0 {
 		log.Warning("No channel to post")
 		return nil
 	}
 
-	reqData := RequestData{User: req.User, Roles: req.Roles, RequestReason: req.RequestReason}
-	mmData, err := a.bot.Broadcast(ctx, channels, req.ID, reqData)
+	reqData := RequestData{User: req.GetUser(), Roles: req.GetRoles(), RequestReason: req.GetRequestReason()}
+	mmData, err := a.bot.Broadcast(ctx, channels, req.GetName(), reqData)
 	if len(mmData) == 0 && err != nil {
 		return err
 	}
 
 	for _, data := range mmData {
-		logger.Get(ctx).WithField("mm_post_id", data.PostID).
+		logger.Get(ctx).WithFields(logger.Fields{"mm_channel_id": data.ChannelID, "mm_post_id": data.PostID}).
 			Info("Successfully posted to Mattermost")
 	}
 
@@ -202,7 +230,7 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 		log.WithError(err).Error("Failed to post one or more messages to Mattermost")
 	}
 
-	if err := a.setPluginData(ctx, req.ID, PluginData{reqData, mmData}); err != nil {
+	if err := a.setPluginData(ctx, req.GetName(), PluginData{reqData, mmData}); err != nil {
 		if trace.IsNotFound(err) {
 			return trace.Wrap(err, "failed to save plugin data, perhaps due to lack of permissions")
 		}
@@ -212,12 +240,12 @@ func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
 	return nil
 }
 
-func (a *App) onResolvedRequest(ctx context.Context, req access.Request) error {
-	switch req.State {
+func (a *App) onResolvedRequest(ctx context.Context, req types.AccessRequest) error {
+	switch req.GetState() {
 	case types.RequestState_APPROVED:
-		return a.updatePosts(ctx, req.ID, "APPROVED")
+		return a.updatePosts(ctx, req.GetName(), "APPROVED")
 	case types.RequestState_DENIED:
-		return a.updatePosts(ctx, req.ID, "DENIED")
+		return a.updatePosts(ctx, req.GetName(), "DENIED")
 	default:
 		return nil
 	}
@@ -330,14 +358,30 @@ func (a *App) updatePosts(ctx context.Context, reqID string, status string) erro
 	return nil
 }
 
-func (a *App) getPluginData(ctx context.Context, reqID string) (data PluginData, err error) {
-	dataMap, err := a.accessClient.GetPluginData(ctx, reqID)
+func (a *App) getPluginData(ctx context.Context, reqID string) (PluginData, error) {
+	data, err := a.apiClient.GetPluginData(ctx, types.PluginDataFilter{
+		Kind:     types.KindAccessRequest,
+		Resource: reqID,
+		Plugin:   pluginName,
+	})
 	if err != nil {
 		return PluginData{}, trace.Wrap(err)
 	}
-	return DecodePluginData(dataMap), nil
+	if len(data) == 0 {
+		return PluginData{}, nil
+	}
+	entry := data[0].Entries()[pluginName]
+	if entry == nil {
+		return PluginData{}, nil
+	}
+	return DecodePluginData(entry.Data), nil
 }
 
 func (a *App) setPluginData(ctx context.Context, reqID string, data PluginData) error {
-	return a.accessClient.UpdatePluginData(ctx, reqID, EncodePluginData(data), nil)
+	return a.apiClient.UpdatePluginData(ctx, types.PluginDataUpdateParams{
+		Kind:     types.KindAccessRequest,
+		Resource: reqID,
+		Plugin:   pluginName,
+		Set:      EncodePluginData(data),
+	})
 }

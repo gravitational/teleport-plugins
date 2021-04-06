@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-
-	"github.com/gravitational/teleport-plugins/access"
 )
 
 // Plugin data
@@ -88,7 +86,7 @@ func (e ErrorResult) Error() string {
 	return fmt.Sprintf("api error status_code=%v, message=%q", e.StatusCode, e.Message)
 }
 
-func DecodePluginData(dataMap access.PluginDataMap) (data PluginData) {
+func DecodePluginData(dataMap map[string]string) (data PluginData) {
 	data.User = dataMap["user"]
 	data.Roles = strings.Split(dataMap["roles"], ",")
 	data.RequestReason = dataMap["request_reason"]
@@ -103,12 +101,12 @@ func DecodePluginData(dataMap access.PluginDataMap) (data PluginData) {
 	return
 }
 
-func EncodePluginData(data PluginData) access.PluginDataMap {
+func EncodePluginData(data PluginData) map[string]string {
 	var encodedMessages []string
 	for _, msg := range data.MattermostData {
 		encodedMessages = append(encodedMessages, fmt.Sprintf("%s/%s", msg.ChannelID, msg.PostID))
 	}
-	return access.PluginDataMap{
+	return map[string]string{
 		"user":           data.User,
 		"roles":          strings.Join(data.Roles, ","),
 		"request_reason": data.RequestReason,

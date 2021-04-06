@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/mailgun/holster/v3/collections"
+	"github.com/sirupsen/logrus"
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/trace"
@@ -105,6 +106,8 @@ func NewBot(conf MattermostConfig, clusterName, webProxyAddr string) (Bot, error
 		if result == nil {
 			return nil
 		}
+
+		logrus.Debugf("RESP BODYYYY %q", string(resp.Body()))
 
 		if result, ok := result.(*ErrorResult); ok {
 			return trace.Wrap(result)
