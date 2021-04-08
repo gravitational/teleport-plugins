@@ -10,16 +10,13 @@ import (
 type Config struct {
 	Teleport   lib.TeleportConfig `toml:"teleport"`
 	Mattermost MattermostConfig   `toml:"mattermost"`
-	HTTP       lib.HTTPConfig     `toml:"http"`
 	Log        logger.Config      `toml:"log"`
 }
 
 type MattermostConfig struct {
-	URL     string `toml:"url"`
-	Team    string `toml:"team"`
-	Channel string `toml:"channel"`
-	Token   string `toml:"token"`
-	Secret  string `toml:"secret"`
+	URL        string   `toml:"url"`
+	Recipients []string `toml:"recipients"`
+	Token      string   `toml:"token"`
 }
 
 const exampleConfig = `# example mattermost configuration TOML file
@@ -31,16 +28,7 @@ root_cas = "/var/lib/teleport/plugins/mattermost/auth.cas"   # Teleport cluster 
 
 [mattermost]
 url = "https://mattermost.example.com" # Mattermost Server URL
-team = "team-name"                     # Mattermost team in which the channel resides.
-channel = "channel-name"               # Mattermost Channel name to post requests to
 token = "api-token"                    # Mattermost Bot OAuth token
-secret = "signing-secret-value"        # Mattermost API signing Secret
-
-[http]
-public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com
-# listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:8081
-https_key_file = "/var/lib/teleport/webproxy_key.pem"  # TLS private key
-https_cert_file = "/var/lib/teleport/webproxy_cert.pem" # TLS certificate
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/mattermost.log"
@@ -78,26 +66,8 @@ func (c *Config) CheckAndSetDefaults() error {
 	if c.Mattermost.Token == "" {
 		return trace.BadParameter("missing required value mattermost.token")
 	}
-	if c.Mattermost.Secret == "" {
-		return trace.BadParameter("missing required value mattermost.secret")
-	}
-	if c.Mattermost.Team == "" {
-		return trace.BadParameter("missing required value mattermost.team")
-	}
-	if c.Mattermost.Channel == "" {
-		return trace.BadParameter("missing required value mattermost.channel")
-	}
 	if c.Mattermost.URL == "" {
 		return trace.BadParameter("missing required value mattermost.url")
-	}
-	if c.HTTP.PublicAddr == "" {
-		return trace.BadParameter("missing required value http.public_addr")
-	}
-	if c.HTTP.ListenAddr == "" {
-		c.HTTP.ListenAddr = ":8081"
-	}
-	if err := c.HTTP.Check(); err != nil {
-		return trace.Wrap(err)
 	}
 	if c.Log.Output == "" {
 		c.Log.Output = "stderr"
