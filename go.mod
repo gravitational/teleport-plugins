@@ -14,7 +14,6 @@ require (
 	github.com/jonboulle/clockwork v0.2.2
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/mailgun/holster/v3 v3.15.2
-	github.com/nlopes/slack v0.0.0-00010101000000-000000000000
 	github.com/pborman/uuid v1.2.1
 	github.com/pelletier/go-toml v1.8.0
 	github.com/sirupsen/logrus v1.8.1-0.20210219125412-f104497f2b21
@@ -36,5 +35,3 @@ replace (
 	github.com/siddontang/go-mysql v1.1.0 => github.com/gravitational/go-mysql v1.1.1-0.20210212011549-886316308a77
 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 )
-
-replace github.com/nlopes/slack => github.com/marshall-lee/slack v0.6.1-0.20200130120608-5efb9dafdf1b

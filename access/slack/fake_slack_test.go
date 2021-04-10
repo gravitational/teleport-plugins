@@ -4,10 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"runtime/debug"
 	"sync"
 	"sync/atomic"
@@ -15,7 +13,6 @@ import (
 
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
-	"github.com/nlopes/slack"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -23,146 +20,171 @@ import (
 type FakeSlack struct {
 	srv *httptest.Server
 
-	botUser                    slack.User
+	botUser                    User
 	objects                    sync.Map
-	newMessages                chan slack.Msg
-	messageUpdatesByAPI        chan slack.Msg
-	messageUpdatesByResponding chan slack.Msg
+	newMessages                chan Msg
+	messageUpdatesByAPI        chan Msg
+	messageUpdatesByResponding chan Msg
 	messageCounter             uint64
 	userIDCounter              uint64
 	startTime                  time.Time
 }
 
-type chatMessageResponse struct {
-	Channel string `json:"channel"`
-	TS      string `json:"ts"`
-	Text    string `json:"text"`
-	Ok      bool   `json:"ok"`
-}
-
-func NewFakeSlack(botUser slack.User, concurrency int) *FakeSlack {
+func NewFakeSlack(botUser User, concurrency int) *FakeSlack {
 	router := httprouter.New()
 
 	s := &FakeSlack{
-		newMessages:                make(chan slack.Msg, concurrency),
-		messageUpdatesByAPI:        make(chan slack.Msg, concurrency),
-		messageUpdatesByResponding: make(chan slack.Msg, concurrency),
+		newMessages:                make(chan Msg, concurrency),
+		messageUpdatesByAPI:        make(chan Msg, concurrency),
+		messageUpdatesByResponding: make(chan Msg, concurrency),
 		startTime:                  time.Now(),
 		srv:                        httptest.NewServer(router),
 	}
 
 	s.botUser = s.StoreUser(botUser)
 
+	router.POST("/auth.test", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		rw.Header().Add("Content-Type", "application/json")
+		err := json.NewEncoder(rw).Encode(Response{Ok: true})
+		panicIf(err)
+	})
+
 	router.POST("/chat.postMessage", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		data, err := ioutil.ReadAll(r.Body)
-		panicIf(err)
-		values, err := url.ParseQuery(string(data))
+		rw.Header().Add("Content-Type", "application/json")
+
+		var payload Msg
+		err := json.NewDecoder(r.Body).Decode(&payload)
 		panicIf(err)
 
-		var msgBlocks slack.Blocks
-		if blocksRaw := values.Get("blocks"); blocksRaw != "" {
-			unescaped, err := url.QueryUnescape(blocksRaw)
-			panicIf(err)
-			err = json.Unmarshal([]byte(unescaped), &msgBlocks)
-			panicIf(err)
-		}
-
-		msg := s.StoreMessage(slack.Msg{
-			Type:     "message",
-			Channel:  values.Get("channel"),
-			Blocks:   msgBlocks,
-			User:     s.botUser.ID,
-			Username: s.botUser.Name,
+		msg := s.StoreMessage(Msg{
+			Type:       "message",
+			Channel:    payload.Channel,
+			Text:       payload.Text,
+			BlockItems: payload.BlockItems,
+			User:       s.botUser.ID,
+			Username:   s.botUser.Name,
 		})
 		s.newMessages <- msg
 
-		response := chatMessageResponse{
-			Channel: msg.Channel,
-			TS:      msg.Timestamp,
-			Text:    msg.Text,
-			Ok:      true,
+		response := ChatMsgResponse{
+			Response:  Response{Ok: true},
+			Channel:   msg.Channel,
+			Timestamp: msg.Timestamp,
+			Text:      msg.Text,
 		}
-		err = json.NewEncoder(rw).Encode(&response)
+		err = json.NewEncoder(rw).Encode(response)
 		panicIf(err)
 	})
 
 	router.POST("/chat.update", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		data, err := ioutil.ReadAll(r.Body)
-		panicIf(err)
-		values, err := url.ParseQuery(string(data))
+		rw.Header().Add("Content-Type", "application/json")
+
+		var payload Msg
+		err := json.NewDecoder(r.Body).Decode(&payload)
 		panicIf(err)
 
-		timestamp := values.Get("ts")
-		msg, found := s.GetMessage(timestamp)
+		msg, found := s.GetMessage(payload.Timestamp)
 		if !found {
-			http.Error(rw, "", http.StatusNotFound)
+			err := json.NewEncoder(rw).Encode(Response{Ok: false, Error: "message_not_found"})
+			panicIf(err)
 			return
 		}
 
-		if blocksRaw := values.Get("blocks"); blocksRaw != "" {
-			unescaped, err := url.QueryUnescape(blocksRaw)
-			panicIf(err)
-			err = json.Unmarshal([]byte(unescaped), &msg.Blocks)
-			panicIf(err)
-		}
+		msg.Text = payload.Text
+		msg.BlockItems = payload.BlockItems
 
 		s.messageUpdatesByAPI <- s.StoreMessage(msg)
 
-		response := chatMessageResponse{
-			Channel: msg.Channel,
-			TS:      msg.Timestamp,
-			Text:    msg.Text,
-			Ok:      true,
+		response := ChatMsgResponse{
+			Response:  Response{Ok: true},
+			Channel:   msg.Channel,
+			Timestamp: msg.Timestamp,
+			Text:      msg.Text,
 		}
 		err = json.NewEncoder(rw).Encode(&response)
 		panicIf(err)
 	})
 
 	router.POST("/_response/:ts", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-		var payload slack.Msg
+		rw.Header().Add("Content-Type", "application/json")
+
+		var payload struct {
+			Msg
+			ReplaceOriginal bool `json:"replace_original"`
+		}
 		err := json.NewDecoder(r.Body).Decode(&payload)
 		panicIf(err)
 
 		timestamp := ps.ByName("ts")
 		msg, found := s.GetMessage(timestamp)
 		if !found {
-			_, err = rw.Write([]byte(`{"ok":false}`))
+			err := json.NewEncoder(rw).Encode(Response{Ok: false, Error: "message_not_found"})
 			panicIf(err)
 			return
 		}
 
 		if payload.ReplaceOriginal {
-			msg.Blocks = payload.Blocks
+			msg.BlockItems = payload.BlockItems
 			s.messageUpdatesByResponding <- s.StoreMessage(msg)
 		} else {
-			newMsg := s.StoreMessage(slack.Msg{
-				Type:     "message",
-				Channel:  msg.Channel,
-				Blocks:   payload.Blocks,
-				User:     s.botUser.ID,
-				Username: s.botUser.Name,
+			newMsg := s.StoreMessage(Msg{
+				Type:       "message",
+				Channel:    msg.Channel,
+				BlockItems: payload.BlockItems,
+				User:       s.botUser.ID,
+				Username:   s.botUser.Name,
 			})
 			s.newMessages <- newMsg
 		}
-		_, err = rw.Write([]byte(`{"ok":true}`))
+		err = json.NewEncoder(rw).Encode(Response{Ok: true})
 		panicIf(err)
 	})
 
-	router.POST("/users.info", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
-		data, err := ioutil.ReadAll(r.Body)
-		panicIf(err)
-		values, err := url.ParseQuery(string(data))
-		panicIf(err)
+	router.GET("/users.info", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		rw.Header().Add("Content-Type", "application/json")
 
-		user, found := s.GetUser(values.Get("user"))
-		if !found {
-			http.Error(rw, "", http.StatusNotFound)
+		id := r.URL.Query().Get("user")
+		if id == "" {
+			err := json.NewEncoder(rw).Encode(Response{Ok: false, Error: "invalid_arguments"})
+			panicIf(err)
 			return
 		}
 
-		err = json.NewEncoder(rw).Encode(&struct {
-			User slack.User `json:"user"`
-		}{user})
+		user, found := s.GetUser(id)
+		if !found {
+			err := json.NewEncoder(rw).Encode(Response{Ok: false, Error: "user_not_found"})
+			panicIf(err)
+			return
+		}
+
+		err := json.NewEncoder(rw).Encode(struct {
+			User User `json:"user"`
+			Ok   bool `json:"ok"`
+		}{user, true})
+		panicIf(err)
+	})
+
+	router.GET("/users.lookupByEmail", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		rw.Header().Add("Content-Type", "application/json")
+
+		email := r.URL.Query().Get("email")
+		if email == "" {
+			err := json.NewEncoder(rw).Encode(Response{Ok: false, Error: "invalid_arguments"})
+			panicIf(err)
+			return
+		}
+
+		user, found := s.GetUserByEmail(email)
+		if !found {
+			err := json.NewEncoder(rw).Encode(Response{Ok: false, Error: "users_not_found"})
+			panicIf(err)
+			return
+		}
+
+		err := json.NewEncoder(rw).Encode(struct {
+			User User `json:"user"`
+			Ok   bool `json:"ok"`
+		}{user, true})
 		panicIf(err)
 	})
 
@@ -180,7 +202,7 @@ func (s *FakeSlack) Close() {
 	close(s.messageUpdatesByResponding)
 }
 
-func (s *FakeSlack) StoreMessage(msg slack.Msg) slack.Msg {
+func (s *FakeSlack) StoreMessage(msg Msg) Msg {
 	if msg.Timestamp == "" {
 		now := s.startTime.Add(time.Since(s.startTime)) // get monotonic timestamp
 		uniq := atomic.AddUint64(&s.messageCounter, 1)  // generate uniq int to prevent races
@@ -190,54 +212,63 @@ func (s *FakeSlack) StoreMessage(msg slack.Msg) slack.Msg {
 	return msg
 }
 
-func (s *FakeSlack) GetMessage(id string) (slack.Msg, bool) {
+func (s *FakeSlack) GetMessage(id string) (Msg, bool) {
 	if obj, ok := s.objects.Load(fmt.Sprintf("msg-%s", id)); ok {
-		msg, ok := obj.(slack.Msg)
+		msg, ok := obj.(Msg)
 		return msg, ok
 	}
-	return slack.Msg{}, false
+	return Msg{}, false
 }
 
-func (s *FakeSlack) StoreUser(user slack.User) slack.User {
+func (s *FakeSlack) StoreUser(user User) User {
 	if user.ID == "" {
 		user.ID = fmt.Sprintf("U%d", atomic.AddUint64(&s.userIDCounter, 1))
 	}
 	s.objects.Store(fmt.Sprintf("user-%s", user.ID), user)
+	s.objects.Store(fmt.Sprintf("userByEmail-%s", user.Profile.Email), user)
 	return user
 }
 
-func (s *FakeSlack) GetUser(id string) (slack.User, bool) {
+func (s *FakeSlack) GetUser(id string) (User, bool) {
 	if obj, ok := s.objects.Load(fmt.Sprintf("user-%s", id)); ok {
-		user, ok := obj.(slack.User)
+		user, ok := obj.(User)
 		return user, ok
 	}
-	return slack.User{}, false
+	return User{}, false
 }
 
-func (s *FakeSlack) CheckNewMessage(ctx context.Context) (slack.Msg, error) {
+func (s *FakeSlack) GetUserByEmail(email string) (User, bool) {
+	if obj, ok := s.objects.Load(fmt.Sprintf("userByEmail-%s", email)); ok {
+		user, ok := obj.(User)
+		return user, ok
+	}
+	return User{}, false
+}
+
+func (s *FakeSlack) CheckNewMessage(ctx context.Context) (Msg, error) {
 	select {
 	case message := <-s.newMessages:
 		return message, nil
 	case <-ctx.Done():
-		return slack.Msg{}, trace.Wrap(ctx.Err())
+		return Msg{}, trace.Wrap(ctx.Err())
 	}
 }
 
-func (s *FakeSlack) CheckMessageUpdateByAPI(ctx context.Context) (slack.Msg, error) {
+func (s *FakeSlack) CheckMessageUpdateByAPI(ctx context.Context) (Msg, error) {
 	select {
 	case message := <-s.messageUpdatesByAPI:
 		return message, nil
 	case <-ctx.Done():
-		return slack.Msg{}, trace.Wrap(ctx.Err())
+		return Msg{}, trace.Wrap(ctx.Err())
 	}
 }
 
-func (s *FakeSlack) CheckMessageUpdateByResponding(ctx context.Context) (slack.Msg, error) {
+func (s *FakeSlack) CheckMessageUpdateByResponding(ctx context.Context) (Msg, error) {
 	select {
 	case message := <-s.messageUpdatesByResponding:
 		return message, nil
 	case <-ctx.Done():
-		return slack.Msg{}, trace.Wrap(ctx.Err())
+		return Msg{}, trace.Wrap(ctx.Err())
 	}
 }
 
