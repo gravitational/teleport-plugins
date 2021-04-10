@@ -34,7 +34,7 @@ import (
 )
 
 func (process *TeleportProcess) initKubernetes() {
-	log := logrus.WithFields(logrus.Fields{
+	log := process.log.WithFields(logrus.Fields{
 		trace.Component: teleport.Component(teleport.ComponentKube, process.id),
 	})
 
@@ -59,7 +59,7 @@ func (process *TeleportProcess) initKubernetes() {
 
 		err := process.initKubernetesService(log, conn)
 		if err != nil {
-			warnOnErr(conn.Close())
+			warnOnErr(conn.Close(), log)
 			return trace.Wrap(err)
 		}
 		return nil
@@ -70,7 +70,7 @@ func (process *TeleportProcess) initKubernetesService(log *logrus.Entry, conn *C
 	// clean up unused descriptors passed for proxy, but not used by it
 	defer func() {
 		if err := process.closeImportedDescriptors(teleport.ComponentKube); err != nil {
-			log.WithError(err).Warn("Failed closing imported file descriptors")
+			log.WithError(err).Warn("Failed closing imported file descriptors.")
 		}
 	}()
 	cfg := process.Config
@@ -121,7 +121,7 @@ func (process *TeleportProcess) initKubernetesService(log *logrus.Entry, conn *C
 		}
 		defer func() {
 			if retErr != nil {
-				warnOnErr(listener.Close())
+				warnOnErr(listener.Close(), log)
 			}
 		}()
 
@@ -174,8 +174,10 @@ func (process *TeleportProcess) initKubernetesService(log *logrus.Entry, conn *C
 		}()
 	}
 
+	teleportClusterName := conn.ServerIdentity.Cert.Extensions[utils.CertExtensionAuthority]
+
 	// Create the kube server to service listener.
-	authorizer, err := auth.NewAuthorizer(conn.Client, conn.Client, conn.Client)
+	authorizer, err := auth.NewAuthorizer(teleportClusterName, conn.Client, conn.Client, conn.Client)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -191,8 +193,9 @@ func (process *TeleportProcess) initKubernetesService(log *logrus.Entry, conn *C
 		return trace.Wrap(err)
 	}
 	streamer, err := events.NewCheckingStreamer(events.CheckingStreamerConfig{
-		Inner: conn.Client,
-		Clock: process.Clock,
+		Inner:       conn.Client,
+		Clock:       process.Clock,
+		ClusterName: teleportClusterName,
 	})
 	if err != nil {
 		return trace.Wrap(err)
@@ -206,7 +209,7 @@ func (process *TeleportProcess) initKubernetesService(log *logrus.Entry, conn *C
 		ForwarderConfig: kubeproxy.ForwarderConfig{
 			Namespace:         defaults.Namespace,
 			Keygen:            cfg.Keygen,
-			ClusterName:       conn.ServerIdentity.Cert.Extensions[utils.CertExtensionAuthority],
+			ClusterName:       teleportClusterName,
 			Authz:             authorizer,
 			AuthClient:        conn.Client,
 			StreamEmitter:     streamEmitter,
@@ -237,16 +240,20 @@ func (process *TeleportProcess) initKubernetesService(log *logrus.Entry, conn *C
 	}
 	defer func() {
 		if retErr != nil {
-			warnOnErr(kubeServer.Close())
+			warnOnErr(kubeServer.Close(), log)
 		}
 	}()
 	process.RegisterCriticalFunc("kube.serve", func() error {
 		if conn.UseTunnel() {
 			log.Info("Starting Kube service via proxy reverse tunnel.")
-			utils.Consolef(cfg.Console, teleport.ComponentKube, "Kubernetes service %s:%s is starting via proxy reverse tunnel.", teleport.Version, teleport.Gitref)
+			utils.Consolef(cfg.Console, log, teleport.ComponentKube,
+				"Kubernetes service %s:%s is starting via proxy reverse tunnel.",
+				teleport.Version, teleport.Gitref)
 		} else {
 			log.Infof("Starting Kube service on %v.", listener.Addr())
-			utils.Consolef(cfg.Console, teleport.ComponentKube, "Kubernetes service %s:%s is starting on %v.", teleport.Version, teleport.Gitref, listener.Addr())
+			utils.Consolef(cfg.Console, log, teleport.ComponentKube,
+				"Kubernetes service %s:%s is starting on %v.",
+				teleport.Version, teleport.Gitref, listener.Addr())
 		}
 		err := kubeServer.Serve(listener)
 		if err != nil {
@@ -259,23 +266,23 @@ func (process *TeleportProcess) initKubernetesService(log *logrus.Entry, conn *C
 	})
 
 	// Cleanup, when process is exiting.
-	process.onExit("kube.shutdown", func(payload interface{}) {
+	process.OnExit("kube.shutdown", func(payload interface{}) {
 		if asyncEmitter != nil {
-			warnOnErr(asyncEmitter.Close())
+			warnOnErr(asyncEmitter.Close(), log)
 		}
 		// Clean up items in reverse order from their initialization.
 		if payload != nil {
 			// Graceful shutdown.
-			warnOnErr(kubeServer.Shutdown(payloadContext(payload)))
+			warnOnErr(kubeServer.Shutdown(payloadContext(payload, log)), log)
 			agentPool.Stop()
 			agentPool.Wait()
 		} else {
 			// Fast shutdown.
-			warnOnErr(kubeServer.Close())
+			warnOnErr(kubeServer.Close(), log)
 			agentPool.Stop()
 		}
-		warnOnErr(listener.Close())
-		warnOnErr(conn.Close())
+		warnOnErr(listener.Close(), log)
+		warnOnErr(conn.Close(), log)
 
 		if dynLabels != nil {
 			dynLabels.Close()

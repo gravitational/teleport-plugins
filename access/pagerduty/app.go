@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"net/url"
-	"regexp"
 	"strings"
 	"time"
 
@@ -36,8 +35,6 @@ func NewApp(conf Config) (*App, error) {
 	app.mainJob = lib.NewServiceJob(app.run)
 	return app, nil
 }
-
-var emailRegex = regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 
 // Run initializes and runs a watcher and a callback server
 func (a *App) Run(ctx context.Context) error {
@@ -349,7 +346,7 @@ func (a *App) setRequestState(ctx context.Context, reqID, incidentID, userEmail 
 func (a *App) tryAutoApproveRequest(ctx context.Context, req access.Request, incidentID string) error {
 	log := logger.Get(ctx)
 
-	if !emailRegex.MatchString(req.User) {
+	if !lib.IsEmail(req.User) {
 		logger.Get(ctx).Warningf("Failed to auto-approve the request: %q does not look like a valid email", req.User)
 		return nil
 	}

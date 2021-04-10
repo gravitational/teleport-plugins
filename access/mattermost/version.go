@@ -3,7 +3,7 @@
 package main
 
 const (
-	Version = "0.2.0"
+	Version = "6.1.0"
 )
 
 // Gitref variable is automatically set to the output of git-describe

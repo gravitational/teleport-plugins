@@ -2,20 +2,13 @@ package main
 
 import (
 	"context"
-	"crypto/hmac"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
-	"fmt"
 	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
 	"os/user"
+	"regexp"
 	"runtime"
-	"strings"
+	"sort"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -23,33 +16,31 @@ import (
 
 	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
-	"github.com/gravitational/teleport/lib/backend"
-	"github.com/gravitational/teleport/lib/events"
 	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/trace"
-	"github.com/nlopes/slack"
 
 	. "gopkg.in/check.v1"
 )
 
 const (
-	Host        = "localhost"
-	HostID      = "00000000-0000-0000-0000-000000000000"
-	Site        = "local-site"
-	SlackSecret = "f9e77a2814566fe23d33dee5b853955b"
+	Host   = "localhost"
+	HostID = "00000000-0000-0000-0000-000000000000"
+	Site   = "local-site"
 )
+
+var msgFieldRegexp = regexp.MustCompile(`(?im)^\*([a-zA-Z ]+)\*: (.+)$`)
 
 type SlackSuite struct {
 	ctx        context.Context
 	cancel     context.CancelFunc
 	appConfig  Config
 	app        *App
-	publicURL  string
 	raceNumber int
 	me         *user.User
 	fakeSlack  *FakeSlack
-	slackUser  slack.User
+	slackUser  User
 	teleport   *integration.TeleInstance
 	tmpFiles   []*os.File
 }
@@ -68,8 +59,8 @@ func (s *SlackSuite) SetUpSuite(c *C) {
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	s.me, err = user.Current()
 	c.Assert(err, IsNil)
-	userRole, err := services.NewRole("foo", services.RoleSpecV3{
-		Allow: services.RoleConditions{
+	userRole, err := types.NewRole("foo", types.RoleSpecV3{
+		Allow: types.RoleConditions{
 			Logins:  []string{s.me.Username}, // cannot be empty
 			Request: &services.AccessRequestConditions{Roles: []string{"admin"}},
 		},
@@ -77,11 +68,12 @@ func (s *SlackSuite) SetUpSuite(c *C) {
 	c.Assert(err, IsNil)
 	t.AddUserWithRole(s.me.Username, userRole)
 
-	accessPluginRole, err := services.NewRole("access-plugin", services.RoleSpecV3{
-		Allow: services.RoleConditions{
+	accessPluginRole, err := types.NewRole("access-plugin", types.RoleSpecV3{
+		Allow: types.RoleConditions{
 			Logins: []string{"access-plugin"}, // cannot be empty
-			Rules: []services.Rule{
-				services.NewRule("access_request", []string{"list", "read", "update"}),
+			Rules: []types.Rule{
+				types.NewRule("access_request", []string{"list", "read"}),
+				types.NewRule("access_plugin_data", []string{"update"}),
 			},
 		},
 	})
@@ -98,11 +90,10 @@ func (s *SlackSuite) SetUpSuite(c *C) {
 
 func (s *SlackSuite) SetUpTest(c *C) {
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), 5*time.Second)
-	s.publicURL = ""
-	s.fakeSlack = NewFakeSlack(slack.User{Name: "slackbot"}, s.raceNumber)
-	s.slackUser = s.fakeSlack.StoreUser(slack.User{
+	s.fakeSlack = NewFakeSlack(User{Name: "slackbot"}, s.raceNumber)
+	s.slackUser = s.fakeSlack.StoreUser(User{
 		Name: s.me.Username,
-		Profile: slack.UserProfile{
+		Profile: UserProfile{
 			Email: s.me.Username + "@example.com",
 		},
 	})
@@ -139,12 +130,8 @@ func (s *SlackSuite) SetUpTest(c *C) {
 	conf.Teleport.ClientCrt = certFile.Name()
 	conf.Teleport.ClientKey = keyFile.Name()
 	conf.Teleport.RootCAs = casFile.Name()
-	conf.Slack.Secret = SlackSecret
 	conf.Slack.Token = "000000"
-	conf.Slack.Channel = "test"
 	conf.Slack.APIURL = s.fakeSlack.URL() + "/"
-	conf.HTTP.ListenAddr = ":0"
-	conf.HTTP.Insecure = true
 
 	s.appConfig = conf
 }
@@ -170,9 +157,6 @@ func (s *SlackSuite) newTmpFile(c *C, pattern string) (file *os.File) {
 func (s *SlackSuite) startApp(c *C) {
 	var err error
 
-	if s.publicURL != "" {
-		s.appConfig.HTTP.PublicAddr = s.publicURL
-	}
 	s.app, err = NewApp(s.appConfig)
 	c.Assert(err, IsNil)
 
@@ -184,9 +168,6 @@ func (s *SlackSuite) startApp(c *C) {
 	ok, err := s.app.WaitReady(s.ctx)
 	c.Assert(err, IsNil)
 	c.Assert(ok, Equals, true)
-	if s.publicURL == "" {
-		s.publicURL = s.app.PublicURL().String()
-	}
 }
 
 func (s *SlackSuite) shutdownApp(c *C) {
@@ -195,14 +176,28 @@ func (s *SlackSuite) shutdownApp(c *C) {
 	c.Assert(s.app.Err(), IsNil)
 }
 
-func (s *SlackSuite) createAccessRequest(c *C) services.AccessRequest {
-	req, err := s.teleport.CreateAccessRequest(s.ctx, s.me.Username, "admin")
+func (s *SlackSuite) newAccessRequest(c *C, reviewers []User) services.AccessRequest {
+	req, err := services.NewAccessRequest(s.me.Username, "admin")
+	c.Assert(err, IsNil)
+	req.SetRequestReason("because of")
+	var suggestedReviewers []string
+	for _, user := range reviewers {
+		suggestedReviewers = append(suggestedReviewers, user.Profile.Email)
+	}
+	req.SetSuggestedReviewers(suggestedReviewers)
+	return req
+}
+
+func (s *SlackSuite) createAccessRequest(c *C, reviewers []User) services.AccessRequest {
+	req := s.newAccessRequest(c, reviewers)
+	err := s.teleport.CreateAccessRequest(s.ctx, req)
 	c.Assert(err, IsNil)
 	return req
 }
 
-func (s *SlackSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
-	req, err := s.teleport.CreateExpiredAccessRequest(s.ctx, s.me.Username, "admin")
+func (s *SlackSuite) createExpiredAccessRequest(c *C, reviewers []User) services.AccessRequest {
+	req := s.newAccessRequest(c, reviewers)
+	err := s.teleport.CreateExpiredAccessRequest(s.ctx, req)
 	c.Assert(err, IsNil)
 	return req
 }
@@ -213,246 +208,186 @@ func (s *SlackSuite) checkPluginData(c *C, reqID string) PluginData {
 	return DecodePluginData(rawData)
 }
 
-func (s *SlackSuite) pressBlockButton(c *C, msg slack.Msg, blockID, actionID string) {
-	actionBlock := findActionBlock(msg, blockID)
-	c.Assert(actionBlock, NotNil, Commentf("block action %q not found", blockID))
-	button := findButton(*actionBlock, actionID)
-	c.Assert(button, NotNil, Commentf("cannot find block element with action %q", actionID))
-	s.postCallbackAndCheck(c, msg, button.ActionID, button.Value, http.StatusOK)
-}
-
-func (s *SlackSuite) postCallbackAndCheck(c *C, msg slack.Msg, actionID, value string, expectedStatus int) {
-	resp, err := s.postCallback(s.ctx, msg, actionID, value)
-	c.Assert(err, IsNil)
-	c.Assert(resp.Body.Close(), IsNil)
-	c.Assert(resp.StatusCode, Equals, expectedStatus)
-}
-
-func (s *SlackSuite) postCallback(ctx context.Context, msg slack.Msg, actionID, value string) (*http.Response, error) {
-	cb := &slack.InteractionCallback{
-		User: slack.User{
-			ID:   s.slackUser.ID,
-			Name: s.slackUser.Name,
-		},
-		ActionCallback: slack.ActionCallbacks{
-			BlockActions: []*slack.BlockAction{
-				{
-					ActionID: actionID,
-					Value:    value,
-				},
-			},
-		},
-		ResponseURL: fmt.Sprintf("%s/_response/%s", s.fakeSlack.URL(), msg.Timestamp),
-	}
-
-	payload, err := json.Marshal(cb)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	data := url.Values{
-		"payload": {string(payload)},
-	}
-	body := data.Encode()
-
-	stimestamp := fmt.Sprintf("%d", time.Now().Unix())
-	hash := hmac.New(sha256.New, []byte(SlackSecret))
-	_, err = hash.Write([]byte(fmt.Sprintf("v0:%s:%s", stimestamp, body)))
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	signature := hash.Sum(nil)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.publicURL, strings.NewReader(body))
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Add("X-Slack-Request-Timestamp", stimestamp)
-	req.Header.Add("X-Slack-Signature", "v0="+hex.EncodeToString(signature))
-
-	response, err := http.DefaultClient.Do(req)
-	return response, trace.Wrap(err)
-}
-
 // Tests if Interactive Mode posts Slack message with buttons correctly
-func (s *SlackSuite) TestSlackMessagePosting(c *C) {
+func (s *SlackSuite) TestMessagePosting(c *C) {
+	reviewer1 := s.fakeSlack.StoreUser(User{
+		Profile: UserProfile{
+			Email: "user1@example.com",
+		},
+	})
+	reviewer2 := s.fakeSlack.StoreUser(User{
+		Profile: UserProfile{
+			Email: "user2@example.com",
+		},
+	})
+
 	s.startApp(c)
-	request := s.createAccessRequest(c)
+	request := s.createAccessRequest(c, []User{reviewer2, reviewer1})
+
 	pluginData := s.checkPluginData(c, request.GetName())
+	c.Assert(pluginData.SlackData, HasLen, 2)
+
+	var messages []Msg
+	messageSet := make(SlackDataMessageSet)
+	for i := 0; i < 2; i++ {
+		msg, err := s.fakeSlack.CheckNewMessage(s.ctx)
+		c.Assert(err, IsNil)
+		messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, Timestamp: msg.Timestamp})
+		messages = append(messages, msg)
+	}
+
+	c.Assert(messageSet, HasLen, 2)
+	c.Assert(messageSet.Contains(pluginData.SlackData[0]), Equals, true)
+	c.Assert(messageSet.Contains(pluginData.SlackData[1]), Equals, true)
+
+	sort.Sort(SlackMessageSlice(messages))
+
+	c.Assert(messages[0].Channel, Equals, reviewer1.ID)
+	c.Assert(messages[1].Channel, Equals, reviewer2.ID)
+
+	msgReason, err := parseMessageField(messages[0], "Reason")
+	c.Assert(err, IsNil)
+	c.Assert(msgReason, Equals, "because of")
+
+	statusLine, err := getStatusLine(messages[0])
+	c.Assert(err, IsNil)
+	c.Assert(statusLine, Equals, "*Status:* ⏳ PENDING")
+}
+
+func (s *SlackSuite) TestRecipientsConfig(c *C) {
+	reviewer1 := s.fakeSlack.StoreUser(User{
+		Profile: UserProfile{
+			Email: "user1@example.com",
+		},
+	})
+	reviewer2 := s.fakeSlack.StoreUser(User{
+		Profile: UserProfile{
+			Email: "user2@example.com",
+		},
+	})
+
+	s.appConfig.Slack.Recipients = []string{reviewer2.Profile.Email, reviewer1.ID}
+	s.startApp(c)
+	request := s.createAccessRequest(c, nil)
+
+	pluginData := s.checkPluginData(c, request.GetName())
+	c.Assert(pluginData.SlackData, HasLen, 2)
+
+	var (
+		msg      Msg
+		messages []Msg
+	)
+
+	messageSet := make(SlackDataMessageSet)
+
 	msg, err := s.fakeSlack.CheckNewMessage(s.ctx)
 	c.Assert(err, IsNil)
-	c.Assert(pluginData.Timestamp, Equals, msg.Timestamp)
-	c.Assert(pluginData.ChannelID, Equals, msg.Channel)
+	messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, Timestamp: msg.Timestamp})
+	messages = append(messages, msg)
 
-	actionBlock := findActionBlock(msg, "approve_or_deny")
-	c.Assert(actionBlock, NotNil)
-	c.Assert(actionBlock.Elements.ElementSet, HasLen, 2)
-
-	approveButton := findButton(*actionBlock, "approve_request")
-	c.Assert(approveButton, NotNil)
-	c.Assert(approveButton.Value, Equals, request.GetName())
-
-	denyButton := findButton(*actionBlock, "deny_request")
-	c.Assert(denyButton, NotNil)
-	c.Assert(denyButton.Value, Equals, request.GetName())
-}
-
-// Tests if Interactive Mode posts Slack message with buttons correctly
-func (s *SlackSuite) TestSlackMessagePostingReadonly(c *C) {
-	s.appConfig.Slack.NotifyOnly = true
-	s.startApp(c)
-	request := s.createAccessRequest(c)
-	pluginData := s.checkPluginData(c, request.GetName())
-	msg, err := s.fakeSlack.CheckNewMessage(s.ctx)
+	msg, err = s.fakeSlack.CheckNewMessage(s.ctx)
 	c.Assert(err, IsNil)
-	c.Assert(pluginData.Timestamp, Equals, msg.Timestamp)
-	c.Assert(pluginData.ChannelID, Equals, msg.Channel)
+	messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, Timestamp: msg.Timestamp})
+	messages = append(messages, msg)
 
-	actionBlock := findActionBlock(msg, "approve_or_deny")
-	c.Assert(actionBlock, IsNil, Commentf("there should be no buttons block in readonly mode"))
+	c.Assert(messageSet, HasLen, 2)
+	c.Assert(messageSet.Contains(pluginData.SlackData[0]), Equals, true)
+	c.Assert(messageSet.Contains(pluginData.SlackData[1]), Equals, true)
+
+	sort.Sort(SlackMessageSlice(messages))
+
+	c.Assert(messages[0].Channel, Equals, reviewer1.ID)
+	c.Assert(messages[1].Channel, Equals, reviewer2.ID)
 }
 
 func (s *SlackSuite) TestApproval(c *C) {
+	reviewer := s.fakeSlack.StoreUser(User{
+		Profile: UserProfile{
+			Email: "user@example.com",
+		},
+	})
 	s.startApp(c)
-	request := s.createAccessRequest(c)
-	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
-
+	req := s.createAccessRequest(c, []User{reviewer})
 	msg, err := s.fakeSlack.CheckNewMessage(s.ctx)
 	c.Assert(err, IsNil)
-	s.pressBlockButton(c, msg, "approve_or_deny", "approve_request")
+	c.Assert(msg.Channel, Equals, reviewer.ID)
 
-	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByResponding(s.ctx)
-	c.Assert(err, IsNil)
-	c.Assert(msgUpdate.Timestamp, Equals, msg.Timestamp)
-	actionBlock := findActionBlock(msgUpdate, "approve_or_deny")
-	c.Assert(actionBlock, IsNil, Commentf("there should be no buttons block after request approval"))
-
-	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
-	c.Assert(err, IsNil)
-	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
-
-	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdateEvent, "id": request.GetName()})
-	c.Assert(err, IsNil)
-	c.Assert(auditLog, HasLen, 1)
-	c.Assert(auditLog[0].GetString("state"), Equals, "APPROVED")
-	c.Assert(auditLog[0].GetString("delegator"), Equals, "slack:"+s.slackUser.Profile.Email)
-}
-
-func (s *SlackSuite) TestDenial(c *C) {
-	s.startApp(c)
-	request := s.createAccessRequest(c)
-	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
-
-	msg, err := s.fakeSlack.CheckNewMessage(s.ctx)
-	c.Assert(err, IsNil)
-	s.pressBlockButton(c, msg, "approve_or_deny", "deny_request")
-
-	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByResponding(s.ctx)
-	c.Assert(err, IsNil)
-	c.Assert(msgUpdate.Timestamp, Equals, msg.Timestamp)
-	actionBlock := findActionBlock(msgUpdate, "approve_or_deny")
-	c.Assert(actionBlock, IsNil, Commentf("there should be no buttons block after request denial"))
-
-	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
-	c.Assert(err, IsNil)
-	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
-
-	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdateEvent, "id": request.GetName()})
-	c.Assert(err, IsNil)
-	c.Assert(auditLog, HasLen, 1)
-	c.Assert(auditLog[0].GetString("state"), Equals, "DENIED")
-	c.Assert(auditLog[0].GetString("delegator"), Equals, "slack:"+s.slackUser.Profile.Email)
-}
-
-func (s *SlackSuite) TestApproveReadonly(c *C) {
-	s.appConfig.Slack.NotifyOnly = true
-	s.startApp(c)
-	request := s.createAccessRequest(c)
-	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
-
-	msg, err := s.fakeSlack.CheckNewMessage(s.ctx)
-	c.Assert(err, IsNil)
-	s.postCallbackAndCheck(c, msg, "approve_request", request.GetName(), http.StatusUnauthorized)
-
-	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
-	c.Assert(err, IsNil)
-	c.Assert(request.GetState(), Equals, services.RequestState_PENDING)
-}
-
-func (s *SlackSuite) TestDenyReadonly(c *C) {
-	s.appConfig.Slack.NotifyOnly = true
-	s.startApp(c)
-	request := s.createAccessRequest(c)
-	s.checkPluginData(c, request.GetName()) // when plugin data created, we are sure that request is completely served.
-
-	msg, err := s.fakeSlack.CheckNewMessage(s.ctx)
-	c.Assert(err, IsNil)
-	s.postCallbackAndCheck(c, msg, "deny_request", request.GetName(), http.StatusUnauthorized)
-
-	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
-	c.Assert(err, IsNil)
-	c.Assert(request.GetState(), Equals, services.RequestState_PENDING)
-}
-
-func (s *SlackSuite) TestExpiration(c *C) {
-	s.startApp(c)
-	s.createExpiredAccessRequest(c)
-	msg, err := s.fakeSlack.CheckNewMessage(s.ctx)
+	err = s.teleport.SetAccessRequestState(s.ctx, services.AccessRequestUpdate{
+		RequestID: req.GetName(),
+		State:     types.RequestState_APPROVED,
+	})
 	c.Assert(err, IsNil)
 
 	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.ctx)
 	c.Assert(err, IsNil)
-	c.Assert(msg.Timestamp, Equals, msgUpdate.Timestamp)
-	c.Assert(findActionBlock(msgUpdate, "approve_or_deny"), IsNil, Commentf("there should be no buttons block after request expiration"))
+	c.Assert(msgUpdate.Channel, Equals, reviewer.ID)
+	c.Assert(msgUpdate.Timestamp, Equals, msg.Timestamp)
+
+	statusLine, err := getStatusLine(msgUpdate)
+	c.Assert(err, IsNil)
+	c.Assert(statusLine, Equals, "*Status:* ✅ APPROVED")
 }
 
-func (s *SlackSuite) TestApproveExpired(c *C) {
+func (s *SlackSuite) TestDenial(c *C) {
+	reviewer := s.fakeSlack.StoreUser(User{
+		Profile: UserProfile{
+			Email: "user@example.com",
+		},
+	})
 	s.startApp(c)
-	s.createExpiredAccessRequest(c)
+	req := s.createAccessRequest(c, []User{reviewer})
 	msg, err := s.fakeSlack.CheckNewMessage(s.ctx)
 	c.Assert(err, IsNil)
+	c.Assert(msg.Channel, Equals, reviewer.ID)
 
-	msg1, err := s.fakeSlack.CheckMessageUpdateByAPI(s.ctx)
+	err = s.teleport.SetAccessRequestState(s.ctx, services.AccessRequestUpdate{
+		RequestID: req.GetName(),
+		State:     types.RequestState_DENIED,
+	})
 	c.Assert(err, IsNil)
-	c.Assert(msg1.Timestamp, Equals, msg.Timestamp)
 
-	msg = s.fakeSlack.StoreMessage(msg) // Restore the message to have an action block.
-	c.Assert(findActionBlock(msg, "approve_or_deny"), NotNil, Commentf("there should be an action block"))
-
-	s.pressBlockButton(c, msg, "approve_or_deny", "approve_request")
-
-	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByResponding(s.ctx)
+	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.ctx)
 	c.Assert(err, IsNil)
-	c.Assert(msg.Timestamp, Equals, msgUpdate.Timestamp)
-	c.Assert(findActionBlock(msgUpdate, "approve_or_deny"), IsNil, Commentf("there should be no buttons block after request expiration"))
+	c.Assert(msgUpdate.Channel, Equals, reviewer.ID)
+	c.Assert(msgUpdate.Timestamp, Equals, msg.Timestamp)
+
+	statusLine, err := getStatusLine(msgUpdate)
+	c.Assert(err, IsNil)
+	c.Assert(statusLine, Equals, "*Status:* ❌ DENIED")
 }
 
-func (s *SlackSuite) TestDenyExpired(c *C) {
+func (s *SlackSuite) TestExpiration(c *C) {
+	reviewer := s.fakeSlack.StoreUser(User{
+		Profile: UserProfile{
+			Email: "user@example.com",
+		},
+	})
 	s.startApp(c)
-	s.createExpiredAccessRequest(c)
+	s.createExpiredAccessRequest(c, []User{reviewer})
 	msg, err := s.fakeSlack.CheckNewMessage(s.ctx)
 	c.Assert(err, IsNil)
+	c.Assert(msg.Channel, Equals, reviewer.ID)
 
-	msg1, err := s.fakeSlack.CheckMessageUpdateByAPI(s.ctx)
+	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.ctx)
 	c.Assert(err, IsNil)
-	c.Assert(msg1.Timestamp, Equals, msg.Timestamp)
+	c.Assert(msgUpdate.Channel, Equals, reviewer.ID)
+	c.Assert(msgUpdate.Timestamp, Equals, msg.Timestamp)
 
-	msg = s.fakeSlack.StoreMessage(msg) // Restore the message to have an action block.
-	c.Assert(findActionBlock(msg, "approve_or_deny"), NotNil, Commentf("there should be an action block"))
-
-	s.pressBlockButton(c, msg, "approve_or_deny", "deny_request")
-
-	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByResponding(s.ctx)
+	statusLine, err := getStatusLine(msgUpdate)
 	c.Assert(err, IsNil)
-	c.Assert(msg.Timestamp, Equals, msgUpdate.Timestamp)
-	c.Assert(findActionBlock(msgUpdate, "approve_or_deny"), IsNil, Commentf("there should be no buttons block after request expiration"))
+	c.Assert(statusLine, Equals, "*Status:* ⌛ EXPIRED")
 }
 
 func (s *SlackSuite) TestRace(c *C) {
 	prevLogLevel := log.GetLevel()
 	log.SetLevel(log.InfoLevel) // Turn off noisy debug logging
 	defer log.SetLevel(prevLogLevel)
+
+	reviewer := s.fakeSlack.StoreUser(User{
+		Profile: UserProfile{
+			Email: "user@example.com",
+		},
+	})
 
 	s.cancel() // Cancel the default timeout
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), 10*time.Second)
@@ -461,7 +396,6 @@ func (s *SlackSuite) TestRace(c *C) {
 	var (
 		raceErr     error
 		raceErrOnce sync.Once
-		requests    sync.Map
 	)
 	setRaceErr := func(err error) error {
 		raceErrOnce.Do(func() {
@@ -470,97 +404,46 @@ func (s *SlackSuite) TestRace(c *C) {
 		return err
 	}
 
-	watcher, err := s.teleport.Process.GetAuthServer().NewWatcher(s.ctx, services.Watch{
-		Kinds: []services.WatchKind{
-			{
-				Kind: services.KindAccessRequest,
-			},
-		},
-	})
-	c.Assert(err, IsNil)
-	defer watcher.Close()
-	c.Assert((<-watcher.Events()).Type, Equals, backend.OpInit)
-
 	process := lib.NewProcess(s.ctx)
 	for i := 0; i < s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			_, err := s.teleport.CreateAccessRequest(ctx, s.me.Username, "admin")
-			if err := trace.Wrap(err); err != nil {
-				return setRaceErr(err)
+			req, err := services.NewAccessRequest(s.me.Username, "admin")
+			if err != nil {
+				return setRaceErr(trace.Wrap(err))
+			}
+			req.SetSuggestedReviewers([]string{reviewer.Profile.Email})
+			if err := s.teleport.CreateAccessRequest(ctx, req); err != nil {
+				return setRaceErr(trace.Wrap(err))
 			}
 			return nil
 		})
 		process.SpawnCritical(func(ctx context.Context) error {
 			msg, err := s.fakeSlack.CheckNewMessage(ctx)
-			if err := trace.Wrap(err); err != nil {
-				return setRaceErr(err)
-			}
-			actionBlock := findActionBlock(msg, "approve_or_deny")
-			if actionBlock == nil {
-				return setRaceErr(trace.Errorf("action block not found"))
-			}
-			if obtained, expected := len(actionBlock.Elements.ElementSet), 2; obtained != expected {
-				return setRaceErr(trace.Errorf("wrong block elements size. expected %v, obtained %v", expected, obtained))
-			}
-			button := findButton(*actionBlock, "approve_request")
-			if button == nil {
-				return setRaceErr(trace.Errorf("approve button is not found"))
+			if err != nil {
+				return setRaceErr(trace.Wrap(err))
 			}
 
-			ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
-			defer cancel()
-			var lastErr error
-			for {
-				log.Infof("Trying to press \"Approve\" on msg %q", msg.Timestamp)
-				resp, err := s.postCallback(ctx, msg, button.ActionID, button.Value)
-				if err != nil {
-					if lib.IsDeadline(err) {
-						return setRaceErr(lastErr)
-					}
-					return setRaceErr(trace.Wrap(err))
-				}
-				if err := resp.Body.Close(); err != nil {
-					return setRaceErr(trace.Wrap(err))
-				}
-				if status := resp.StatusCode; status != http.StatusOK {
-					lastErr = trace.Errorf("got %v http code from webhook server", status)
-				} else {
-					return nil
-				}
+			reqID, err := parseMessageField(msg, "ID")
+			if err != nil {
+				return setRaceErr(trace.Wrap(err))
 			}
-		})
-		process.SpawnCritical(func(ctx context.Context) error {
-			msg, err := s.fakeSlack.CheckMessageUpdateByResponding(ctx)
-			if err := trace.Wrap(err); err != nil {
-				return setRaceErr(err)
+
+			if _, err := s.teleport.PollAccessRequestPluginData(s.ctx, "slack", reqID); err != nil {
+				return setRaceErr(trace.Wrap(err))
 			}
-			if obtained, expected := findActionBlock(msg, "approve_or_deny"), (*slack.ActionBlock)(nil); obtained != expected {
-				return setRaceErr(trace.Errorf("there should be no buttons block after request approval"))
+
+			if err = s.teleport.SetAccessRequestState(ctx, services.AccessRequestUpdate{
+				RequestID: reqID,
+				State:     types.RequestState_APPROVED,
+			}); err != nil {
+				return setRaceErr(trace.Wrap(err))
 			}
+
 			return nil
 		})
-	}
-	for i := 0; i < 2*s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			var event services.Event
-			select {
-			case event = <-watcher.Events():
-			case <-ctx.Done():
-				return setRaceErr(trace.Wrap(ctx.Err()))
-			}
-			if obtained, expected := event.Type, backend.OpPut; obtained != expected {
-				return setRaceErr(trace.Errorf("wrong event type. expected %v, obtained %v", expected, obtained))
-			}
-			req := event.Resource.(services.AccessRequest)
-			var newCounter int64
-			val, _ := requests.LoadOrStore(req.GetName(), &newCounter)
-			switch state := req.GetState(); state {
-			case services.RequestState_PENDING:
-				atomic.AddInt64(val.(*int64), 1)
-			case services.RequestState_APPROVED:
-				atomic.AddInt64(val.(*int64), -1)
-			default:
-				return setRaceErr(trace.Errorf("wrong request state %v", state))
+			if _, err := s.fakeSlack.CheckMessageUpdateByAPI(ctx); err != nil {
+				return setRaceErr(trace.Wrap(err))
 			}
 			return nil
 		})
@@ -568,31 +451,51 @@ func (s *SlackSuite) TestRace(c *C) {
 	process.Terminate()
 	<-process.Done()
 	c.Assert(raceErr, IsNil)
-
-	var count int
-	requests.Range(func(key, val interface{}) bool {
-		count++
-		c.Assert(*val.(*int64), Equals, int64(0))
-		return true
-	})
-	c.Assert(count, Equals, s.raceNumber)
 }
 
-func findActionBlock(msg slack.Msg, blockID string) *slack.ActionBlock {
-	for _, block := range msg.Blocks.BlockSet {
-		if actionBlock, ok := block.(*slack.ActionBlock); ok && actionBlock.BlockID == blockID {
-			return actionBlock
-		}
+func parseMessageField(msg Msg, field string) (string, error) {
+	block := msg.BlockItems[1].Block
+	sectionBlock, ok := block.(SectionBlock)
+	if !ok {
+		return "", trace.Errorf("invalid block type %T", block)
 	}
-	return nil
+
+	if sectionBlock.Text.TextObject == nil {
+		return "", trace.Errorf("section block does not contain text")
+	}
+
+	text := sectionBlock.Text.GetText()
+	matches := msgFieldRegexp.FindAllStringSubmatch(text, -1)
+	if matches == nil {
+		return "", trace.Errorf("cannot parse fields from text %q", text)
+	}
+	var fields []string
+	for _, match := range matches {
+		if match[1] == field {
+			return match[2], nil
+		}
+		fields = append(fields, match[1])
+	}
+	return "", trace.Errorf("cannot find field %q in %v", field, fields)
 }
 
-func findButton(block slack.ActionBlock, actionID string) *slack.ButtonBlockElement {
-	for _, element := range block.Elements.ElementSet {
-		buttonElement, ok := element.(*slack.ButtonBlockElement)
-		if ok && buttonElement.ActionID == actionID {
-			return buttonElement
-		}
+func getStatusLine(msg Msg) (string, error) {
+	block := msg.BlockItems[2].Block
+	contextBlock, ok := block.(ContextBlock)
+	if !ok {
+		return "", trace.Errorf("invalid block type %T", block)
 	}
-	return nil
+
+	elementItems := contextBlock.ElementItems
+	if n := len(elementItems); n != 1 {
+		return "", trace.Errorf("expected only one context element, got %v", n)
+	}
+
+	element := elementItems[0].ContextElement
+	textBlock, ok := element.(TextObject)
+	if !ok {
+		return "", trace.Errorf("invalid element type %T", element)
+	}
+
+	return textBlock.GetText(), nil
 }

@@ -32,6 +32,7 @@ import (
 	"golang.org/x/crypto/ssh"
 
 	"github.com/gravitational/teleport"
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/lib/auth"
 	"github.com/gravitational/teleport/lib/auth/native"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
@@ -82,10 +83,10 @@ type TeleInstance struct {
 }
 
 type User struct {
-	Username      string          `json:"username"`
-	AllowedLogins []string        `json:"logins"`
-	Key           *client.Key     `json:"key"`
-	Roles         []services.Role `json:"-"`
+	Username      string       `json:"username"`
+	AllowedLogins []string     `json:"logins"`
+	Key           *client.Key  `json:"key"`
+	Roles         []types.Role `json:"-"`
 }
 
 type InstanceSecrets struct {
@@ -141,8 +142,7 @@ func NewInstance(cfg InstanceConfig) *TeleInstance {
 		panicIf(err)
 	}
 	// generate instance secrets (keys):
-	keygen, err := native.New(context.TODO(), native.PrecomputeKeys(0))
-	panicIf(err)
+	keygen := native.New(context.TODO(), native.PrecomputeKeys(0))
 	if cfg.Priv == nil || cfg.Pub == nil {
 		cfg.Priv, cfg.Pub, _ = keygen.GenerateKeyPair("")
 	}
@@ -166,7 +166,7 @@ func NewInstance(cfg InstanceConfig) *TeleInstance {
 		TTL:                 time.Hour * 24,
 	})
 	panicIf(err)
-	tlsCA, err := tlsca.New(tlsCACert, tlsCAKey)
+	tlsCA, err := tlsca.FromKeys(tlsCACert, tlsCAKey)
 	panicIf(err)
 	cryptoPubKey, err := sshutils.CryptoPublicKey(cfg.Pub)
 	panicIf(err)
@@ -205,8 +205,8 @@ func NewInstance(cfg InstanceConfig) *TeleInstance {
 }
 
 // GetRoles returns a list of roles to initiate for this secret
-func (s *InstanceSecrets) GetRoles() []services.Role {
-	var roles []services.Role
+func (s *InstanceSecrets) GetRoles() []types.Role {
+	var roles []types.Role
 	for _, ca := range s.GetCAs() {
 		if ca.GetType() != services.UserCA {
 			continue
@@ -361,7 +361,7 @@ func (i *TeleInstance) CreateEx(trustedSecrets []*InstanceSecrets, tconf *servic
 	auth := i.Process.GetAuthServer()
 
 	for _, user := range i.Secrets.Users {
-		teleUser, err := services.NewUser(user.Username)
+		teleUser, err := types.NewUser(user.Username)
 		if err != nil {
 			return trace.Wrap(err)
 		}
@@ -423,10 +423,10 @@ func (i *TeleInstance) Reset() (err error) {
 }
 
 // AddUserUserWithRole adds user with one or many assigned roles
-func (i *TeleInstance) AddUserWithRole(username string, roles ...services.Role) *User {
+func (i *TeleInstance) AddUserWithRole(username string, roles ...types.Role) *User {
 	user := &User{
 		Username: username,
-		Roles:    make([]services.Role, len(roles)),
+		Roles:    make([]types.Role, len(roles)),
 	}
 	copy(user.Roles, roles)
 	i.Secrets.Users[username] = user
@@ -448,25 +448,19 @@ func (i *TeleInstance) AddUser(username string, mappings []string) *User {
 	return user
 }
 
-func (i *TeleInstance) CreateAccessRequest(ctx context.Context, user string, roles ...string) (services.AccessRequest, error) {
-	auth := i.Process.GetAuthServer()
-	req, err := services.NewAccessRequest(user, roles...)
-	if err != nil {
-		return req, err
-	}
-	err = auth.CreateAccessRequest(ctx, req)
-	return req, err
+func (i *TeleInstance) CreateAccessRequest(ctx context.Context, req types.AccessRequest) error {
+	return i.Process.GetAuthServer().CreateAccessRequest(ctx, req)
 }
 
-func (i *TeleInstance) CreateExpiredAccessRequest(ctx context.Context, user string, roles ...string) (services.AccessRequest, error) {
-	req, err := services.NewAccessRequest(user, roles...)
-	if err != nil {
-		return req, err
-	}
+func (i *TeleInstance) SetAccessRequestState(ctx context.Context, update types.AccessRequestUpdate) error {
+	return i.Process.GetAuthServer().SetAccessRequestState(ctx, update)
+}
+
+func (i *TeleInstance) CreateExpiredAccessRequest(ctx context.Context, req types.AccessRequest) error {
 	ttl := time.Millisecond * 250
 	req.SetAccessExpiry(time.Now().Add(ttl))
-	if err = i.Process.GetAuthServer().CreateAccessRequest(ctx, req); err != nil {
-		return req, err
+	if err := i.CreateAccessRequest(ctx, req); err != nil {
+		return err
 	}
 
 	time.Sleep(ttl)
@@ -475,7 +469,7 @@ func (i *TeleInstance) CreateExpiredAccessRequest(ctx context.Context, user stri
 	for {
 		req1, err := i.GetAccessRequest(ctx, req.GetName())
 		if err != nil {
-			return req, trace.Wrap(err)
+			return trace.Wrap(err)
 		}
 		if req1 == nil {
 			break
@@ -483,11 +477,11 @@ func (i *TeleInstance) CreateExpiredAccessRequest(ctx context.Context, user stri
 		time.Sleep(25 * time.Millisecond)
 	}
 
-	return req, nil
+	return nil
 }
 
-func (i *TeleInstance) GetAccessRequest(ctx context.Context, reqID string) (services.AccessRequest, error) {
-	requests, err := i.Process.GetAuthServer().GetAccessRequests(ctx, services.AccessRequestFilter{ID: reqID})
+func (i *TeleInstance) GetAccessRequest(ctx context.Context, reqID string) (types.AccessRequest, error) {
+	requests, err := i.Process.GetAuthServer().GetAccessRequests(ctx, types.AccessRequestFilter{ID: reqID})
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}

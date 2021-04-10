@@ -1,4 +1,4 @@
-VERSION=0.2.0
+VERSION=6.1.0-dev
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-slack

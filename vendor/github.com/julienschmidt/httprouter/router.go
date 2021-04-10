@@ -34,7 +34,7 @@
 // The router matches incoming requests by the request method and the path.
 // If a handle is registered for this path and method, the router delegates the
 // request to that function.
-// For the methods GET, POST, PUT, PATCH and DELETE shortcut functions exist to
+// For the methods GET, POST, PUT, PATCH, DELETE and OPTIONS shortcut functions exist to
 // register handles, for all other methods router.Handle can be used.
 //
 // The registered path, against which the router matches incoming requests, can
@@ -80,11 +80,12 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"sync"
 )
 
 // Handle is a function that can be registered to a route to handle HTTP
 // requests. Like http.HandlerFunc, but has a third parameter for the values of
-// wildcards (variables).
+// wildcards (path variables).
 type Handle func(http.ResponseWriter, *http.Request, Params)
 
 // Param is a single URL parameter, consisting of a key and a value.
@@ -101,9 +102,9 @@ type Params []Param
 // ByName returns the value of the first Param which key matches the given name.
 // If no matching Param is found, an empty string is returned.
 func (ps Params) ByName(name string) string {
-	for i := range ps {
-		if ps[i].Key == name {
-			return ps[i].Value
+	for _, p := range ps {
+		if p.Key == name {
+			return p.Value
 		}
 	}
 	return ""
@@ -121,16 +122,36 @@ func ParamsFromContext(ctx context.Context) Params {
 	return p
 }
 
+// MatchedRoutePathParam is the Param name under which the path of the matched
+// route is stored, if Router.SaveMatchedRoutePath is set.
+var MatchedRoutePathParam = "$matchedRoutePath"
+
+// MatchedRoutePath retrieves the path of the matched route.
+// Router.SaveMatchedRoutePath must have been enabled when the respective
+// handler was added, otherwise this function always returns an empty string.
+func (ps Params) MatchedRoutePath() string {
+	return ps.ByName(MatchedRoutePathParam)
+}
+
 // Router is a http.Handler which can be used to dispatch requests to different
 // handler functions via configurable routes
 type Router struct {
 	trees map[string]*node
 
+	paramsPool sync.Pool
+	maxParams  uint16
+
+	// If enabled, adds the matched route path onto the http.Request context
+	// before invoking the handler.
+	// The matched route path is only added to handlers of routes that were
+	// registered when this option was enabled.
+	SaveMatchedRoutePath bool
+
 	// Enables automatic redirection if the current route can't be matched but a
 	// handler for the path with (without) the trailing slash exists.
 	// For example if /foo/ is requested but a route only exists for /foo, the
 	// client is redirected to /foo with http status code 301 for GET requests
-	// and 307 for all other request methods.
+	// and 308 for all other request methods.
 	RedirectTrailingSlash bool
 
 	// If enabled, the router tries to fix the current request path, if no
@@ -138,7 +159,7 @@ type Router struct {
 	// First superfluous path elements like ../ or // are removed.
 	// Afterwards the router does a case-insensitive lookup of the cleaned path.
 	// If a handle can be found for this route, the router makes a redirection
-	// to the corrected path with status code 301 for GET requests and 307 for
+	// to the corrected path with status code 301 for GET requests and 308 for
 	// all other request methods.
 	// For example /FOO and /..//Foo could be redirected to /foo.
 	// RedirectTrailingSlash is independent of this option.
@@ -198,6 +219,33 @@ func New() *Router {
 	}
 }
 
+func (r *Router) getParams() *Params {
+	ps, _ := r.paramsPool.Get().(*Params)
+	*ps = (*ps)[0:0] // reset slice
+	return ps
+}
+
+func (r *Router) putParams(ps *Params) {
+	if ps != nil {
+		r.paramsPool.Put(ps)
+	}
+}
+
+func (r *Router) saveMatchedRoutePath(path string, handle Handle) Handle {
+	return func(w http.ResponseWriter, req *http.Request, ps Params) {
+		if ps == nil {
+			psp := r.getParams()
+			ps = (*psp)[0:1]
+			ps[0] = Param{Key: MatchedRoutePathParam, Value: path}
+			handle(w, req, ps)
+			r.putParams(psp)
+		} else {
+			ps = append(ps, Param{Key: MatchedRoutePathParam, Value: path})
+			handle(w, req, ps)
+		}
+	}
+}
+
 // GET is a shortcut for router.Handle(http.MethodGet, path, handle)
 func (r *Router) GET(path string, handle Handle) {
 	r.Handle(http.MethodGet, path, handle)
@@ -242,8 +290,21 @@ func (r *Router) DELETE(path string, handle Handle) {
 // frequently used, non-standardized or custom methods (e.g. for internal
 // communication with a proxy).
 func (r *Router) Handle(method, path string, handle Handle) {
+	varsCount := uint16(0)
+
+	if method == "" {
+		panic("method must not be empty")
+	}
 	if len(path) < 1 || path[0] != '/' {
 		panic("path must begin with '/' in path '" + path + "'")
+	}
+	if handle == nil {
+		panic("handle must not be nil")
+	}
+
+	if r.SaveMatchedRoutePath {
+		varsCount++
+		handle = r.saveMatchedRoutePath(path, handle)
 	}
 
 	if r.trees == nil {
@@ -259,6 +320,19 @@ func (r *Router) Handle(method, path string, handle Handle) {
 	}
 
 	root.addRoute(path, handle)
+
+	// Update maxParams
+	if paramsCount := countParams(path); paramsCount+varsCount > r.maxParams {
+		r.maxParams = paramsCount + varsCount
+	}
+
+	// Lazy-init paramsPool alloc func
+	if r.paramsPool.New == nil && r.maxParams > 0 {
+		r.paramsPool.New = func() interface{} {
+			ps := make(Params, 0, r.maxParams)
+			return &ps
+		}
+	}
 }
 
 // Handler is an adapter which allows the usage of an http.Handler as a
@@ -319,7 +393,15 @@ func (r *Router) recv(w http.ResponseWriter, req *http.Request) {
 // the same path with an extra / without the trailing slash should be performed.
 func (r *Router) Lookup(method, path string) (Handle, Params, bool) {
 	if root := r.trees[method]; root != nil {
-		return root.getValue(path)
+		handle, ps, tsr := root.getValue(path, r.getParams)
+		if handle == nil {
+			r.putParams(ps)
+			return nil, nil, tsr
+		}
+		if ps == nil {
+			return handle, nil, tsr
+		}
+		return handle, *ps, tsr
 	}
 	return nil, nil, false
 }
@@ -347,7 +429,7 @@ func (r *Router) allowed(path, reqMethod string) (allow string) {
 				continue
 			}
 
-			handle, _, _ := r.trees[method].getValue(path)
+			handle, _, _ := r.trees[method].getValue(path, nil)
 			if handle != nil {
 				// Add request method to list of allowed methods
 				allowed = append(allowed, method)
@@ -371,7 +453,8 @@ func (r *Router) allowed(path, reqMethod string) (allow string) {
 		// return as comma separated list
 		return strings.Join(allowed, ", ")
 	}
-	return
+
+	return allow
 }
 
 // ServeHTTP makes the router implement the http.Handler interface.
@@ -383,15 +466,20 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	path := req.URL.Path
 
 	if root := r.trees[req.Method]; root != nil {
-		if handle, ps, tsr := root.getValue(path); handle != nil {
-			handle(w, req, ps)
+		if handle, ps, tsr := root.getValue(path, r.getParams); handle != nil {
+			if ps != nil {
+				handle(w, req, *ps)
+				r.putParams(ps)
+			} else {
+				handle(w, req, nil)
+			}
 			return
 		} else if req.Method != http.MethodConnect && path != "/" {
-			code := 301 // Permanent redirect, request with GET method
+			// Moved Permanently, request with GET method
+			code := http.StatusMovedPermanently
 			if req.Method != http.MethodGet {
-				// Temporary redirect, request with same method
-				// As of Go 1.3, Go does not support status code 308.
-				code = 307
+				// Permanent Redirect, request with same method
+				code = http.StatusPermanentRedirect
 			}
 
 			if tsr && r.RedirectTrailingSlash {
@@ -411,7 +499,7 @@ func (r *Router) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 					r.RedirectTrailingSlash,
 				)
 				if found {
-					req.URL.Path = string(fixedPath)
+					req.URL.Path = fixedPath
 					http.Redirect(w, req, req.URL.String(), code)
 					return
 				}
