@@ -100,6 +100,17 @@ _Note: by default, tctl auth sign produces certificates with a relatively short
 lifetime. For production deployments, the --ttl flag can be used to ensure a
 more practical certificate lifetime. --ttl=8760h exports a 1 year token_
 
+#### Export access-plugin Certificate for use with Teleport Cloud
+
+Connection to Teleport Cloud is only possible with reverse tunnel. For this reason,
+we need the identity signed in a different format called `file` which exports
+SSH keys too.
+
+```bash
+$ tctl auth sign --auth-server=yourproxy.teleport.sh:443 --format=file --user=access-plugin --out=auth --ttl=8760h
+# ...
+```
+
 ## Downloading and installing the plugin
 
 The recommended way to run Teleport Mattermost plugin is by downloading the
@@ -152,6 +163,14 @@ token = "api-token"                    # Mattermost Bot OAuth token
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/mattermost.log"
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
+```
+
+To use with Teleport Cloud, you should set a path to identity file exported with `--format=file` option.
+
+```TOML
+[teleport]
+auth_server = "yourproxy.teleport.sh"                  # Teleport proxy address
+identity = "/var/lib/teleport/plugins/mattermost/auth" # Teleport identity file
 ```
 
 ### Running the plugin

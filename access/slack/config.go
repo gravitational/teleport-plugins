@@ -57,18 +57,6 @@ func LoadConfig(filepath string) (*Config, error) {
 // if some values are missing.
 // If critical values are missing and we can't set defaults for them — this will return an error.
 func (c *Config) CheckAndSetDefaults() error {
-	if c.Teleport.AuthServer == "" {
-		c.Teleport.AuthServer = "localhost:3025"
-	}
-	if c.Teleport.ClientKey == "" {
-		c.Teleport.ClientKey = "client.key"
-	}
-	if c.Teleport.ClientCrt == "" {
-		c.Teleport.ClientCrt = "client.pem"
-	}
-	if c.Teleport.RootCAs == "" {
-		c.Teleport.RootCAs = "cas.pem"
-	}
 	if c.Slack.Token == "" {
 		return trace.BadParameter("missing required value slack.token")
 	}
