@@ -1,23 +1,61 @@
+/*
+Copyright 2020-2021 Gravitational, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
 	"context"
+	"fmt"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/access"
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/jonboulle/clockwork"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/backoff"
+	grpcbackoff "google.golang.org/grpc/backoff"
+
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/backoff"
+	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport-plugins/lib/watcherjob"
+	"github.com/gravitational/teleport/api/client"
+	"github.com/gravitational/teleport/api/client/proto"
+	"github.com/gravitational/teleport/api/types"
+	apiutils "github.com/gravitational/teleport/api/utils"
 
 	"github.com/gravitational/trace"
 )
 
-// MinServerVersion is the minimal teleport version the plugin supports.
-const MinServerVersion = "5.0.0"
+const (
+	// minServerVersion is the minimal teleport version the plugin supports.
+	minServerVersion = "6.1.0"
+	// pluginName is used to tag PluginData and as a Delegator in Audit log.
+	pluginName = "jira"
+	// grpcBackoffMaxDelay is a maximum time GRPC client waits before reconnection attempt.
+	grpcBackoffMaxDelay = time.Second * 2
+	// initTimeout is used to bound execution time of health check and teleport version check.
+	initTimeout = time.Second * 10
+	// handlerTimeout is used to bound the execution time of watcher event handler.
+	handlerTimeout = time.Second * 5
+	// modifyPluginDataBackoffBase is an initial (minimum) backoff value.
+	modifyPluginDataBackoffBase = time.Millisecond
+	// modifyPluginDataBackoffMax is a backoff threshold
+	modifyPluginDataBackoffMax = time.Second
+)
 
 var resolveReasonInlineRegex = regexp.MustCompile(`(?im)^ *(resolution|reason) *: *(.+)$`)
 var resolveReasonSeparatorRegex = regexp.MustCompile(`(?im)^ *(resolution|reason) *: *$`)
@@ -26,10 +64,10 @@ var resolveReasonSeparatorRegex = regexp.MustCompile(`(?im)^ *(resolution|reason
 type App struct {
 	conf Config
 
-	accessClient access.Client
-	bot          *Bot
-	webhookSrv   *WebhookServer
-	mainJob      lib.ServiceJob
+	apiClient  *client.Client
+	jira       Jira
+	webhookSrv *WebhookServer
+	mainJob    lib.ServiceJob
 
 	*lib.Process
 }
@@ -59,6 +97,7 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 	return a.mainJob.WaitReady(ctx)
 }
 
+// PublicURL returns a webhook base URL.
 func (a *App) PublicURL() *url.URL {
 	if !a.mainJob.IsReady() {
 		panic("app is not running")
@@ -66,78 +105,44 @@ func (a *App) PublicURL() *url.URL {
 	return a.webhookSrv.BaseURL()
 }
 
-func (a *App) run(ctx context.Context) (err error) {
+func (a *App) run(ctx context.Context) error {
+	var err error
+
 	log := logger.Get(ctx)
-	log.Infof("Starting Teleport Access JIRAbot %s:%s", Version, Gitref)
+	log.Infof("Starting Teleport Jira Plugin %s:%s", Version, Gitref)
 
-	// Create webhook server prividing a.OnJIRAWebhook as a callback function
-	a.webhookSrv, err = NewWebhookServer(a.conf.HTTP, a.onJIRAWebhook)
-	if err != nil {
-		return
-	}
-
-	a.bot = NewBot(a.conf.JIRA)
-
-	tlsConf, err := access.LoadTLSConfig(
-		a.conf.Teleport.ClientCrt,
-		a.conf.Teleport.ClientKey,
-		a.conf.Teleport.RootCAs,
-	)
-	if trace.Unwrap(err) == access.ErrInvalidCertificate {
-		log.WithError(err).Warning("Auth client TLS configuration error")
-	} else if err != nil {
-		return err
-	}
-
-	bk := backoff.DefaultConfig
-	bk.MaxDelay = time.Second * 2
-	a.accessClient, err = access.NewClient(
-		ctx,
-		"jira",
-		a.conf.Teleport.AuthServer,
-		tlsConf,
-		grpc.WithConnectParams(grpc.ConnectParams{
-			Backoff: bk,
-		}),
-	)
-	if err != nil {
+	if err = a.init(ctx); err != nil {
 		return trace.Wrap(err)
 	}
-	if err = a.checkTeleportVersion(ctx); err != nil {
-		return
-	}
 
-	log.Debug("Starting JIRA API health check...")
-	if err = a.bot.HealthCheck(ctx); err != nil {
-		log.WithError(err).Error("JIRA API health check failed")
-		a.Terminate()
-		return
-	}
-	log.Debug("JIRA API health check finished ok")
-
-	err = a.webhookSrv.EnsureCert()
-	if err != nil {
-		return
-	}
 	httpJob := a.webhookSrv.ServiceJob()
 	a.SpawnCriticalJob(httpJob)
 	httpOk, err := httpJob.WaitReady(ctx)
 	if err != nil {
-		return
+		return trace.Wrap(err)
 	}
 
-	watcherJob := access.NewWatcherJob(
-		a.accessClient,
-		access.Filter{State: access.StatePending},
+	watcherJob := watcherjob.NewJob(
+		a.apiClient,
+		watcherjob.Config{
+			Watch:            types.Watch{Kinds: []types.WatchKind{types.WatchKind{Kind: types.KindAccessRequest}}},
+			EventFuncTimeout: handlerTimeout,
+		},
 		a.onWatcherEvent,
 	)
 	a.SpawnCriticalJob(watcherJob)
 	watcherOk, err := watcherJob.WaitReady(ctx)
 	if err != nil {
-		return
+		return trace.Wrap(err)
 	}
 
-	a.mainJob.SetReady(httpOk && watcherOk)
+	ok := httpOk && watcherOk
+	a.mainJob.SetReady(ok)
+	if ok {
+		log.Info("Plugin is ready")
+	} else {
+		log.Error("Plugin is not ready")
+	}
 
 	<-httpJob.Done()
 	<-watcherJob.Done()
@@ -145,52 +150,116 @@ func (a *App) run(ctx context.Context) (err error) {
 	return trace.NewAggregate(httpJob.Err(), watcherJob.Err())
 }
 
-func (a *App) checkTeleportVersion(ctx context.Context) error {
-	log := logger.Get(ctx)
-	log.Debug("Checking Teleport server version")
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+func (a *App) init(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, initTimeout)
 	defer cancel()
-	pong, err := a.accessClient.Ping(ctx)
-	if err != nil {
-		if trace.IsNotImplemented(err) {
-			return trace.Wrap(err, "server version must be at least %s", MinServerVersion)
-		}
-		log.Error("Unable to get Teleport server version")
+	log := logger.Get(ctx)
+
+	var (
+		err  error
+		pong proto.PingResponse
+	)
+
+	bk := grpcbackoff.DefaultConfig
+	bk.MaxDelay = grpcBackoffMaxDelay
+	if a.apiClient, err = client.New(ctx, client.Config{
+		Addrs:       a.conf.Teleport.GetAddrs(),
+		Credentials: a.conf.Teleport.Credentials(),
+		DialOpts:    []grpc.DialOption{grpc.WithConnectParams(grpc.ConnectParams{Backoff: bk, MinConnectTimeout: initTimeout})},
+	}); err != nil {
 		return trace.Wrap(err)
 	}
-	a.bot.clusterName = pong.ClusterName
-	err = pong.AssertServerVersion(MinServerVersion)
-	return trace.Wrap(err)
+
+	if pong, err = a.checkTeleportVersion(ctx); err != nil {
+		return trace.Wrap(err)
+	}
+
+	var webProxyAddr string
+	if pong.ServerFeatures.AdvancedAccessWorkflows {
+		webProxyAddr = pong.ProxyPublicAddr
+	}
+	a.jira, err = NewJiraClient(a.conf.Jira, pong.ClusterName, webProxyAddr)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	log.Debug("Starting Jira API health check...")
+	if err = a.jira.HealthCheck(ctx); err != nil {
+		return trace.Wrap(err, "api health check failed")
+	}
+	log.Debug("Jira API health check finished ok")
+
+	webhookSrv, err := NewWebhookServer(a.conf.HTTP, a.onJiraWebhook)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	if err = webhookSrv.EnsureCert(); err != nil {
+		return trace.Wrap(err)
+	}
+
+	a.webhookSrv = webhookSrv
+
+	return nil
 }
 
-func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
-	req, op := event.Request, event.Type
-	ctx = logger.SetField(ctx, "request_id", req.ID)
+func (a *App) checkTeleportVersion(ctx context.Context) (proto.PingResponse, error) {
+	log := logger.Get(ctx)
+	log.Debug("Checking Teleport server version")
+	pong, err := a.apiClient.Ping(ctx)
+	if err != nil {
+		if trace.IsNotImplemented(err) {
+			return pong, trace.Wrap(err, "server version must be at least %s", minServerVersion)
+		}
+		log.Error("Unable to get Teleport server version")
+		return pong, trace.Wrap(err)
+	}
+	err = lib.AssertServerVersion(pong, minServerVersion)
+	return pong, trace.Wrap(err)
+}
+
+func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
+	if kind := event.Resource.GetKind(); kind != types.KindAccessRequest {
+		return trace.Errorf("unexpected kind %q", kind)
+	}
+	op := event.Type
+	reqID := event.Resource.GetName()
+	ctx, _ = logger.WithField(ctx, "request_id", reqID)
 
 	switch op {
-	case access.OpPut:
-		ctx, log := logger.WithField(ctx, "request_op", "put")
+	case types.OpPut:
+		ctx, _ = logger.WithField(ctx, "request_op", "put")
+		req, ok := event.Resource.(types.AccessRequest)
+		if !ok {
+			return trace.Errorf("unexpected resource type %T", event.Resource)
+		}
+		ctx, log := logger.WithField(ctx, "request_state", req.GetState().String())
+		log.Debug("Processing watcher event")
 
-		if !req.State.IsPending() {
-			log.WithField("event", event).Warn("non-pending request event")
+		var err error
+		switch {
+		case req.GetState().IsPending():
+			err = a.onPendingRequest(ctx, req)
+		case req.GetState().IsApproved():
+			err = a.onResolvedRequest(ctx, req)
+		case req.GetState().IsDenied():
+			err = a.onResolvedRequest(ctx, req)
+		default:
+			log.WithField("event", event).Warn("Unknown request state")
 			return nil
 		}
 
-		if err := a.onPendingRequest(ctx, req); err != nil {
-			log := log.WithError(err)
-			log.Errorf("Failed to process pending request")
-			log.Debugf("%v", trace.DebugReport(err))
-			return err
+		if err != nil {
+			log.WithError(err).Error("Failed to process request")
+			return trace.Wrap(err)
 		}
+
 		return nil
-	case access.OpDelete:
+	case types.OpDelete:
 		ctx, log := logger.WithField(ctx, "request_op", "delete")
 
-		if err := a.onDeletedRequest(ctx, req); err != nil {
-			log := log.WithError(err)
-			log.Errorf("Failed to process deleted request")
-			log.Debugf("%v", trace.DebugReport(err))
-			return err
+		if err := a.onDeletedRequest(ctx, reqID); err != nil {
+			log.WithError(err).Errorf("Failed to process deleted request")
+			return trace.Wrap(err)
 		}
 		return nil
 	default:
@@ -198,181 +267,427 @@ func (a *App) onWatcherEvent(ctx context.Context, event access.Event) error {
 	}
 }
 
-// onJIRAWebhook processes JIRA webhook and updates the status of an issue
-func (a *App) onJIRAWebhook(ctx context.Context, webhook Webhook) error {
-	log := logger.Get(ctx)
-
-	if webhook.WebhookEvent != "jira:issue_updated" || webhook.IssueEventTypeName != "issue_generic" {
+// onJiraWebhook processes Jira webhook and updates the status of an issue
+func (a *App) onJiraWebhook(ctx context.Context, webhook Webhook) error {
+	webhookEvent := webhook.WebhookEvent
+	issueEventTypeName := webhook.IssueEventTypeName
+	if webhookEvent != "jira:issue_updated" || issueEventTypeName != "issue_generic" {
 		return nil
 	}
+
+	ctx, log := logger.WithFields(ctx, logger.Fields{
+		"jira_issue_id": webhook.Issue.ID,
+	})
+	log.Debugf("Processing incoming webhook event %q with type %q", webhookEvent, issueEventTypeName)
 
 	if webhook.Issue == nil {
 		return trace.Errorf("got webhook without issue info")
 	}
 
-	issue, err := a.bot.GetIssue(ctx, webhook.Issue.ID)
+	issue, err := a.jira.GetIssue(ctx, webhook.Issue.ID)
 	if err != nil {
 		return trace.Wrap(err)
 	}
-
-	statusName := strings.ToLower(issue.Fields.Status.Name)
-	if statusName == "pending" {
-		log.Debug("Issue is pending, ignoring it")
-		return nil
-	} else if statusName == "expired" {
-		log.Debug("Issue is expired, ignoring it")
-		return nil
-	} else if statusName != "approved" && statusName != "denied" {
-		return trace.BadParameter("unknown JIRA status %q", statusName)
-	}
-
-	reqID, err := issue.GetRequestID()
-	if err != nil {
-		return trace.Wrap(err)
-	}
-	ctx, log = logger.WithField(ctx, "request_id", reqID)
-
-	req, err := a.accessClient.GetRequest(ctx, reqID)
-	if err != nil {
-		if trace.IsNotFound(err) {
-			log.WithError(err).Warning("Cannot process expired request")
-			return nil
-		}
-		return trace.Wrap(err)
-	}
-
-	if req.State != access.StatePending {
-		log.WithField("request_state", req.State).Warningf("Cannot process not pending request")
-		return nil
-	}
-
-	pluginData, err := a.getPluginData(ctx, reqID)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
 	ctx, log = logger.WithFields(ctx, logger.Fields{
 		"jira_issue_id":  issue.ID,
 		"jira_issue_key": issue.Key,
 	})
 
-	if pluginData.JiraData.ID != issue.ID {
-		log.WithField("plugin_data_issue_id", pluginData.JiraData.ID).Debug("plugin_data.issue_id does not match issue.id")
-		return trace.Errorf("issue_id from request's plugin_data does not match")
+	statusName := strings.ToLower(issue.Fields.Status.Name)
+	switch {
+	case statusName == "pending":
+		log.Debug("Issue has pending status, ignoring it")
+		return nil
+	case statusName == "expired":
+		log.Debug("Issue has expired status, ignoring it")
+		return nil
+	case statusName != "approved" && statusName != "denied":
+		return trace.BadParameter("unknown Jira status %q", statusName)
 	}
 
-	var (
-		params     access.RequestStateParams
-		resolution string
-	)
-
-	issueUpdate, err := issue.GetLastUpdate(statusName)
-	if err == nil {
-		params.Delegator = issueUpdate.Author.EmailAddress
-
-		accountID := issueUpdate.Author.AccountID
-		err := a.bot.RangeIssueCommentsDescending(ctx, issue.ID, func(page PageOfComments) bool {
-			for _, comment := range page.Comments {
-				if comment.Author.AccountID != accountID {
-					continue
-				}
-				contents := comment.Body
-				if submatch := resolveReasonInlineRegex.FindStringSubmatch(contents); len(submatch) > 0 {
-					params.Reason = strings.Trim(submatch[2], " \n")
-					return false
-				} else if locs := resolveReasonSeparatorRegex.FindStringIndex(contents); len(locs) > 0 {
-					params.Reason = strings.TrimLeft(contents[locs[1]:], "\n")
-					return false
-				}
-			}
-			return true
-		})
-		if err != nil {
-			log.WithError(err).Error("Cannot load issue comments")
-		}
-	} else {
-		log.WithError(err).Error("Cannot determine who updated the issue status")
-	}
-
-	ctx, log = logger.WithFields(ctx, logger.Fields{
-		"jira_user_email": issueUpdate.Author.EmailAddress,
-		"jira_user_name":  issueUpdate.Author.DisplayName,
-		"request_user":    req.User,
-		"request_roles":   req.Roles,
-		"reason":          params.Reason,
-	})
-
-	switch statusName {
-	case "approved":
-		params.State = access.StateApproved
-		resolution = "approved"
-	case "denied":
-		params.State = access.StateDenied
-		resolution = "denied"
-	}
-
-	if err := a.accessClient.SetRequestStateExt(ctx, req.ID, params); err != nil {
-		return trace.Wrap(err)
-	}
-	log.Infof("JIRA user %s the request", resolution)
-
-	return nil
-}
-
-func (a *App) onPendingRequest(ctx context.Context, req access.Request) error {
-	reqData := RequestData{User: req.User, Roles: req.Roles, RequestReason: req.RequestReason, Created: req.Created}
-	jiraData, err := a.bot.CreateIssue(ctx, req.ID, reqData)
-
+	reqID, err := GetRequestID(issue)
 	if err != nil {
 		return trace.Wrap(err)
 	}
-
-	logger.Get(ctx).WithFields(logger.Fields{
-		"jira_issue_id":  jiraData.ID,
-		"jira_issue_key": jiraData.Key,
-	}).Info("JIRA Issue created")
-
-	err = a.setPluginData(ctx, req.ID, PluginData{reqData, jiraData})
-
-	return trace.Wrap(err)
-}
-
-func (a *App) onDeletedRequest(ctx context.Context, req access.Request) error {
-	log := logger.Get(ctx)
-	reqID := req.ID // This is the only available field
-
-	pluginData, err := a.getPluginData(ctx, reqID)
-	if err != nil {
-		if trace.IsNotFound(err) {
-			log.WithError(err).Warn("Cannot expire unknown request")
-			return nil
-		}
-		return trace.Wrap(err)
-	}
-
-	reqData, jiraData := pluginData.RequestData, pluginData.JiraData
-	if jiraData.ID == "" {
-		log.Warn("Plugin data is either missing or expired")
+	if reqID == "" {
+		log.Debugf("Missing %q issue property", RequestIDPropertyKey)
 		return nil
 	}
 
-	if err := a.bot.ExpireIssue(ctx, reqID, reqData, jiraData); err != nil {
+	ctx, log = logger.WithField(ctx, "request_id", reqID)
+
+	reqs, err := a.apiClient.GetAccessRequests(ctx, types.AccessRequestFilter{ID: reqID})
+	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	log.Info("Successfully marked request as expired")
+	var req types.AccessRequest
+	if len(reqs) > 0 {
+		req = reqs[0]
+	}
+
+	// Validate plugin data that it's matching with the webhook information
+	pluginData, err := a.getPluginData(ctx, reqID)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	if pluginData.IssueID == "" {
+		return trace.Errorf("plugin data is blank")
+	}
+	if pluginData.IssueID != issue.ID {
+		log.WithField("plugin_data_issue_id", pluginData.IssueID).
+			Debug("plugin_data.issue_id does not match issue.id")
+		return trace.Errorf("issue_id from request's plugin_data does not match")
+	}
+
+	if req == nil {
+		return trace.Wrap(a.resolveIssue(ctx, reqID, Resolution{Tag: ResolvedExpired}))
+	}
+
+	var resolution Resolution
+	state := req.GetState()
+	switch {
+	case state.IsPending():
+		switch statusName {
+		case "approved":
+			resolution.Tag = ResolvedApproved
+		case "denied":
+			resolution.Tag = ResolvedDenied
+		default:
+			return trace.BadParameter("unknown status: %v", statusName)
+		}
+
+		author, reason, err := a.loadResolutionInfo(ctx, issue, statusName)
+		if err != nil {
+			log.WithError(err).Error("Failed to load resolution info from the issue history")
+		}
+		resolution.Reason = reason
+
+		ctx, _ = logger.WithFields(ctx, logger.Fields{
+			"jira_user_email": author.EmailAddress,
+			"jira_user_name":  author.DisplayName,
+			"request_user":    req.GetUser(),
+			"request_roles":   req.GetRoles(),
+			"reason":          reason,
+		})
+		if err := a.resolveRequest(ctx, reqID, author.EmailAddress, resolution); err != nil {
+			return trace.Wrap(err)
+		}
+	case state.IsApproved():
+		resolution.Tag = ResolvedApproved
+	case state.IsDenied():
+		resolution.Tag = ResolvedDenied
+	default:
+		return trace.BadParameter("unknown request state %v (%q)", state, state)
+	}
+
+	return trace.Wrap(a.resolveIssue(ctx, reqID, resolution))
+}
+
+func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) error {
+	reqID := req.GetName()
+	reqData := RequestData{
+		User:          req.GetUser(),
+		Roles:         req.GetRoles(),
+		RequestReason: req.GetRequestReason(),
+		Created:       req.GetCreationTime(),
+	}
+
+	// Create plugin data if it didn't exist before.
+	isNew, err := a.modifyPluginData(ctx, reqID, func(existing *PluginData) (PluginData, bool) {
+		if existing != nil {
+			return PluginData{}, false
+		}
+		return PluginData{RequestData: reqData}, true
+	})
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	if isNew {
+		if err := a.createIssue(ctx, reqID, reqData); err != nil {
+			return trace.Wrap(err)
+		}
+	}
+
+	if reqReviews := req.GetReviews(); len(reqReviews) > 0 {
+		if err = a.addReviewComments(ctx, reqID, reqReviews); err != nil {
+			return trace.Wrap(err)
+		}
+	}
 
 	return nil
 }
 
-func (a *App) getPluginData(ctx context.Context, reqID string) (PluginData, error) {
-	dataMap, err := a.accessClient.GetPluginData(ctx, reqID)
-	if err != nil {
-		return PluginData{}, trace.Wrap(err)
+func (a *App) onResolvedRequest(ctx context.Context, req types.AccessRequest) error {
+	var commentErr error
+	if err := a.addReviewComments(ctx, req.GetName(), req.GetReviews()); err != nil {
+		commentErr = trace.Wrap(err)
 	}
-	return DecodePluginData(dataMap), nil
+
+	resolution := Resolution{Reason: req.GetResolveReason()}
+	switch req.GetState() {
+	case types.RequestState_APPROVED:
+		resolution.Tag = ResolvedApproved
+	case types.RequestState_DENIED:
+		resolution.Tag = ResolvedDenied
+	}
+	err := trace.Wrap(a.resolveIssue(ctx, req.GetName(), resolution))
+	return trace.NewAggregate(commentErr, err)
 }
 
-func (a *App) setPluginData(ctx context.Context, reqID string, data PluginData) error {
-	return a.accessClient.UpdatePluginData(ctx, reqID, EncodePluginData(data), nil)
+func (a *App) onDeletedRequest(ctx context.Context, reqID string) error {
+	return a.resolveIssue(ctx, reqID, Resolution{Tag: ResolvedExpired})
+}
+
+// createIssue posts a Jira issue with request information.
+func (a *App) createIssue(ctx context.Context, reqID string, reqData RequestData) error {
+	data, err := a.jira.CreateIssue(ctx, reqID, reqData)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	ctx, log := logger.WithFields(ctx, logger.Fields{
+		"jira_issue_id":  data.IssueID,
+		"jira_issue_key": data.IssueKey,
+	})
+	log.Info("Jira Issue created")
+
+	// Save jira issue info in plugin data.
+	_, err = a.modifyPluginData(ctx, reqID, func(existing *PluginData) (PluginData, bool) {
+		var pluginData PluginData
+		if existing != nil {
+			pluginData = *existing
+		} else {
+			// It must be impossible but lets handle it just in case.
+			pluginData = PluginData{RequestData: reqData}
+		}
+		pluginData.JiraData = data
+		return pluginData, true
+	})
+	return trace.Wrap(err)
+}
+
+// addReviewComments posts issue comments about new reviews appeared for request.
+func (a *App) addReviewComments(ctx context.Context, reqID string, reqReviews []types.AccessReview) error {
+	var oldCount int
+	var issueID string
+
+	// Increase the review counter in plugin data.
+	ok, err := a.modifyPluginData(ctx, reqID, func(existing *PluginData) (PluginData, bool) {
+		// If plugin data is empty or missing issueID, we cannot do anything.
+		if existing == nil {
+			issueID = ""
+			return PluginData{}, false
+		}
+
+		issueID = existing.IssueID
+		// If plugin data has blank issue identification info, we cannot do anything.
+		if issueID == "" {
+			return PluginData{}, false
+		}
+
+		count := len(reqReviews)
+		if oldCount = existing.ReviewsCount; oldCount >= count {
+			return PluginData{}, false
+		}
+		pluginData := *existing
+		pluginData.ReviewsCount = count
+		return pluginData, true
+	})
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	if !ok {
+		if issueID == "" {
+			logger.Get(ctx).Debug("Failed to add the comment: plugin data is blank")
+		}
+		return nil
+	}
+	ctx, _ = logger.WithField(ctx, "jira_issue_id", issueID)
+
+	slice := reqReviews[oldCount:]
+	if len(slice) == 0 {
+		return nil
+	}
+
+	errors := make([]error, 0, len(slice))
+	for _, review := range slice {
+		if err := a.jira.AddIssueReviewComment(ctx, issueID, review); err != nil {
+			errors = append(errors, err)
+		}
+	}
+	return trace.NewAggregate(errors...)
+}
+
+// loadResolutionInfo loads a user email of who has transitioned the issue and the contents of resolution comment.
+func (a *App) loadResolutionInfo(ctx context.Context, issue Issue, statusName string) (UserDetails, string, error) {
+	issueUpdate, err := GetLastUpdate(issue, statusName)
+	if err != nil {
+		return UserDetails{}, "", trace.Wrap(err, "failed to determine who updated the issue status")
+	}
+	author := issueUpdate.Author
+	accountID := author.AccountID
+	var reason string
+	err = a.jira.RangeIssueCommentsDescending(ctx, issue.ID, func(page PageOfComments) bool {
+		for _, comment := range page.Comments {
+			if comment.Author.AccountID != accountID {
+				continue
+			}
+			contents := comment.Body
+			if submatch := resolveReasonInlineRegex.FindStringSubmatch(contents); len(submatch) > 0 {
+				reason = strings.Trim(submatch[2], " \n")
+				return false
+			} else if locs := resolveReasonSeparatorRegex.FindStringIndex(contents); len(locs) > 0 {
+				reason = strings.TrimLeft(contents[locs[1]:], "\n")
+				return false
+			}
+		}
+		return true
+	})
+	if err != nil {
+		return UserDetails{}, "", trace.Wrap(err, "failed to load issue comments")
+	}
+	return author, reason, nil
+}
+
+// resolveRequest sets an access request state.
+func (a *App) resolveRequest(ctx context.Context, reqID string, userEmail string, resolution Resolution) error {
+	params := types.AccessRequestUpdate{RequestID: reqID, Reason: resolution.Reason}
+
+	switch resolution.Tag {
+	case ResolvedApproved:
+		params.State = types.RequestState_APPROVED
+	case ResolvedDenied:
+		params.State = types.RequestState_DENIED
+	default:
+		return trace.BadParameter("unknown resolution tag %v", resolution.Tag)
+	}
+
+	delegator := fmt.Sprintf("%s:%s", pluginName, userEmail)
+
+	if err := a.apiClient.SetAccessRequestState(apiutils.WithDelegator(ctx, delegator), params); err != nil {
+		return trace.Wrap(err)
+	}
+
+	logger.Get(ctx).Infof("Jira user %s the request", resolution.Tag)
+	return nil
+}
+
+// resolveIssue transitions the issue to some final state.
+func (a *App) resolveIssue(ctx context.Context, reqID string, resolution Resolution) error {
+	var issueID string
+
+	// Save request resolution info in plugin data.
+	ok, err := a.modifyPluginData(ctx, reqID, func(existing *PluginData) (PluginData, bool) {
+		// If plugin data is empty or missing issueID, we cannot do anything.
+		if existing == nil {
+			issueID = ""
+			return PluginData{}, false
+		}
+
+		issueID = existing.IssueID
+		// If plugin data has blank issue identification info, we cannot do anything.
+		if issueID == "" {
+			return PluginData{}, false
+		}
+
+		// If resolution field is not empty then we already resolved the issue before. In this case we just quit.
+		if existing.RequestData.Resolution.Tag != Unresolved {
+			return PluginData{}, false
+		}
+
+		// Mark issue as resolved.
+		pluginData := *existing
+		pluginData.Resolution = resolution
+		return pluginData, true
+	})
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	if !ok {
+		if issueID == "" {
+			logger.Get(ctx).Debug("Failed to resolve the issue: plugin data is blank")
+		}
+
+		// Either plugin data is missing or issue is already resolved by us, just quit.
+		return nil
+	}
+
+	ctx, log := logger.WithField(ctx, "jira_issue_id", issueID)
+	if err := a.jira.ResolveIssue(ctx, issueID, resolution); err != nil {
+		return trace.Wrap(err)
+	}
+	log.Info("Successfully resolved the issue")
+
+	return nil
+}
+
+// modifyPluginData performs a compare-and-swap update of access request's plugin data.
+// Callback function parameter is nil if plugin data hasn't been created yet.
+// Otherwise, callback function parameter is a pointer to current plugin data contents.
+// Callback function return value is an updated plugin data contents plus the boolean flag
+// indicating whether it should be written or not.
+// Note that callback function fn might be called more than once due to retry mechanism baked in
+// so make sure that the function is "pure" i.e. it doesn't interact with the outside world:
+// it doesn't perform any sort of I/O operations so even things like Go channels must be avoided.
+// Indeed, this limitation is not that ultimate at least if you know what you're doing.
+func (a *App) modifyPluginData(ctx context.Context, reqID string, fn func(data *PluginData) (PluginData, bool)) (bool, error) {
+	backoff := backoff.NewDecorr(modifyPluginDataBackoffBase, modifyPluginDataBackoffMax, clockwork.NewRealClock())
+	for {
+		oldData, err := a.getPluginData(ctx, reqID)
+		if err != nil && !trace.IsNotFound(err) {
+			return false, trace.Wrap(err)
+		}
+		newData, ok := fn(oldData)
+		if !ok {
+			return false, nil
+		}
+		var expectData PluginData
+		if oldData != nil {
+			expectData = *oldData
+		}
+		err = trace.Wrap(a.updatePluginData(ctx, reqID, newData, expectData))
+		if err == nil {
+			return true, nil
+		}
+		if !trace.IsCompareFailed(err) {
+			return false, trace.Wrap(err)
+		}
+		if err := backoff.Do(ctx); err != nil {
+			return false, trace.Wrap(err)
+		}
+	}
+}
+
+// getPluginData loads a plugin data for a given access request. It returns nil if it's not found.
+func (a *App) getPluginData(ctx context.Context, reqID string) (*PluginData, error) {
+	dataMaps, err := a.apiClient.GetPluginData(ctx, types.PluginDataFilter{
+		Kind:     types.KindAccessRequest,
+		Resource: reqID,
+		Plugin:   pluginName,
+	})
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	if len(dataMaps) == 0 {
+		return nil, trace.NotFound("plugin data not found")
+	}
+	entry := dataMaps[0].Entries()[pluginName]
+	if entry == nil {
+		return nil, trace.NotFound("plugin data entry not found")
+	}
+	data := DecodePluginData(entry.Data)
+	return &data, nil
+}
+
+// updatePluginData updates an existing plugin data or sets a new one if it didn't exist.
+func (a *App) updatePluginData(ctx context.Context, reqID string, data PluginData, expectData PluginData) error {
+	return a.apiClient.UpdatePluginData(ctx, types.PluginDataUpdateParams{
+		Kind:     types.KindAccessRequest,
+		Resource: reqID,
+		Plugin:   pluginName,
+		Set:      EncodePluginData(data),
+		Expect:   EncodePluginData(expectData),
+	})
 }

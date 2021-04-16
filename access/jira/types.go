@@ -1,54 +1,22 @@
+/*
+Copyright 2020-2021 Gravitational, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
-import (
-	"fmt"
-	"strings"
-	"time"
-
-	"github.com/gravitational/teleport-plugins/access"
-)
-
-type RequestData struct {
-	User          string
-	Roles         []string
-	Created       time.Time
-	RequestReason string
-}
-
-type JiraData struct {
-	ID  string
-	Key string
-}
-
-type PluginData struct {
-	RequestData
-	JiraData
-}
-
-func DecodePluginData(dataMap map[string]string) (data PluginData) {
-	var created int64
-	data.User = dataMap["user"]
-	data.Roles = strings.Split(dataMap["roles"], ",")
-	fmt.Sscanf(dataMap["created"], "%d", &created)
-	data.Created = time.Unix(created, 0)
-	data.ID = dataMap["issue_id"]
-	data.Key = dataMap["issue_key"]
-	data.RequestReason = dataMap["request_reason"]
-	return
-}
-
-func EncodePluginData(data PluginData) access.PluginDataMap {
-	return access.PluginDataMap{
-		"issue_id":       data.ID,
-		"issue_key":      data.Key,
-		"user":           data.User,
-		"roles":          strings.Join(data.Roles, ","),
-		"created":        fmt.Sprintf("%d", data.Created.Unix()),
-		"request_reason": data.RequestReason,
-	}
-}
-
-// JIRA REST API resources
+// Jira REST API resources
 
 type ErrorResult struct {
 	ErrorMessages []string `url:"errorMessages"`
@@ -199,6 +167,11 @@ type Comment struct {
 	Author  UserDetails `json:"author"`
 	Body    string      `json:"body"`
 	Created string      `json:"created"`
+}
+
+type CommentInput struct {
+	Body       string           `json:"body,omitempty"`
+	Properties []EntityProperty `json:"properties,omitempty"`
 }
 
 type PageOfChangelogs struct {

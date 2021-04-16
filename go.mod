@@ -22,7 +22,6 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	google.golang.org/grpc v1.31.0
-	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/resty.v1 v1.12.0
 )
 

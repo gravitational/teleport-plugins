@@ -1,3 +1,19 @@
+/*
+Copyright 2020-2021 Gravitational, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
@@ -16,20 +32,27 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type FakeJIRA struct {
+type FakeJira struct {
 	srv              *httptest.Server
 	issues           sync.Map
 	newIssues        chan Issue
+	newIssueComments chan FakeIssueComment
 	issueTransitions chan Issue
 	author           UserDetails
 	issueIDCounter   uint64
 }
 
-func NewFakeJIRA(author UserDetails, concurrency int) *FakeJIRA {
+type FakeIssueComment struct {
+	IssueID string
+	Comment
+}
+
+func NewFakeJira(author UserDetails, concurrency int) *FakeJira {
 	router := httprouter.New()
 
-	self := &FakeJIRA{
+	self := &FakeJira{
 		newIssues:        make(chan Issue, concurrency),
+		newIssueComments: make(chan FakeIssueComment, concurrency*2),
 		issueTransitions: make(chan Issue, concurrency),
 		srv:              httptest.NewServer(router),
 		author:           author,
@@ -55,6 +78,12 @@ func NewFakeJIRA(author UserDetails, concurrency int) *FakeJIRA {
 					HavePermission: true,
 				},
 				"CREATE_ISSUES": {
+					HavePermission: true,
+				},
+				"TRANSITION_ISSUES": {
+					HavePermission: true,
+				},
+				"ADD_COMMENTS": {
 					HavePermission: true,
 				},
 			},
@@ -131,6 +160,26 @@ func NewFakeJIRA(author UserDetails, concurrency int) *FakeJIRA {
 		err := json.NewEncoder(rw).Encode(page)
 		panicIf(err)
 	})
+	router.POST("/rest/api/2/issue/:id/comment", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+		rw.Header().Add("Content-Type", "application/json")
+
+		issue, found := self.GetIssue(ps.ByName("id"))
+		if !found {
+			rw.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		var payload CommentInput
+		err := json.NewDecoder(r.Body).Decode(&payload)
+		panicIf(err)
+
+		comment := Comment{Body: payload.Body}
+		self.StoreIssueComment(issue, comment)
+		self.newIssueComments <- FakeIssueComment{IssueID: issue.ID, Comment: comment}
+
+		err = json.NewEncoder(rw).Encode(comment)
+		panicIf(err)
+	})
 	router.POST("/rest/api/2/issue/:id/transitions", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		issue, found := self.GetIssue(ps.ByName("id"))
 		if !found {
@@ -159,21 +208,21 @@ func NewFakeJIRA(author UserDetails, concurrency int) *FakeJIRA {
 	return self
 }
 
-func (s *FakeJIRA) URL() string {
+func (s *FakeJira) URL() string {
 	return s.srv.URL
 }
 
-func (s *FakeJIRA) Close() {
+func (s *FakeJira) Close() {
 	s.srv.Close()
 	close(s.newIssues)
 	close(s.issueTransitions)
 }
 
-func (s *FakeJIRA) GetAuthor() UserDetails {
+func (s *FakeJira) GetAuthor() UserDetails {
 	return s.author
 }
 
-func (s *FakeJIRA) StoreIssue(issue Issue) Issue {
+func (s *FakeJira) StoreIssue(issue Issue) Issue {
 	if issue.ID == "" {
 		id := atomic.AddUint64(&s.issueIDCounter, 1)
 		issue.ID = fmt.Sprintf("%v", id)
@@ -184,14 +233,14 @@ func (s *FakeJIRA) StoreIssue(issue Issue) Issue {
 	return issue
 }
 
-func (s *FakeJIRA) GetIssue(idOrKey string) (Issue, bool) {
+func (s *FakeJira) GetIssue(idOrKey string) (Issue, bool) {
 	if obj, ok := s.issues.Load(idOrKey); ok {
 		return obj.(Issue), true
 	}
 	return Issue{}, false
 }
 
-func (s *FakeJIRA) TransitionIssue(issue Issue, status string) Issue {
+func (s *FakeJira) TransitionIssue(issue Issue, status string) Issue {
 	issue.Fields.Status = StatusDetails{Name: status}
 
 	changelog := Changelog{
@@ -210,7 +259,7 @@ func (s *FakeJIRA) TransitionIssue(issue Issue, status string) Issue {
 	return issue
 }
 
-func (s *FakeJIRA) StoreIssueComment(issue Issue, comment Comment) Issue {
+func (s *FakeJira) StoreIssueComment(issue Issue, comment Comment) Issue {
 	comments := issue.Fields.Comment.Comments
 	newComments := make([]Comment, len(comments), len(comments)+1)
 	copy(newComments, comments)
@@ -220,7 +269,7 @@ func (s *FakeJIRA) StoreIssueComment(issue Issue, comment Comment) Issue {
 	return s.StoreIssue(issue)
 }
 
-func (s *FakeJIRA) CheckNewIssue(ctx context.Context) (Issue, error) {
+func (s *FakeJira) CheckNewIssue(ctx context.Context) (Issue, error) {
 	select {
 	case issue := <-s.newIssues:
 		return issue, nil
@@ -229,7 +278,16 @@ func (s *FakeJIRA) CheckNewIssue(ctx context.Context) (Issue, error) {
 	}
 }
 
-func (s *FakeJIRA) CheckIssueTransition(ctx context.Context) (Issue, error) {
+func (s *FakeJira) CheckNewIssueComment(ctx context.Context) (FakeIssueComment, error) {
+	select {
+	case comment := <-s.newIssueComments:
+		return comment, nil
+	case <-ctx.Done():
+		return FakeIssueComment{}, trace.Wrap(ctx.Err())
+	}
+}
+
+func (s *FakeJira) CheckIssueTransition(ctx context.Context) (Issue, error) {
 	select {
 	case issue := <-s.issueTransitions:
 		return issue, nil

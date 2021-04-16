@@ -21,6 +21,8 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/jonboulle/clockwork"
+
 	"github.com/gravitational/trace"
 )
 
@@ -30,20 +32,22 @@ type decorr struct {
 	cap   int64
 	mul   int64
 	sleep int64
+	clock clockwork.Clock
 }
 
-// Decorr initializes an alogoritm.
-func Decorr(base, cap time.Duration) Backoff {
-	return DecorrWithMul(base, cap, 3)
+// NewDecorr initializes an alogoritm.
+func NewDecorr(base, cap time.Duration, clock clockwork.Clock) Backoff {
+	return NewDecorrWithMul(base, cap, 3, clock)
 }
 
-// DecorrWithMul initializes a backoff alogoritm with a give multiplier.
-func DecorrWithMul(base, cap time.Duration, mul int64) Backoff {
+// NewDecorrWithMul initializes a backoff alogoritm with a give multiplier.
+func NewDecorrWithMul(base, cap time.Duration, mul int64, clock clockwork.Clock) Backoff {
 	return &decorr{
 		base:  int64(base),
 		cap:   int64(cap),
 		mul:   mul,
 		sleep: int64(base),
+		clock: clock,
 	}
 }
 
@@ -53,7 +57,7 @@ func (backoff *decorr) Do(ctx context.Context) error {
 		backoff.sleep = backoff.cap
 	}
 	select {
-	case <-time.After(time.Duration(backoff.sleep)):
+	case <-backoff.clock.After(time.Duration(backoff.sleep)):
 		return nil
 	case <-ctx.Done():
 		return trace.Wrap(ctx.Err())
