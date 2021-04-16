@@ -21,37 +21,33 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jonboulle/clockwork"
 	"github.com/stretchr/testify/require"
 )
-
-func measure(fn func()) time.Duration {
-	before := time.Now()
-	fn()
-	after := time.Now()
-	return after.Sub(before)
-}
 
 func TestDecorr(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	base := 200 * time.Millisecond
+	clock := clockwork.NewFakeClock()
+	base := 20 * time.Millisecond
 	cap := 2 * time.Second
-	delay := 125 * time.Millisecond // Lets have some delay because darwin builds on CI are a bit laggy.
-	backoff := Decorr(base, cap)
+	backoff := NewDecorr(base, cap, clock)
 
 	// Check exponential bounds.
 	for max := 3 * base; max < cap; max = 3 * max {
-		dur := measure(func() { require.NoError(t, backoff.Do(ctx)) })
+		dur, err := measure(ctx, clock, func() error { return backoff.Do(ctx) })
+		require.NoError(t, err)
 		require.Greater(t, dur, base)
-		require.Less(t, dur, max+delay)
+		require.Less(t, dur, max)
 	}
 
 	// Check that exponential growth threshold.
 	for i := 0; i < 2; i++ {
-		dur := measure(func() { require.NoError(t, backoff.Do(ctx)) })
+		dur, err := measure(ctx, clock, func() error { return backoff.Do(ctx) })
+		require.NoError(t, err)
 		require.Greater(t, dur, base)
-		require.Less(t, dur, cap+delay)
+		require.Less(t, dur, cap)
 	}
 }

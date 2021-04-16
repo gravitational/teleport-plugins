@@ -1,19 +1,16 @@
 # Getting Started with Teleport Jira Plugin on Jira Server
 
-This guide ia an additional guide to the [README.md](./README.md) and [INSTALL.md](./INSTALL-JIRA-CLOUD.md).
+This guide ia an additional guide to the [README.md](./README.md) and [INSTALL-JIRA-CLOUD.md](./INSTALL-JIRA-CLOUD.md).
 It covers the differences in the setup process for the Teleport Jira Plugin for Jira Server environments.
 Because Jira Server works with a different project and kanban board setup, several more steps are required to set it up to work with the plugin.
 
-
 ## Prerequisites
 
+1. Teleport Cluster with admin permissions. Make sure you're able to add roles and users to the cluster.
 1. A Jira Server instance. Your user must be an owner of the instance to set it up.
-2. Teleport Enterprise with admin access.
-
 
 _Note:Setting up a playground:_: Before you setup the plugin in your production environment, you can setup a sandboxed jira server environment to and go through the setup process to make sure it works correctly.
 To do that, you could [run Jira Server in a Docker container](https://hub.docker.com/r/atlassian/jira-software) and go through the setup steps.
-
 
 ## Setting up the Jira Server instance
 
@@ -75,4 +72,3 @@ Once you've successfully setup your Jira Server, you'll need to tweak your `tele
 
 
 When you start `teleport-jira`, it'll perform an API health check and verify that your Jira Server instance is compatible with the plugin, and that your username and password are authorized.
-
