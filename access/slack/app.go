@@ -23,7 +23,7 @@ const (
 	// backoffMaxDelay is a maximum time GRPC client waits before reconnection attempt.
 	backoffMaxDelay = time.Second * 2
 	// initTimeout is used to bound execution time of health check and teleport version check.
-	initTimeout = time.Second * 5
+	initTimeout = time.Second * 10
 	// handlerTimeout is used to bound the execution time of watcher event handler.
 	handlerTimeout = time.Second * 5
 )
@@ -71,23 +71,6 @@ func (a *App) run(ctx context.Context) error {
 	log := logger.Get(ctx)
 	log.Infof("Starting Teleport Access Slack Plugin %s:%s", Version, Gitref)
 
-	bk := backoff.DefaultConfig
-	bk.MaxDelay = backoffMaxDelay
-
-	a.apiClient, err = client.New(client.WithDelegator(ctx, pluginName), client.Config{
-		Addrs: []string{a.conf.Teleport.AuthServer},
-		Credentials: []client.Credentials{client.LoadKeyPair(
-			a.conf.Teleport.ClientCrt,
-			a.conf.Teleport.ClientKey,
-			a.conf.Teleport.RootCAs,
-		)},
-		DialInBackground: true,
-		DialOpts:         []grpc.DialOption{grpc.WithConnectParams(grpc.ConnectParams{Backoff: bk})},
-	})
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
 	if err = a.init(ctx); err != nil {
 		return trace.Wrap(err)
 	}
@@ -118,6 +101,17 @@ func (a *App) init(ctx context.Context) error {
 		err  error
 		pong proto.PingResponse
 	)
+
+	bk := backoff.DefaultConfig
+	bk.MaxDelay = backoffMaxDelay
+	if a.apiClient, err = client.New(ctx, client.Config{
+		Addrs:       []string{a.conf.Teleport.AuthServer},
+		Credentials: a.conf.Teleport.Credentials(),
+		DialOpts:    []grpc.DialOption{grpc.WithConnectParams(grpc.ConnectParams{Backoff: bk, MinConnectTimeout: initTimeout})},
+	}); err != nil {
+		return trace.Wrap(err)
+	}
+
 	if pong, err = a.checkTeleportVersion(ctx); err != nil {
 		return trace.Wrap(err)
 	}
