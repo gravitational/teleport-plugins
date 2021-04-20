@@ -8,6 +8,8 @@ messages.
 
 [See setup instructions on Teleport's website](https://goteleport.com/teleport/docs/enterprise/workflow/ssh_approval_slack/)
 
+You must have Go version 1.15 or higher to build.
+
 Run `make access-slack && ./access/slack/build/teleport-slack configure` from
 the repository root. The `configure` command will produce an example
 configuration file that looks something like this:
