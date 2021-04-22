@@ -1,3 +1,19 @@
+/*
+Copyright 2020-2021 Gravitational, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
@@ -6,10 +22,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"sync/atomic"
 
+	"github.com/gravitational/teleport-plugins/lib/stringset"
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
 
@@ -28,7 +47,7 @@ type FakePagerduty struct {
 	newIncidents      chan Incident
 	incidentUpdates   chan Incident
 	// Incident notes
-	newIncidentNotes      chan IncidentNote
+	newIncidentNotes      chan FakeIncidentNote
 	incidentNoteIDCounter uint64
 	// Services
 	serviceIDCounter uint64
@@ -38,6 +57,30 @@ type FakePagerduty struct {
 	onCallIDCounter uint64
 }
 
+type QueryValues url.Values
+
+func (q QueryValues) GetAsSet(name string) stringset.StringSet {
+	values := q[name]
+	result := stringset.NewWithCap(len(values))
+	for _, v := range values {
+		if v != "" {
+			result[v] = struct{}{}
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+type fakeServiceByNameKey string
+type fakeUserByEmailKey string
+
+type FakeIncidentNote struct {
+	IncidentID string
+	IncidentNote
+}
+
 func NewFakePagerduty(concurrency int) *FakePagerduty {
 	router := httprouter.New()
 
@@ -45,7 +88,7 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 		newExtensions:    make(chan Extension, concurrency),
 		newIncidents:     make(chan Incident, concurrency),
 		incidentUpdates:  make(chan Incident, concurrency),
-		newIncidentNotes: make(chan IncidentNote, concurrency),
+		newIncidentNotes: make(chan FakeIncidentNote, concurrency*3), // for any incident there could be 1-3 notes
 		srv:              httptest.NewServer(router),
 	}
 
@@ -56,12 +99,35 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 		service, found := pagerduty.GetService(id)
 		if !found {
 			rw.WriteHeader(http.StatusNotFound)
-			err := json.NewEncoder(rw).Encode(&ErrorResult{Message: "Service not found"})
+			err := json.NewEncoder(rw).Encode(ErrorResult{Message: "Service not found"})
 			panicIf(err)
 			return
 		}
 
-		err := json.NewEncoder(rw).Encode(&ServiceResult{Service: service})
+		err := json.NewEncoder(rw).Encode(ServiceResult{Service: service})
+		panicIf(err)
+	})
+	router.GET("/services", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		rw.Header().Add("Content-Type", "application/json")
+
+		var services []Service
+		if query := r.URL.Query().Get("query"); query != "" {
+			if service, ok := pagerduty.GetServiceByName(query); ok {
+				services = append(services, service)
+			}
+		} else {
+			pagerduty.objects.Range(func(key, value interface{}) bool {
+				if key, ok := key.(string); !ok || !strings.HasPrefix(key, "service-") {
+					return true
+				}
+				if service, ok := value.(Service); ok {
+					services = append(services, service)
+				}
+				return true
+			})
+		}
+
+		err := json.NewEncoder(rw).Encode(ListServicesResult{Services: services})
 		panicIf(err)
 	})
 	router.GET("/extension_schemas", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -79,7 +145,7 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 				},
 			},
 		}
-		err := json.NewEncoder(rw).Encode(&resp)
+		err := json.NewEncoder(rw).Encode(resp)
 		panicIf(err)
 	})
 	router.GET("/extensions", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -99,7 +165,7 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 			},
 			Extensions: extensions,
 		}
-		err := json.NewEncoder(rw).Encode(&resp)
+		err := json.NewEncoder(rw).Encode(resp)
 		panicIf(err)
 	})
 	router.POST("/extensions", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -118,7 +184,7 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 		})
 		pagerduty.newExtensions <- extension
 
-		err = json.NewEncoder(rw).Encode(&ExtensionResult{Extension: extension})
+		err = json.NewEncoder(rw).Encode(ExtensionResult{Extension: extension})
 		panicIf(err)
 	})
 	router.PUT("/extensions/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -138,20 +204,23 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 		pagerduty.StoreExtension(extension)
 		pagerduty.newExtensions <- extension
 
-		err = json.NewEncoder(rw).Encode(&ExtensionResult{Extension: extension})
+		err = json.NewEncoder(rw).Encode(ExtensionResult{Extension: extension})
 		panicIf(err)
 	})
 	router.GET("/users", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
 
-		users := []User{}
+		var users []User
 		pagerduty.objects.Range(func(key, value interface{}) bool {
+			if key, ok := key.(string); !ok || !strings.HasPrefix(key, "user-") {
+				return true
+			}
 			if user, ok := value.(User); ok {
 				users = append(users, user)
 			}
 			return true
 		})
-		err := json.NewEncoder(rw).Encode(&ListUsersResult{Users: users})
+		err := json.NewEncoder(rw).Encode(ListUsersResult{Users: users})
 		panicIf(err)
 	})
 	router.GET("/users/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -166,7 +235,52 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 			return
 		}
 
-		err := json.NewEncoder(rw).Encode(&UserResult{User: user})
+		err := json.NewEncoder(rw).Encode(UserResult{User: user})
+		panicIf(err)
+	})
+	router.GET("/incidents", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		rw.Header().Add("Content-Type", "application/json")
+
+		query := QueryValues(r.URL.Query())
+		serviceIDSet := query.GetAsSet("service_ids[]")
+		userIDSet := query.GetAsSet("user_ids[]")
+
+		var incidents []Incident
+
+		pagerduty.objects.Range(func(key, value interface{}) bool {
+			if key, ok := key.(string); !ok || !strings.HasPrefix(key, "incident-") {
+				return true
+			}
+			incident, ok := value.(Incident)
+			if !ok {
+				return true
+			}
+
+			// Filter by service_ids
+			if serviceIDSet.Len() > 0 && !(incident.Service.Type == "service_reference" && serviceIDSet.Contains(incident.Service.ID)) {
+				return true
+			}
+
+			// Filter by user_ids
+			if userIDSet.Len() > 0 {
+				ok := false
+				for _, assignment := range incident.Assignments {
+					if assignment.Assignee.Type == "user_reference" && userIDSet.Contains(assignment.Assignee.ID) {
+						ok = true
+						break
+					}
+				}
+				if !ok {
+					return true
+				}
+			}
+
+			incidents = append(incidents, incident)
+
+			return true
+		})
+
+		err := json.NewEncoder(rw).Encode(ListIncidentsResult{Incidents: incidents})
 		panicIf(err)
 	})
 	router.POST("/incidents", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -186,7 +300,7 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 		})
 		pagerduty.newIncidents <- incident
 
-		err = json.NewEncoder(rw).Encode(&IncidentResult{Incident: incident})
+		err = json.NewEncoder(rw).Encode(IncidentResult{Incident: incident})
 		panicIf(err)
 	})
 	router.PUT("/incidents/:id", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -208,64 +322,58 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 		pagerduty.StoreIncident(incident)
 		pagerduty.incidentUpdates <- incident
 
-		err = json.NewEncoder(rw).Encode(&IncidentResult{Incident: incident})
+		err = json.NewEncoder(rw).Encode(IncidentResult{Incident: incident})
 		panicIf(err)
 	})
 	router.POST("/incidents/:id/notes", func(rw http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
 		rw.WriteHeader(http.StatusCreated)
 
+		incidentID := ps.ByName("id")
+
 		var body IncidentNoteBodyWrap
 		err := json.NewDecoder(r.Body).Decode(&body)
 		panicIf(err)
 
 		note := pagerduty.StoreIncidentNote(IncidentNote{Content: body.Note.Content})
-		pagerduty.newIncidentNotes <- note
+		pagerduty.newIncidentNotes <- FakeIncidentNote{IncidentNote: note, IncidentID: incidentID}
 
-		err = json.NewEncoder(rw).Encode(&IncidentNoteResult{Note: note})
+		err = json.NewEncoder(rw).Encode(IncidentNoteResult{Note: note})
 		panicIf(err)
 	})
 	router.GET("/oncalls", func(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 		rw.Header().Add("Content-Type", "application/json")
 
-		query := r.URL.Query()
+		query := QueryValues(r.URL.Query())
+		userIDSet := query.GetAsSet("user_ids[]")
+		policyIDSet := query.GetAsSet("escalation_policy_ids[]")
+
 		var onCalls []OnCall
+
 		pagerduty.objects.Range(func(key, value interface{}) bool {
+			if key, ok := key.(string); !ok || !strings.HasPrefix(key, "oncall-") {
+				return true
+			}
+
 			onCall, ok := value.(OnCall)
 			if !ok {
 				return true
 			}
 			// Filter by user_ids
-			if ids := query["user_ids[]"]; len(ids) > 0 {
-				ok := false
-				for _, id := range ids {
-					if onCall.User.ID == id {
-						ok = true
-						break
-					}
-				}
-				if !ok {
-					return true
-				}
+			if userIDSet.Len() > 0 && !(onCall.User.Type == "user_reference" && userIDSet.Contains(onCall.User.ID)) {
+				return true
 			}
+
 			// Filter by escalation_policy_ids
-			if ids := query["escalation_policy_ids[]"]; len(ids) > 0 {
-				ok := false
-				for _, id := range ids {
-					if onCall.EscalationPolicy.ID == id {
-						ok = true
-						break
-					}
-				}
-				if !ok {
-					return true
-				}
+			if policyIDSet.Len() > 0 && !(onCall.EscalationPolicy.Type == "escalation_policy_reference" && policyIDSet.Contains(onCall.EscalationPolicy.ID)) {
+				return true
 			}
+
 			onCalls = append(onCalls, onCall)
 			return true
 		})
 
-		err := json.NewEncoder(rw).Encode(&ListOnCallsResult{OnCalls: onCalls})
+		err := json.NewEncoder(rw).Encode(ListOnCallsResult{OnCalls: onCalls})
 		panicIf(err)
 	})
 
@@ -292,11 +400,25 @@ func (s *FakePagerduty) GetService(id string) (Service, bool) {
 	return Service{}, false
 }
 
+func (s *FakePagerduty) GetServiceByName(name string) (Service, bool) {
+	if obj, ok := s.objects.Load(fakeServiceByNameKey(strings.ToLower(name))); ok {
+		service, ok := obj.(Service)
+		return service, ok
+	}
+	return Service{}, false
+}
+
 func (s *FakePagerduty) StoreService(service Service) Service {
+	byNameKey := fakeServiceByNameKey(strings.ToLower(service.Name))
 	if service.ID == "" {
-		service.ID = fmt.Sprintf("service-%v", atomic.AddUint64(&s.serviceIDCounter, 1))
+		if obj, ok := s.objects.Load(byNameKey); ok {
+			service.ID = obj.(Service).ID
+		} else {
+			service.ID = fmt.Sprintf("service-%v", atomic.AddUint64(&s.serviceIDCounter, 1))
+		}
 	}
 	s.objects.Store(service.ID, service)
+	s.objects.Store(byNameKey, service)
 	return service
 }
 
@@ -318,6 +440,14 @@ func (s *FakePagerduty) StoreExtension(extension Extension) Extension {
 
 func (s *FakePagerduty) GetUser(id string) (User, bool) {
 	if obj, ok := s.objects.Load(id); ok {
+		user, ok := obj.(User)
+		return user, ok
+	}
+	return User{}, false
+}
+
+func (s *FakePagerduty) GetUserByEmail(email string) (User, bool) {
+	if obj, ok := s.objects.Load(fakeUserByEmailKey(email)); ok {
 		user, ok := obj.(User)
 		return user, ok
 	}
@@ -389,12 +519,12 @@ func (s *FakePagerduty) CheckIncidentUpdate(ctx context.Context) (Incident, erro
 	}
 }
 
-func (s *FakePagerduty) CheckNewIncidentNote(ctx context.Context) (IncidentNote, error) {
+func (s *FakePagerduty) CheckNewIncidentNote(ctx context.Context) (FakeIncidentNote, error) {
 	select {
 	case note := <-s.newIncidentNotes:
 		return note, nil
 	case <-ctx.Done():
-		return IncidentNote{}, trace.Wrap(ctx.Err())
+		return FakeIncidentNote{}, trace.Wrap(ctx.Err())
 	}
 }
 
