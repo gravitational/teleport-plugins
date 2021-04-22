@@ -11,7 +11,7 @@ special action.
 
 This guide assumes you have
 
-- Teleport Enterprise 4.2.8 or newer with admin permissions and access to `tctl`
+- Teleport Enterprise 6.1 or newer with admin permissions and access to `tctl`
 - Pagerduty account already set, with access to creating a new API token.
 
 ### Create an access-plugin role and user within Teleport
@@ -44,10 +44,13 @@ spec:
   allow:
     rules:
       - resources: ['access_request']
-        verbs: ['list','read','update']
-    # teleport currently refuses to issue certs for a user with 0 logins,
-    # this restriction may be lifted in future versions.
-    logins: ['access-plugin']
+        verbs: ['list','read']
+      - resources: ['access_plugin_data']
+        verbs: ['update']
+    # if you want to enable auto-approve feature
+    review_requests:
+      roles: ...
+      where: ... 
 version: v3
 EOF
 
@@ -75,34 +78,78 @@ _Note: by default, tctl auth sign produces certificates with a relatively short
 lifetime. For production deployments, the --ttl flag can be used to ensure a
 more practical certificate lifetime. --ttl=8760h exports a 1 year token_
 
+#### Export access-plugin Certificate for use with Teleport Cloud
+
+Connection to Teleport Cloud is only possible with reverse tunnel. For this reason,
+we need the identity signed in a different format called `file` which exports
+SSH keys too.
+
+```bash
+$ tctl auth sign --auth-server=yourproxy.teleport.sh:443 --format=file --user=access-plugin --out=auth --ttl=8760h
+# ...
+```
+
 ### Setting up Pagerduty API key
 
 In your Pagerduty dashboard, go to **Configuration -> API Access -> Create New
 API Key**, add a key description, and save the key. We'll use the key in the
 plugin config file later.
 
-### Securing Pagerduty webhooks
+### Setting up Pagerduty notification alerts
 
-Pagerduty doesn't have a mechanism to sign it's webhook payload. Instead, they
-provide two good ways for you to verify the integrity and origin of the webhook
-requests (i.e. that the webhook is actually sent by Pagerduty, not bo something
-else):
+Once a new access request has been created, plugin creates an incident in a Pagerduty service. In order to know what service to post the notification in, the service name must be set up in a request annotation of a role of a user who requests an access.
 
-- Basic auth (not recommended)
-- Certificate verification (recommended and default).
+Suppose you created a Pagerduty service called "Teleport Notifications" and want it to be notified about all new access requests from users under role `challenger`. Then you should set up a request annotation called `pagerduty_notify_service` containing a list with an only element `["Teleport notifications"]`.
 
-To setup Basic Auth, setup a usename and password in the config below. in
-`[http.basic_auth]` section.
+```yaml
+kind: role
+metadata:
+  name: challenger
+spec:
+  allow:
+    request:
+      roles: ['champion']
+      annotations:
+        pagerduty_notify_service: ["teleport notifications"]
+```
 
-If you intend to run `teleport-pagerduty` with TLS anyway, then to ensure mutual
-TLS verification, you need to setup `verify-client-cert = true` in the config
-below in `[http.tls]` section.
+### Setting up auto-approval behavior
 
-If you're running `teleport-pagerduty` with `--insecure-no-tls`, and another
-Proxy server provides TLS certs for your setup, you'll need to setup TLS
-verification on that proxy server instead. Pagerduty documentation covers that
-process here:
-[https://developer.pagerduty.com/docs/webhooks/webhooks-mutual-tls](https://developer.pagerduty.com/docs/webhooks/webhooks-mutual-tls).
+If given sufficient permissions, Pagerduty plugin can auto-approve new access requests if they come from a user who is currently on-call and has at least one active incident assigned to her. More specifically, it works like this:
+
+- Access plugin has an access to submit access reviews:
+```yaml
+kind: role
+metadata:
+  name: access-plugin
+spec:
+  allow:
+    # ...
+    review_requests:
+      roles: ['champion']
+      where: ... # If you want to limit the scope of requests the plugin can approve.
+      # ...
+```
+- There's a request annotation called `pagerduty_services` that contains a non-empty list of service names.
+```yaml
+kind: role
+metadata:
+  name: challenger
+spec:
+  allow:
+    request:
+      roles: ['champion']
+      annotations:
+        pagerduty_services: ["service 1", "service 2"]
+```
+- There's a Teleport user with name `alice@example.com` and role `challenger`.
+- There's also a Pagerduty user with e-mail `alice@example.com`
+- That user is currently on-call in a service "service 1" or "service 2" or in both of them.
+- There's at least one active incident assigned to `alice@example.com` in a service where she's currently on-call.
+- `alice@example.com` requests a role `champion`.
+- Then pagerduty plugin **submits an approval** of Alice's request.
+
+*NOTE* that `pagerduty_services` and `pagerduty_notify_service` annotations should not overlap. You cannot use the same service to post notifications in and be on-call in that service. If `pagerduty_services` and `pagerduty_notify_service` overlap then there'll always be an active incident assigned to user - the notification itself is an incident. So the plugin will auto-approve an access every time which is not actually desired.
 
 ## Install
 
@@ -152,20 +199,6 @@ root_cas = "/var/lib/teleport/plugins/pagerduty/auth.cas"   # Teleport cluster C
 [pagerduty]
 api_key = "key"               # PagerDuty API Key
 user_email = "me@example.com" # PagerDuty bot user email (Could be admin email)
-service_id = "PIJ90N7"        # PagerDuty service id
-
-[http]
-public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-pagerduty.example.com
-# listen_addr = ":8081" # Network address in format [addr]:port on which callback server listens, e.g. 0.0.0.0:443
-https_key_file = "/var/lib/teleport/plugins/pagerduty/server.key"  # TLS private key
-https_cert_file = "/var/lib/teleport/plugins/pagerduty/server.crt" # TLS certificate
-
-[http.tls]
-verify_client_cert = true # The preferred way to authenticate webhooks on Pagerduty. See more: https://developer.pagerduty.com/docs/webhooks/webhooks-mutual-tls
-
-[http.basic_auth]
-user = "user"
-password = "password" # If you prefer to use basic auth for Pagerduty Webhooks authentication, use this section to store user and password
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/pagerduty.log"
