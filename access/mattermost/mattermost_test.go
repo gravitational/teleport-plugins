@@ -335,7 +335,7 @@ func (s *MattermostSuite) TestRace(c *C) {
 	reviewer := s.fakeMattermost.StoreUser(User{Email: "user@example.com"})
 
 	s.cancel() // Cancel the default timeout
-	s.ctx, s.cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 20*time.Second)
 	s.startApp(c)
 
 	var (
