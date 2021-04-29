@@ -520,7 +520,7 @@ func (s *GitlabSuite) TestRace(c *C) {
 	defer log.SetLevel(prevLogLevel)
 
 	s.cancel() // Cancel the default timeout
-	s.ctx, s.cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	s.ctx, s.cancel = context.WithTimeout(context.Background(), 20*time.Second)
 	s.startApp(c)
 	labels := s.assertNewLabels(c, 4)
 
