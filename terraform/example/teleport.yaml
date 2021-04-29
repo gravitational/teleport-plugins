@@ -1,0 +1,16 @@
+kind: role
+metadata:
+  name: terraform
+spec:
+  allow:
+    rules:
+      - resources: ['user', 'role', 'token', 'trusted_cluster', 'github', 'oidc', 'saml']
+        verbs: ['list','create','read','update','delete']
+version: v3
+---
+kind: user
+metadata:
+  name: terraform
+spec:
+  roles: ['terraform']
+version: v2
