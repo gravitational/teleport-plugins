@@ -51,7 +51,7 @@ Run:
 
 ```
 tctl create terraform.yaml
-tctl auth sign --format=tls --user=terraform --out=tf --ttl=10h
+tctl auth sign --format=file --user=terraform --out=terraform-identity --ttl=10h
 ```
 
 # Create Terraform configuration
@@ -69,10 +69,8 @@ terraform {
 }
 
 provider "teleport" {
-  addr         = "localhost:3025"
-  cert_path    = "tf.crt"
-  key_path     = "tf.key"
-  root_ca_path = "tf.cas"
+  addr               = "localhost:3025"
+  identity_file_path = "terraform-identity"
 }
 
 resource "teleport_user" "example" {

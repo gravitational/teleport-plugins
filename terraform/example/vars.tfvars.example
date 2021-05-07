@@ -1,4 +1,2 @@
-# Change these paths to actual certificate paths on your machine
-cert_path = "/etc/teleport-plugins/terraform.crt"
-key_path = "/etc/teleport-plugins/terraform.key"
-root_ca_path = "/etc/teleport-plugins/terraform.cas"
+# Change this path to an actual identity file path on your machine
+identity_file_path = "/etc/teleport-plugins/terraform-identity"
