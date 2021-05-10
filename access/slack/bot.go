@@ -234,7 +234,7 @@ func (b Bot) msgSections(reqID string, reqData RequestData, status string) []Blo
 		msgFieldToBuilder(&builder, "Link", reqURL.String())
 	} else {
 		if status == "PENDING" {
-			msgFieldToBuilder(&builder, "Approve", fmt.Sprintf("`tsh request review --aprove %s`", reqID))
+			msgFieldToBuilder(&builder, "Approve", fmt.Sprintf("`tsh request review --approve %s`", reqID))
 			msgFieldToBuilder(&builder, "Deny", fmt.Sprintf("`tsh request review --deny %s`", reqID))
 		}
 	}
