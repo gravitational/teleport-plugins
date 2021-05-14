@@ -23,9 +23,9 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport"
-	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/wrappers"
+	"github.com/gravitational/teleport/api/utils"
 	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/teleport/lib/tlsca"
 
@@ -35,7 +35,12 @@ import (
 
 // NewAdminContext returns new admin auth context
 func NewAdminContext() (*Context, error) {
-	authContext, err := contextForBuiltinRole(BuiltinRole{Role: teleport.RoleAdmin, Username: fmt.Sprintf("%v", teleport.RoleAdmin)}, nil)
+	return NewBuiltinRoleContext(types.RoleAdmin)
+}
+
+// NewBuiltinRoleContext create auth context for the provided builtin role.
+func NewBuiltinRoleContext(role types.SystemRole) (*Context, error) {
+	authContext, err := contextForBuiltinRole(BuiltinRole{Role: role, Username: fmt.Sprintf("%v", role)}, nil)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -139,17 +144,29 @@ func (a *authorizer) authorizeRemoteUser(u RemoteUser) (*Context, error) {
 	if len(roleNames) == 0 {
 		return nil, trace.AccessDenied("no roles mapped for remote user %q from cluster %q with remote roles %v", u.Username, u.ClusterName, u.RemoteRoles)
 	}
-	// Set "logins" trait and "kubernetes_groups" for the remote user. This allows Teleport to work by
-	// passing exact logins, kubernetes groups and users to the remote cluster. Note that claims (OIDC/SAML)
-	// are not passed, but rather the exact logins, this is done to prevent
-	// leaking too much of identity to the remote cluster, and instead of focus
-	// on main cluster's interpretation of this identity
+	// Set internal traits for the remote user. This allows Teleport to work by
+	// passing exact logins, Kubernetes users/groups and database users/names
+	// to the remote cluster.
 	traits := map[string][]string{
 		teleport.TraitLogins:     u.Principals,
 		teleport.TraitKubeGroups: u.KubernetesGroups,
 		teleport.TraitKubeUsers:  u.KubernetesUsers,
 		teleport.TraitDBNames:    u.DatabaseNames,
 		teleport.TraitDBUsers:    u.DatabaseUsers,
+	}
+	// Prior to Teleport 6.2 no user traits were passed to remote clusters
+	// except for the internal ones specified above.
+	//
+	// To preserve backwards compatible behavior, when applying traits from user
+	// identity, make sure to filter out those already present in the map above.
+	//
+	// This ensures that if e.g. there's a "logins" trait in the root user's
+	// identity, it won't overwrite the internal "logins" trait set above
+	// causing behavior change.
+	for k, v := range u.Identity.Traits {
+		if _, ok := traits[k]; !ok {
+			traits[k] = v
+		}
 	}
 	log.Debugf("Mapped roles %v of remote user %q to local roles %v and traits %v.",
 		u.RemoteRoles, u.Username, roleNames, traits)
@@ -620,7 +637,7 @@ const (
 )
 
 // WithDelegator alias for backwards compatibility
-var WithDelegator = client.WithDelegator
+var WithDelegator = utils.WithDelegator
 
 // ClientUsername returns the username of a remote HTTP client making the call.
 // If ctx didn't pass through auth middleware or did not come from an HTTP

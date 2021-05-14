@@ -456,6 +456,13 @@ func (i *TeleInstance) SetAccessRequestState(ctx context.Context, update types.A
 	return i.Process.GetAuthServer().SetAccessRequestState(ctx, update)
 }
 
+func (i *TeleInstance) SubmitAccessReview(ctx context.Context, reqID string, review types.AccessReview) (types.AccessRequest, error) {
+	return i.Process.GetAuthServer().SubmitAccessReview(ctx, types.AccessReviewSubmission{
+		RequestID: reqID,
+		Review:    review,
+	})
+}
+
 func (i *TeleInstance) CreateExpiredAccessRequest(ctx context.Context, req types.AccessRequest) error {
 	ttl := time.Millisecond * 250
 	req.SetAccessExpiry(time.Now().Add(ttl))
@@ -514,37 +521,22 @@ func (i *TeleInstance) PollAccessRequestPluginData(ctx context.Context, plugin, 
 	}
 }
 
-func (i *TeleInstance) SearchAuditEvents(query string) ([]events.EventFields, error) {
-	result, err := i.Process.GetAuditLog().SearchEvents(time.Now().UTC().AddDate(0, -1, 0), time.Now().UTC(), query, 0)
-	return result, trace.Wrap(err)
-}
-
-func (i *TeleInstance) FilterAuditEvents(query string, filter events.EventFields) ([]events.EventFields, error) {
-	searchResult, err := i.SearchAuditEvents(query)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	var result []events.EventFields
-	for _, event := range searchResult {
-		ok := true
-		for key, obj := range filter {
-			switch value := obj.(type) {
-			case int:
-				ok = ok && event.GetInt(key) == value
-			case string:
-				ok = ok && event.GetString(key) == value
-			default:
-				return nil, trace.Fatalf("unsupported filter type %T", value)
-			}
-			if !ok {
-				break
-			}
-		}
-		if ok {
+func (i *TeleInstance) SearchAccessRequestEvents(reqID string) ([]*events.AccessRequestCreate, error) {
+	auditEvents, _, err := i.Process.GetAuditLog().SearchEvents(
+		time.Now().UTC().AddDate(0, -1, 0),
+		time.Now().UTC(),
+		"default",
+		[]string{events.AccessRequestUpdateEvent},
+		100,
+		"",
+	)
+	result := make([]*events.AccessRequestCreate, 0, len(auditEvents))
+	for _, event := range auditEvents {
+		if event, ok := event.(*events.AccessRequestCreate); ok && event.RequestID == reqID {
 			result = append(result, event)
 		}
 	}
-	return result, nil
+	return result, trace.Wrap(err)
 }
 
 // Start will start the TeleInstance and then block until it is ready to
