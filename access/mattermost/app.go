@@ -77,7 +77,7 @@ func (a *App) run(ctx context.Context) error {
 
 	watcherJob := lib.NewWatcherJob(
 		a.apiClient,
-		types.Watch{Kinds: []types.WatchKind{types.WatchKind{Kind: types.KindAccessRequest}}},
+		lib.WatcherJobConfig{Watch: types.Watch{Kinds: []types.WatchKind{types.WatchKind{Kind: types.KindAccessRequest}}}},
 		a.onWatcherEvent,
 	)
 	a.SpawnCriticalJob(watcherJob)

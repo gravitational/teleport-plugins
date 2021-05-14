@@ -34,8 +34,8 @@ func NewFakeSlack(botUser User, concurrency int) *FakeSlack {
 	router := httprouter.New()
 
 	s := &FakeSlack{
-		newMessages:                make(chan Msg, concurrency),
-		messageUpdatesByAPI:        make(chan Msg, concurrency),
+		newMessages:                make(chan Msg, concurrency*6),
+		messageUpdatesByAPI:        make(chan Msg, concurrency*2),
 		messageUpdatesByResponding: make(chan Msg, concurrency),
 		startTime:                  time.Now(),
 		srv:                        httptest.NewServer(router),
@@ -59,6 +59,7 @@ func NewFakeSlack(botUser User, concurrency int) *FakeSlack {
 		msg := s.StoreMessage(Msg{
 			Type:       "message",
 			Channel:    payload.Channel,
+			ThreadTs:   payload.ThreadTs,
 			Text:       payload.Text,
 			BlockItems: payload.BlockItems,
 			User:       s.botUser.ID,
