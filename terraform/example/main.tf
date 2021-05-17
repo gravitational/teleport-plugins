@@ -10,7 +10,7 @@ terraform {
 }
 
 provider "teleport" {
-  identity_file_path = "var.identity_file_path"
+  identity_file_path = var.identity_file_path
 
   addr = "localhost:3025"
   # Update addr to point to Teleport Auth/Proxy
