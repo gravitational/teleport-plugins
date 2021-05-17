@@ -10,14 +10,11 @@ terraform {
 }
 
 provider "teleport" {
-  addr               = "localhost:3025"
   identity_file_path = "var.identity_file_path"
 
-  # Specify addr if you want to use tctl profile
+  addr = "localhost:3025"
+  # Update addr to point to Teleport Auth/Proxy
   # addr = "evilmartians.teleport.sh:443"
-
-  # Specify path to identity file if you have it
-  # identity_file_path = "id"
 }
 
 resource "teleport_provision_token" "example" {
