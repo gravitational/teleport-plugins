@@ -69,6 +69,8 @@ terraform {
 }
 
 provider "teleport" {
+  # Update addr to point to Teleport Auth/Proxy
+  # e.g. addr = "example.teleport.sh:3025"
   addr               = "localhost:3025"
   identity_file_path = "terraform-identity"
 }
