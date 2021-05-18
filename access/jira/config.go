@@ -21,10 +21,11 @@ type Config struct {
 }
 
 type JIRAConfig struct {
-	URL      string `toml:"url"`
-	Username string `toml:"username"`
-	APIToken string `toml:"api_token"`
-	Project  string `toml:"project"`
+	URL       string `toml:"url"`
+	Username  string `toml:"username"`
+	APIToken  string `toml:"api_token"`
+	Project   string `toml:"project"`
+	IssueType string `toml:"issue_type"`
 }
 
 const exampleConfig = `# example jira plugin configuration TOML file
@@ -39,6 +40,7 @@ url = "https://example.com/jira"    # JIRA URL. For JIRA Cloud, https://[my-jira
 username = "jira-bot"               # JIRA username
 api_token = "token"                 # JIRA API Basic Auth token, or our password in case you're using Jira Server.
 project = "MYPROJ"                  # JIRA Project key
+issue_type = "Task"                 # JIRA Issue type
 
 [http]
 public_addr = "example.com" # URL on which callback server is accessible externally, e.g. [https://]teleport-proxy.example.com
@@ -90,6 +92,9 @@ func (c *Config) CheckAndSetDefaults() error {
 	}
 	if c.JIRA.APIToken == "" {
 		return trace.BadParameter("missing required value jira.api_token")
+	}
+	if c.JIRA.IssueType == "" {
+		c.JIRA.IssueType = "Task"
 	}
 	if c.HTTP.ListenAddr == "" {
 		c.HTTP.ListenAddr = ":8081"
