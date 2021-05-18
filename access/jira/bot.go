@@ -26,6 +26,7 @@ const (
 type Bot struct {
 	client      *resty.Client
 	project     string
+	issueType   string
 	clusterName string
 }
 
@@ -126,7 +127,7 @@ func NewBot(conf JIRAConfig) *Bot {
 		}
 		return nil
 	})
-	return &Bot{client: client, project: conf.Project}
+	return &Bot{client: client, project: conf.Project, issueType: conf.IssueType}
 }
 
 func (b *Bot) HealthCheck(ctx context.Context) error {
@@ -206,7 +207,7 @@ func (b *Bot) CreateIssue(ctx context.Context, reqID string, reqData RequestData
 			},
 		},
 		Fields: IssueFieldsInput{
-			Type:        &IssueType{Name: "Task"},
+			Type:        &IssueType{Name: b.issueType},
 			Project:     &Project{Key: b.project},
 			Summary:     fmt.Sprintf("%s requested %s", reqData.User, strings.Join(reqData.Roles, ", ")),
 			Description: description,
