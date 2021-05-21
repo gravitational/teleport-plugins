@@ -29,6 +29,7 @@ mkdir ~/terraform-cluster && cd ~/terraform-cluster
 Put the following content into terraform.yaml:
 
 ```
+// terraform.yaml
 kind: role
 metadata:
   name: terraform
@@ -53,6 +54,8 @@ Run:
 tctl create terraform.yaml
 tctl auth sign --format=file --user=terraform --out=terraform-identity --ttl=10h
 ```
+
+Note: Teleport cloud users may want to use [impersonation](https://goteleport.com/docs/access-controls/guides/impersonation/) for this step.
 
 # Create Terraform configuration
 
