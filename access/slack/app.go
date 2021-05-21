@@ -228,7 +228,7 @@ func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) err
 	}
 
 	if err != nil {
-		log.WithError(err).Error("Failed to post one or more messages to Mattermost")
+		log.WithError(err).Error("Failed to post one or more messages to Slack")
 	}
 
 	if err := a.setPluginData(ctx, req.GetName(), PluginData{reqData, slackData}); err != nil {
