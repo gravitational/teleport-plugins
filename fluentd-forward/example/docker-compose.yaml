@@ -1,0 +1,10 @@
+version: "3.7"
+
+services:
+  fluent-bit:
+    image: fluent/fluentd:edge
+    volumes:
+      - ./fluent.conf:/fluentd/etc/fluent.conf
+      - ./keys:/fluentd/etc/keys
+    ports:
+      - 8888:8888
