@@ -1,15 +1,42 @@
+/*
+Copyright 2015-2021 Gravitational, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
-	"encoding/json"
-	"log"
 	"time"
 
 	"github.com/gravitational/teleport/api/client"
-	"github.com/gravitational/teleport/lib/events"
+	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
+)
+
+const (
+	batchSize = 10 // TODO: config
+)
+
+var (
+	// TODO: config + until
+	start = time.Now().AddDate(-5, 0, 0)
+
+	// TODO: config
+	namespace = "default"
+
+	// TODO: config event names
 )
 
 // TODO: TeleportEventsIterator
@@ -18,25 +45,38 @@ type TeleportClient struct {
 	// client is an instance of GRPC Teleport client
 	client *client.Client
 
-	// current cursor value
+	// cursor current cursor value
 	cursor string
+
+	// pos current virtual cursor position within a batch
+	pos int
+
+	// batch current events batch
+	batch []events.AuditEvent
 }
 
 // NewTeleportClient builds Teleport client instance
 func NewTeleportClient(c *Config) (*TeleportClient, error) {
+	var cl *client.Client
+	var err error
+
 	if c.TeleportIdentityFile != "" {
-		t, err := newUsingIdentityFile(c)
+		cl, err = newUsingIdentityFile(c)
 		if err != nil {
 			return nil, err
 		}
-		return t, nil
+	} else {
+		cl, err = newUsingKeys(c)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return newUsingKeys(c)
+	return &TeleportClient{client: cl, pos: -1}, nil
 }
 
 // newUsingIdentityFile tries to build API client using identity file
-func newUsingIdentityFile(c *Config) (*TeleportClient, error) {
+func newUsingIdentityFile(c *Config) (*client.Client, error) {
 	identity := client.LoadIdentityFile(c.TeleportIdentityFile)
 
 	config := client.Config{
@@ -49,11 +89,11 @@ func newUsingIdentityFile(c *Config) (*TeleportClient, error) {
 		return nil, trace.Wrap(err)
 	}
 
-	return &TeleportClient{client: client}, nil
+	return client, nil
 }
 
 // newUsingKeys tries to build API client using keys
-func newUsingKeys(c *Config) (*TeleportClient, error) {
+func newUsingKeys(c *Config) (*client.Client, error) {
 	config := client.Config{
 		Addrs: []string{c.TeleportAddr},
 		Credentials: []client.Credentials{
@@ -66,7 +106,7 @@ func newUsingKeys(c *Config) (*TeleportClient, error) {
 		return nil, trace.Wrap(err)
 	}
 
-	return &TeleportClient{client: client}, nil
+	return client, nil
 }
 
 // Close closes connection to Teleport
@@ -74,36 +114,59 @@ func (t *TeleportClient) Close() {
 	t.client.Close()
 }
 
-// Fetches next batch of events starting from a last cursor position
-func (t *TeleportClient) Fetch() error {
+// fetch fetches next batch of events starting from a last cursor position
+func (t *TeleportClient) fetch() error {
+	e, cursor, err := t.client.SearchEvents(
+		context.Background(),
+		start,
+		time.Now().UTC(),
+		namespace,
+		[]string{},
+		batchSize,
+		t.cursor,
+	)
 
+	if err != nil {
+		return err
+	}
+
+	t.pos = -1
+
+	for i, v := range e {
+		if v.GetID() != t.cursor {
+			t.pos = i
+			break
+		}
+	}
+
+	t.batch = e
+	t.cursor = cursor
+
+	return nil
 }
 
-// Next returns next event
-func (t *TeleportClient) Next() (*events.AuditEvent, error) {
-
-}
-
-func (t *TeleportClient) Test() {
-	e, cursor, err := t.client.SearchEvents(context.Background(), time.Now().AddDate(-5, 0, 0), time.Now().UTC(), "default", []string{}, 5, "")
-	if err != nil {
-		log.Fatalf("%v", err)
+// Next returns next event from a batch or requests next batch if it has been ended
+func (t *TeleportClient) Next() (events.AuditEvent, error) {
+	// re-request batch if it's empty or ended
+	if t.pos == -1 {
+		err := t.fetch()
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	for _, v := range e {
-		s, _ := json.Marshal(v)
-		logrus.Printf("%+v", string(s))
+	// return if it's still empty
+	if t.pos == -1 {
+		return nil, nil
 	}
 
-	log.Printf("----")
+	event := t.batch[t.pos]
+	t.pos++
 
-	e, cursor, err = t.client.SearchEvents(context.Background(), time.Now().AddDate(-5, 0, 0), time.Now().UTC(), "default", []string{}, 5, cursor)
-	if err != nil {
-		log.Fatalf("%v", err)
+	// batch has ended
+	if t.pos >= len(t.batch) {
+		t.pos = -1
 	}
 
-	for _, v := range e {
-		s, _ := json.Marshal(v)
-		logrus.Printf("%+v", string(s))
-	}
+	return event, nil
 }
