@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// package config contains app configuration methods
-package config
+package main
 
 import (
 	"fmt"
@@ -71,8 +70,8 @@ const (
 	envPrefix = "FDF"
 )
 
-// init initializes viper args
-func init() {
+// initConfig initializes viper args
+func initConfig() {
 	viper.SetEnvPrefix(envPrefix)
 	viper.AutomaticEnv()
 
@@ -101,14 +100,14 @@ func init() {
 	//pflag.StringP(FluentdPassphrase, "p", "", "fluentd key passphrase")
 }
 
-// PrintUsage calls respective pflag method which prints usage message
-func PrintUsage() {
+// printUsage calls respective pflag method which prints usage message
+func printUsage() {
 	fmt.Println()
 	pflag.PrintDefaults()
 }
 
-// New creates new config structб fills it in from CLI and validates that required args are present
-func New() (*Config, error) {
+// newConfig creates new config structб fills it in from CLI and validates that required args are present
+func newConfig() (*Config, error) {
 	c := &Config{}
 	err := viper.Unmarshal(c)
 
@@ -192,7 +191,7 @@ func (c *Config) validateTeleport() error {
 		}
 
 		if !fileExists(c.TeleportCA) {
-			return trace.BadParameter("Teleport TLS CA file does not exist", c.TeleportCA)
+			return trace.BadParameter("Teleport TLS CA file does not exist %s", c.TeleportCA)
 		}
 
 		if c.TeleportCert == "" {
@@ -200,7 +199,7 @@ func (c *Config) validateTeleport() error {
 		}
 
 		if !fileExists(c.TeleportCert) {
-			return trace.BadParameter("Teleport TLS certificate file does not exist", c.TeleportCert)
+			return trace.BadParameter("Teleport TLS certificate file does not exist %s", c.TeleportCert)
 		}
 
 		if c.TeleportKey == "" {

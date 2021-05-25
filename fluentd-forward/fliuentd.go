@@ -14,8 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// package fluentd provides fluentd methods
-package fluentd
+package main
 
 import (
 	"bytes"
@@ -25,12 +24,11 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/gravitational/teleport-plugins/fluentd/config"
 	"github.com/gravitational/trace"
 )
 
-// Client represents Fluentd client
-type Client struct {
+// FluentdClient represents Fluentd client
+type FluentdClient struct {
 	// client HTTP client to send requests
 	client *http.Client
 
@@ -39,7 +37,7 @@ type Client struct {
 }
 
 // New creates new FluentdClient
-func New(c *config.Config) (*Client, error) {
+func NewFluentdClient(c *Config) (*FluentdClient, error) {
 	cert, err := tls.LoadX509KeyPair(c.FluentdCert, c.FluentdKey)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -59,11 +57,11 @@ func New(c *config.Config) (*Client, error) {
 		},
 	}
 
-	return &Client{client: client, url: c.FluentdURL}, nil
+	return &FluentdClient{client: client, url: c.FluentdURL}, nil
 }
 
 // getCertPool reads CA certificate and returns CA cert pool if passed
-func getCertPool(c *config.Config) (*x509.CertPool, error) {
+func getCertPool(c *Config) (*x509.CertPool, error) {
 	if c.FluentdCA == "" {
 		return nil, nil
 	}
@@ -79,7 +77,7 @@ func getCertPool(c *config.Config) (*x509.CertPool, error) {
 }
 
 // Send sends event to fluentd
-func (f *Client) Send(obj interface{}) error {
+func (f *FluentdClient) Send(obj interface{}) error {
 	b, err := json.Marshal(obj)
 	if err != nil {
 		return trace.Wrap(err)

@@ -5,9 +5,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/gravitational/teleport-plugins/fluentd/config"
-	_ "github.com/gravitational/teleport-plugins/fluentd/config"
-	"github.com/gravitational/teleport-plugins/fluentd/fluentd"
 	"github.com/gravitational/trace"
 )
 
@@ -16,21 +13,34 @@ type dummy struct {
 	B string `json:"b"`
 }
 
+func init() {
+	initConfig()
+}
+
 func main() {
 	log.WithFields(log.Fields{"version": Version, "sha": Sha}).Printf("Teleport fluentd-forwarder")
 
-	c, err := config.New()
+	c, err := newConfig()
 	if err != nil {
 		log.Error(trace.DebugReport(err))
-		config.PrintUsage()
+		printUsage()
 		os.Exit(-1)
 	}
 
-	f, err := fluentd.New(c)
+	f, err := NewFluentdClient(c)
 	if err != nil {
 		log.Error(trace.DebugReport(err))
 		os.Exit(-1)
 	}
+
+	t, err := NewTeleportClient(c)
+	if err != nil {
+		log.Fatal(trace.DebugReport(err))
+		os.Exit(-1)
+	}
+	defer t.Close()
+
+	t.Test()
 
 	err = f.Send(dummy{A: "1", B: "2"})
 	if err != nil {
@@ -43,15 +53,6 @@ func main() {
 	// 	log.Fatal(trace.DebugReport(err))
 	// 	os.Exit(-1)
 	// }
-
-	// err = teleport.Init()
-	// if err != nil {
-	// 	log.Fatal(trace.DebugReport(err))
-	// 	os.Exit(-1)
-	// }
-	// defer teleport.Close()
-
-	// teleport.Test()
 
 	// err = cursor.Init()
 	// if err != nil {
