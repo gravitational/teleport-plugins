@@ -25,21 +25,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-const (
-	batchSize = 10 // TODO: config
-)
-
-var (
-	// TODO: config + until
-	start = time.Now().AddDate(-5, 0, 0)
-
-	// TODO: config
-	namespace = "default"
-
-	// TODO: config event names
-)
-
-// TODO: TeleportEventsIterator
+// TODO: -> TeleportEventsIterator
 // TeleportClient represents wrapper around Teleport client to work with events
 type TeleportClient struct {
 	// client is an instance of GRPC Teleport client
@@ -53,6 +39,18 @@ type TeleportClient struct {
 
 	// batch current events batch
 	batch []events.AuditEvent
+
+	// batchSize is fetch batch size
+	batchSize int
+
+	// namespace is events namespace
+	namespace string
+
+	// types is events types list
+	types []string
+
+	// startTime is event time frame start
+	startTime time.Time
 }
 
 // NewTeleportClient builds Teleport client instance
@@ -72,7 +70,13 @@ func NewTeleportClient(c *Config) (*TeleportClient, error) {
 		}
 	}
 
-	return &TeleportClient{client: cl, pos: -1}, nil
+	return &TeleportClient{
+		client:    cl,
+		pos:       -1,
+		batchSize: c.BatchSize,
+		namespace: c.Namespace,
+		startTime: c.StartTime,
+	}, nil
 }
 
 // newUsingIdentityFile tries to build API client using identity file
@@ -118,11 +122,11 @@ func (t *TeleportClient) Close() {
 func (t *TeleportClient) fetch() error {
 	e, cursor, err := t.client.SearchEvents(
 		context.Background(),
-		start,
+		t.startTime,
 		time.Now().UTC(),
-		namespace,
-		[]string{},
-		batchSize,
+		t.namespace,
+		t.types,
+		t.batchSize,
 		t.cursor,
 	)
 

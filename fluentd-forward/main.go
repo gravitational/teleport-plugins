@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"fmt"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -52,32 +51,32 @@ func main() {
 
 	t, err := NewTeleportClient(c)
 	if err != nil {
-		log.Fatal(trace.DebugReport(err))
+		log.Error(trace.DebugReport(err))
 		os.Exit(-1)
 	}
 	defer t.Close()
 
 	//t.Test()
-	e, err := t.Next()
-	if err != nil {
-		log.Fatal(err)
-	}
+	// e, err := t.Next()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
 
-	for e != nil {
-		e, err := t.Next()
-		if err != nil {
-			log.Fatal(err)
-		}
-		if e != nil {
-			fmt.Println(e.GetID())
-		} else {
-			break
-		}
-	}
+	// for e != nil {
+	// 	e, err := t.Next()
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	if e != nil {
+	// 		fmt.Println(e.GetID())
+	// 	} else {
+	// 		break
+	// 	}
+	// }
 
 	err = f.Send(dummy{A: "1", B: "2"})
 	if err != nil {
-		log.Fatal(trace.DebugReport(err))
+		log.Error(trace.DebugReport(err))
 		os.Exit(-1)
 	}
 
@@ -87,10 +86,10 @@ func main() {
 	// 	os.Exit(-1)
 	// }
 
-	// err = cursor.Init()
-	// if err != nil {
-	// 	log.Fatal(trace.DebugReport(err))
-	// 	os.Exit(-1)
-	// }
-	// defer cursor.Close()
+	k, err := NewCursor(c)
+	if err != nil {
+		log.Error(trace.DebugReport(err))
+		os.Exit(-1)
+	}
+	k = k
 }

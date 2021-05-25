@@ -19,6 +19,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
@@ -63,11 +64,34 @@ type Config struct {
 
 	// StorageDir is a path to badger storage dir
 	StorageDir string `mapstructure:"storage-dir"`
+
+	// BatchSize is a fetch batch size
+	BatchSize int `mapstructure:"batch"`
+
+	// Namespace is events namespace
+	Namespace string `mapstructure:"namespace"`
+
+	// Types are event types to log
+	Types []string `mapstructure:"types"`
+
+	// StartTimeRaw is start time passed from CLI
+	StartTimeRaw string `mapstructure:"start-time"`
+
+	// StartTime is start time
+	StartTime time.Time
 }
 
 const (
 	// envPrefix is the configuration environment prefix
 	envPrefix = "FDF"
+
+	// debug CLI flag name
+	debug = "debug"
+)
+
+var (
+	// defaultStartTime is time frame start used by default
+	defaultStartTime = time.Now().AddDate(-5, 0, 0).UTC()
 )
 
 // initConfig initializes viper args
@@ -91,10 +115,20 @@ func initConfig() {
 	pflag.StringP("fluentd-key", "k", "", "fluentd TLS key path")
 
 	pflag.StringP("storage-dir", "s", "", "Storage directory")
+	pflag.Int("batch-size", 20, "Events API fetch batch size")
+	pflag.String("namespace", "default", "Events namespace")
+	pflag.StringSliceP("types", "t", []string{}, "Event types to log")
+	pflag.String("start-time", defaultStartTime.Format(time.RFC3339), "Start time to fetch events from in RFC3339 format")
+
+	pflag.BoolP(debug, "d", false, "Debug mode")
 
 	pflag.Parse()
 
 	viper.BindPFlags(pflag.CommandLine)
+
+	if viper.GetBool(debug) {
+		log.SetLevel(log.DebugLevel)
+	}
 
 	//https://stackoverflow.com/questions/56129533/tls-with-certificate-private-key-and-pass-phrase
 	//pflag.StringP(FluentdPassphrase, "p", "", "fluentd key passphrase")
@@ -135,9 +169,21 @@ func (c *Config) validate() error {
 		return err
 	}
 
-	if c.StorageDir == "" {
-		return trace.BadParameter("Storage dir is empty, pass storage dir")
+	err = c.validateStorage()
+	if err != nil {
+		return err
 	}
+
+	c.StartTime, err = time.Parse(time.RFC3339, c.StartTimeRaw)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	log.WithFields(log.Fields{"dir": c.StorageDir}).Debug("Using storage dir")
+	log.WithFields(log.Fields{"batch": c.BatchSize}).Debug("Using batch size")
+	log.WithFields(log.Fields{"namespace": c.Namespace}).Debug("Using namespace")
+	log.WithFields(log.Fields{"types": c.Types}).Debug("Using type filter")
+	log.WithFields(log.Fields{"value": c.StartTime}).Debug("Using start time")
 
 	return nil
 }
@@ -222,6 +268,22 @@ func (c *Config) validateTeleport() error {
 
 		if !fileExists(c.TeleportIdentityFile) {
 			return trace.BadParameter("Teleport identity file does not exist %s", c.TeleportIdentityFile)
+		}
+	}
+
+	return nil
+}
+
+func (c *Config) validateStorage() error {
+	if c.StorageDir == "" {
+		return trace.BadParameter("Storage dir is empty, pass storage dir")
+	}
+
+	_, err := os.Stat(c.StorageDir)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(c.StorageDir, 0755)
+		if err != nil {
+			return trace.Wrap(err)
 		}
 	}
 
