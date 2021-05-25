@@ -102,17 +102,7 @@ more practical certificate lifetime. --ttl=8760h exports a 1 year token_
 
 ## Downloading and installing the plugin
 
-The recommended way to run Teleport Mattermost plugin is by downloading the
-release version and installing it:
-
-```bash
-$ wget https://get.gravitational.com/teleport-mattermost-v6.2.0-linux-amd64-bin.tar.gz
-$ tar -xzf teleport-mattermost-v6.2.0-linux-amd64-bin.tar.gz
-$ cd teleport-mattermost
-$ ./install
-$ which teleport-mattermost
-/usr/local/bin/teleport-mattermost
-```
+[See our Mattermost plugin docs for [download links](https://goteleport.com/docs/enterprise/workflow/ssh-approval-mattermost/#downloading-and-installing-the-plugin).
 
 ### Building from source
 
