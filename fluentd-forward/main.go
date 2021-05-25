@@ -74,6 +74,15 @@ func main() {
 	// 	}
 	// }
 
+	k, err := NewCursor(c)
+	if err != nil {
+		log.Error(trace.DebugReport(err))
+		os.Exit(-1)
+	}
+	v, _ := k.Get()
+	// logrus.Printf(v)
+	// k.Set("")
+
 	err = f.Send(dummy{A: "1", B: "2"})
 	if err != nil {
 		log.Error(trace.DebugReport(err))
@@ -85,11 +94,4 @@ func main() {
 	// 	log.Fatal(trace.DebugReport(err))
 	// 	os.Exit(-1)
 	// }
-
-	k, err := NewCursor(c)
-	if err != nil {
-		log.Error(trace.DebugReport(err))
-		os.Exit(-1)
-	}
-	k = k
 }

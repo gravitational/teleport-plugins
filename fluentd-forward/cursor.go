@@ -16,7 +16,10 @@ limitations under the License.
 
 package main
 
-import "github.com/peterbourgon/diskv"
+import (
+	"github.com/gravitational/trace"
+	"github.com/peterbourgon/diskv"
+)
 
 const (
 	// cacheSizeMax max memory cache
@@ -26,6 +29,9 @@ const (
 type Cursor struct {
 	// dv is a diskv instance
 	dv *diskv.Diskv
+
+	// name is the cursor name
+	name string
 }
 
 // NewCursor creates new cursor instance
@@ -40,5 +46,20 @@ func NewCursor(c *Config) (*Cursor, error) {
 		CacheSizeMax: cacheSizeMax,
 	})
 
-	return &Cursor{dv: dv}, nil
+	return &Cursor{dv: dv, name: c.TeleportAddr}, nil
+}
+
+// Get gets current cursor value
+func (c *Cursor) Get() (string, error) {
+	value, err := c.dv.Read(c.name)
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+
+	return string(value), nil
+}
+
+// Set sets current cursor value
+func (c *Cursor) Set(v string) error {
+	return c.dv.Write(c.name, []byte(v))
 }
