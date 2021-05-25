@@ -100,19 +100,20 @@ _Note: by default, tctl auth sign produces certificates with a relatively short
 lifetime. For production deployments, the --ttl flag can be used to ensure a
 more practical certificate lifetime. --ttl=8760h exports a 1 year token_
 
-## Downloading and installing the plugin
+#### Export access-plugin Certificate for use with Teleport Cloud
 
-The recommended way to run Teleport Mattermost plugin is by downloading the
-release version and installing it:
+Connection to Teleport Cloud is only possible with reverse tunnel. For this reason,
+we need the identity signed in a different format called `file` which exports
+SSH keys too.
 
 ```bash
-$ wget https://get.gravitational.com/teleport-mattermost-v6.1.0-linux-amd64-bin.tar.gz
-$ tar -xzf teleport-mattermost-v6.1.0-linux-amd64-bin.tar.gz
-$ cd teleport-mattermost
-$ ./install
-$ which teleport-mattermost
-/usr/local/bin/teleport-mattermost
+$ tctl auth sign --auth-server=yourproxy.teleport.sh:443 --format=file --user=access-plugin --out=auth --ttl=8760h
+# ...
 ```
+
+## Downloading and installing the plugin
+
+[See our Mattermost plugin docs for [download links](https://goteleport.com/docs/enterprise/workflow/ssh-approval-mattermost/#downloading-and-installing-the-plugin).
 
 ### Building from source
 
@@ -152,6 +153,14 @@ token = "api-token"                    # Mattermost Bot OAuth token
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/mattermost.log"
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
+```
+
+To use with Teleport Cloud, you should set a path to identity file exported with `--format=file` option.
+
+```TOML
+[teleport]
+auth_server = "yourproxy.teleport.sh"                  # Teleport proxy address
+identity = "/var/lib/teleport/plugins/mattermost/auth" # Teleport identity file
 ```
 
 ### Running the plugin

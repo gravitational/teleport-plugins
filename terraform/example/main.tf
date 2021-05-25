@@ -1,6 +1,4 @@
-variable "cert_path" {}
-variable "key_path" {}
-variable "root_ca_path" {}
+variable "identity_file_path" {}
 
 terraform {
   required_providers {
@@ -12,16 +10,11 @@ terraform {
 }
 
 provider "teleport" {
-  addr         = "localhost:3025"
-  cert_path    = var.cert_path
-  key_path     = var.key_path
-  root_ca_path = var.root_ca_path
+  identity_file_path = var.identity_file_path
 
-  # Specify addr if you want to use tctl profile
+  addr = "localhost:3025"
+  # Update addr to point to Teleport Auth/Proxy
   # addr = "evilmartians.teleport.sh:443"
-
-  # Specify path to identity file if you have it
-  # identity_file_path = "id"
 }
 
 resource "teleport_provision_token" "example" {

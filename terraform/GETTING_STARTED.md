@@ -29,6 +29,7 @@ mkdir ~/terraform-cluster && cd ~/terraform-cluster
 Put the following content into terraform.yaml:
 
 ```
+// terraform.yaml
 kind: role
 metadata:
   name: terraform
@@ -51,8 +52,10 @@ Run:
 
 ```
 tctl create terraform.yaml
-tctl auth sign --format=tls --user=terraform --out=tf --ttl=10h
+tctl auth sign --format=file --user=terraform --out=terraform-identity --ttl=10h
 ```
+
+Note: Teleport cloud users may want to use [impersonation](https://goteleport.com/docs/access-controls/guides/impersonation/) for this step.
 
 # Create Terraform configuration
 
@@ -69,10 +72,10 @@ terraform {
 }
 
 provider "teleport" {
-  addr         = "localhost:3025"
-  cert_path    = "tf.crt"
-  key_path     = "tf.key"
-  root_ca_path = "tf.cas"
+  # Update addr to point to Teleport Auth/Proxy
+  # e.g. addr = "example.teleport.sh:3025"
+  addr               = "localhost:3025"
+  identity_file_path = "terraform-identity"
 }
 
 resource "teleport_user" "example" {
