@@ -65,14 +65,13 @@ type etagCacheEntry struct {
 }
 
 func NewBot(conf MattermostConfig, clusterName, webProxyAddr string) (Bot, error) {
-	var webProxyURL *url.URL
+	var (
+		webProxyURL *url.URL
+		err         error
+	)
 	if webProxyAddr != "" {
-		var err error
-		if !strings.HasPrefix(webProxyAddr, "http://") && !strings.HasPrefix(webProxyAddr, "https://") {
-			webProxyAddr = "https://" + webProxyAddr
-		}
-		if webProxyURL, err = url.Parse(webProxyAddr); err != nil {
-			return Bot{}, err
+		if webProxyURL, err = lib.AddrToURL(webProxyAddr); err != nil {
+			return Bot{}, trace.Wrap(err)
 		}
 	}
 
