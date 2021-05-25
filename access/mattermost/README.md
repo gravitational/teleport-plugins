@@ -106,8 +106,8 @@ The recommended way to run Teleport Mattermost plugin is by downloading the
 release version and installing it:
 
 ```bash
-$ wget https://get.gravitational.com/teleport-mattermost-v6.1.0-linux-amd64-bin.tar.gz
-$ tar -xzf teleport-mattermost-v6.1.0-linux-amd64-bin.tar.gz
+$ wget https://get.gravitational.com/teleport-mattermost-v6.2.0-linux-amd64-bin.tar.gz
+$ tar -xzf teleport-mattermost-v6.2.0-linux-amd64-bin.tar.gz
 $ cd teleport-mattermost
 $ ./install
 $ which teleport-mattermost
