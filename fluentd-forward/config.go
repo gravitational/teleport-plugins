@@ -132,6 +132,7 @@ func initConfig() {
 		log.SetLevel(log.DebugLevel)
 	}
 
+	// TODO: Add passphrase
 	//https://stackoverflow.com/questions/56129533/tls-with-certificate-private-key-and-pass-phrase
 	//pflag.StringP(FluentdPassphrase, "p", "", "fluentd key passphrase")
 }
