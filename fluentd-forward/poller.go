@@ -96,40 +96,9 @@ func (p *Poller) Run() error {
 			return err
 		}
 
-		log.WithFields(log.Fields{"event": *e}).Info("Event sent")
+		p.cursor.Set(e.GetID())
+
+		log.WithFields(log.Fields{"type": e.GetType(), "time": e.GetTime()}).Info("Event sent")
+		log.WithFields(log.Fields{"event": e}).Debug("Event dump")
 	}
-	// // v, _ := k.Get()
-	// // logrus.Printf(v)
-	// // k.Set("")
-
-	// err = f.Send(dummy{A: "1", B: "2"})
-	// if err != nil {
-	// 	log.Error(trace.DebugReport(err))
-	// 	os.Exit(-1)
-	// }
-
-	//t.Test()
-	// e, err := t.Next()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// for e != nil {
-	// 	e, err := t.Next()
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	if e != nil {
-	// 		fmt.Println(e.GetID())
-	// 	} else {
-	// 		break
-	// 	}
-	// }
-
-	// err = fluentd.Init()
-	// if err != nil {
-	// 	log.Fatal(trace.DebugReport(err))
-	// 	os.Exit(-1)
-	// }
-
 }

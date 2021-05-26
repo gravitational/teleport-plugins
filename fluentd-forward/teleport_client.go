@@ -151,7 +151,7 @@ func (t *TeleportClient) fetch() error {
 }
 
 // Next returns next event from a batch or requests next batch if it has been ended
-func (t *TeleportClient) Next() (*events.AuditEvent, error) {
+func (t *TeleportClient) Next() (events.AuditEvent, error) {
 	// re-request batch if it's empty or ended
 	if t.pos == -1 {
 		err := t.fetch()
@@ -173,5 +173,5 @@ func (t *TeleportClient) Next() (*events.AuditEvent, error) {
 		t.pos = -1
 	}
 
-	return &event, nil
+	return event, nil
 }
