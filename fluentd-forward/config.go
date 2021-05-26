@@ -107,10 +107,8 @@ func initConfig() {
 	pflag.StringP("teleport-addr", "p", "", "Teleport addr")
 	pflag.StringP("teleport-identity", "i", "", "Teleport identity file")
 	pflag.String("teleport-ca", "", "Teleport TLS CA file")
-	pflag.String("teleport-cert", "", "Teleport TLS cert file")
+	pflag.String("teleport-cert", "", "Teleport TLS certificate file")
 	pflag.String("teleport-key", "", "Teleport TLS key file")
-	pflag.String("teleport-profile-name", "", "Teleport profile name")
-	pflag.String("teleport-profile-dir", "", "Teleport profile dir")
 
 	pflag.StringP("fluentd-url", "u", "", "fluentd url")
 	pflag.StringP("fluentd-ca", "a", "", "fluentd TLS CA path")

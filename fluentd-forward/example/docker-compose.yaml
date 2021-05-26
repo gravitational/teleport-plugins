@@ -1,7 +1,7 @@
 version: "3.7"
 
 services:
-  fluent-bit:
+  fluent:
     image: fluent/fluentd:edge
     volumes:
       - ./fluent.conf:/fluentd/etc/fluent.conf
