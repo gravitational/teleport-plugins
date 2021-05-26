@@ -34,6 +34,9 @@ type Poller struct {
 
 	// cursor is an instance of cursor manager
 	cursor *Cursor
+
+	// timeout is polling timeout
+	timeout time.Duration
 }
 
 // NewPoller builds new Poller structure
@@ -79,18 +82,22 @@ func (p *Poller) Start() error {
 	return nil
 }
 
+// Run is an infinite polling loop
 func (p *Poller) Run() error {
 	for {
+		// Get next event from
 		e, err := p.teleport.Next()
 		if err != nil {
 			return err
 		}
 
+		// No events in queue, wait and try again
 		if e == nil {
-			time.Sleep(5 * time.Second)
+			time.Sleep(p.timeout)
 			continue
 		}
 
+		// Send event to fluentd
 		err = p.fluentd.Send(e)
 		if err != nil {
 			return err

@@ -79,6 +79,9 @@ type Config struct {
 
 	// StartTime is start time
 	StartTime time.Time
+
+	// Timeout is the time poller will wait before the new request if there are no events in the queue
+	Timeout time.Duration
 }
 
 const (
@@ -119,6 +122,7 @@ func initConfig() {
 	pflag.String("namespace", "default", "Events namespace")
 	pflag.StringSliceP("types", "t", []string{}, "Event types to log")
 	pflag.String("start-time", defaultStartTime.Format(time.RFC3339), "Start time to fetch events from in RFC3339 format")
+	pflag.Duration("timeout", 5*time.Second, "Polling timeout")
 
 	pflag.BoolP(debug, "d", false, "Debug mode")
 
@@ -184,6 +188,7 @@ func (c *Config) validate() error {
 	log.WithFields(log.Fields{"namespace": c.Namespace}).Debug("Using namespace")
 	log.WithFields(log.Fields{"types": c.Types}).Debug("Using type filter")
 	log.WithFields(log.Fields{"value": c.StartTime}).Debug("Using start time")
+	log.WithFields(log.Fields{"timeout": c.Timeout}).Debug("Using timeout")
 
 	return nil
 }
