@@ -19,15 +19,9 @@ package main
 import (
 	"os"
 
-	log "github.com/sirupsen/logrus"
-
 	"github.com/gravitational/trace"
+	log "github.com/sirupsen/logrus"
 )
-
-type dummy struct {
-	A string `json:"a"`
-	B string `json:"b"`
-}
 
 func init() {
 	initConfig()
@@ -45,10 +39,16 @@ func main() {
 
 	p, err := NewPoller(c)
 	if err != nil {
-		log.Error(trace.DebugReport(err))
+		log.Debug(trace.DebugReport(err))
+		log.Error("%w", err)
 		os.Exit(-1)
-
 	}
-
 	defer p.Close()
+
+	err = p.Start()
+	if err != nil {
+		log.Debug(trace.DebugReport(err))
+		log.Error("%w", err)
+		os.Exit(-1)
+	}
 }

@@ -17,7 +17,11 @@ limitations under the License.
 package main
 
 import (
+	"time"
+
 	"github.com/gravitational/trace"
+	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 // Poller represents periodical event poll
@@ -62,7 +66,38 @@ func (p *Poller) Close() {
 	p.teleport.Close()
 }
 
-func (p *Poller) Run() {
+// Start starts polling
+func (p *Poller) Start() error {
+	g := new(errgroup.Group)
+	g.Go(p.Run)
+
+	err := g.Wait()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (p *Poller) Run() error {
+	for {
+		e, err := p.teleport.Next()
+		if err != nil {
+			return err
+		}
+
+		if e == nil {
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		err = p.fluentd.Send(e)
+		if err != nil {
+			return err
+		}
+
+		log.WithFields(log.Fields{"event": *e}).Info("Event sent")
+	}
 	// // v, _ := k.Get()
 	// // logrus.Printf(v)
 	// // k.Set("")
