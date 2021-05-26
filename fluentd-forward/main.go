@@ -43,55 +43,12 @@ func main() {
 		os.Exit(-1)
 	}
 
-	f, err := NewFluentdClient(c)
+	p, err := NewPoll(c)
 	if err != nil {
 		log.Error(trace.DebugReport(err))
 		os.Exit(-1)
+
 	}
 
-	t, err := NewTeleportClient(c)
-	if err != nil {
-		log.Error(trace.DebugReport(err))
-		os.Exit(-1)
-	}
-	defer t.Close()
-
-	//t.Test()
-	// e, err := t.Next()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// for e != nil {
-	// 	e, err := t.Next()
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	if e != nil {
-	// 		fmt.Println(e.GetID())
-	// 	} else {
-	// 		break
-	// 	}
-	// }
-
-	k, err := NewCursor(c)
-	if err != nil {
-		log.Error(trace.DebugReport(err))
-		os.Exit(-1)
-	}
-	v, _ := k.Get()
-	// logrus.Printf(v)
-	// k.Set("")
-
-	err = f.Send(dummy{A: "1", B: "2"})
-	if err != nil {
-		log.Error(trace.DebugReport(err))
-		os.Exit(-1)
-	}
-
-	// err = fluentd.Init()
-	// if err != nil {
-	// 	log.Fatal(trace.DebugReport(err))
-	// 	os.Exit(-1)
-	// }
+	defer p.Close()
 }

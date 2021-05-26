@@ -54,7 +54,7 @@ type TeleportClient struct {
 }
 
 // NewTeleportClient builds Teleport client instance
-func NewTeleportClient(c *Config) (*TeleportClient, error) {
+func NewTeleportClient(c *Config, cursor string) (*TeleportClient, error) {
 	var cl *client.Client
 	var err error
 
@@ -73,6 +73,7 @@ func NewTeleportClient(c *Config) (*TeleportClient, error) {
 	return &TeleportClient{
 		client:    cl,
 		pos:       -1,
+		cursor:    cursor,
 		batchSize: c.BatchSize,
 		namespace: c.Namespace,
 		startTime: c.StartTime,

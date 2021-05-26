@@ -39,7 +39,6 @@ func NewCursor(c *Config) (*Cursor, error) {
 	// Simplest transform function: put all the data files into the base dir.
 	flatTransform := func(s string) []string { return []string{} }
 
-	// Initialize a new diskv store, rooted at "my-data-dir", with a 1MB cache.
 	dv := diskv.New(diskv.Options{
 		BasePath:     c.StorageDir,
 		Transform:    flatTransform,
@@ -51,6 +50,10 @@ func NewCursor(c *Config) (*Cursor, error) {
 
 // Get gets current cursor value
 func (c *Cursor) Get() (string, error) {
+	if !c.dv.Has(c.name) {
+		return "", nil
+	}
+
 	value, err := c.dv.Read(c.name)
 	if err != nil {
 		return "", trace.Wrap(err)
