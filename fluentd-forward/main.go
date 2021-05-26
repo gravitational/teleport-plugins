@@ -43,7 +43,7 @@ func main() {
 		os.Exit(-1)
 	}
 
-	p, err := NewPoll(c)
+	p, err := NewPoller(c)
 	if err != nil {
 		log.Error(trace.DebugReport(err))
 		os.Exit(-1)
