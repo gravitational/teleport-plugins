@@ -21,7 +21,7 @@ make build
 
 ```bash
 tctl create example/teleport.yaml
-tctl auth sign --format=tls --user=terraform --out=tf --ttl=10h
+tctl auth sign --format=file --user=terraform --out=terraform-identity --ttl=10h
 ```
 
 Move generated keys to the desired location.
