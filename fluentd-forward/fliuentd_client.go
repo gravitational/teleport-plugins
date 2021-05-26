@@ -25,6 +25,7 @@ import (
 	"net/http"
 
 	"github.com/gravitational/trace"
+	log "github.com/sirupsen/logrus"
 )
 
 // FluentdClient represents Fluentd client
@@ -82,6 +83,8 @@ func (f *FluentdClient) Send(obj interface{}) error {
 	if err != nil {
 		return trace.Wrap(err)
 	}
+
+	log.WithFields(log.Fields{"json": string(b)}).Debug("JSON to send")
 
 	r, err := f.client.Post(f.url, "application/json", bytes.NewReader(b))
 	if err != nil {
