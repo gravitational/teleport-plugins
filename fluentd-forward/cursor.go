@@ -17,13 +17,15 @@ limitations under the License.
 package main
 
 import (
+	"net/url"
+
 	"github.com/gravitational/trace"
 	"github.com/peterbourgon/diskv"
 )
 
 const (
 	// cacheSizeMax max memory cache
-	cacheSizeMax = 1024 * 1024
+	cacheSizeMax = 1024
 )
 
 type Cursor struct {
@@ -45,7 +47,12 @@ func NewCursor(c *Config) (*Cursor, error) {
 		CacheSizeMax: cacheSizeMax,
 	})
 
-	return &Cursor{dv: dv, name: c.TeleportAddr}, nil
+	url, err := url.Parse(c.TeleportAddr)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return &Cursor{dv: dv, name: url.Host}, nil
 }
 
 // Get gets current cursor value

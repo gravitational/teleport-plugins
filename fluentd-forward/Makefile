@@ -26,6 +26,11 @@ gen-example-mtls:
 	openssl req -passin pass:1234 -config example/ssl.conf -subj "/CN=server" -key example/keys/server.key -new -out example/keys/server.csr
 	openssl x509 -req -in example/keys/server.csr -CA example/keys/ca.crt -CAkey example/keys/ca.key -CAcreateserial -days 365 -out example/keys/server.crt -extfile example/ssl.conf -extensions server_cert
 
+	openssl genrsa -out example/keys/server_nopass.key 4096
+	chmod 444 example/keys/server_nopass.key
+	openssl req -config example/ssl.conf -subj "/CN=server-nopass" -key example/keys/server_nopass.key -new -out example/keys/server_nopass.csr
+	openssl x509 -req -in example/keys/server_nopass.csr -CA example/keys/ca.crt -CAkey example/keys/ca.key -CAcreateserial -days 365 -out example/keys/server_nopass.crt -extfile example/ssl.conf -extensions server_cert
+
 	openssl genrsa -out example/keys/client.key 4096
 	chmod 444 example/keys/client.key
 	openssl req -config example/ssl.conf -subj "/CN=client" -key example/keys/client.key -new -out example/keys/client.csr
@@ -43,6 +48,11 @@ build: clean
 install: build
 	go install
 
-.phony: example
+.PHONY: example
 example: build
 	./build/fluentd-forward -c example/keys/client.crt -k example/keys/client.key --fluentd-ca example/keys/ca.crt --fluentd-url https://localhost:8888/test.log --teleport-ca ~/www/teleport-installation/tf.cas --teleport-cert ~/www/teleport-installation/tf.crt --teleport-key ~/www/teleport-installation/tf.key --teleport-addr localhost:3025 --storage-dir /tmp/storage -d
+
+.PHONY: test
+test: gen-example-mtls
+	rm -rf tmp && mkdir -p tmp
+	go test -coverprofile=cover.out

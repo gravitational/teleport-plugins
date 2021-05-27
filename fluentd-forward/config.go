@@ -143,7 +143,7 @@ func printUsage() {
 	pflag.PrintDefaults()
 }
 
-// newConfig creates new config structб fills it in from CLI and validates that required args are present
+// newConfig builds new config struct and validates that required args are present
 func newConfig() (*Config, error) {
 	c := &Config{}
 	err := viper.Unmarshal(c)
@@ -232,7 +232,7 @@ func (c *Config) validateTeleport() error {
 	if c.TeleportCA != "" || c.TeleportCert != "" || c.TeleportKey != "" {
 		// Then addr becomes required
 		if c.TeleportAddr == "" {
-			return trace.BadParameter("Please, specify Teleport address using")
+			return trace.BadParameter("Please, specify Teleport address")
 		}
 
 		// And all of the files must be specified
