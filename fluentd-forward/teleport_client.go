@@ -25,11 +25,16 @@ import (
 	"golang.org/x/net/context"
 )
 
-// TODO: -> TeleportEventsIterator
+// TeleportSearchEventsClient is an interface for client.Client, required for testing
+type TeleportSearchEventsClient interface {
+	SearchEvents(ctx context.Context, fromUTC, toUTC time.Time, namespace string, eventTypes []string, limit int, startKey string) ([]events.AuditEvent, string, error)
+	Close() error
+}
+
 // TeleportClient represents wrapper around Teleport client to work with events
 type TeleportClient struct {
 	// client is an instance of GRPC Teleport client
-	client *client.Client
+	client TeleportSearchEventsClient
 
 	// cursor current cursor value
 	cursor string
