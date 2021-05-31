@@ -253,30 +253,13 @@ trigger:
     include:
       - refs/tags/terraform-provider-teleport-v*
 
-workspace:
-  path: /tmp/teleport-plugins/tag-build-terraform-darwin
-
 steps:
-  - name: Clean up exec runner storage (pre)
-    environment:
-      WORKSPACE_DIR: /tmp/teleport-plugins/tag-build-terraform-darwin
+  - name: Build artifacts
     commands:
-      - set -u
-      - rm -rf $WORKSPACE_DIR/go
-      - mkdir -p $WORKSPACE_DIR/go/cache
-      - chmod -R u+rw $WORKSPACE_DIR/go
-
-  - name: Build artifacts (darwin)
-    environment:
-      WORKSPACE_DIR: /tmp/teleport-plugins/tag-build-terraform-darwin
-    commands:
-      - set -u
-      - export GOPATH=$WORKSPACE_DIR/go
-      - export GOCACHE=$WORKSPACE_DIR/go/cache
-      - mkdir -p $WORKSPACE_DIR/build/
+      - mkdir -p build/
       - make release/terraform
-      - find $WORKSPACE_DIR/terraform/ -iname "*.tar.gz" -print -exec cp {} $WORKSPACE_DIR/build/ \;
-      - cd $WORKSPACE_DIR/build
+      - find terraform/ -iname "*.tar.gz" -print -exec cp {} build/ \;
+      - cd build
       - pwd
       - for FILE in *.tar.gz; do shasum -a 256 $FILE > $FILE.sha256; done
       - ls -l .
@@ -290,18 +273,9 @@ steps:
       AWS_SECRET_ACCESS_KEY:
         from_secret: AWS_SECRET_ACCESS_KEY
       AWS_REGION: us-west-2
-      WORKSPACE_DIR: /tmp/teleport-plugins/tag-build-terraform-darwin
     commands:
-      - set -u
-      - cd $WORKSPACE_DIR/build
+      - cd build
       - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
-
-  - name: Clean up exec runner storage (post)
-    environment:
-      WORKSPACE_DIR: /tmp/teleport-plugins/tag-build-terraform-darwin
-    commands:
-      - set -u
-      - rm -rf $WORKSPACE_DIR/go
 
 ---
 kind: pipeline
@@ -351,6 +325,6 @@ steps:
 
 ---
 kind: signature
-hmac: f81b0135253be317b90538ea0f6c01618e3df74aa7ed71f69ad66d45dd9651d0
+hmac: 44c8df93eb2f51675aeb6dfe7e84161a25321066ceef56d97c9f6a1837b2dff6
 
 ...
