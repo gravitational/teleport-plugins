@@ -10,7 +10,7 @@ ADDFLAGS ?=
 BUILDFLAGS ?= $(ADDFLAGS) -ldflags '-w -s'
 CGOFLAG ?= CGO_ENABLED=1
 
-RELEASE = access-terraform-v$(VERSION)-$(OS)-$(ARCH)-bin
+RELEASE = terraform-provider-teleport-v$(VERSION)-$(OS)-$(ARCH)-bin
 
 .PHONY: tfclean
 tfclean:

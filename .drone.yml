@@ -204,7 +204,7 @@ trigger:
     - tag
   ref:
     include:
-      - refs/tags/terraform-*-v*
+      - refs/tags/terraform-provider-teleport-v*
 
 workspace:
   path: /go/src/github.com/gravitational/teleport-plugins
@@ -231,7 +231,7 @@ steps:
         from_secret: AWS_SECRET_ACCESS_KEY
       region: us-west-2
       source: /go/src/github.com/gravitational/teleport-plugins/build/*
-      target: teleport-terraform/tag/${DRONE_TAG}
+      target: teleport-plugins/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
 
 ---
@@ -251,27 +251,33 @@ trigger:
     - tag
   ref:
     include:
-      - refs/tags/terraform-v*
+      - refs/tags/terraform-provider-teleport-v*
 
 workspace:
   path: /tmp/teleport-plugins/tag-build-terraform-darwin
 
 steps:
   - name: Clean up exec runner storage (pre)
+    environment:
+      WORKSPACE_DIR: /tmp/teleport-plugins/tag-build-terraform-darwin
     commands:
-      - rm -rf /tmp/teleport-plugins/tag-build-terraform-darwin/go
-      - mkdir -p /tmp/teleport-plugins/tag-build-terraform-darwin/go/cache
-      - chmod -R u+rw /tmp/teleport-plugins/tag-build-terraform-darwin/go
+      - set -u
+      - rm -rf ${WORKSPACE_DIR}/go
+      - mkdir -p ${WORKSPACE_DIR}/go/cache
+      - chmod -R u+rw ${WORKSPACE_DIR}/go
 
   - name: Build artifacts (darwin)
     environment:
-      GOPATH: /tmp/teleport-plugins/tag-build-terraform-darwin/go
-      GOCACHE: /tmp/teleport-plugins/tag-build-terraform-darwin/go/cache
+      WORKSPACE_DIR: /tmp/teleport-plugins/tag-build-terraform-darwin
     commands:
-      - mkdir -p build/
+      - set -u
+      - export GOPATH=${WORKSPACE_DIR}/go
+      - export GOCACHE=${WORKSPACE_DIR}/go/cache
+      - mkdir -p ${WORKSPACE_DIR}/build/
       - make release/terraform
-      - find terraform/ -iname "*.tar.gz" -print -exec cp {} build/ \;
-      - cd build
+      - find ${WORKSPACE_DIR}/terraform/ -iname "*.tar.gz" -print -exec cp {} ${WORKSPACE_DIR}/build/ \;
+      - cd ${WORKSPACE_DIR}/build
+      - pwd
       - for FILE in *.tar.gz; do shasum -a 256 $FILE > $FILE.sha256; done
       - ls -l .
 
@@ -287,23 +293,26 @@ steps:
       WORKSPACE_DIR: /tmp/teleport-plugins/tag-build-terraform-darwin
     commands:
       - set -u
-      - cd /tmp/teleport-plugins/tag-build-terraform-darwin/build
-      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-terraform/tag/${DRONE_TAG}/
+      - cd ${WORKSPACE_DIR}/build
+      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
 
   - name: Clean up exec runner storage (post)
+    environment:
+      WORKSPACE_DIR: /tmp/teleport-plugins/tag-build-terraform-darwin
     commands:
-      - rm -rf /tmp/teleport-plugins/tag-build-terraform-darwin/go
+      - set -u
+      - rm -rf ${WORKSPACE_DIR}/go
 
 ---
 kind: pipeline
 type: kubernetes
-name: promote-plugin-artifact
+name: promote-artifact
 
 trigger:
   event:
     - promote
   target:
-    - production-plugin
+    - production
 
 workspace:
   path: /go/src/github.com/gravitational/teleport-plugins
@@ -312,7 +321,7 @@ clone:
   disable: true
 
 steps:
-  - name: Download plugin artifact from S3 artifact publishing bucket
+  - name: Download artifact from S3 artifact publishing bucket
     image: amazon/aws-cli
     environment:
       AWS_S3_BUCKET:
@@ -325,7 +334,7 @@ steps:
     commands:
       - aws s3 sync s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/ .
 
-  - name: Upload plugin artifact to production S3 bucket with public read access
+  - name: Upload artifact to production S3 bucket with public read access
     image: plugins/s3
     settings:
       bucket:
@@ -341,53 +350,7 @@ steps:
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/
 
 ---
-kind: pipeline
-type: kubernetes
-name: promote-terraform-artifact
-
-trigger:
-  event:
-    - promote
-  target:
-    - production-terraform
-
-workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
-
-clone:
-  disable: true
-
-steps:
-  - name: Download Terraform artifact from S3 artifact publishing bucket
-    image: amazon/aws-cli
-    environment:
-      AWS_S3_BUCKET:
-        from_secret: AWS_S3_BUCKET
-      AWS_ACCESS_KEY_ID:
-        from_secret: AWS_ACCESS_KEY_ID
-      AWS_SECRET_ACCESS_KEY:
-        from_secret: AWS_SECRET_ACCESS_KEY
-      AWS_REGION: us-west-2
-    commands:
-      - aws s3 sync s3://$AWS_S3_BUCKET/teleport-terraform/tag/${DRONE_TAG}/ .
-
-  - name: Upload Terraform artifact to production S3 bucket with public read access
-    image: plugins/s3
-    settings:
-      bucket:
-        from_secret: PRODUCTION_AWS_S3_BUCKET
-      access_key:
-        from_secret: PRODUCTION_AWS_ACCESS_KEY_ID
-      secret_key:
-        from_secret: PRODUCTION_AWS_SECRET_ACCESS_KEY
-      region: us-east-1
-      acl: public-read
-      source: /go/src/github.com/gravitational/teleport-plugins/*
-      target: teleport-terraform/${DRONE_TAG##*-v}/
-      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/
-
----
 kind: signature
-hmac: 2ad5620f6ab789b97626eb6eacd6efcfe13f6fac7fcc916a8596ee2a7c6a24a1
+hmac: 555b19d1a0538620f20fe8ee3f2d6903f53ce93a81b94d875f10d517c4448087
 
 ...
