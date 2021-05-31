@@ -39,3 +39,8 @@ buildbox:
 build: buildbox
 	docker run $(DOCKERFLAGS) $(BUILDFORHOST) $(NOROOT) $(BUILDBOX) \
 		dumb-init make -C $(SRCDIR)/fluentd-forward build
+
+.PHONY: test
+test: build
+	docker run $(DOCKERFLAGS) $(BUILDFORHOST) $(NOROOT) $(BUILDBOX) \
+		dumb-init make -C $(SRCDIR)/fluentd-forward test
