@@ -10,6 +10,8 @@ ADDFLAGS ?=
 BUILDFLAGS ?= $(ADDFLAGS) -ldflags '-w -s'
 CGOFLAG ?= CGO_ENABLED=1
 
+RELEASE = access-terraform-v$(VERSION)-$(OS)-$(ARCH)-bin
+
 .PHONY: tfclean
 tfclean:
 	rm -rf $(TFDIR)/terraform.tfstate
@@ -21,15 +23,20 @@ tfclean:
 clean: tfclean
 	rm -rf $(PROVIDER_PATH)*
 	rm -rf $(BUILDDIR)/*
+	rm -rf $(RELEASE).tar.gz
 	go clean
 
 .PHONY: build
 build: clean
 	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/terraform-provider-teleport $(BUILDFLAGS)
 
+.PHONY: release
+release: build
+	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
+
 .PHONY: apply
 apply: install
-	terraform -chdir=$(TFDIR) init -var-file="vars.tfvars" && terraform -chdir=$(TFDIR) apply -auto-approve -var-file="vars.tfvars" 
+	terraform -chdir=$(TFDIR) init -var-file="vars.tfvars" && terraform -chdir=$(TFDIR) apply -auto-approve -var-file="vars.tfvars"
 
 .PHONY: reapply
 reapply:

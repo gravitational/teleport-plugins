@@ -22,6 +22,10 @@ access-gitlab:
 access-example:
 	go build -o build/access-example ./access/example
 
+.PHONY: terraform
+terraform:
+	make -C terraform
+
 # Run all tests
 .PHONY: test
 test:
@@ -48,12 +52,16 @@ release/access-pagerduty:
 release/access-gitlab:
 	make -C access/gitlab clean release
 
+.PHONY: release/terraform
+release/terraform:
+	make -C terraform clean release
+
 # Run all releases
 .PHONY: releases
 releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-gitlab
 
 .PHONY: build-all
-build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab
+build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab terraform
 
 #
 # Lint the Go code.
