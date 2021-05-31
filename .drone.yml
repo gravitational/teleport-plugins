@@ -260,7 +260,6 @@ steps:
       - make release/terraform
       - find terraform/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
-      - pwd
       - for FILE in *.tar.gz; do shasum -a 256 $FILE > $FILE.sha256; done
       - ls -l .
 
@@ -325,6 +324,6 @@ steps:
 
 ---
 kind: signature
-hmac: 44c8df93eb2f51675aeb6dfe7e84161a25321066ceef56d97c9f6a1837b2dff6
+hmac: 315bf9d19df8ffe72effa7a6204663c1f95ebedf409e20f7c7a124126f3db8c3
 
 ...
