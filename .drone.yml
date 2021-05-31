@@ -262,21 +262,21 @@ steps:
       WORKSPACE_DIR: /tmp/teleport-plugins/tag-build-terraform-darwin
     commands:
       - set -u
-      - rm -rf ${WORKSPACE_DIR}/go
-      - mkdir -p ${WORKSPACE_DIR}/go/cache
-      - chmod -R u+rw ${WORKSPACE_DIR}/go
+      - rm -rf $WORKSPACE_DIR/go
+      - mkdir -p $WORKSPACE_DIR/go/cache
+      - chmod -R u+rw $WORKSPACE_DIR/go
 
   - name: Build artifacts (darwin)
     environment:
       WORKSPACE_DIR: /tmp/teleport-plugins/tag-build-terraform-darwin
     commands:
       - set -u
-      - export GOPATH=${WORKSPACE_DIR}/go
-      - export GOCACHE=${WORKSPACE_DIR}/go/cache
-      - mkdir -p ${WORKSPACE_DIR}/build/
+      - export GOPATH=$WORKSPACE_DIR/go
+      - export GOCACHE=$WORKSPACE_DIR/go/cache
+      - mkdir -p $WORKSPACE_DIR/build/
       - make release/terraform
-      - find ${WORKSPACE_DIR}/terraform/ -iname "*.tar.gz" -print -exec cp {} ${WORKSPACE_DIR}/build/ \;
-      - cd ${WORKSPACE_DIR}/build
+      - find $WORKSPACE_DIR/terraform/ -iname "*.tar.gz" -print -exec cp {} $WORKSPACE_DIR/build/ \;
+      - cd $WORKSPACE_DIR/build
       - pwd
       - for FILE in *.tar.gz; do shasum -a 256 $FILE > $FILE.sha256; done
       - ls -l .
@@ -293,7 +293,7 @@ steps:
       WORKSPACE_DIR: /tmp/teleport-plugins/tag-build-terraform-darwin
     commands:
       - set -u
-      - cd ${WORKSPACE_DIR}/build
+      - cd $WORKSPACE_DIR/build
       - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
 
   - name: Clean up exec runner storage (post)
@@ -301,7 +301,7 @@ steps:
       WORKSPACE_DIR: /tmp/teleport-plugins/tag-build-terraform-darwin
     commands:
       - set -u
-      - rm -rf ${WORKSPACE_DIR}/go
+      - rm -rf $WORKSPACE_DIR/go
 
 ---
 kind: pipeline
@@ -351,6 +351,6 @@ steps:
 
 ---
 kind: signature
-hmac: 555b19d1a0538620f20fe8ee3f2d6903f53ce93a81b94d875f10d517c4448087
+hmac: f81b0135253be317b90538ea0f6c01618e3df74aa7ed71f69ad66d45dd9651d0
 
 ...
