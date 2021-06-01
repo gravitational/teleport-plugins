@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"time"
@@ -82,6 +83,9 @@ type Config struct {
 
 	// Timeout is the time poller will wait before the new request if there are no events in the queue
 	Timeout time.Duration
+
+	// Config is a path to toml config file
+	Config string `mapstructure:"config"`
 }
 
 const (
@@ -90,6 +94,9 @@ const (
 
 	// debug CLI flag name
 	debug = "debug"
+
+	// path to viper config CLI flag name
+	config = "config"
 )
 
 var (
@@ -116,7 +123,7 @@ func initConfig() {
 	pflag.StringP("fluentd-key", "k", "", "fluentd TLS key path")
 
 	pflag.StringP("storage-dir", "s", "", "Storage directory")
-	pflag.Int("batch-size", 20, "Events API fetch batch size")
+	pflag.Int("batch", 20, "Events API fetch batch size")
 	pflag.String("namespace", "default", "Events namespace")
 	pflag.StringSliceP("types", "t", []string{}, "Event types to log")
 	pflag.String("start-time", defaultStartTime.Format(time.RFC3339), "Start time to fetch events from in RFC3339 format")
@@ -124,9 +131,12 @@ func initConfig() {
 
 	pflag.BoolP(debug, "d", false, "Debug mode")
 
+	pflag.String(config, "", "Path to TOML config file")
+
 	pflag.Parse()
 
 	viper.BindPFlags(pflag.CommandLine)
+	viper.SetConfigType("toml")
 
 	if viper.GetBool(debug) {
 		log.SetLevel(log.DebugLevel)
@@ -145,9 +155,13 @@ func printUsage() {
 
 // newConfig builds new config struct and validates that required args are present
 func newConfig() (*Config, error) {
-	c := &Config{}
-	err := viper.Unmarshal(c)
+	err := readConfig()
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 
+	c := &Config{}
+	err = viper.Unmarshal(c)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -158,6 +172,26 @@ func newConfig() (*Config, error) {
 	}
 
 	return c, nil
+}
+
+// readConfig reads config from file
+func readConfig() error {
+	config := viper.GetString(config)
+	if config == "" {
+		return nil
+	}
+
+	file, err := os.Open(config)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	err = viper.ReadConfig(bufio.NewReader(file))
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	return nil
 }
 
 // Validate validates that required CLI args are present
