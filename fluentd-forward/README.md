@@ -98,7 +98,7 @@ key  = "fd.key"
 
 For the purpose of testing, we will run the local fluentd instance first.
 
-### Generate mTLS certificates
+### <a name="mtls"></a>Generate mTLS certificates
 
 For the purpose of security, we require mTLS to be enabled on the fluentd side. You are going to need [OpenSSL configuration file](example/ssl.conf). Put the following contents to `ssl.conf`:
 
@@ -183,7 +183,7 @@ You will be requested to enter key password. Remember this password since it wil
 
 Alternatively, you can run: `PASS=12345678 make gen-example-mtls` from the plugin source folder. Keys will be generated and put to `example/keys` folder.
 
-### Configure fluentd
+### <a name="fd"></a>Configure fluentd
 
 The plugin will send events to the fluentd instance using keys generated on the previous step. Put the following contents into `fluent.conf`:
 
@@ -218,7 +218,7 @@ The plugin will send events to the fluentd instance using keys generated on the 
 
 Please notice that passphrase must be changed to the one you used during key generation.
 
-## Run test setup
+## <a name="run"></a>Run test setup
 
 * Start `fluentd`:
 
@@ -274,3 +274,73 @@ You may specify configuration options via command line arguments, environment va
 | cursor             | Start cursor value                             | FDFWD_CURSOR            |
 
 TOML configuration keys are the same as CLI args. Teleport and Fluentd variables can be grouped into sections. See [example TOML](example/config.toml).
+
+## Using with Teleport Cloud
+
+### Login to Teleport cloud:
+
+```sh
+ tsh login --proxy test.teleport.sh:443 --user test@evilmartians.com
+ ```
+
+### Create `fluentd-forward` user and role
+
+Put the following contents into `fluentd-forward.yaml`:
+
+```yaml
+kind: user
+metadata:
+  name: fluentd-forward
+spec:
+  roles: ['fluentd-forward']
+version: v2
+---
+kind: role
+metadata:
+  name: fluentd-forward
+spec:
+  allow:
+    rules:
+      - resources: ['event']
+        verbs: ['list','read']
+version: v3
+```
+
+```sh
+tctl create -f fluentd-forward.yaml
+```
+
+Now, export the identity file:
+
+```sh
+tctl auth sign --out identity --user fluentd-forward
+```
+
+### Configure fluentd-forward
+
+Put the following contents into fluent-forward.toml:
+
+```toml
+storage = "./fluentd-forward-storage" # Plugin will save it's state here
+timeout = "10s"
+batch = 10
+namespace = "default"
+
+[fluentd]
+cert = "client.crt"
+key = "client.key" 
+ca = "ca.crt"
+url = "https://localhost:8888/test.log"
+
+[teleport]
+addr = "test.teleport.sh:443"
+identity = "identity"
+```
+
+### Generate mTLS keys and configure fluentd
+
+Follow the ["Generate mTLS certificates"](#mtls) section and ["Configure fluentd"](#md) sections of this document.
+
+### Run test setup
+
+Follow the ["Run test setup"](#run) section.

@@ -326,6 +326,8 @@ func (c *Config) validateTeleport() error {
 		if !fileExists(c.TeleportIdentityFile) {
 			return trace.BadParameter("Teleport identity file does not exist %s", c.TeleportIdentityFile)
 		}
+
+		log.WithFields(log.Fields{"file": c.TeleportIdentityFile}).Debug("Using Teleport identity file")
 	}
 
 	return nil
