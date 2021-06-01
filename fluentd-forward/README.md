@@ -9,9 +9,10 @@ This plugin is used to export Audit Log events to Fluentd service.
 This guide assumes that you have:
 * Teleport 6.2 or newer
 * Admin privileges to access tctl
-* Fluentd v1.12.4 or newer
 * OpenSSL or LibreSSL (macOS)
 * Docker to build plugin from source and run fluentd example instance
+
+The required Fluentd version for production setup is v1.12.4 or newer. Lower versions do not support TLS.
 
 ### Create user and role for access audit log events
 
@@ -178,11 +179,13 @@ openssl req -config ssl.conf -subj "/CN=client" -key client.key -new -out client
 openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 365 -out client.crt -extfile ssl.conf -extensions client_cert
 ```
 
-You will be requested to enter key password. Remember this password since it will be required later, in fluentd configuration.
+You will be requested to enter key password. Remember this password since it will be required later, in fluentd configuration. Note that for the testing purposes we encrypt only `server.key` (which is fluentd instance key). It is strongly recommended by the Fluentd. Plugin does not yet support client key encryption.
+
+Alternatively, you can run: `PASS=12345678 make gen-example-mtls` from the plugin source folder. Keys will be generated and put to `example/keys` folder.
 
 ### Configure fluentd
 
-The plugin will send events to the fluentd instance using keys generated on previous step.
+The plugin will send events to the fluentd instance using keys generated on the previous step.
 
 ```
 <source>
@@ -201,11 +204,13 @@ The plugin will send events to the fluentd instance using keys generated on prev
       @type json
       json_parser oj
 
+      # This time format is used by the plugin. This field is required.
       time_type string
-      time_format %Y-%m-%dT%H:%M:%S # This time format is used by Go marshaller. It is required to specify this.
+      time_format %Y-%m-%dT%H:%M:%S
     </parse>
 </source>
 
+# Events sent to test.log will be dumped to STDOUT.
 <match test.log> 
   @type stdout
 </match>

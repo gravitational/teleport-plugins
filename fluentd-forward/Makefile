@@ -13,6 +13,8 @@ ADDFLAGS ?=
 BUILDFLAGS ?= $(ADDFLAGS) -ldflags "-w -s -X main.Sha=`git rev-parse HEAD` -X main.Version=$(VERSION)"
 CGOFLAG ?= CGO_ENABLED=1
 
+PASS ?= 1234
+
 .PHONY: gen-example-mtls
 gen-example-mtls:
 	rm -f example/keys/*
@@ -21,9 +23,9 @@ gen-example-mtls:
 	chmod 444 example/keys/ca.key
 	openssl req -config example/ssl.conf -key example/keys/ca.key -new -x509 -days 7300 -sha256 -extensions v3_ca -subj "/CN=ca" -out example/keys/ca.crt
 
-	openssl genrsa -aes256 -passout pass:1234 -out example/keys/server.key 4096
+	openssl genrsa -aes256 -passout pass:$(PASS) -out example/keys/server.key 4096
 	chmod 444 example/keys/server.key
-	openssl req -passin pass:1234 -config example/ssl.conf -subj "/CN=server" -key example/keys/server.key -new -out example/keys/server.csr
+	openssl req -passin pass:$(PASS) -config example/ssl.conf -subj "/CN=server" -key example/keys/server.key -new -out example/keys/server.csr
 	openssl x509 -req -in example/keys/server.csr -CA example/keys/ca.crt -CAkey example/keys/ca.key -CAcreateserial -days 365 -out example/keys/server.crt -extfile example/ssl.conf -extensions server_cert
 
 	openssl genrsa -out example/keys/server_nopass.key 4096
