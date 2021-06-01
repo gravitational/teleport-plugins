@@ -119,15 +119,15 @@ func initConfig() {
 	pflag.String("teleport-key", "", "Teleport TLS key file")
 
 	pflag.StringP("fluentd-url", "u", "", "fluentd url")
-	pflag.StringP("fluentd-ca", "a", "", "fluentd TLS CA path")
-	pflag.StringP("fluentd-cert", "c", "", "fluentd TLS certificate path")
-	pflag.StringP("fluentd-key", "k", "", "fluentd TLS key path")
+	pflag.StringP("fluentd-ca", "a", "", "fluentd TLS CA file")
+	pflag.StringP("fluentd-cert", "c", "", "fluentd TLS certificate file")
+	pflag.StringP("fluentd-key", "k", "", "fluentd TLS key file")
 
 	pflag.StringP("storage", "s", "", "Storage directory")
-	pflag.Int("batch", 20, "Events API fetch batch size")
+	pflag.Int("batch", 20, "Fetch batch size")
 	pflag.String("namespace", "default", "Events namespace")
-	pflag.StringSliceP("types", "t", []string{}, "Event types to log")
-	pflag.String("start-time", defaultStartTime.Format(time.RFC3339), "Start time to fetch events from in RFC3339 format")
+	pflag.StringSliceP("types", "t", []string{}, "Comma-separated list of event types to forward")
+	pflag.String("start-time", defaultStartTime.Format(time.RFC3339), "Minimum event time (RFC3339 format)")
 	pflag.Duration("timeout", 5*time.Second, "Polling timeout")
 	pflag.String("cursor", "", "Initial cursor value")
 
