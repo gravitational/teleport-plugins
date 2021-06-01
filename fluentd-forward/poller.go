@@ -41,6 +41,8 @@ type Poller struct {
 
 // NewPoller builds new Poller structure
 func NewPoller(c *Config) (*Poller, error) {
+	var cursor string
+
 	k, err := NewCursor(c)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -51,10 +53,16 @@ func NewPoller(c *Config) (*Poller, error) {
 		return nil, trace.Wrap(err)
 	}
 
-	cursor, err := k.Get()
-	if err != nil {
-		return nil, trace.Wrap(err)
+	if c.Cursor != "" {
+		cursor = c.Cursor
+	} else {
+		cursor, err = k.Get()
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
 	}
+
+	log.WithFields(log.Fields{"cursor": cursor}).Debug("Using initial cursor value")
 
 	t, err := NewTeleportClient(c, cursor)
 	if err != nil {

@@ -40,7 +40,7 @@ func main() {
 	p, err := NewPoller(c)
 	if err != nil {
 		log.Debug(trace.DebugReport(err))
-		log.Error("%w", err)
+		log.Error(err)
 		os.Exit(-1)
 	}
 	defer p.Close()
@@ -48,7 +48,7 @@ func main() {
 	err = p.Start()
 	if err != nil {
 		log.Debug(trace.DebugReport(err))
-		log.Error("%w", err)
+		log.Error(err)
 		os.Exit(-1)
 	}
 }

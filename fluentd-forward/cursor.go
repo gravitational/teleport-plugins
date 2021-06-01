@@ -17,10 +17,12 @@ limitations under the License.
 package main
 
 import (
-	"net/url"
+	"net"
+	"strings"
 
 	"github.com/gravitational/trace"
 	"github.com/peterbourgon/diskv"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -47,12 +49,19 @@ func NewCursor(c *Config) (*Cursor, error) {
 		CacheSizeMax: cacheSizeMax,
 	})
 
-	url, err := url.Parse(c.TeleportAddr)
+	host, port, err := net.SplitHostPort(c.TeleportAddr)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
-	return &Cursor{dv: dv, name: url.Host}, nil
+	name := strings.TrimSpace(host + "_" + port)
+	if name == "_" {
+		return nil, trace.Errorf("Can not generate cursor name from Teleport host %s", c.TeleportAddr)
+	}
+
+	log.WithFields(log.Fields{"name": name}).Debug("Using cursor name")
+
+	return &Cursor{dv: dv, name: name}, nil
 }
 
 // Get gets current cursor value

@@ -20,6 +20,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gravitational/trace"
@@ -86,11 +87,14 @@ type Config struct {
 
 	// Config is a path to toml config file
 	Config string `mapstructure:"config"`
+
+	// Cursor is the initial cursor value
+	Cursor string `mapstructure:"cursor"`
 }
 
 const (
 	// envPrefix is the configuration environment prefix
-	envPrefix = "FDF"
+	envPrefix = "FDFWD"
 
 	// debug CLI flag name
 	debug = "debug"
@@ -106,9 +110,6 @@ var (
 
 // initConfig initializes viper args
 func initConfig() {
-	viper.SetEnvPrefix(envPrefix)
-	viper.AutomaticEnv()
-
 	pflag.BoolP("help", "h", false, "Print usage message")
 
 	pflag.StringP("teleport-addr", "p", "", "Teleport addr")
@@ -128,6 +129,7 @@ func initConfig() {
 	pflag.StringSliceP("types", "t", []string{}, "Event types to log")
 	pflag.String("start-time", defaultStartTime.Format(time.RFC3339), "Start time to fetch events from in RFC3339 format")
 	pflag.Duration("timeout", 5*time.Second, "Polling timeout")
+	pflag.String("cursor", "", "Initial cursor value")
 
 	pflag.BoolP(debug, "d", false, "Debug mode")
 
@@ -137,6 +139,10 @@ func initConfig() {
 
 	viper.BindPFlags(pflag.CommandLine)
 	viper.SetConfigType("toml")
+
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	viper.SetEnvPrefix(envPrefix)
+	viper.AutomaticEnv()
 
 	if viper.GetBool(debug) {
 		log.SetLevel(log.DebugLevel)
@@ -234,6 +240,7 @@ func (c *Config) validate() error {
 	log.WithFields(log.Fields{"types": c.Types}).Debug("Using type filter")
 	log.WithFields(log.Fields{"value": c.StartTime}).Debug("Using start time")
 	log.WithFields(log.Fields{"timeout": c.Timeout}).Debug("Using timeout")
+	log.WithFields(log.Fields{"cursor": c.Cursor}).Debug("Using cursor")
 
 	return nil
 }

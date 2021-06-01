@@ -68,7 +68,7 @@ make install
 This will place `fluentd-forward` executable to `/usr/local/bin` folder. You can override the target directory:
 
 ```sh
-make install BINDIR=/bin
+make install BINDIR=/tmp/test-fluentd-setup
 ```
 
 ### Configure the plugin
@@ -218,16 +218,45 @@ The plugin will send events to the fluentd instance using keys generated on the 
 
 Please notice that passphrase must be changed to the one you used during key generation.
 
-## Run everything
+## Run test setup
 
-* Start fluentd:
+* Start `fluentd`:
 
 ```sh
 docker run -p 8888:8888 -v $(pwd):/keys -v $(pwd)/fluent.conf:/fluentd/etc/fluent.conf fluent/fluentd:edge 
 ```
 
-* Start fluentd-forward:
+* Start `fluentd-forward`:
 
 ```sh
 fluentd-forward --config fluentd-forward.toml -d
 ```
+
+`-d` flag is used to enable debug logging.
+
+You are going to see something like this:
+
+```sh
+DEBU[0010] JSON to send                                  json="{\"ei\":0,\"event\":\"role.created\",\"uid\":\"4f3cc272-4d54-4729-8563-20702cac0d4b\",\"code\":\"T9000I\",\"time\":\"2021-05-26T11:15:30.587Z\",\"cluster_name\":\"teleport-cluster\",\"name\":\"terraform\",\"expires\":\"0001-01-01T00:00:00Z\",\"user\":\"79e2cc83-8d4f-4897-84a2-ccd3427246b7.teleport-cluster\"}"
+INFO[0010] Event sent                                    fields.time="2021-05-26 11:15:30.587 +0000 UTC" type=role.created
+DEBU[0010] Event dump                                    event="Metadata:<Type:\"role.created\" ID:\"4f3cc272-4d54-4729-8563-20702cac0d4b\" Code:\"T9000I\" Time:<seconds:1622027730 nanos:587000000 > ClusterName:\"teleport-cluster\" > Resource:<Name:\"terraform\" Expires:<seconds:-62135596800 > > User:<User:\"79e2cc83-8d4f-4897-84a2-ccd3427246b7.teleport-cluster\" > "
+DEBU[0010] JSON to send                                  json="{\"ei\":0,\"event\":\"user.create\",\"uid\":\"e01f9e74-fea3-4fd0-b8e5-638264fbae27\",\"code\":\"T1002I\",\"time\":\"2021-06-01T11:07:12.536Z\",\"cluster_name\":\"teleport-cluster\",\"user\":\"79e2cc83-8d4f-4897-84a2-ccd3427246b7.teleport-cluster\",\"name\":\"fluentd-forward\",\"expires\":\"0001-01-01T00:00:00Z\",\"roles\":[\"fluentd-forward\"],\"connector\":\"local\"}"
+```
+
+## How it works
+
+* `fluentd-forward` takes the Audit Log event stream from Teleport. It loads events in batches of 20 by default. Every event gets sent to fluentd.
+* Once event is successfully received by fluentd, it's ID is saved to the `fluent-forward` state. In case `fluentd-forward` crashes, it will pick the stream up from a latest successful event.
+* Once all events are sent, `fluentd-forward` starts polling for new evetns. It happens every 5 seconds by default.
+* If storage directory gets lost, you may specify latest event id value. `fluentd-forward` will pick streamin up from the next event after it.
+
+## Configuration options
+
+You may specify configuration options via command line arguments, environment variables or TOML file.
+
+| CLI arg name       | Description                   | Env var name                   |
+| -------------------|-------------------------------|--------------------------------|
+| teleport-addr      | Teleport host and port        | FDFWD_TELEPORT_ADDR            |
+| teleport-ca        | Teleport TLS CA file          | FDFWD_TELEPORT_CA              |
+| teleport-cert      | Teleport TLS certificate file | FDWRD_TELEPORT_CERT            |
+| teleport-key       | Teleport TLS key file         | FDFWD_TELEPORT_KEY             |
