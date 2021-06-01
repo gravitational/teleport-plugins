@@ -97,7 +97,7 @@ func TestTeleportIdentity(t *testing.T) {
 			existingFile,
 		},
 		{
-			"storage-dir",
+			"storage",
 			"Storage dir is empty, pass storage dir",
 			"./tmp",
 		},
@@ -150,7 +150,7 @@ func TestTeleportCerts(t *testing.T) {
 			existingFile,
 		},
 		{
-			"storage-dir",
+			"storage",
 			"Storage dir is empty, pass storage dir",
 			"./tmp",
 		},

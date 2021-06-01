@@ -50,6 +50,10 @@ build: clean
 install: build
 	go install
 
+.PHONY: fluentd
+fluentd: gen-example-mtls
+	docker run -p 8888:8888 -v $(LOCALDIR)example/keys:/fluentd/etc/keys -v $(LOCALDIR)example/fluent.conf:/fluentd/etc/fluent.conf fluent/fluentd:edge 
+
 .PHONY: example
 example: build
 	./build/fluentd-forward -c example/keys/client.crt -k example/keys/client.key --fluentd-ca example/keys/ca.crt --fluentd-url https://localhost:8888/test.log --teleport-ca ~/www/teleport-installation/tf.cas --teleport-cert ~/www/teleport-installation/tf.crt --teleport-key ~/www/teleport-installation/tf.key --teleport-addr localhost:3025 --storage /tmp/storage -d

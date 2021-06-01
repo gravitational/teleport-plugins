@@ -26,7 +26,7 @@ var (
 	// cursorConfig represents required config
 	cursorConfig = &Config{
 		StorageDir:   "tmp",
-		TeleportAddr: "https://localhost:8888",
+		TeleportAddr: "localhost:8888",
 	}
 )
 

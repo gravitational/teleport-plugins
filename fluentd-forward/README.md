@@ -234,7 +234,7 @@ fluentd-forward --config fluentd-forward.toml -d
 
 `-d` flag is used to enable debug logging.
 
-You are going to see something like this:
+You should see something like this:
 
 ```sh
 DEBU[0010] JSON to send                                  json="{\"ei\":0,\"event\":\"role.created\",\"uid\":\"4f3cc272-4d54-4729-8563-20702cac0d4b\",\"code\":\"T9000I\",\"time\":\"2021-05-26T11:15:30.587Z\",\"cluster_name\":\"teleport-cluster\",\"name\":\"terraform\",\"expires\":\"0001-01-01T00:00:00Z\",\"user\":\"79e2cc83-8d4f-4897-84a2-ccd3427246b7.teleport-cluster\"}"
@@ -248,7 +248,7 @@ DEBU[0010] JSON to send                                  json="{\"ei\":0,\"event
 * `fluentd-forward` takes the Audit Log event stream from Teleport. It loads events in batches of 20 by default. Every event gets sent to fluentd.
 * Once event is successfully received by fluentd, it's ID is saved to the `fluent-forward` state. In case `fluentd-forward` crashes, it will pick the stream up from a latest successful event.
 * Once all events are sent, `fluentd-forward` starts polling for new evetns. It happens every 5 seconds by default.
-* If storage directory gets lost, you may specify latest event id value. `fluentd-forward` will pick streamin up from the next event after it.
+* If storage directory gets lost, you may specify latest event id value. `fluentd-forward` will pick streaming up from the next event after it.
 
 ## Configuration options
 
