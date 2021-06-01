@@ -16,7 +16,7 @@ The required Fluentd version for production setup is v1.12.4 or newer. Lower ver
 
 ### Create user and role for access audit log events
 
-Log into Teleport Authentication Server, this is where you normally run tctl. Create a new user and role that only has read-only API access to the `events` API. The below script will create a [yaml resource file](example/fluentd-forward.yaml) for a new user and role.
+Log into Teleport Authentication Server, this is where you normally run tctl. Create a new user and role that only has read-only API access to the `event` API. The below script will create a [yaml resource file](example/fluentd-forward.yaml) for a new user and role.
 
 ```yaml
 kind: user
@@ -32,7 +32,7 @@ metadata:
 spec:
   allow:
     rules:
-      - resources: ['events']
+      - resources: ['event']
         verbs: ['list','read']
 version: v3
 ```
@@ -76,7 +76,7 @@ make install BINDIR=/bin
 Save the following content to `fluentd-forward.toml`:
 
 ```toml
-storage = "/var/lib/teleport/plugins/fluentd-forward" # Plugin will save it's state here
+storage = "./fluentd-forward-storage" # Plugin will save it's state here
 timeout = "10s"
 batch = 10
 namespace = "default"
@@ -185,7 +185,7 @@ Alternatively, you can run: `PASS=12345678 make gen-example-mtls` from the plugi
 
 ### Configure fluentd
 
-The plugin will send events to the fluentd instance using keys generated on the previous step.
+The plugin will send events to the fluentd instance using keys generated on the previous step. Put the following contents into `fluent.conf`:
 
 ```
 <source>
@@ -216,7 +216,9 @@ The plugin will send events to the fluentd instance using keys generated on the 
 </match>
 ```
 
-## Run the setup
+Please notice that passphrase must be changed to the one you used during key generation.
+
+## Run everything
 
 * Start fluentd:
 
@@ -227,5 +229,5 @@ docker run -p 8888:8888 -v $(pwd):/keys -v $(pwd)/fluent.conf:/fluentd/etc/fluen
 * Start fluentd-forward:
 
 ```sh
-fluentd-forward -config fluentd-forward.toml -d
+fluentd-forward --config fluentd-forward.toml -d
 ```
