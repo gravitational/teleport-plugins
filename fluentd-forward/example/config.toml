@@ -1,13 +1,17 @@
 # fluentd forwarder example key file
-fluentd-cert = "example/keys/client.crt"
-fluentd-key = "example/keys/client.key" 
-fluentd-ca = "example/keys/ca.crt"
-fluentd-url = "https://localhost:8888/test.log"
-teleport-ca = "example/keys/tf.cas" 
-teleport-cert = "example/keys/tf.crt"
-teleport-key  = "example/keys/tf.key"
-teleport-addr = "localhost:3025"
 storage-dir = "example/storage"
 timeout = "10s"
 batch = 10
 namespace = "default"
+
+[fluentd]
+cert = "example/keys/client.crt"
+key = "example/keys/client.key" 
+ca = "example/keys/ca.crt"
+url = "https://localhost:8888/test.log"
+
+[teleport]
+addr = "localhost:3025"
+ca = "example/keys/tf.cas" 
+cert = "example/keys/tf.crt"
+key  = "example/keys/tf.key"

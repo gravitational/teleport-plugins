@@ -191,6 +191,18 @@ func readConfig() error {
 		return trace.Wrap(err)
 	}
 
+	// Aliases for toml sections, must be called after ReadConfig
+	viper.RegisterAlias("teleport-addr", "teleport.addr")
+	viper.RegisterAlias("teleport-identity", "teleport.identity")
+	viper.RegisterAlias("teleport-ca", "teleport.ca")
+	viper.RegisterAlias("teleport-cert", "teleport.cert")
+	viper.RegisterAlias("teleport-key", "teleport.key")
+
+	viper.RegisterAlias("fluentd-url", "fluentd.url")
+	viper.RegisterAlias("fluentd-ca", "fluentd.ca")
+	viper.RegisterAlias("fluentd-cert", "fluentd.cert")
+	viper.RegisterAlias("fluentd-key", "fluentd.key")
+
 	return nil
 }
 
