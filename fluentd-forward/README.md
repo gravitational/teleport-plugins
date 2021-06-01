@@ -243,6 +243,24 @@ DEBU[0010] Event dump                                    event="Metadata:<Type:\
 DEBU[0010] JSON to send                                  json="{\"ei\":0,\"event\":\"user.create\",\"uid\":\"e01f9e74-fea3-4fd0-b8e5-638264fbae27\",\"code\":\"T1002I\",\"time\":\"2021-06-01T11:07:12.536Z\",\"cluster_name\":\"teleport-cluster\",\"user\":\"79e2cc83-8d4f-4897-84a2-ccd3427246b7.teleport-cluster\",\"name\":\"fluentd-forward\",\"expires\":\"0001-01-01T00:00:00Z\",\"roles\":[\"fluentd-forward\"],\"connector\":\"local\"}"
 ```
 
+## Do not forget to set time range
+
+By default, all events starting from the firstmost will be exported. If you want to narrow the scope: for example, start from the month ago, or export only new events from now, you need to specify the start time:
+
+This can be done by setting an argument `start-time`:
+
+This will start an export from May 5 2021:
+
+```sh
+fluentd-forward --config fluentd-forward.toml -d --start-time "2021-05-05T00:00:00Z"
+```
+
+This will export new events from a moment service did start:
+
+```sh
+fluentd-forward --config fluentd-forward.toml -d --start-time "now"
+```
+
 ## How it works
 
 * `fluentd-forward` takes the Audit Log event stream from Teleport. It loads events in batches of 20 by default. Every event gets sent to fluentd.

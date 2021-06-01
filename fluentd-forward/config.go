@@ -229,9 +229,13 @@ func (c *Config) validate() error {
 		return err
 	}
 
-	c.StartTime, err = time.Parse(time.RFC3339, c.StartTimeRaw)
-	if err != nil {
-		return trace.Wrap(err)
+	if strings.ToLower(strings.TrimSpace(c.StartTimeRaw)) == "now" {
+		c.StartTime = time.Now().UTC()
+	} else {
+		c.StartTime, err = time.Parse(time.RFC3339, c.StartTimeRaw)
+		if err != nil {
+			return trace.Wrap(err)
+		}
 	}
 
 	log.WithFields(log.Fields{"dir": c.StorageDir}).Debug("Using storage dir")
