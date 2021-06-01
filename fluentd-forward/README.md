@@ -245,7 +245,7 @@ DEBU[0010] JSON to send                                  json="{\"ei\":0,\"event
 
 ## Do not forget to set time range
 
-By default, all events starting from the firstmost will be exported. If you want to narrow the scope: for example, start from the month ago, or export only new events from now, you need to specify the start time:
+By default, all events starting from the firstmost will be exported. If you want to narrow the scope: for example, start from the month ago, or export only newest events starting from now, you need to specify the start time:
 
 This can be done by setting an argument `start-time`:
 
