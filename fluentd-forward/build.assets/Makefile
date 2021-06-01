@@ -48,5 +48,5 @@ test: build
 
 .PHONY: install
 install: build
-	mdkir -p $(BINDIR)
+	mkdir -p $(BINDIR)
 	cp ../build/fluentd-forward $(BINDIR)

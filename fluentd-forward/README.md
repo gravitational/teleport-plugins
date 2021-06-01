@@ -61,14 +61,14 @@ We recommend installing the Teleport Plugins alongside the Teleport Proxy. This 
 
 ```sh
 git clone https://github.com/gravitational/teleport-plugins.git --depth 1
-cd teleport-plugins/fluentd-forwarder/build.assets
+cd teleport-plugins/fluentd-forward/build.assets
 make install
 ```
 
 This will place `fluentd-forward` executable to `/usr/local/bin` folder. You can override the target directory:
 
 ```sh
-BINDIR=/bin make install
+make install BINDIR=/bin
 ```
 
 ### Configure the plugin
