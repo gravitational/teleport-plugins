@@ -1,0 +1,16 @@
+kind: user
+metadata:
+  name: fluentd
+spec:
+  roles: ['fluentd']
+version: v2
+---
+kind: role
+metadata:
+  name: fluentd
+spec:
+  allow:
+    rules:
+      - resources: ['events']
+        verbs: ['list','read']
+version: v3
