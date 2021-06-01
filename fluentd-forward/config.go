@@ -64,7 +64,7 @@ type Config struct {
 	TeleportKey string `mapstructure:"teleport-key"`
 
 	// StorageDir is a path to badger storage dir
-	StorageDir string `mapstructure:"storage-dir"`
+	StorageDir string `mapstructure:"storage"`
 
 	// BatchSize is a fetch batch size
 	BatchSize int `mapstructure:"batch"`
@@ -122,7 +122,7 @@ func initConfig() {
 	pflag.StringP("fluentd-cert", "c", "", "fluentd TLS certificate path")
 	pflag.StringP("fluentd-key", "k", "", "fluentd TLS key path")
 
-	pflag.StringP("storage-dir", "s", "", "Storage directory")
+	pflag.StringP("storage", "s", "", "Storage directory")
 	pflag.Int("batch", 20, "Events API fetch batch size")
 	pflag.String("namespace", "default", "Events namespace")
 	pflag.StringSliceP("types", "t", []string{}, "Event types to log")

@@ -1,5 +1,5 @@
 # fluentd forwarder example key file
-storage-dir = "example/storage"
+storage = "example/storage"
 timeout = "10s"
 batch = 10
 namespace = "default"
@@ -12,6 +12,6 @@ url = "https://localhost:8888/test.log"
 
 [teleport]
 addr = "localhost:3025"
-ca = "example/keys/tf.cas" 
-cert = "example/keys/tf.crt"
-key  = "example/keys/tf.key"
+ca = "example/keys/fd.cas" 
+cert = "example/keys/fd.crt"
+key  = "example/keys/fd.key"

@@ -50,7 +50,7 @@ install: build
 
 .PHONY: example
 example: build
-	./build/fluentd-forward -c example/keys/client.crt -k example/keys/client.key --fluentd-ca example/keys/ca.crt --fluentd-url https://localhost:8888/test.log --teleport-ca ~/www/teleport-installation/tf.cas --teleport-cert ~/www/teleport-installation/tf.crt --teleport-key ~/www/teleport-installation/tf.key --teleport-addr localhost:3025 --storage-dir /tmp/storage -d
+	./build/fluentd-forward -c example/keys/client.crt -k example/keys/client.key --fluentd-ca example/keys/ca.crt --fluentd-url https://localhost:8888/test.log --teleport-ca ~/www/teleport-installation/tf.cas --teleport-cert ~/www/teleport-installation/tf.crt --teleport-key ~/www/teleport-installation/tf.key --teleport-addr localhost:3025 --storage /tmp/storage -d
 
 .PHONY: test
 test: gen-example-mtls
