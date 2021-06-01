@@ -25,6 +25,7 @@ DOCKERPULLFLAGS ?= --pull
 GO_VER = 1.16
 
 NOROOT=-u $$(id -u):$$(id -g)
+BINDIR=/usr/local/bin
 
 .PHONY: buildbox
 buildbox:
@@ -44,3 +45,8 @@ build: buildbox
 test: build
 	docker run $(DOCKERFLAGS) $(BUILDFORHOST) $(NOROOT) $(BUILDBOX) \
 		dumb-init make -C $(SRCDIR)/fluentd-forward test
+
+.PHONY: install
+install: build
+	mdkir -p $(BINDIR)
+	cp ../build/fluentd-forward $(BINDIR)
