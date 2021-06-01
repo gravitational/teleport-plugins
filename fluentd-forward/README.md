@@ -272,8 +272,9 @@ You may specify configuration options via command line arguments, environment va
 | start-time         | Minimum event time (RFC3339 format)            | FDFWD_START_TIME        |
 | timeout            | Polling timeout                                | FDFWD_TIMEOUT           |
 | cursor             | Start cursor value                             | FDFWD_CURSOR            |
+| debug              | Debug logging                                  | FDFWD_DEBUG             |
 
-TOML configuration keys are the same as CLI args. Teleport and Fluentd variables can be grouped into sections. See [example TOML](example/config.toml).
+TOML configuration keys are the same as CLI args. Teleport and Fluentd variables can be grouped into sections. See [example TOML](example/config.toml). You can specify TOML file location using `--config` CLI flag.
 
 ## Using with Teleport Cloud
 
