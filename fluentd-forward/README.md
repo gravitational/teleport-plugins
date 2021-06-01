@@ -14,7 +14,7 @@ This guide assumes that you have:
 
 The required Fluentd version for production setup is v1.12.4 or newer. Lower versions do not support TLS.
 
-### Create user and role for access audit log events
+### <a name="user"></a>Create user and role for access audit log events
 
 Log into Teleport Authentication Server, this is where you normally run tctl. Create a new user and role that only has read-only API access to the `event` API. The below script will create a [yaml resource file](example/fluentd-forward.yaml) for a new user and role.
 
@@ -285,32 +285,9 @@ TOML configuration keys are the same as CLI args. Teleport and Fluentd variables
 
 ### Create `fluentd-forward` user and role
 
-Put the following contents into `fluentd-forward.yaml`:
+Follow the ["Create user and role for access audit log events"](#user) section of this document.
 
-```yaml
-kind: user
-metadata:
-  name: fluentd-forward
-spec:
-  roles: ['fluentd-forward']
-version: v2
----
-kind: role
-metadata:
-  name: fluentd-forward
-spec:
-  allow:
-    rules:
-      - resources: ['event']
-        verbs: ['list','read']
-version: v3
-```
-
-```sh
-tctl create -f fluentd-forward.yaml
-```
-
-Now, export the identity file:
+Export the identity file after you're done:
 
 ```sh
 tctl auth sign --out identity --user fluentd-forward
