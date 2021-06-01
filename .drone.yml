@@ -153,7 +153,7 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
-name: tag-build-linux
+name: tag-build-plugins-linux
 
 trigger:
   event:
@@ -193,6 +193,88 @@ steps:
       source: /go/src/github.com/gravitational/teleport-plugins/build/*
       target: teleport-plugins/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
+
+---
+kind: pipeline
+type: kubernetes
+name: tag-build-terraform-linux
+
+trigger:
+  event:
+    - tag
+  ref:
+    include:
+      - refs/tags/terraform-provider-teleport-v*
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+steps:
+  - name: Build artifacts
+    image: golang:1.16.2
+    commands:
+      - mkdir -p build/
+      - make release/terraform
+      - find terraform/ -iname "*.tar.gz" -print -exec cp {} build/ \;
+      - cd build
+      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
+      - ls -l .
+
+  - name: Upload to S3
+    image: plugins/s3
+    settings:
+      bucket:
+        from_secret: AWS_S3_BUCKET
+      access_key:
+        from_secret: AWS_ACCESS_KEY_ID
+      secret_key:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      region: us-west-2
+      source: /go/src/github.com/gravitational/teleport-plugins/build/*
+      target: teleport-plugins/tag/${DRONE_TAG}
+      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
+
+---
+kind: pipeline
+type: exec
+name: tag-build-terraform-darwin
+
+concurrency:
+  limit: 1
+
+platform:
+  os: darwin
+  arch: amd64
+
+trigger:
+  event:
+    - tag
+  ref:
+    include:
+      - refs/tags/terraform-provider-teleport-v*
+
+steps:
+  - name: Build artifacts
+    commands:
+      - mkdir -p build/
+      - make release/terraform
+      - find terraform/ -iname "*.tar.gz" -print -exec cp {} build/ \;
+      - cd build
+      - for FILE in *.tar.gz; do shasum -a 256 $FILE > $FILE.sha256; done
+      - ls -l .
+
+  - name: Upload to S3
+    environment:
+      AWS_S3_BUCKET:
+        from_secret: AWS_S3_BUCKET
+      AWS_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      AWS_REGION: us-west-2
+    commands:
+      - cd build
+      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
 
 ---
 kind: pipeline
@@ -242,6 +324,6 @@ steps:
 
 ---
 kind: signature
-hmac: 80cf45ae20e0f6380385236a69ef16935fa8826147950147372a5306d8b059d7
+hmac: 315bf9d19df8ffe72effa7a6204663c1f95ebedf409e20f7c7a124126f3db8c3
 
 ...
