@@ -7,6 +7,8 @@ import (
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport-plugins/lib/stringset"
+	"github.com/gravitational/teleport-plugins/lib/watcherjob"
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
@@ -27,6 +29,8 @@ const (
 	initTimeout = time.Second * 10
 	// handlerTimeout is used to bound the execution time of watcher event handler.
 	handlerTimeout = time.Second * 5
+	// maxModifyPluginDataTries is a maximum number of compare-and-swap tries when modifying plugin data.
+	maxModifyPluginDataTries = 5
 )
 
 // App contains global application state.
@@ -75,18 +79,26 @@ func (a *App) run(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	watcherJob := lib.NewWatcherJob(
+	watcherJob := watcherjob.NewJob(
 		a.apiClient,
-		lib.WatcherJobConfig{Watch: types.Watch{Kinds: []types.WatchKind{types.WatchKind{Kind: types.KindAccessRequest}}}},
+		watcherjob.Config{
+			Watch:            types.Watch{Kinds: []types.WatchKind{types.WatchKind{Kind: types.KindAccessRequest}}},
+			EventFuncTimeout: handlerTimeout,
+		},
 		a.onWatcherEvent,
 	)
 	a.SpawnCriticalJob(watcherJob)
-	watcherOk, err := watcherJob.WaitReady(ctx)
+	ok, err := watcherJob.WaitReady(ctx)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	a.mainJob.SetReady(watcherOk)
+	a.mainJob.SetReady(ok)
+	if ok {
+		log.Info("Plugin is ready")
+	} else {
+		log.Error("Plugin is not ready")
+	}
 
 	<-watcherJob.Done()
 
@@ -151,9 +163,6 @@ func (a *App) checkTeleportVersion(ctx context.Context) (proto.PingResponse, err
 }
 
 func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
-	ctx, cancel := context.WithTimeout(ctx, handlerTimeout)
-	defer cancel()
-
 	if kind := event.Resource.GetKind(); kind != types.KindAccessRequest {
 		return trace.Errorf("unexpected kind %q", kind)
 	}
@@ -163,11 +172,12 @@ func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
 
 	switch op {
 	case types.OpPut:
-		ctx, log := logger.WithField(ctx, "request_op", "put")
+		ctx, _ = logger.WithField(ctx, "request_op", "put")
 		req, ok := event.Resource.(types.AccessRequest)
 		if !ok {
 			return trace.Errorf("unexpected resource type %T", event.Resource)
 		}
+		ctx, log := logger.WithField(ctx, "request_state", req.GetState().String())
 
 		var err error
 		switch {
@@ -190,6 +200,7 @@ func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
 		return nil
 	case types.OpDelete:
 		ctx, log := logger.WithField(ctx, "request_op", "delete")
+
 		if err := a.onDeletedRequest(ctx, reqID); err != nil {
 			log.WithError(err).Errorf("Failed to process deleted request")
 			return trace.Wrap(err)
@@ -203,50 +214,134 @@ func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
 func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) error {
 	log := logger.Get(ctx)
 
-	channels := a.getPostRecipients(ctx, req.GetSuggestedReviewers())
-	if len(channels) == 0 {
-		log.Warning("No channel to post")
-		return nil
-	}
-
+	reqID := req.GetName()
 	reqData := RequestData{User: req.GetUser(), Roles: req.GetRoles(), RequestReason: req.GetRequestReason()}
-	mmData, err := a.bot.Broadcast(ctx, channels, req.GetName(), reqData)
-	if len(mmData) == 0 && err != nil {
-		return err
-	}
 
-	for _, data := range mmData {
-		logger.Get(ctx).WithFields(logger.Fields{"mm_channel_id": data.ChannelID, "mm_post_id": data.PostID}).
-			Info("Successfully posted to Mattermost")
-	}
-
-	if err != nil {
-		log.WithError(err).Error("Failed to post one or more messages to Mattermost")
-	}
-
-	if err := a.setPluginData(ctx, req.GetName(), PluginData{reqData, mmData}); err != nil {
-		if trace.IsNotFound(err) {
-			return trace.Wrap(err, "failed to save plugin data, perhaps due to lack of permissions")
+	isNew, err := a.modifyPluginData(ctx, reqID, func(existing *PluginData) (PluginData, bool) {
+		if existing != nil {
+			return PluginData{}, false
 		}
+		return PluginData{RequestData: reqData}, true
+	})
+	if err != nil {
 		return trace.Wrap(err)
+	}
+
+	if isNew {
+		if channels := a.getPostRecipients(ctx, req.GetSuggestedReviewers()); len(channels) > 0 {
+			if err := a.broadcastMessages(ctx, channels, reqID, reqData); err != nil {
+				return trace.Wrap(err)
+			}
+		} else {
+			log.Warning("No channel to post")
+		}
+	}
+
+	if reqReviews := req.GetReviews(); len(reqReviews) > 0 {
+		if err := a.postReviewComments(ctx, reqID, reqReviews); err != nil {
+			return trace.Wrap(err)
+		}
 	}
 
 	return nil
 }
 
 func (a *App) onResolvedRequest(ctx context.Context, req types.AccessRequest) error {
-	switch req.GetState() {
-	case types.RequestState_APPROVED:
-		return a.updatePosts(ctx, req.GetName(), "APPROVED")
-	case types.RequestState_DENIED:
-		return a.updatePosts(ctx, req.GetName(), "DENIED")
-	default:
-		return nil
+	var commentErr error
+	if err := a.postReviewComments(ctx, req.GetName(), req.GetReviews()); err != nil {
+		commentErr = trace.Wrap(err)
 	}
+	resolution := Resolution{Reason: req.GetResolveReason()}
+	state := req.GetState()
+	switch state {
+	case types.RequestState_APPROVED:
+		resolution.Tag = ResolvedApproved
+	case types.RequestState_DENIED:
+		resolution.Tag = ResolvedDenied
+	default:
+		logger.Get(ctx).Warningf("Unknown state %v (%s)", state, state.String())
+		return commentErr
+	}
+	err := trace.Wrap(a.updatePosts(ctx, req.GetName(), resolution))
+	return trace.NewAggregate(commentErr, err)
 }
 
 func (a *App) onDeletedRequest(ctx context.Context, reqID string) error {
-	return a.updatePosts(ctx, reqID, "EXPIRED")
+	return a.updatePosts(ctx, reqID, Resolution{Tag: ResolvedExpired})
+}
+
+func (a *App) broadcastMessages(ctx context.Context, channels []string, reqID string, reqData RequestData) error {
+	mmData, err := a.bot.Broadcast(ctx, channels, reqID, reqData)
+	if len(mmData) == 0 && err != nil {
+		return trace.Wrap(err)
+	}
+	for _, data := range mmData {
+		logger.Get(ctx).WithFields(logger.Fields{
+			"mm_channel_id": data.ChannelID,
+			"mm_post_id":    data.PostID,
+		}).Info("Successfully posted to Mattermost")
+	}
+	if err != nil {
+		logger.Get(ctx).WithError(err).Error("Failed to post one or more messages to Mattermost")
+	}
+
+	_, err = a.modifyPluginData(ctx, reqID, func(existing *PluginData) (PluginData, bool) {
+		var pluginData PluginData
+		if existing != nil {
+			pluginData = *existing
+		} else {
+			// It must be impossible but lets handle it just in case.
+			pluginData = PluginData{RequestData: reqData}
+		}
+		pluginData.MattermostData = mmData
+		return pluginData, true
+	})
+	return trace.Wrap(err)
+}
+
+func (a *App) postReviewComments(ctx context.Context, reqID string, reqReviews []types.AccessReview) error {
+	var oldCount int
+	var mmData MattermostData
+	ok, err := a.modifyPluginData(ctx, reqID, func(existing *PluginData) (PluginData, bool) {
+		if existing == nil {
+			return PluginData{}, false
+		}
+
+		if mmData = existing.MattermostData; len(mmData) == 0 {
+			return PluginData{}, false
+		}
+
+		count := len(reqReviews)
+		if oldCount = existing.ReviewsCount; oldCount >= count {
+			return PluginData{}, false
+		}
+		pluginData := *existing
+		pluginData.ReviewsCount = count
+		return pluginData, true
+	})
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	if !ok {
+		logger.Get(ctx).Debug("Failed to post comment: plugin data is missing")
+		return nil
+	}
+
+	slice := reqReviews[oldCount:]
+	if len(slice) == 0 {
+		return nil
+	}
+
+	errors := make([]error, 0, len(slice))
+	for _, data := range mmData {
+		ctx, _ = logger.WithFields(ctx, logger.Fields{"mm_channel_id": data.ChannelID, "mm_post_id": data.PostID})
+		for _, review := range slice {
+			if err := a.bot.PostReviewComment(ctx, data.ChannelID, data.PostID, review); err != nil {
+				errors = append(errors, err)
+			}
+		}
+	}
+	return trace.NewAggregate(errors...)
 }
 
 func (a *App) tryLookupDirectChannel(ctx context.Context, userEmail string) string {
@@ -283,7 +378,7 @@ func (a *App) tryLookupChannel(ctx context.Context, team, name string) string {
 func (a *App) getPostRecipients(ctx context.Context, suggestedReviewers []string) []string {
 	log := logger.Get(ctx)
 
-	channelSet := make(map[string]struct{})
+	channelSet := stringset.NewWithCap(len(suggestedReviewers) + len(a.conf.Mattermost.Recipients))
 
 	for _, recipient := range suggestedReviewers {
 		// We require SuggestedReviewers to contain email-like data. Anything else is not supported.
@@ -295,7 +390,7 @@ func (a *App) getPostRecipients(ctx context.Context, suggestedReviewers []string
 		if channel == "" {
 			continue
 		}
-		channelSet[channel] = struct{}{}
+		channelSet.Add(channel)
 	}
 
 	for _, recipient := range a.conf.Mattermost.Recipients {
@@ -314,68 +409,109 @@ func (a *App) getPostRecipients(ctx context.Context, suggestedReviewers []string
 		if channel == "" {
 			continue
 		}
-		channelSet[channel] = struct{}{}
+		channelSet.Add(channel)
 	}
 
-	var channels []string
-	for channel := range channelSet {
-		channels = append(channels, channel)
-	}
-
-	return channels
+	return channelSet.ToSlice()
 }
 
-func (a *App) updatePosts(ctx context.Context, reqID string, status string) error {
+func (a *App) updatePosts(ctx context.Context, reqID string, resolution Resolution) error {
 	log := logger.Get(ctx)
 
-	pluginData, err := a.getPluginData(ctx, reqID)
-	if err != nil {
-		if trace.IsNotFound(err) {
-			log.WithError(err).Warn("Cannot process unknown request")
-			return nil
+	var pluginData PluginData
+	ok, err := a.modifyPluginData(ctx, reqID, func(existing *PluginData) (PluginData, bool) {
+		// If plugin data is empty or missing mattermost post IDs, we cannot do anything.
+		if existing == nil {
+			return PluginData{}, false
 		}
+		if pluginData = *existing; len(pluginData.MattermostData) == 0 {
+			return PluginData{}, false
+		}
+
+		// If resolution field is not empty then we already resolved the incident before. In this case we just quit.
+		if pluginData.RequestData.Resolution.Tag != Unresolved {
+			return PluginData{}, false
+		}
+
+		// Mark plugin data as resolved.
+		pluginData.Resolution = resolution
+		return pluginData, true
+	})
+	if err != nil {
 		return trace.Wrap(err)
 	}
-
-	reqData, mmData := pluginData.RequestData, pluginData.MattermostData
-	if len(mmData) == 0 {
-		log.Warn("Failed to update messages. Plugin data is either missing or expired")
+	if !ok {
+		log.Debug("Failed to update posts: plugin data is missing")
 		return nil
 	}
 
-	if err := a.bot.UpdatePosts(ctx, reqID, reqData, mmData, status); err != nil {
+	reqData, mmData := pluginData.RequestData, pluginData.MattermostData
+	if err := a.bot.UpdatePosts(ctx, reqID, reqData, mmData); err != nil {
 		return trace.Wrap(err)
 	}
 
-	log.Infof("Successfully marked request as %s in all messages", status)
+	log.Infof("Successfully marked request as %s in all messages", resolution.Tag)
 
 	return nil
 }
 
-func (a *App) getPluginData(ctx context.Context, reqID string) (PluginData, error) {
-	data, err := a.apiClient.GetPluginData(ctx, types.PluginDataFilter{
+// modifyPluginData performs a compare-and-swap update of access request's plugin data.
+func (a *App) modifyPluginData(ctx context.Context, reqID string, fn func(data *PluginData) (PluginData, bool)) (bool, error) {
+	var lastErr error
+	for i := 0; i < maxModifyPluginDataTries; i++ {
+		oldData, err := a.getPluginData(ctx, reqID)
+		if err != nil {
+			return false, trace.Wrap(err)
+		}
+		newData, ok := fn(oldData)
+		if !ok {
+			return false, nil
+		}
+		var expectData PluginData
+		if oldData != nil {
+			expectData = *oldData
+		}
+		err = trace.Wrap(a.updatePluginData(ctx, reqID, newData, expectData))
+		if err == nil {
+			return true, nil
+		}
+		if trace.IsCompareFailed(err) {
+			lastErr = err
+			continue
+		}
+		return false, err
+	}
+	return false, lastErr
+}
+
+// getPluginData loads a plugin data for a given access request. It returns nil if it's not found.
+func (a *App) getPluginData(ctx context.Context, reqID string) (*PluginData, error) {
+	dataMaps, err := a.apiClient.GetPluginData(ctx, types.PluginDataFilter{
 		Kind:     types.KindAccessRequest,
 		Resource: reqID,
 		Plugin:   pluginName,
 	})
 	if err != nil {
-		return PluginData{}, trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
-	if len(data) == 0 {
-		return PluginData{}, nil
+	if len(dataMaps) == 0 {
+		return nil, nil
 	}
-	entry := data[0].Entries()[pluginName]
+	entry := dataMaps[0].Entries()[pluginName]
 	if entry == nil {
-		return PluginData{}, nil
+		return nil, nil
 	}
-	return DecodePluginData(entry.Data), nil
+	data := DecodePluginData(entry.Data)
+	return &data, nil
 }
 
-func (a *App) setPluginData(ctx context.Context, reqID string, data PluginData) error {
+// updatePluginData updates an existing plugin data or sets a new one if it didn't exist.
+func (a *App) updatePluginData(ctx context.Context, reqID string, data PluginData, expectData PluginData) error {
 	return a.apiClient.UpdatePluginData(ctx, types.PluginDataUpdateParams{
 		Kind:     types.KindAccessRequest,
 		Resource: reqID,
 		Plugin:   pluginName,
 		Set:      EncodePluginData(data),
+		Expect:   EncodePluginData(expectData),
 	})
 }
