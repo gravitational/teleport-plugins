@@ -154,15 +154,15 @@ func (t *TeleportClient) fetch(latestID string) error {
 	// Save next cursor
 	t.nextCursor = nextCursor
 
-	// Reset position within page
+	// Reset the position within page
 	t.pos = -1
 
-	// Next page is empty
+	// Next page is empty: do nothing
 	if len(batch) == 0 {
 		return nil
-	} else {
-		log.WithFields(log.Fields{"cursor": t.cursor, "next": nextCursor, "len": len(batch)}).Info("Fetched page")
 	}
+
+	log.WithFields(log.Fields{"cursor": t.cursor, "next": nextCursor, "len": len(batch)}).Info("Fetched page")
 
 	pos := 0
 
@@ -185,7 +185,8 @@ func (t *TeleportClient) fetch(latestID string) error {
 	t.pos = pos
 	t.batch = batch
 
-	log.WithFields(log.Fields{"id": t.id}).Info("Skipping last known event")
+	log.WithField("id", t.id).Info("Skipping last known event")
+	log.WithField("pos", t.pos).Info("Starting with pos")
 
 	return nil
 }
