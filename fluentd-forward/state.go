@@ -70,7 +70,7 @@ func NewState(c *Config) (*State, error) {
 		return nil, trace.Errorf("Can not generate cursor name from Teleport host %s", c.TeleportAddr)
 	}
 
-	log.WithFields(log.Fields{"prefix": prefix}).Debug("Using state prefix")
+	log.WithFields(log.Fields{"prefix": prefix}).Info("Using state prefix")
 
 	s := State{dv, prefix, prefix + "_start_time", prefix + "_cursor", prefix + "_id"}
 
@@ -90,7 +90,7 @@ func (s *State) resetOnStartTimeChanged(c *Config) error {
 	}
 
 	if (prevStartTime != nil && *prevStartTime != c.StartTime) || prevStartTime == nil {
-		log.Debug("Start time changed: state reset")
+		log.Info("Start time changed: state reset")
 
 		err := s.dv.EraseAll()
 		if err != nil {

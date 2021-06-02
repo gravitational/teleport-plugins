@@ -140,8 +140,6 @@ func (t *TeleportClient) Close() {
 
 // flipPage flips the current page
 func (t *TeleportClient) flipPage() {
-	log.WithFields(log.Fields{"next": t.nextCursor}).Info("Flipping page")
-
 	t.cursor = t.nextCursor
 	t.pos = -1
 }
@@ -156,17 +154,14 @@ func (t *TeleportClient) fetch(latestID string) error {
 	// Save next cursor
 	t.nextCursor = nextCursor
 
-	if t.cursor != nextCursor {
-		log.WithFields(log.Fields{"cursor": t.cursor, "next": nextCursor, "len": len(batch)}).Info("Fetched next page")
-	}
-
 	// Reset position within page
 	t.pos = -1
 
 	// Next page is empty
-	if len(batch) == 0 || t.cursor == nextCursor {
-		log.WithFields(log.Fields{"cursor": t.cursor}).Info("No new events loaded")
+	if len(batch) == 0 {
 		return nil
+	} else {
+		log.WithFields(log.Fields{"cursor": t.cursor, "next": nextCursor, "len": len(batch)}).Info("Fetched page")
 	}
 
 	pos := 0
