@@ -22,6 +22,7 @@ import (
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 
@@ -36,8 +37,14 @@ type TeleportClient struct {
 	// client is an instance of GRPC Teleport client
 	client TeleportSearchEventsClient
 
-	// cursor current cursor value
+	// cursor current page cursor value
 	cursor string
+
+	// nextCursor next page cursor value
+	nextCursor string
+
+	// id latest event returned by Next()
+	id string
 
 	// pos current virtual cursor position within a batch
 	pos int
@@ -59,7 +66,7 @@ type TeleportClient struct {
 }
 
 // NewTeleportClient builds Teleport client instance
-func NewTeleportClient(c *Config, cursor string) (*TeleportClient, error) {
+func NewTeleportClient(c *Config, cursor string, id string) (*TeleportClient, error) {
 	var cl *client.Client
 	var err error
 
@@ -75,14 +82,21 @@ func NewTeleportClient(c *Config, cursor string) (*TeleportClient, error) {
 		}
 	}
 
-	return &TeleportClient{
+	tc := TeleportClient{
 		client:    cl,
 		pos:       -1,
 		cursor:    cursor,
 		batchSize: c.BatchSize,
 		namespace: c.Namespace,
 		startTime: c.StartTime,
-	}, nil
+	}
+
+	err = tc.fetchInitialPage(id)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return &tc, nil
 }
 
 // newUsingIdentityFile tries to build API client using identity file
@@ -124,9 +138,43 @@ func (t *TeleportClient) Close() {
 	t.client.Close()
 }
 
-// fetch fetches next batch of events starting from a last cursor position
+// fetchInitialPage fetches the initial page and sets the position to the event after latest known
+func (t *TeleportClient) fetchInitialPage(latestID string) error {
+	log.Debug("Fetching initial event batch")
+
+	err := t.fetch()
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	t.pos = 0
+
+	// If last known id is not empty, let's try to find it's pos
+	if latestID != "" {
+		for i, v := range t.batch {
+			if v.GetID() == latestID {
+				t.pos = i + 1
+				t.id = latestID
+
+				log.WithFields(log.Fields{"pos": t.pos, "id": latestID}).Debug("Skipping latest successful event")
+			}
+		}
+
+		// Last successful event is the last event on a page, we need to flip the page
+		if t.pos >= len(t.batch) {
+			t.pos = -1
+			return nil
+		}
+	} else {
+		log.WithFields(log.Fields{"pos": t.pos}).Debug("No latest successful event")
+	}
+
+	return nil
+}
+
+// fetch fetches next batch of events starting from a last known cursor position
 func (t *TeleportClient) fetch() error {
-	e, cursor, err := t.client.SearchEvents(
+	batch, nextCursor, err := t.client.SearchEvents(
 		context.Background(),
 		t.startTime,
 		time.Now().UTC(),
@@ -137,37 +185,55 @@ func (t *TeleportClient) fetch() error {
 	)
 
 	if err != nil {
-		return err
+		return trace.Wrap(err)
 	}
 
-	t.pos = -1
+	t.nextCursor = nextCursor
 
-	for i, v := range e {
-		if v.GetID() != t.cursor {
-			t.pos = i
-			break
+	if t.cursor == nextCursor {
+		log.Info("No new events loaded")
+		t.pos = -1
+		return nil
+	}
+
+	log.WithFields(log.Fields{"cursor": t.cursor, "nextCursor": t.nextCursor, "batchLen": len(batch)}).Info("Fetched new batch")
+
+	// Skip latest known returned event if it came back again
+	if t.id != "" {
+		for i, v := range batch {
+			if v.GetID() == t.id {
+				t.pos = i + 1
+
+				log.WithFields(log.Fields{"pos": t.pos, "id": t.id}).Info("Skiping latest successful event")
+			}
+		}
+
+		// Flip page if latest event is last on the page
+		if t.pos > len(batch) {
+			t.pos = -1
 		}
 	}
 
-	t.batch = e
-	t.cursor = cursor
+	t.batch = batch
 
 	return nil
 }
 
 // Next returns next event from a batch or requests next batch if it has been ended
-func (t *TeleportClient) Next() (events.AuditEvent, error) {
+func (t *TeleportClient) Next() (events.AuditEvent, string, error) {
 	// re-request batch if it's empty or ended
 	if t.pos == -1 {
+		t.cursor = t.nextCursor
+
 		err := t.fetch()
 		if err != nil {
-			return nil, err
+			return nil, t.cursor, err
 		}
-	}
 
-	// return if it's still empty
-	if t.pos == -1 {
-		return nil, nil
+		// return if it's still empty
+		if len(t.batch) == 0 || t.cursor == t.nextCursor {
+			return nil, t.cursor, nil
+		}
 	}
 
 	event := t.batch[t.pos]
@@ -178,5 +244,7 @@ func (t *TeleportClient) Next() (events.AuditEvent, error) {
 		t.pos = -1
 	}
 
-	return event, nil
+	t.id = event.GetID()
+
+	return event, t.cursor, nil
 }

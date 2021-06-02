@@ -32,8 +32,8 @@ type Poller struct {
 	// teleport is an instance of Teleport client
 	teleport *TeleportClient
 
-	// cursor is an instance of cursor manager
-	cursor *Cursor
+	// state is current persisted state
+	state *State
 
 	// timeout is polling timeout
 	timeout time.Duration
@@ -41,9 +41,7 @@ type Poller struct {
 
 // NewPoller builds new Poller structure
 func NewPoller(c *Config) (*Poller, error) {
-	var cursor string
-
-	k, err := NewCursor(c)
+	s, err := NewState(c)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -53,23 +51,25 @@ func NewPoller(c *Config) (*Poller, error) {
 		return nil, trace.Wrap(err)
 	}
 
-	if c.Cursor != "" {
-		cursor = c.Cursor
-	} else {
-		cursor, err = k.Get()
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-	}
-
-	log.WithFields(log.Fields{"cursor": cursor}).Debug("Using initial cursor value")
-
-	t, err := NewTeleportClient(c, cursor)
+	cursor, err := s.GetCursor()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
-	return &Poller{fluentd: f, teleport: t, cursor: k}, nil
+	id, err := s.GetID()
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	log.WithFields(log.Fields{"cursor": cursor}).Debug("Using initial cursor value")
+	log.WithFields(log.Fields{"id": id}).Debug("Using initial ID value")
+
+	t, err := NewTeleportClient(c, cursor, id)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return &Poller{fluentd: f, teleport: t, state: s, timeout: c.Timeout}, nil
 }
 
 // Close closes all connections
@@ -94,7 +94,7 @@ func (p *Poller) Start() error {
 func (p *Poller) Run() error {
 	for {
 		// Get next event from
-		e, err := p.teleport.Next()
+		e, cursor, err := p.teleport.Next()
 		if err != nil {
 			return err
 		}
@@ -111,9 +111,11 @@ func (p *Poller) Run() error {
 			return err
 		}
 
-		p.cursor.Set(e.GetID())
+		// Save latest successful id & cursor value to the state
+		p.state.SetID(e.GetID())
+		p.state.SetCursor(cursor)
 
-		log.WithFields(log.Fields{"type": e.GetType(), "time": e.GetTime()}).Info("Event sent")
-		log.WithFields(log.Fields{"event": e}).Debug("Event dump")
+		log.WithFields(log.Fields{"id": e.GetID(), "type": e.GetType(), "time": e.GetTime()}).Info("Event sent")
+		//log.WithFields(log.Fields{"event": e}).Debug("Event dump")
 	}
 }

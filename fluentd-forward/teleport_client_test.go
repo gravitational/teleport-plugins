@@ -69,17 +69,17 @@ func TestNext(t *testing.T) {
 	}
 
 	client := newTeleportClient(e)
-	n1, err := client.Next()
+	n1, _, err := client.Next()
 
 	require.NoError(t, err)
 	require.IsType(t, &events.UserCreate{}, n1)
 
-	n2, err := client.Next()
+	n2, _, err := client.Next()
 
 	require.NoError(t, err)
 	require.IsType(t, &events.UserDelete{}, n2)
 
-	n3, err := client.Next()
+	n3, _, err := client.Next()
 
 	require.NoError(t, err)
 	require.Nil(t, n3)

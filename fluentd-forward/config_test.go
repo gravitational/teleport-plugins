@@ -18,7 +18,6 @@ package main
 
 import (
 	"testing"
-	"time"
 
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
@@ -42,7 +41,6 @@ type argAssertion struct {
 // setupCleanViper sets viper config to empty
 func setupCleanViper() {
 	viper.Reset()
-	viper.Set("start-time", defaultStartTime.Format(time.RFC3339)) // When reset, viper restes default values as well
 }
 
 // setupFluentdArgs sets args required for fluentd

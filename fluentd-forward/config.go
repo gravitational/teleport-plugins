@@ -87,9 +87,6 @@ type Config struct {
 
 	// Config is a path to toml config file
 	Config string `mapstructure:"config"`
-
-	// Cursor is the initial cursor value
-	Cursor string `mapstructure:"cursor"`
 }
 
 const (
@@ -101,11 +98,6 @@ const (
 
 	// path to viper config CLI flag name
 	config = "config"
-)
-
-var (
-	// defaultStartTime is time frame start used by default
-	defaultStartTime = time.Now().AddDate(-5, 0, 0).UTC()
 )
 
 // initConfig initializes viper args
@@ -127,9 +119,8 @@ func initConfig() {
 	pflag.Int("batch", 20, "Fetch batch size")
 	pflag.String("namespace", "default", "Events namespace")
 	pflag.StringSliceP("types", "t", []string{}, "Comma-separated list of event types to forward")
-	pflag.String("start-time", defaultStartTime.Format(time.RFC3339), "Minimum event time (RFC3339 format)")
+	pflag.String("start-time", "", "Minimum event time (RFC3339 format)")
 	pflag.Duration("timeout", 5*time.Second, "Polling timeout")
-	pflag.String("cursor", "", "Initial cursor value")
 
 	pflag.BoolP(debug, "d", false, "Debug mode")
 
@@ -214,6 +205,8 @@ func readConfig() error {
 
 // Validate validates that required CLI args are present
 func (c *Config) validate() error {
+	var t time.Time
+
 	err := c.validateFluentd()
 	if err != nil {
 		return err
@@ -229,14 +222,19 @@ func (c *Config) validate() error {
 		return err
 	}
 
-	if strings.ToLower(strings.TrimSpace(c.StartTimeRaw)) == "now" {
-		c.StartTime = time.Now().UTC()
+	// If start time was not passed, use the beginning of time
+	if c.StartTimeRaw == "" {
+		c.StartTime = time.Time{}
 	} else {
-		c.StartTime, err = time.Parse(time.RFC3339, c.StartTimeRaw)
+		// Otherwise, parse time from CLI
+		t, err = time.Parse(time.RFC3339, c.StartTimeRaw)
 		if err != nil {
 			return trace.Wrap(err)
 		}
 	}
+
+	// We do not need any microseconds
+	c.StartTime = t.Truncate(time.Second)
 
 	log.WithFields(log.Fields{"dir": c.StorageDir}).Debug("Using storage dir")
 	log.WithFields(log.Fields{"batch": c.BatchSize}).Debug("Using batch size")
@@ -244,7 +242,6 @@ func (c *Config) validate() error {
 	log.WithFields(log.Fields{"types": c.Types}).Debug("Using type filter")
 	log.WithFields(log.Fields{"value": c.StartTime}).Debug("Using start time")
 	log.WithFields(log.Fields{"timeout": c.Timeout}).Debug("Using timeout")
-	log.WithFields(log.Fields{"cursor": c.Cursor}).Debug("Using cursor")
 
 	return nil
 }
