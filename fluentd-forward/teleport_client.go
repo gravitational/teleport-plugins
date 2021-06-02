@@ -91,7 +91,7 @@ func NewTeleportClient(c *Config, cursor string, id string) (*TeleportClient, er
 		startTime: c.StartTime,
 	}
 
-	err = tc.fetchInitialPage(id)
+	err = tc.fetch(id)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -138,43 +138,66 @@ func (t *TeleportClient) Close() {
 	t.client.Close()
 }
 
-// fetchInitialPage fetches the initial page and sets the position to the event after latest known
-func (t *TeleportClient) fetchInitialPage(latestID string) error {
-	log.Debug("Fetching initial event batch")
+// flipPage flips the current page
+func (t *TeleportClient) flipPage() {
+	log.WithFields(log.Fields{"next": t.nextCursor}).Info("Flipping page")
 
-	err := t.fetch()
+	t.cursor = t.nextCursor
+	t.pos = -1
+}
+
+// fetchInitialPage fetches the initial page and sets the position to the event after latest known
+func (t *TeleportClient) fetch(latestID string) error {
+	batch, nextCursor, err := t.getEvents()
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	t.pos = 0
+	// Save next cursor
+	t.nextCursor = nextCursor
+
+	if t.cursor != nextCursor {
+		log.WithFields(log.Fields{"cursor": t.cursor, "next": nextCursor, "len": len(batch)}).Info("Fetched next page")
+	}
+
+	// Reset position within page
+	t.pos = -1
+
+	// Next page is empty
+	if len(batch) == 0 || t.cursor == nextCursor {
+		log.WithFields(log.Fields{"cursor": t.cursor}).Info("No new events loaded")
+		return nil
+	}
+
+	pos := 0
 
 	// If last known id is not empty, let's try to find it's pos
 	if latestID != "" {
-		for i, v := range t.batch {
+		for i, v := range batch {
 			if v.GetID() == latestID {
-				t.pos = i + 1
+				pos = i + 1
 				t.id = latestID
-
-				log.WithFields(log.Fields{"pos": t.pos, "id": latestID}).Debug("Skipping latest successful event")
 			}
 		}
 
-		// Last successful event is the last event on a page, we need to flip the page
-		if t.pos >= len(t.batch) {
-			t.pos = -1
+		// We need to flip the page because the latest event on the current page is successful
+		if pos >= len(batch) {
+			t.flipPage()
 			return nil
 		}
-	} else {
-		log.WithFields(log.Fields{"pos": t.pos}).Debug("No latest successful event")
 	}
+
+	t.pos = pos
+	t.batch = batch
+
+	log.WithFields(log.Fields{"id": t.id}).Info("Skipping last known event")
 
 	return nil
 }
 
-// fetch fetches next batch of events starting from a last known cursor position
-func (t *TeleportClient) fetch() error {
-	batch, nextCursor, err := t.client.SearchEvents(
+// getEvents calls Teleport client and loads events
+func (t *TeleportClient) getEvents() ([]events.AuditEvent, string, error) {
+	return t.client.SearchEvents(
 		context.Background(),
 		t.startTime,
 		time.Now().UTC(),
@@ -183,67 +206,30 @@ func (t *TeleportClient) fetch() error {
 		t.batchSize,
 		t.cursor,
 	)
-
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	t.nextCursor = nextCursor
-
-	if t.cursor == nextCursor {
-		log.Info("No new events loaded")
-		t.pos = -1
-		return nil
-	}
-
-	log.WithFields(log.Fields{"cursor": t.cursor, "nextCursor": t.nextCursor, "batchLen": len(batch)}).Info("Fetched new batch")
-
-	// Skip latest known returned event if it came back again
-	if t.id != "" {
-		for i, v := range batch {
-			if v.GetID() == t.id {
-				t.pos = i + 1
-
-				log.WithFields(log.Fields{"pos": t.pos, "id": t.id}).Info("Skiping latest successful event")
-			}
-		}
-
-		// Flip page if latest event is last on the page
-		if t.pos > len(batch) {
-			t.pos = -1
-		}
-	}
-
-	t.batch = batch
-
-	return nil
 }
 
 // Next returns next event from a batch or requests next batch if it has been ended
 func (t *TeleportClient) Next() (events.AuditEvent, string, error) {
+	// We need to flip the page if we have processed last event
+	if t.pos >= len(t.batch) {
+		t.flipPage()
+	}
+
 	// re-request batch if it's empty or ended
 	if t.pos == -1 {
-		t.cursor = t.nextCursor
-
-		err := t.fetch()
+		err := t.fetch(t.id)
 		if err != nil {
 			return nil, t.cursor, err
 		}
 
-		// return if it's still empty
-		if len(t.batch) == 0 || t.cursor == t.nextCursor {
+		// page is still empty, return
+		if t.pos == -1 {
 			return nil, t.cursor, nil
 		}
 	}
 
 	event := t.batch[t.pos]
 	t.pos++
-
-	// batch has ended
-	if t.pos >= len(t.batch) {
-		t.pos = -1
-	}
-
 	t.id = event.GetID()
 
 	return event, t.cursor, nil

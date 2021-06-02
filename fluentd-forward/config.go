@@ -236,12 +236,12 @@ func (c *Config) validate() error {
 	// We do not need any microseconds
 	c.StartTime = t.Truncate(time.Second)
 
-	log.WithFields(log.Fields{"dir": c.StorageDir}).Debug("Using storage dir")
-	log.WithFields(log.Fields{"batch": c.BatchSize}).Debug("Using batch size")
-	log.WithFields(log.Fields{"namespace": c.Namespace}).Debug("Using namespace")
-	log.WithFields(log.Fields{"types": c.Types}).Debug("Using type filter")
-	log.WithFields(log.Fields{"value": c.StartTime}).Debug("Using start time")
-	log.WithFields(log.Fields{"timeout": c.Timeout}).Debug("Using timeout")
+	log.WithFields(log.Fields{"dir": c.StorageDir}).Info("Using storage dir")
+	log.WithFields(log.Fields{"batch": c.BatchSize}).Info("Using batch size")
+	log.WithFields(log.Fields{"namespace": c.Namespace}).Info("Using namespace")
+	log.WithFields(log.Fields{"types": c.Types}).Info("Using type filter")
+	log.WithFields(log.Fields{"value": c.StartTime}).Info("Using start time")
+	log.WithFields(log.Fields{"timeout": c.Timeout}).Info("Using timeout")
 
 	return nil
 }
@@ -272,10 +272,10 @@ func (c *Config) validateFluentd() error {
 		return trace.BadParameter("Fluentd key file does not exist %s", c.FluentdKey)
 	}
 
-	log.WithFields(log.Fields{"url": c.FluentdURL}).Debug("Using Fluentd url")
-	log.WithFields(log.Fields{"ca": c.FluentdCA}).Debug("Using Fluentd ca")
-	log.WithFields(log.Fields{"cert": c.FluentdCert}).Debug("Using Fluentd cert")
-	log.WithFields(log.Fields{"key": c.FluentdKey}).Debug("Using Fluentd key")
+	log.WithFields(log.Fields{"url": c.FluentdURL}).Info("Using Fluentd url")
+	log.WithFields(log.Fields{"ca": c.FluentdCA}).Info("Using Fluentd ca")
+	log.WithFields(log.Fields{"cert": c.FluentdCert}).Info("Using Fluentd cert")
+	log.WithFields(log.Fields{"key": c.FluentdKey}).Info("Using Fluentd key")
 
 	return nil
 }
@@ -314,10 +314,10 @@ func (c *Config) validateTeleport() error {
 			return trace.BadParameter("Teleport TLS key file does not exist %s", c.TeleportKey)
 		}
 
-		log.WithFields(log.Fields{"addr": c.TeleportAddr}).Debug("Using Teleport addr")
-		log.WithFields(log.Fields{"ca": c.TeleportCA}).Debug("Using Teleport CA")
-		log.WithFields(log.Fields{"cert": c.TeleportCert}).Debug("Using Teleport cert")
-		log.WithFields(log.Fields{"key": c.TeleportKey}).Debug("Using Teleport key")
+		log.WithFields(log.Fields{"addr": c.TeleportAddr}).Info("Using Teleport addr")
+		log.WithFields(log.Fields{"ca": c.TeleportCA}).Info("Using Teleport CA")
+		log.WithFields(log.Fields{"cert": c.TeleportCert}).Info("Using Teleport cert")
+		log.WithFields(log.Fields{"key": c.TeleportKey}).Info("Using Teleport key")
 	} else {
 		if c.TeleportIdentityFile == "" {
 			// Otherwise, we need identity file
@@ -328,7 +328,7 @@ func (c *Config) validateTeleport() error {
 			return trace.BadParameter("Teleport identity file does not exist %s", c.TeleportIdentityFile)
 		}
 
-		log.WithFields(log.Fields{"file": c.TeleportIdentityFile}).Debug("Using Teleport identity file")
+		log.WithFields(log.Fields{"file": c.TeleportIdentityFile}).Info("Using Teleport identity file")
 	}
 
 	return nil
