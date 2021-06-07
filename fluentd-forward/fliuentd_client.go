@@ -84,7 +84,7 @@ func (f *FluentdClient) Send(obj interface{}) error {
 		return trace.Wrap(err)
 	}
 
-	log.WithFields(log.Fields{"json": string(b)}).Debug("JSON to send")
+	log.WithField("json", string(b)).Debug("JSON to send")
 
 	r, err := f.client.Post(f.url, "application/json", bytes.NewReader(b))
 	if err != nil {
