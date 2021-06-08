@@ -229,37 +229,36 @@ docker run -p 8888:8888 -v $(pwd):/keys -v $(pwd)/fluent.conf:/fluentd/etc/fluen
 * Start `fluentd-forward`:
 
 ```sh
-fluentd-forward --config fluentd-forward.toml -d
+fluentd-forward --config fluentd-forward.toml
 ```
-
-`-d` flag is used to enable debug logging.
 
 You should see something like this:
 
 ```sh
-DEBU[0010] JSON to send                                  json="{\"ei\":0,\"event\":\"role.created\",\"uid\":\"4f3cc272-4d54-4729-8563-20702cac0d4b\",\"code\":\"T9000I\",\"time\":\"2021-05-26T11:15:30.587Z\",\"cluster_name\":\"teleport-cluster\",\"name\":\"terraform\",\"expires\":\"0001-01-01T00:00:00Z\",\"user\":\"79e2cc83-8d4f-4897-84a2-ccd3427246b7.teleport-cluster\"}"
-INFO[0010] Event sent                                    fields.time="2021-05-26 11:15:30.587 +0000 UTC" type=role.created
-DEBU[0010] Event dump                                    event="Metadata:<Type:\"role.created\" ID:\"4f3cc272-4d54-4729-8563-20702cac0d4b\" Code:\"T9000I\" Time:<seconds:1622027730 nanos:587000000 > ClusterName:\"teleport-cluster\" > Resource:<Name:\"terraform\" Expires:<seconds:-62135596800 > > User:<User:\"79e2cc83-8d4f-4897-84a2-ccd3427246b7.teleport-cluster\" > "
-DEBU[0010] JSON to send                                  json="{\"ei\":0,\"event\":\"user.create\",\"uid\":\"e01f9e74-fea3-4fd0-b8e5-638264fbae27\",\"code\":\"T1002I\",\"time\":\"2021-06-01T11:07:12.536Z\",\"cluster_name\":\"teleport-cluster\",\"user\":\"79e2cc83-8d4f-4897-84a2-ccd3427246b7.teleport-cluster\",\"name\":\"fluentd-forward\",\"expires\":\"0001-01-01T00:00:00Z\",\"roles\":[\"fluentd-forward\"],\"connector\":\"local\"}"
+INFO[0046] Event sent                                    id=0b5f2a3e-faa5-4d77-ab6e-362bca0994fc ts="2021-06-08 11:00:56.034 +0000 UTC" type=user.login
+INFO[0046] Event sent                                    id=8a435f89-a70a-4bb4-9b0f-2818da51a62b ts="2021-06-08 12:09:11.344 +0000 UTC" type=user.create
+INFO[0046] Event sent                                    id=04734bc5-f8d8-493f-8109-680b8df76ce9 ts="2021-06-08 12:09:11.783 +0000 UTC" type=role.created
+INFO[0046] Event sent                                    id=2a3ac443-5e32-41c7-9b3e-da45d53f27b2 ts="2021-06-08 12:09:43.892 +0000 UTC" type=user.update
+INFO[0046] Event sent                                    id=af9c0777-7f02-4ec4-a682-3896a6960ce5 ts="2021-06-08 12:09:44.329 +0000 UTC" type=role.created
 ```
 
 ## Do not forget to set time range
 
-By default, all events starting from the firstmost will be exported. If you want to narrow the scope: for example, start from the month ago, or export only newest events starting from now, you need to specify the start time:
-
-This can be done by setting an argument `start-time`:
+By default, all events starting from the current moment will be exported. If you want to export previous events, you have to pass `--start-time` CLI arg.
 
 This will start an export from May 5 2021:
 
 ```sh
-fluentd-forward --config fluentd-forward.toml -d --start-time "2021-05-05T00:00:00Z"
+fluentd-forward --config fluentd-forward.toml --start-time "2021-05-05T00:00:00Z"
 ```
 
 This will export new events from a moment service did start:
 
 ```sh
-fluentd-forward --config fluentd-forward.toml -d --start-time "now"
+fluentd-forward --config fluentd-forward.toml
 ```
+
+Note that start time can be set only once, on the first run of the plugin. If you want to change the time frame later, remove plugin state dir which you had specified in `storage-dir` argument.
 
 ## How it works
 
