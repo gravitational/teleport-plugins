@@ -15,6 +15,9 @@ CGOFLAG ?= CGO_ENABLED=1
 
 PASS ?= 1234
 
+CLOUD_ADDR=evilmartians.teleport.sh:443
+IDENTITY_FILE=example/keys/identity
+
 .PHONY: gen-example-mtls
 gen-example-mtls:
 	rm -f example/keys/*
@@ -56,7 +59,11 @@ fluentd: gen-example-mtls
 
 .PHONY: example
 example: build
-	./build/fluentd-forward -c example/keys/client.crt -k example/keys/client.key --fluentd-ca example/keys/ca.crt --fluentd-url https://localhost:8888/test.log --teleport-ca ~/www/teleport-installation/tf.cas --teleport-cert ~/www/teleport-installation/tf.crt --teleport-key ~/www/teleport-installation/tf.key --teleport-addr localhost:3025 --storage /tmp/storage --batch 10 --timeout 15s
+	./build/fluentd-forward -c example/keys/client.crt -k example/keys/client.key --fluentd-ca example/keys/ca.crt --fluentd-url https://localhost:8888/test.log --teleport-ca ~/www/teleport-installation/tf.cas --teleport-cert ~/www/teleport-installation/tf.crt --teleport-key ~/www/teleport-installation/tf.key --teleport-addr localhost:3025 --storage /tmp/storage --batch 10 --timeout 10s
+
+.PHONY: example-cloud
+example-cloud: build
+	./build/fluentd-forward -c example/keys/client.crt -k example/keys/client.key --fluentd-ca example/keys/ca.crt --fluentd-url https://localhost:8888/test.log --teleport-identity $(IDENTITY_FILE) --teleport-addr $(CLOUD_ADDR) --storage /tmp/storage-cloud --batch 10 --timeout 10s --start-time 2020-01-01T00:00:00Z
 
 .PHONY: test
 test: gen-example-mtls

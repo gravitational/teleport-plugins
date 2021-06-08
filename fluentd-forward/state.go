@@ -79,18 +79,25 @@ func NewState(c *Config) (*State, error) {
 		return nil, trace.Wrap(err)
 	}
 
+	t, err := s.GetStartTime()
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	log.WithField("value", t).Info("Using start time")
+
 	return &s, nil
 }
 
-// resetOnStartTimeChanged resets state if start time changed from the previous run
+// resetOnStartTimeChanged resets state if start time explicitly changed from the previous run
 func (s *State) resetOnStartTimeChanged(c *Config) error {
 	prevStartTime, err := s.GetStartTime()
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	if (prevStartTime != nil && *prevStartTime != c.StartTime) || prevStartTime == nil {
-		log.Info("Start time changed: state reset")
+	if prevStartTime == nil {
+		log.WithField("value", c.StartTime).Debug("Setting start time")
 
 		err := s.dv.EraseAll()
 		if err != nil {
@@ -98,6 +105,12 @@ func (s *State) resetOnStartTimeChanged(c *Config) error {
 		}
 
 		return s.SetStartTime(&c.StartTime)
+	}
+
+	// If there is a time saved in the state and this time does not equal to the time passed from CLI and a
+	// time was explicitly passed from CLI
+	if prevStartTime != nil && *prevStartTime != c.StartTime && c.StartTimeRaw != "" {
+		return trace.Errorf("You can not change start time in the middle of ingestion. To restart the ingestion, rm -rf %v", c.StorageDir)
 	}
 
 	return nil

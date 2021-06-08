@@ -223,8 +223,8 @@ func (c *Config) validate() error {
 	}
 
 	// If start time was not passed, use the beginning of time
-	if c.StartTimeRaw == "" {
-		c.StartTime = time.Time{}
+	if strings.TrimSpace(c.StartTimeRaw) == "" {
+		t = time.Now().UTC()
 	} else {
 		// Otherwise, parse time from CLI
 		t, err = time.Parse(time.RFC3339, c.StartTimeRaw)
