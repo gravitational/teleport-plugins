@@ -12,6 +12,7 @@ import (
 	"github.com/mailgun/holster/v3/collections"
 
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 )
 
@@ -21,25 +22,22 @@ const (
 	mmCacheSize   = 1024
 )
 
-var postTextTemplate *template.Template
-
-func init() {
-	var err error
-	postTextTemplate, err = template.New("description").Parse(
-		`{{if eq .Status "PENDING"}}*You have new pending request to review!*{{end}}
+var postTextTemplate = template.Must(template.New("description").Parse(
+	`{{if eq .Status "PENDING"}}*You have new pending request to review!*{{end}}
 **User**: {{.User}}
 **Roles**: {{range $index, $element := .Roles}}{{if $index}}, {{end}}{{ . }}{{end}}
 **Request ID**: {{.ID}}
 **Reason**: {{.RequestReason}}
-**Status**: {{.StatusEmoji}} {{.Status}}
+**Status**: {{.StatusEmoji}} {{.Status}}{{if .Resolution.Reason}} ({{.Resolution.Reason}}){{end}}
 {{if .RequestLink}}**Link**: [{{.RequestLink}}]({{.RequestLink}})
 {{else if eq .Status "PENDING"}}**Approve**: ` + "`tsh request review --approve {{.ID}}`" + `
 **Deny**: ` + "`tsh request review --deny {{.ID}}`" + `{{end}}`,
-	)
-	if err != nil {
-		panic(err)
-	}
-}
+))
+var reviewCommentTemplate = template.Must(template.New("review comment").Parse(
+	`{{.Author}} reviewed the request at {{.Created.Format .TimeFormat}}.
+Resolution: {{.ProposedStateEmoji}} {{.ProposedState}}.
+{{if .Reason}}Reason: {{.Reason}}.{{end}}`,
+))
 
 // Bot is a Mattermost client that works with access.Request.
 type Bot struct {
@@ -185,7 +183,7 @@ func (b Bot) GetMe(ctx context.Context) (User, error) {
 
 // Broadcast posts request info to Mattermost.
 func (b Bot) Broadcast(ctx context.Context, channels []string, reqID string, reqData RequestData) (MattermostData, error) {
-	text, err := b.buildPostText(reqID, reqData, "PENDING")
+	text, err := b.buildPostText(reqID, reqData)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -212,6 +210,43 @@ func (b Bot) Broadcast(ctx context.Context, channels []string, reqID string, req
 	}
 
 	return data, trace.NewAggregate(errors...)
+}
+
+func (b Bot) PostReviewComment(ctx context.Context, channelID, rootID string, review types.AccessReview) error {
+	var proposedStateEmoji string
+	switch review.ProposedState {
+	case types.RequestState_APPROVED:
+		proposedStateEmoji = "✅"
+	case types.RequestState_DENIED:
+		proposedStateEmoji = "❌"
+	}
+
+	var builder strings.Builder
+	err := reviewCommentTemplate.Execute(&builder, struct {
+		types.AccessReview
+		ProposedState      string
+		ProposedStateEmoji string
+		TimeFormat         string
+	}{
+		review,
+		review.ProposedState.String(),
+		proposedStateEmoji,
+		time.RFC822,
+	})
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	text := builder.String()
+
+	_, err = b.client.NewRequest().
+		SetContext(ctx).
+		SetBody(Post{
+			ChannelID: channelID,
+			RootID:    rootID,
+			Message:   text,
+		}).
+		Post("api/v4/posts")
+	return trace.Wrap(err)
 }
 
 // LookupChannel fetches channel id by its name and team name.
@@ -269,8 +304,8 @@ func (b Bot) LookupDirectChannel(ctx context.Context, email string) (string, err
 	return channel.ID, nil
 }
 
-func (b Bot) UpdatePosts(ctx context.Context, reqID string, reqData RequestData, mmData MattermostData, status string) error {
-	text, err := b.buildPostText(reqID, reqData, status)
+func (b Bot) UpdatePosts(ctx context.Context, reqID string, reqData RequestData, mmData MattermostData) error {
+	text, err := b.buildPostText(reqID, reqData)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -295,17 +330,20 @@ func (b Bot) UpdatePosts(ctx context.Context, reqID string, reqData RequestData,
 	return trace.NewAggregate(errors...)
 }
 
-func (b Bot) buildPostText(reqID string, reqData RequestData, status string) (string, error) {
-	var statusEmoji string
+func (b Bot) buildPostText(reqID string, reqData RequestData) (string, error) {
+	resolutionTag := reqData.Resolution.Tag
 
-	switch status {
-	case "PENDING":
+	var statusEmoji string
+	status := string(resolutionTag)
+	switch resolutionTag {
+	case Unresolved:
+		status = "PENDING"
 		statusEmoji = "⏳"
-	case "APPROVED":
+	case ResolvedApproved:
 		statusEmoji = "✅"
-	case "DENIED":
+	case ResolvedDenied:
 		statusEmoji = "❌"
-	case "EXPIRED":
+	case ResolvedExpired:
 		statusEmoji = "⌛"
 	}
 

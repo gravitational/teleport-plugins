@@ -36,17 +36,24 @@ type fakeChannelByTeamNameAndNameKey struct {
 	team    string
 	channel string
 }
-type fakeDirectChannelKey struct {
+type fakeDirectChannelUsersKey struct {
 	user1ID string
 	user2ID string
+}
+type fakeDirectChannelKey string
+
+type FakeDirectChannel struct {
+	User1ID string
+	User2ID string
+	Channel
 }
 
 func NewFakeMattermost(botUser User, concurrency int) *FakeMattermost {
 	router := httprouter.New()
 
 	mattermost := &FakeMattermost{
-		newPosts:    make(chan Post, concurrency),
-		postUpdates: make(chan Post, concurrency),
+		newPosts:    make(chan Post, concurrency*6),
+		postUpdates: make(chan Post, concurrency*2),
 		srv:         httptest.NewServer(router),
 	}
 	mattermost.botUserID = mattermost.StoreUser(botUser).ID
@@ -109,7 +116,7 @@ func NewFakeMattermost(botUser User, concurrency int) *FakeMattermost {
 			return
 		}
 
-		err = json.NewEncoder(rw).Encode(mattermost.GetDirectChannel(user1, user2))
+		err = json.NewEncoder(rw).Encode(mattermost.GetDirectChannelFor(user1, user2).Channel)
 		panicIf(err)
 	})
 
@@ -292,21 +299,36 @@ func (s *FakeMattermost) GetChannel(id string) (Channel, bool) {
 	return Channel{}, false
 }
 
-func (s *FakeMattermost) GetDirectChannel(user1, user2 User) Channel {
+func (s *FakeMattermost) GetDirectChannelFor(user1, user2 User) FakeDirectChannel {
 	ids := []string{user1.ID, user2.ID}
 	sort.Strings(ids)
-	key := fakeDirectChannelKey{ids[0], ids[1]}
+	user1ID, user2ID := ids[0], ids[1]
+	key := fakeDirectChannelUsersKey{user1ID, user2ID}
 	if obj, ok := s.objects.Load(key); ok {
-		channel, ok := obj.(Channel)
+		directChannel, ok := obj.(FakeDirectChannel)
 		if !ok {
 			panic(fmt.Sprintf("bad channel type %T", obj))
 		}
-		return channel
+		return directChannel
 	}
 
 	channel := s.StoreChannel(Channel{})
-	s.objects.Store(key, channel)
-	return channel
+	directChannel := FakeDirectChannel{
+		User1ID: user1ID,
+		User2ID: user2ID,
+		Channel: channel,
+	}
+	s.objects.Store(key, directChannel)
+	s.objects.Store(fakeDirectChannelKey(channel.ID), directChannel)
+	return directChannel
+}
+
+func (s *FakeMattermost) GetDirectChannel(id string) (FakeDirectChannel, bool) {
+	if obj, ok := s.objects.Load(fakeDirectChannelKey(id)); ok {
+		directChannel, ok := obj.(FakeDirectChannel)
+		return directChannel, ok
+	}
+	return FakeDirectChannel{}, false
 }
 
 func (s *FakeMattermost) GetChannelByTeamNameAndName(team, name string) (Channel, bool) {

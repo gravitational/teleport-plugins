@@ -23,7 +23,6 @@ import (
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/lib/auth/testauthority"
 	"github.com/gravitational/teleport/lib/backend"
-	"github.com/gravitational/teleport/lib/events"
 	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/trace"
 
@@ -454,11 +453,11 @@ func (s *GitlabSuite) TestApproval(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, types.RequestState_APPROVED)
 
-	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdateEvent, "id": request.GetName()})
+	events, err := s.teleport.SearchAccessRequestEvents(request.GetName())
 	c.Assert(err, IsNil)
-	c.Assert(auditLog, HasLen, 1)
-	c.Assert(auditLog[0].GetString("state"), Equals, "APPROVED")
-	c.Assert(auditLog[0].GetString("delegator"), Equals, "gitlab:"+s.userEmail)
+	c.Assert(events, HasLen, 1)
+	c.Assert(events[0].RequestState, Equals, "APPROVED")
+	c.Assert(events[0].Delegator, Equals, "gitlab:"+s.userEmail)
 }
 
 func (s *GitlabSuite) TestDenial(c *C) {
@@ -488,11 +487,11 @@ func (s *GitlabSuite) TestDenial(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, types.RequestState_DENIED)
 
-	auditLog, err := s.teleport.FilterAuditEvents("", events.EventFields{"event": events.AccessRequestUpdateEvent, "id": request.GetName()})
+	events, err := s.teleport.SearchAccessRequestEvents(request.GetName())
 	c.Assert(err, IsNil)
-	c.Assert(auditLog, HasLen, 1)
-	c.Assert(auditLog[0].GetString("state"), Equals, "DENIED")
-	c.Assert(auditLog[0].GetString("delegator"), Equals, "gitlab:"+s.userEmail)
+	c.Assert(events, HasLen, 1)
+	c.Assert(events[0].RequestState, Equals, "DENIED")
+	c.Assert(events[0].Delegator, Equals, "gitlab:"+s.userEmail)
 }
 
 func (s *GitlabSuite) TestExpiration(c *C) {

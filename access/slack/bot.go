@@ -7,9 +7,11 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"text/template"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 
 	"github.com/go-resty/resty/v2"
@@ -17,6 +19,12 @@ import (
 
 const slackMaxConns = 100
 const slackHTTPTimeout = 10 * time.Second
+
+var reviewReplyTemplate = template.Must(template.New("review reply").Parse(
+	`{{.Author}} reviewed the request at {{.Created.Format .TimeFormat}}.
+Resolution: {{.ProposedStateEmoji}} {{.ProposedState}}.
+{{if .Reason}}Reason: {{.Reason}}.{{end}}`,
+))
 
 // Bot is a slack client that works with access.Request.
 // It's responsible for formatting and posting a message on Slack when an
@@ -113,7 +121,7 @@ func (b Bot) Broadcast(ctx context.Context, channels []string, reqID string, req
 	var data SlackData
 	var errors []error
 
-	blockItems := b.msgSections(reqID, reqData, "PENDING")
+	blockItems := b.msgSections(reqID, reqData)
 
 	for _, channel := range channels {
 		var result ChatMsgResponse
@@ -130,6 +138,39 @@ func (b Bot) Broadcast(ctx context.Context, channels []string, reqID string, req
 	}
 
 	return data, trace.NewAggregate(errors...)
+}
+
+func (b Bot) PostReviewReply(ctx context.Context, channelID, timestamp string, review types.AccessReview) error {
+	var proposedStateEmoji string
+	switch review.ProposedState {
+	case types.RequestState_APPROVED:
+		proposedStateEmoji = "✅"
+	case types.RequestState_DENIED:
+		proposedStateEmoji = "❌"
+	}
+
+	var builder strings.Builder
+	err := reviewReplyTemplate.Execute(&builder, struct {
+		types.AccessReview
+		ProposedState      string
+		ProposedStateEmoji string
+		TimeFormat         string
+	}{
+		review,
+		review.ProposedState.String(),
+		proposedStateEmoji,
+		time.RFC822,
+	})
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	text := builder.String()
+
+	_, err = b.client.NewRequest().
+		SetContext(ctx).
+		SetBody(Msg{Channel: channelID, ThreadTs: timestamp, Text: text}).
+		Post("chat.postMessage")
+	return trace.Wrap(err)
 }
 
 // LookupDirectChannelByEmail fetches user's id by email.
@@ -151,7 +192,7 @@ func (b Bot) LookupDirectChannelByEmail(ctx context.Context, email string) (stri
 }
 
 // Expire updates request's Slack post with EXPIRED status and removes action buttons.
-func (b Bot) UpdateMessages(ctx context.Context, reqID string, reqData RequestData, slackData SlackData, status string) error {
+func (b Bot) UpdateMessages(ctx context.Context, reqID string, reqData RequestData, slackData SlackData) error {
 	var errors []error
 	for _, msg := range slackData {
 		_, err := b.client.NewRequest().
@@ -159,7 +200,7 @@ func (b Bot) UpdateMessages(ctx context.Context, reqID string, reqData RequestDa
 			SetBody(Msg{
 				Channel:    msg.ChannelID,
 				Timestamp:  msg.Timestamp,
-				BlockItems: b.msgSections(reqID, reqData, status),
+				BlockItems: b.msgSections(reqID, reqData),
 			}).
 			Post("chat.update")
 		if err != nil {
@@ -181,9 +222,9 @@ func (b Bot) UpdateMessages(ctx context.Context, reqID string, reqData RequestDa
 }
 
 // Respond is used to send an updated message to Slack by "response_url" from interaction callback.
-func (b Bot) Respond(ctx context.Context, reqID string, reqData RequestData, status string, responseURL string) error {
+func (b Bot) Respond(ctx context.Context, reqID string, reqData RequestData, responseURL string) error {
 	var message RespondMsg
-	message.BlockItems = b.msgSections(reqID, reqData, status)
+	message.BlockItems = b.msgSections(reqID, reqData)
 	message.ReplaceOriginal = true
 
 	var result struct {
@@ -211,9 +252,11 @@ func (b Bot) Respond(ctx context.Context, reqID string, reqData RequestData, sta
 }
 
 // msgSection builds a slack message section (obeys markdown).
-func (b Bot) msgSections(reqID string, reqData RequestData, status string) []BlockItem {
+func (b Bot) msgSections(reqID string, reqData RequestData) []BlockItem {
 	var builder strings.Builder
 	builder.Grow(128)
+
+	resolution := reqData.Resolution
 
 	msgFieldToBuilder(&builder, "ID", reqID)
 	msgFieldToBuilder(&builder, "Cluster", b.clusterName)
@@ -232,22 +275,29 @@ func (b Bot) msgSections(reqID string, reqData RequestData, status string) []Blo
 		reqURL.Path = lib.BuildURLPath("web", "requests", reqID)
 		msgFieldToBuilder(&builder, "Link", reqURL.String())
 	} else {
-		if status == "PENDING" {
+		if resolution.Tag == Unresolved {
 			msgFieldToBuilder(&builder, "Approve", fmt.Sprintf("`tsh request review --aprove %s`", reqID))
 			msgFieldToBuilder(&builder, "Deny", fmt.Sprintf("`tsh request review --deny %s`", reqID))
 		}
 	}
 
 	var statusEmoji string
-	switch status {
-	case "PENDING":
+	status := string(resolution.Tag)
+	switch resolution.Tag {
+	case Unresolved:
+		status = "PENDING"
 		statusEmoji = "⏳"
-	case "APPROVED":
+	case ResolvedApproved:
 		statusEmoji = "✅"
-	case "DENIED":
+	case ResolvedDenied:
 		statusEmoji = "❌"
-	case "EXPIRED":
+	case ResolvedExpired:
 		statusEmoji = "⌛"
+	}
+
+	statusText := fmt.Sprintf("*Status:* %s %s", statusEmoji, status)
+	if resolution.Reason != "" {
+		statusText += fmt.Sprintf(" (%s)", resolution.Reason)
 	}
 
 	sections := []BlockItem{
@@ -259,7 +309,7 @@ func (b Bot) msgSections(reqID string, reqData RequestData, status string) []Blo
 		}),
 		NewBlockItem(ContextBlock{
 			ElementItems: []ContextElementItem{
-				NewContextElementItem(MarkdownObject{Text: fmt.Sprintf("*Status:* %s %s", statusEmoji, status)}),
+				NewContextElementItem(MarkdownObject{Text: statusText}),
 			},
 		}),
 	}

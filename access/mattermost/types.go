@@ -3,28 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 )
-
-// Plugin data
-
-type RequestData struct {
-	User          string
-	Roles         []string
-	RequestReason string
-}
-
-type MattermostData = []MattermostDataPost
-
-type MattermostDataPost struct {
-	PostID    string
-	ChannelID string
-}
-
-type PluginData struct {
-	RequestData
-	MattermostData
-}
 
 // Mattermost API types
 
@@ -34,6 +13,7 @@ type Post struct {
 	ID        string `json:"id,omitempty"`
 	ChannelID string `json:"channel_id"`
 	Message   string `json:"message"`
+	RootID    string `json:"root_id"`
 	Props     Props  `json:"props"`
 }
 
@@ -84,34 +64,6 @@ type ErrorResult struct {
 
 func (e ErrorResult) Error() string {
 	return fmt.Sprintf("api error status_code=%v, message=%q", e.StatusCode, e.Message)
-}
-
-func DecodePluginData(dataMap map[string]string) (data PluginData) {
-	data.User = dataMap["user"]
-	data.Roles = strings.Split(dataMap["roles"], ",")
-	data.RequestReason = dataMap["request_reason"]
-	if channelID, postID := dataMap["channel_id"], dataMap["postID"]; channelID != "" && postID != "" {
-		data.MattermostData = append(data.MattermostData, MattermostDataPost{ChannelID: channelID, PostID: postID})
-	}
-	for _, encodedMsg := range strings.Split(dataMap["messages"], ",") {
-		if parts := strings.Split(encodedMsg, "/"); len(parts) == 2 {
-			data.MattermostData = append(data.MattermostData, MattermostDataPost{ChannelID: parts[0], PostID: parts[1]})
-		}
-	}
-	return
-}
-
-func EncodePluginData(data PluginData) map[string]string {
-	var encodedMessages []string
-	for _, msg := range data.MattermostData {
-		encodedMessages = append(encodedMessages, fmt.Sprintf("%s/%s", msg.ChannelID, msg.PostID))
-	}
-	return map[string]string{
-		"user":           data.User,
-		"roles":          strings.Join(data.Roles, ","),
-		"request_reason": data.RequestReason,
-		"messages":       strings.Join(encodedMessages, ","),
-	}
 }
 
 func (post Post) Attachments() []Attachment {
