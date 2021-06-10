@@ -111,7 +111,7 @@ process here:
 ```bash
 
 # Check out the repo
-git clone git@github.com:gravitational/teleport-plugins.git
+git clone https://github.com/gravitational/teleport-plugins.git
 cd teleport-plugins
 
 # Build the bot
