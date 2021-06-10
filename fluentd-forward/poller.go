@@ -101,6 +101,7 @@ func (p *Poller) Run() error {
 
 		// No events in queue, wait and try again
 		if e == nil {
+			log.WithField("timeout", p.timeout).Debug("Idling")
 			time.Sleep(p.timeout)
 			continue
 		}

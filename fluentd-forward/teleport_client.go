@@ -91,6 +91,7 @@ func NewTeleportClient(c *Config, cursor string, id string) (*TeleportClient, er
 		startTime: c.StartTime,
 	}
 
+	// Get the initial page and find last known event
 	err = tc.fetch(id)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -139,12 +140,18 @@ func (t *TeleportClient) Close() {
 }
 
 // flipPage flips the current page
-func (t *TeleportClient) flipPage() {
+func (t *TeleportClient) flipPage() bool {
+	if t.nextCursor == "" {
+		return false
+	}
+
 	t.cursor = t.nextCursor
 	t.pos = -1
+
+	return true
 }
 
-// fetchInitialPage fetches the initial page and sets the position to the event after latest known
+// fetch fetches the initial page and sets the position to the event after latest known
 func (t *TeleportClient) fetch(latestID string) error {
 	batch, nextCursor, err := t.getEvents()
 	if err != nil {
@@ -154,15 +161,15 @@ func (t *TeleportClient) fetch(latestID string) error {
 	// Save next cursor
 	t.nextCursor = nextCursor
 
-	// Reset the position within page
+	// Mark position as unresolved (the page is empty)
 	t.pos = -1
 
-	// Next page is empty: do nothing
+	log.WithFields(log.Fields{"cursor": t.cursor, "next": nextCursor, "len": len(batch)}).Info("Fetched page")
+
+	// Page is empty: do nothing, return
 	if len(batch) == 0 {
 		return nil
 	}
-
-	log.WithFields(log.Fields{"cursor": t.cursor, "next": nextCursor, "len": len(batch)}).Info("Fetched page")
 
 	pos := 0
 
@@ -174,19 +181,13 @@ func (t *TeleportClient) fetch(latestID string) error {
 				t.id = latestID
 			}
 		}
-
-		// We need to flip the page because the latest event on the current page is successful
-		if pos >= len(batch) {
-			t.flipPage()
-			return nil
-		}
 	}
 
+	// Set the position of the last known event
 	t.pos = pos
 	t.batch = batch
 
-	log.WithField("id", t.id).Info("Skipping last known event")
-	log.WithField("pos", t.pos).Info("Starting with pos")
+	log.WithFields(log.Fields{"id": t.id, "new_pos": t.pos}).Info("Skipping last known event")
 
 	return nil
 }
@@ -206,22 +207,49 @@ func (t *TeleportClient) getEvents() ([]events.AuditEvent, string, error) {
 
 // Next returns next event from a batch or requests next batch if it has been ended
 func (t *TeleportClient) Next() (events.AuditEvent, string, error) {
-	// We need to flip the page if we have processed last event
-	if t.pos >= len(t.batch) {
-		t.flipPage()
-	}
-
-	// re-request batch if it's empty or ended
+	// The page is empty, let's re-request it to check if something has appeared
 	if t.pos == -1 {
 		err := t.fetch(t.id)
 		if err != nil {
 			return nil, t.cursor, err
 		}
+	}
 
-		// page is still empty, return
-		if t.pos == -1 {
-			return nil, t.cursor, nil
+	// We processed the last event on a page
+	if t.pos >= len(t.batch) {
+		// If there is the next page
+		if t.flipPage() {
+			// Try to flip the page
+			err := t.fetch(t.id)
+			if err != nil {
+				return nil, t.cursor, nil
+			}
+		} else {
+			// Try to get updates on current page
+			err := t.fetch(t.id)
+			if err != nil {
+				return nil, t.cursor, nil
+			}
+
+			// There are no new records on current page
+			if t.pos >= len(t.batch) {
+				// And there is no next page, return
+				if !t.flipPage() {
+					return nil, t.cursor, nil
+				}
+
+				// Fetch the next page
+				err = t.fetch(t.id)
+				if err != nil {
+					return nil, t.cursor, nil
+				}
+			}
 		}
+	}
+
+	// After all, there is still nothing to process
+	if t.pos == -1 {
+		return nil, t.cursor, nil
 	}
 
 	event := t.batch[t.pos]
