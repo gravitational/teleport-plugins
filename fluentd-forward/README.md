@@ -59,6 +59,8 @@ We recommend installing the Teleport Plugins alongside the Teleport Proxy. This 
 
 ### Install the plugin from source
 
+Please ensure that Docker is running!
+
 ```sh
 git clone https://github.com/gravitational/teleport-plugins.git --depth 1
 cd teleport-plugins/fluentd-forward/build.assets
