@@ -67,23 +67,23 @@ type TeleportClient struct {
 
 // NewTeleportClient builds Teleport client instance
 func NewTeleportClient(c *Config, cursor string, id string) (*TeleportClient, error) {
-	var cl *client.Client
 	var err error
 
-	if c.TeleportIdentityFile != "" {
-		cl, err = newUsingIdentityFile(c)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		cl, err = newUsingKeys(c)
-		if err != nil {
-			return nil, err
-		}
+	config := client.Config{
+		Addrs: []string{c.TeleportAddr},
+		Credentials: []client.Credentials{
+			client.LoadIdentityFile(c.TeleportIdentityFile),
+			client.LoadKeyPair(c.TeleportCert, c.TeleportKey, c.TeleportCA),
+		},
+	}
+
+	client, err := client.New(context.Background(), config)
+	if err != nil {
+		return nil, trace.Wrap(err)
 	}
 
 	tc := TeleportClient{
-		client:    cl,
+		client:    client,
 		pos:       -1,
 		cursor:    cursor,
 		batchSize: c.BatchSize,
@@ -98,40 +98,6 @@ func NewTeleportClient(c *Config, cursor string, id string) (*TeleportClient, er
 	}
 
 	return &tc, nil
-}
-
-// newUsingIdentityFile tries to build API client using identity file
-func newUsingIdentityFile(c *Config) (*client.Client, error) {
-	identity := client.LoadIdentityFile(c.TeleportIdentityFile)
-
-	config := client.Config{
-		Addrs:       []string{c.TeleportAddr},
-		Credentials: []client.Credentials{identity},
-	}
-
-	client, err := client.New(context.Background(), config)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	return client, nil
-}
-
-// newUsingKeys tries to build API client using keys
-func newUsingKeys(c *Config) (*client.Client, error) {
-	config := client.Config{
-		Addrs: []string{c.TeleportAddr},
-		Credentials: []client.Credentials{
-			client.LoadKeyPair(c.TeleportCert, c.TeleportKey, c.TeleportCA),
-		},
-	}
-
-	client, err := client.New(context.Background(), config)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	return client, nil
 }
 
 // Close closes connection to Teleport
