@@ -67,7 +67,7 @@ cd teleport-plugins/fluentd-forward/build.assets
 make install
 ```
 
-This will place `fluentd-forward` executable to `/usr/local/bin` folder. The following error means that you do not have write permissions to target folder:
+This command will build `build/fluentd-forward` executable and place it to `/usr/local/bin` folder. The following error means that you do not have write permissions on target folder:
 
 ```sh
 cp: /usr/local/bin/fluentd-forward: Operation not permitted
