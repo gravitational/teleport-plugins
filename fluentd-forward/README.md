@@ -65,10 +65,22 @@ cd teleport-plugins/fluentd-forward/build.assets
 make install
 ```
 
-This will place `fluentd-forward` executable to `/usr/local/bin` folder. You can override the target directory:
+This will place `fluentd-forward` executable to `/usr/local/bin` folder. The following error means that you do not have write permissions to target folder:
+
+```sh
+cp: /usr/local/bin/fluentd-forward: Operation not permitted
+```
+
+To fix this, you can either set target folder to something listed in your `$PATH`:
 
 ```sh
 make install BINDIR=/tmp/test-fluentd-setup
+```
+
+or copy binary file manually with `sudo`:
+
+```sh
+sudo cp build/fluentd-forward /usr/local/bin
 ```
 
 ### Configure the plugin
