@@ -45,7 +45,7 @@ func main() {
 	}
 	defer p.Close()
 
-	err = p.Start()
+	err = p.Run()
 	if err != nil {
 		log.Debug(trace.DebugReport(err))
 		log.Error(err)

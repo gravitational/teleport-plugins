@@ -17,11 +17,11 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/sync/errgroup"
 )
 
 // Poller represents periodical event poll
@@ -64,7 +64,7 @@ func NewPoller(c *Config) (*Poller, error) {
 	log.WithField("cursor", cursor).Info("Using initial cursor value")
 	log.WithField("id", id).Info("Using initial ID value")
 
-	t, err := NewTeleportClient(c, cursor, id)
+	t, err := NewTeleportClient(context.Background(), c, cursor, id)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -75,19 +75,6 @@ func NewPoller(c *Config) (*Poller, error) {
 // Close closes all connections
 func (p *Poller) Close() {
 	p.teleport.Close()
-}
-
-// Start starts polling
-func (p *Poller) Start() error {
-	g := new(errgroup.Group)
-	g.Go(p.Run)
-
-	err := g.Wait()
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Run is an infinite polling loop

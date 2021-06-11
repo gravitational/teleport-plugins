@@ -101,38 +101,3 @@ func TestStatePersist(t *testing.T) {
 	assert.Equal(t, "testCursor", cursor)
 	assert.Equal(t, "testId", id)
 }
-
-// TestStatePersist checks that state is reset when StartTime changes
-func TestStateReset(t *testing.T) {
-	setup(t)
-
-	state, err := NewState(configWithStartTime)
-	require.NoError(t, err)
-
-	startTime, errt := state.GetStartTime()
-	cursor, errc := state.GetCursor()
-	id, erri := state.GetID()
-
-	require.NoError(t, errt)
-	require.NoError(t, errc)
-	require.NoError(t, erri)
-
-	assert.Equal(t, currentTime, *startTime)
-	assert.Equal(t, "", cursor)
-	assert.Equal(t, "", id)
-
-	state, err = NewState(configWithOtherStartTime)
-	require.NoError(t, err)
-
-	startTime, errt = state.GetStartTime()
-	cursor, errc = state.GetCursor()
-	id, erri = state.GetID()
-
-	require.NoError(t, errt)
-	require.NoError(t, errc)
-	require.NoError(t, erri)
-
-	assert.Equal(t, otherTime, *startTime)
-	assert.Equal(t, "", cursor)
-	assert.Equal(t, "", id)
-}

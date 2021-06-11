@@ -222,7 +222,7 @@ func (c *Config) validate() error {
 		return err
 	}
 
-	// If start time was not passed, use the beginning of time
+	// If start time was not passed, use the current time
 	if strings.TrimSpace(c.StartTimeRaw) == "" {
 		t = time.Now().UTC()
 	} else {

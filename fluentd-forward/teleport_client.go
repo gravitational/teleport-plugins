@@ -34,6 +34,9 @@ type TeleportSearchEventsClient interface {
 
 // TeleportClient represents wrapper around Teleport client to work with events
 type TeleportClient struct {
+	// context is the context for a client
+	context context.Context
+
 	// client is an instance of GRPC Teleport client
 	client TeleportSearchEventsClient
 
@@ -66,7 +69,7 @@ type TeleportClient struct {
 }
 
 // NewTeleportClient builds Teleport client instance
-func NewTeleportClient(c *Config, cursor string, id string) (*TeleportClient, error) {
+func NewTeleportClient(ctx context.Context, c *Config, cursor string, id string) (*TeleportClient, error) {
 	var err error
 
 	config := client.Config{
@@ -83,6 +86,7 @@ func NewTeleportClient(c *Config, cursor string, id string) (*TeleportClient, er
 	}
 
 	tc := TeleportClient{
+		context:   ctx,
 		client:    client,
 		pos:       -1,
 		cursor:    cursor,
@@ -161,7 +165,7 @@ func (t *TeleportClient) fetch(latestID string) error {
 // getEvents calls Teleport client and loads events
 func (t *TeleportClient) getEvents() ([]events.AuditEvent, string, error) {
 	return t.client.SearchEvents(
-		context.Background(),
+		t.context,
 		t.startTime,
 		time.Now().UTC(),
 		t.namespace,
