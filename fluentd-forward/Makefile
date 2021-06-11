@@ -20,6 +20,7 @@ IDENTITY_FILE=example/keys/identity
 
 .PHONY: gen-example-mtls
 gen-example-mtls:
+	mkdir -p example/keys
 	rm -f example/keys/*
 
 	openssl genrsa -out example/keys/ca.key 4096
