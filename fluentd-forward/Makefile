@@ -55,7 +55,7 @@ install: build
 	go install
 
 .PHONY: fluentd
-fluentd: gen-example-mtls
+fluentd: #gen-example-mtls
 	docker run -p 8888:8888 -v $(LOCALDIR)example/keys:/fluentd/etc/keys -v $(LOCALDIR)example/fluent.conf:/fluentd/etc/fluent.conf fluent/fluentd:edge 
 
 .PHONY: example
