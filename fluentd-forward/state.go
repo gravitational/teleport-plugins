@@ -50,7 +50,7 @@ type State struct {
 }
 
 // NewCursor creates new cursor instance
-func NewState(c *Config) (*State, error) {
+func NewState(c *StartCmd) (*State, error) {
 	// Simplest transform function: put all the data files into the base dir.
 	flatTransform := func(s string) []string { return []string{} }
 
@@ -90,7 +90,7 @@ func NewState(c *Config) (*State, error) {
 }
 
 // resetOnStartTimeChanged resets state if start time explicitly changed from the previous run
-func (s *State) resetOnStartTimeChanged(c *Config) error {
+func (s *State) resetOnStartTimeChanged(c *StartCmd) error {
 	prevStartTime, err := s.GetStartTime()
 	if err != nil {
 		return trace.Wrap(err)
@@ -104,12 +104,17 @@ func (s *State) resetOnStartTimeChanged(c *Config) error {
 			return trace.Wrap(err)
 		}
 
-		return s.SetStartTime(&c.StartTime)
+		if c.StartTime == nil {
+			t := time.Now().UTC().Truncate(time.Second)
+			return s.SetStartTime(&t)
+		}
+
+		return s.SetStartTime(c.StartTime)
 	}
 
 	// If there is a time saved in the state and this time does not equal to the time passed from CLI and a
 	// time was explicitly passed from CLI
-	if prevStartTime != nil && *prevStartTime != c.StartTime && c.StartTimeRaw != "" {
+	if prevStartTime != nil && c.StartTime != nil && *prevStartTime != *c.StartTime {
 		return trace.Errorf("You can not change start time in the middle of ingestion. To restart the ingestion, rm -rf %v", c.StorageDir)
 	}
 

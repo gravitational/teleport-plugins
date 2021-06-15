@@ -16,28 +16,5 @@ limitations under the License.
 
 package main
 
-import (
-	"github.com/alecthomas/kong"
-	log "github.com/sirupsen/logrus"
-)
-
-func init() {
-	// initConfig()
-}
-
-var cli CLI
-
-func main() {
-	ctx := kong.Parse(
-		&cli,
-		kong.UsageOnError(),
-		kong.Configuration(TOML),
-		kong.Name("Teleport fluentd-forwarder"),
-		kong.Description("Forwards Teleport AuditLog to Fluentd"),
-	)
-
-	log.WithFields(log.Fields{"version": Version, "sha": Sha}).Printf("Teleport fluentd-forwarder")
-
-	err := ctx.Run()
-	ctx.FatalIfErrorf(err)
+type GenCertsCmd struct {
 }

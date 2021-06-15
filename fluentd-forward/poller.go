@@ -40,7 +40,7 @@ type Poller struct {
 }
 
 // NewPoller builds new Poller structure
-func NewPoller(c *Config) (*Poller, error) {
+func NewPoller(c *StartCmd) (*Poller, error) {
 	s, err := NewState(c)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -61,10 +61,16 @@ func NewPoller(c *Config) (*Poller, error) {
 		return nil, trace.Wrap(err)
 	}
 
+	st, err := s.GetStartTime()
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
 	log.WithField("cursor", cursor).Info("Using initial cursor value")
 	log.WithField("id", id).Info("Using initial ID value")
+	log.WithField("value", st).Info("Using start time from state")
 
-	t, err := NewTeleportClient(context.Background(), c, cursor, id)
+	t, err := NewTeleportClient(context.Background(), c, *st, cursor, id)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}

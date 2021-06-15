@@ -35,21 +35,11 @@ var (
 	// currentTime is current time
 	currentTime = time.Now().UTC().Truncate(time.Second)
 
-	// otherTime is different time
-	otherTime = time.Now().Add(time.Hour).UTC().Truncate(time.Second)
-
 	// configWithStartTime represents required config
-	configWithStartTime = &Config{
+	configWithStartTime = &StartCmd{
 		StorageDir:   storagePath,
 		TeleportAddr: osAndPort,
-		StartTime:    currentTime,
-	}
-
-	// configWithOtherStartTime represents required config
-	configWithOtherStartTime = &Config{
-		StorageDir:   storagePath,
-		TeleportAddr: osAndPort,
-		StartTime:    otherTime,
+		StartTime:    &currentTime,
 	}
 )
 

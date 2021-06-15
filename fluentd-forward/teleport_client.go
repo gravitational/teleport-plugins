@@ -69,7 +69,7 @@ type TeleportClient struct {
 }
 
 // NewTeleportClient builds Teleport client instance
-func NewTeleportClient(ctx context.Context, c *Config, cursor string, id string) (*TeleportClient, error) {
+func NewTeleportClient(ctx context.Context, c *StartCmd, startTime time.Time, cursor string, id string) (*TeleportClient, error) {
 	var err error
 
 	config := client.Config{
@@ -92,7 +92,7 @@ func NewTeleportClient(ctx context.Context, c *Config, cursor string, id string)
 		cursor:    cursor,
 		batchSize: c.BatchSize,
 		namespace: c.Namespace,
-		startTime: c.StartTime,
+		startTime: startTime,
 	}
 
 	// Get the initial page and find last known event

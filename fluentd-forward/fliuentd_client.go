@@ -38,7 +38,7 @@ type FluentdClient struct {
 }
 
 // New creates new FluentdClient
-func NewFluentdClient(c *Config) (*FluentdClient, error) {
+func NewFluentdClient(c *StartCmd) (*FluentdClient, error) {
 	cert, err := tls.LoadX509KeyPair(c.FluentdCert, c.FluentdKey)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -62,7 +62,7 @@ func NewFluentdClient(c *Config) (*FluentdClient, error) {
 }
 
 // getCertPool reads CA certificate and returns CA cert pool if passed
-func getCertPool(c *Config) (*x509.CertPool, error) {
+func getCertPool(c *StartCmd) (*x509.CertPool, error) {
 	if c.FluentdCA == "" {
 		return nil, nil
 	}
