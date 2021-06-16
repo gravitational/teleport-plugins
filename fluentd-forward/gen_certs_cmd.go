@@ -22,13 +22,16 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net"
+	"os"
 	"path"
 	"time"
 
 	"github.com/gravitational/trace"
+	"github.com/manifoldco/promptui"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -67,6 +70,11 @@ type GenCertsCmd struct {
 var (
 	// maxBigInt is a reader for serial number random
 	maxBigInt *big.Int = new(big.Int).Lsh(big.NewInt(1), 128)
+)
+
+const (
+	// perms certificate/key file permissions
+	perms = 0444
 )
 
 // Run runs the generator
@@ -180,18 +188,25 @@ func (c *GenCertsCmd) Run() error {
 
 // writeKeyAndCert writes private key and certificate on disk
 func (c *GenCertsCmd) writeKeyAndCert(prefix string, certBytes []byte, pk *rsa.PrivateKey) error {
-	caBytesPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
-	caPkBytesPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(pk)})
-
 	crtPath := prefix + ".crt"
 	keyPath := prefix + ".key"
 
-	err := ioutil.WriteFile(crtPath, caBytesPEM, 0444)
+	_, err := os.Stat(crtPath)
+	if !os.IsNotExist(err) {
+		if !yesNo(fmt.Sprintf("Do you want to overwrite %s?", crtPath)) {
+			return nil
+		}
+	}
+
+	caBytesPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
+	caPkBytesPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(pk)})
+
+	err = ioutil.WriteFile(crtPath, caBytesPEM, perms)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	err = ioutil.WriteFile(keyPath, caPkBytesPEM, 0444)
+	err = ioutil.WriteFile(keyPath, caPkBytesPEM, perms)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -205,6 +220,7 @@ func (c *GenCertsCmd) writeKeyAndCert(prefix string, certBytes []byte, pk *rsa.P
 // appendSANs appends subjectAltName
 func (c *GenCertsCmd) appendSANs(cert *x509.Certificate) error {
 	cert.DNSNames = c.DNSNames
+
 	if len(c.IP) == 0 {
 		for _, name := range c.DNSNames {
 			ips, err := net.LookupIP(name)
@@ -223,4 +239,19 @@ func (c *GenCertsCmd) appendSANs(cert *x509.Certificate) error {
 	}
 
 	return nil
+}
+
+// yesNo displays Y/N prompt
+func yesNo(message string) bool {
+	prompt := promptui.Prompt{
+		Label:     message,
+		IsConfirm: true,
+	}
+
+	result, err := prompt.Run()
+	if err != nil {
+		return false
+	}
+
+	return result == "y"
 }
