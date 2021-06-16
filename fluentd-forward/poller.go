@@ -89,7 +89,7 @@ func (p *Poller) Run() error {
 		// Get next event from
 		e, cursor, err := p.teleport.Next()
 		if err != nil {
-			return err
+			return trace.Wrap(err)
 		}
 
 		// No events in queue, wait and try again
@@ -102,7 +102,7 @@ func (p *Poller) Run() error {
 		// Send event to fluentd
 		err = p.fluentd.Send(e)
 		if err != nil {
-			return err
+			return trace.Wrap(err)
 		}
 
 		// Save latest successful id & cursor value to the state

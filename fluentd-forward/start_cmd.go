@@ -119,7 +119,7 @@ func (c *StartCmd) Run() error {
 	if err != nil {
 		log.Debug(trace.DebugReport(err))
 		log.Error(err)
-		return err
+		return trace.Wrap(err)
 	}
 	defer p.Close()
 
@@ -127,7 +127,7 @@ func (c *StartCmd) Run() error {
 	if err != nil {
 		log.Debug(trace.DebugReport(err))
 		log.Error(err)
-		return err
+		return trace.Wrap(err)
 	}
 
 	return nil

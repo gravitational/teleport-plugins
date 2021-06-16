@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/gravitational/trace"
+	log "github.com/sirupsen/logrus"
 )
 
 type GenCertsCmd struct {
@@ -37,6 +38,15 @@ type GenCertsCmd struct {
 
 	// Pwd key passphrase
 	Pwd string `arg:"true" help:"Passphrase" required:"true"`
+
+	// CAName CA certificate and key name
+	CAName string `arg:"true" help:"CA certificate and key name" required:"true" default:"ca"`
+
+	// ServerName server certificate and key name
+	ServerName string `arg:"true" help:"Server certificate and key name" required:"true" default:"server"`
+
+	// ClientName client certificate and key name
+	ClientName string `arg:"true" help:"Client certificate and key name" required:"true" default:"client"`
 
 	// Certificate TTL
 	TTL time.Duration `help:"Certificate TTL" required:"true" default:"87600h"`
@@ -115,24 +125,7 @@ func (c *GenCertsCmd) Run() error {
 		ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 	}
 
-	// Append subjectAltNames
-	serverCert.DNSNames = c.DNSNames
-	if len(c.IP) == 0 {
-		for _, name := range c.DNSNames {
-			ips, err := net.LookupIP(name)
-			if err != nil {
-				return trace.Wrap(err)
-			}
-
-			if ips != nil {
-				serverCert.IPAddresses = append(serverCert.IPAddresses, ips...)
-			}
-		}
-	} else {
-		for _, ip := range c.IP {
-			serverCert.IPAddresses = append(serverCert.IPAddresses, net.ParseIP(ip))
-		}
-	}
+	c.appendSANs(serverCert)
 
 	// Generate CA key and certificate
 	caPK, err := rsa.GenerateKey(rand.Reader, c.Length)
@@ -145,7 +138,7 @@ func (c *GenCertsCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	err = c.writeKeyAndCert(path.Join(c.Out, "ca"), caCertBytes, caPK)
+	err = c.writeKeyAndCert(path.Join(c.Out, c.CAName), caCertBytes, caPK)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -161,7 +154,7 @@ func (c *GenCertsCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	err = c.writeKeyAndCert(path.Join(c.Out, "server"), serverCertBytes, serverPK)
+	err = c.writeKeyAndCert(path.Join(c.Out, c.ServerName), serverCertBytes, serverPK)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -177,7 +170,7 @@ func (c *GenCertsCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	err = c.writeKeyAndCert(path.Join(c.Out, "client"), clientCertBytes, clientPK)
+	err = c.writeKeyAndCert(path.Join(c.Out, c.ClientName), clientCertBytes, clientPK)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -190,14 +183,43 @@ func (c *GenCertsCmd) writeKeyAndCert(prefix string, certBytes []byte, pk *rsa.P
 	caBytesPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
 	caPkBytesPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(pk)})
 
-	err := ioutil.WriteFile(prefix+".crt", caBytesPEM, 0444)
+	crtPath := prefix + ".crt"
+	keyPath := prefix + ".key"
+
+	err := ioutil.WriteFile(crtPath, caBytesPEM, 0444)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	err = ioutil.WriteFile(prefix+".key", caPkBytesPEM, 0444)
+	err = ioutil.WriteFile(keyPath, caPkBytesPEM, 0444)
 	if err != nil {
 		return trace.Wrap(err)
+	}
+
+	log.WithField("path", crtPath).Info("Certificate saved")
+	log.WithField("key", keyPath).Info("Private key saved")
+
+	return nil
+}
+
+// appendSANs appends subjectAltName
+func (c *GenCertsCmd) appendSANs(cert *x509.Certificate) error {
+	cert.DNSNames = c.DNSNames
+	if len(c.IP) == 0 {
+		for _, name := range c.DNSNames {
+			ips, err := net.LookupIP(name)
+			if err != nil {
+				return trace.Wrap(err)
+			}
+
+			if ips != nil {
+				cert.IPAddresses = append(cert.IPAddresses, ips...)
+			}
+		}
+	} else {
+		for _, ip := range c.IP {
+			cert.IPAddresses = append(cert.IPAddresses, net.ParseIP(ip))
+		}
 	}
 
 	return nil
