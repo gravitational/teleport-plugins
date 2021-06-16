@@ -30,6 +30,8 @@ root_cas = "/var/lib/teleport/plugins/slack/auth.cas"   # Teleport cluster CA ce
 
 [slack]
 token = "api_token"             # Slack Bot OAuth token
+# Optional Slack Rooms
+recipients = ["person@email.com","YYYYYYY"]
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/slack.log"
