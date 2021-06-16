@@ -146,7 +146,7 @@ func (c *GenCertsCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	err = c.writeKeyAndCert(path.Join(c.Out, c.CAName), caCertBytes, caPK)
+	err = c.writeKeyAndCert(path.Join(c.Out, c.CAName), caCertBytes, caPK, "")
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -162,7 +162,7 @@ func (c *GenCertsCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	err = c.writeKeyAndCert(path.Join(c.Out, c.ServerName), serverCertBytes, serverPK)
+	err = c.writeKeyAndCert(path.Join(c.Out, c.ServerName), serverCertBytes, serverPK, c.Pwd)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -178,7 +178,7 @@ func (c *GenCertsCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	err = c.writeKeyAndCert(path.Join(c.Out, c.ClientName), clientCertBytes, clientPK)
+	err = c.writeKeyAndCert(path.Join(c.Out, c.ClientName), clientCertBytes, clientPK, "")
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -187,7 +187,7 @@ func (c *GenCertsCmd) Run() error {
 }
 
 // writeKeyAndCert writes private key and certificate on disk
-func (c *GenCertsCmd) writeKeyAndCert(prefix string, certBytes []byte, pk *rsa.PrivateKey) error {
+func (c *GenCertsCmd) writeKeyAndCert(prefix string, certBytes []byte, pk *rsa.PrivateKey, pwd string) error {
 	crtPath := prefix + ".crt"
 	keyPath := prefix + ".key"
 
@@ -198,15 +198,26 @@ func (c *GenCertsCmd) writeKeyAndCert(prefix string, certBytes []byte, pk *rsa.P
 		}
 	}
 
-	caBytesPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
-	caPkBytesPEM := pem.EncodeToMemory(&pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(pk)})
+	pkBlock := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(pk)}
+	bytesPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
 
-	err = ioutil.WriteFile(crtPath, caBytesPEM, perms)
+	// Encrypt with passphrase
+	if pwd != "" {
+		//nolint // deprecated, but we still need it to be encrypted because of fluentd requirements
+		pkBlock, err = x509.EncryptPEMBlock(rand.Reader, pkBlock.Type, pkBlock.Bytes, []byte(pwd), x509.PEMCipherAES256)
+		if err != nil {
+			return nil
+		}
+	}
+
+	pkBytesPEM := pem.EncodeToMemory(pkBlock)
+
+	err = ioutil.WriteFile(crtPath, bytesPEM, perms)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	err = ioutil.WriteFile(keyPath, caPkBytesPEM, perms)
+	err = ioutil.WriteFile(keyPath, pkBytesPEM, perms)
 	if err != nil {
 		return trace.Wrap(err)
 	}
