@@ -100,7 +100,7 @@ fluentd-forward gen-certs . 1234
 
 It will generate certificate authority certificate (`ca.crt`, `ca.key`), fluentd server certificate (`server.crt`, `server.key`) and fluentd-forward client certificate (`client.crt`, `client.key`) and save them to current folder. `1234` is the passphrase used for server private key. Please, use something more secure here.
 
-Alternatively, you can generate certificates manually. Check "Generate mTLS certificates using OpenSSL/LibreSSL" section below [#mtls_advanced].
+Alternatively, you can generate certificates manually. Check ["Generate mTLS certificates using OpenSSL/LibreSSL"](#mtls_advanced) section below.
 
 ### <a name="fd"></a>Configure fluentd
 
@@ -172,7 +172,7 @@ docker run -p 8888:8888 -v $(pwd):/keys -v $(pwd)/fluent.conf:/fluentd/etc/fluen
 fluentd-forward start --config fluentd-forward.toml --start-time 2021-01-01T00:00:00Z
 ```
 
-Note that here we used start time at the beginning of year 2021. Supposedly you have some events at the Teleport instance you are connecting to. Otherwise, you can omit `--start-time` flag and generate an events using `tctl create -f fluentd-forward.yaml` from the first step.
+Note that here we used start time at the beginning of year 2021. Supposedly you have some events at the Teleport instance you are connecting to. Otherwise, you can omit `--start-time` flag, start the service and generate an events using `tctl create -f fluentd-forward.yaml` then from the first step. `fluentd-forward` will wait for that new events to appear and will send them to the fluentd.
 
 You should see something like this:
 
