@@ -26,6 +26,10 @@ access-example:
 terraform:
 	make -C terraform
 
+.PHONY: event-handler
+event-handler:
+	make -C event-handler
+
 # Run all tests
 .PHONY: test
 test:
@@ -56,12 +60,16 @@ release/access-gitlab:
 release/terraform:
 	make -C terraform clean release
 
+.PHONY: release/event-handler
+release/event-handler:
+	make -C event-handler clean release
+
 # Run all releases
 .PHONY: releases
 releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-gitlab
 
 .PHONY: build-all
-build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab terraform
+build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab terraform event-handler
 
 #
 # Lint the Go code.
