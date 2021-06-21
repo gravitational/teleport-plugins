@@ -1,4 +1,4 @@
-# Fluentd-forward
+# Teleport-fluentd-forward
 
 This plugin is used to export Audit Log events to Fluentd service.
 
@@ -27,10 +27,10 @@ cd teleport-plugins/fluentd-forward/build.assets
 make install
 ```
 
-This command will build `build/fluentd-forward` executable and place it to `/usr/local/bin` folder. The following error means that you do not have write permissions on target folder:
+This command will build `build/teleport-fluentd-forward` executable and place it to `/usr/local/bin` folder. The following error means that you do not have write permissions on target folder:
 
 ```sh
-cp: /usr/local/bin/fluentd-forward: Operation not permitted
+cp: /usr/local/bin/teleport-fluentd-forward: Operation not permitted
 ```
 
 To fix this, you can either set target folder to something listed in your `$PATH`:
@@ -42,26 +42,26 @@ make install BINDIR=/tmp/test-fluentd-setup
 or copy binary file manually with `sudo`:
 
 ```sh
-sudo cp build/fluentd-forward /usr/local/bin
+sudo cp build/teleport-fluentd-forward /usr/local/bin
 ```
 
-In sections below we assume that you have `fluentd-forward` executable available in your `$PATH` or cwd.
+In sections below we assume that you have `teleport-fluentd-forward` executable available in your `$PATH` or cwd.
 
 ## <a name="user"></a>Create user and role for access audit log events
 
-Log into Teleport Authentication Server, this is where you normally run tctl. Create a new user and role that only has read-only API access to the `event` API. The below script will create a [yaml resource file](example/fluentd-forward.yaml) for a new user and role.
+Log into Teleport Authentication Server, this is where you normally run tctl. Create a new user and role that only has read-only API access to the `event` API. The below script will create a [yaml resource file](example/teleport-fluentd-forward.yaml) for a new user and role.
 
 ```yaml
 kind: user
 metadata:
-  name: fluentd-forward
+  name: teleport-fluentd-forward
 spec:
-  roles: ['fluentd-forward']
+  roles: ['teleport-fluentd-forward']
 version: v2
 ---
 kind: role
 metadata:
-  name: fluentd-forward
+  name: teleport-fluentd-forward
 spec:
   allow:
     rules:
@@ -73,15 +73,15 @@ version: v3
 Here and below follow along and create yaml resources using `tctl create -f`:
 
 ```sh
-tctl create -f fluentd-forward.yaml
+tctl create -f teleport-fluentd-forward.yaml
 ```
 
-### Export fluentd-forward Certificate
+### Export teleport-fluentd-forward Certificate
 
 Teleport Plugin use the fluentd role and user to read the events. We export the identity files, using tctl auth sign.
 
 ```sh
-tctl auth sign --format=tls --user=fluentd-forward --out=fd --ttl=720h
+tctl auth sign --format=tls --user=teleport-fluentd-forward --out=fd --ttl=720h
 ```
 
 This will generate `fd.cas`, `fd.crt` and `fd.key` which will be used to connect plugin to your Teleport instance.
@@ -95,10 +95,10 @@ For the purpose of testing, we will run the local fluentd instance first. For th
 Run the following command:
 
 ```sh
-fluentd-forward gen-certs . 1234
+teleport-fluentd-forward gen-certs . 1234
 ```
 
-It will generate certificate authority certificate (`ca.crt`, `ca.key`), fluentd server certificate (`server.crt`, `server.key`) and fluentd-forward client certificate (`client.crt`, `client.key`) and save them to current folder. `1234` is the passphrase used for server private key. Please, use something more secure here.
+It will generate certificate authority certificate (`ca.crt`, `ca.key`), fluentd server certificate (`server.crt`, `server.key`) and teleport-fluentd-forward client certificate (`client.crt`, `client.key`) and save them to current folder. `1234` is the passphrase used for server private key. Please, use something more secure here.
 
 Alternatively, you can generate certificates manually. Check ["Generate mTLS certificates using OpenSSL/LibreSSL"](#mtls_advanced) section below.
 
@@ -137,10 +137,10 @@ The plugin will send events to the fluentd instance using keys generated on the 
 
 ## Configure the plugin
 
-Save the following content to `fluentd-forward.toml`:
+Save the following content to `teleport-fluentd-forward.toml`:
 
 ```toml
-storage = "./fluentd-forward-storage" # Plugin will save it's state here
+storage = "./teleport-fluentd-forward-storage" # Plugin will save it's state here
 timeout = "10s"
 batch = 10
 namespace = "default"
@@ -166,13 +166,13 @@ key  = "fd.key"
 docker run -p 8888:8888 -v $(pwd):/keys -v $(pwd)/fluent.conf:/fluentd/etc/fluent.conf fluent/fluentd:edge 
 ```
 
-* Start `fluentd-forward`:
+* Start `teleport-fluentd-forward`:
 
 ```sh
-fluentd-forward start --config fluentd-forward.toml --start-time 2021-01-01T00:00:00Z
+teleport-fluentd-forward start --config teleport-fluentd-forward.toml --start-time 2021-01-01T00:00:00Z
 ```
 
-Note that here we used start time at the beginning of year 2021. Supposedly you have some events at the Teleport instance you are connecting to. Otherwise, you can omit `--start-time` flag, start the service and generate an events using `tctl create -f fluentd-forward.yaml` then from the first step. `fluentd-forward` will wait for that new events to appear and will send them to the fluentd.
+Note that here we used start time at the beginning of year 2021. Supposedly you have some events at the Teleport instance you are connecting to. Otherwise, you can omit `--start-time` flag, start the service and generate an events using `tctl create -f teleport-fluentd-forward.yaml` then from the first step. `teleport-fluentd-forward` will wait for that new events to appear and will send them to the fluentd.
 
 You should see something like this:
 
@@ -191,23 +191,23 @@ By default, all events starting from the current moment will be exported. If you
 This will start an export from May 5 2021:
 
 ```sh
-fluentd-forward start --config fluentd-forward.toml --start-time "2021-05-05T00:00:00Z"
+teleport-fluentd-forward start --config teleport-fluentd-forward.toml --start-time "2021-05-05T00:00:00Z"
 ```
 
 This will export new events from a moment the service did start:
 
 ```sh
-fluentd-forward start --config fluentd-forward.toml
+teleport-fluentd-forward start --config teleport-fluentd-forward.toml
 ```
 
 Note that start time can be set only once, on the first run of the tool. If you want to change the time frame later, remove plugin state dir which you had specified in `storage-dir` argument.s
 
 ## How it works
 
-* `fluentd-forward` takes the Audit Log event stream from Teleport. It loads events in batches of 20 by default. Every event gets sent to fluentd.
-* Once event is successfully received by fluentd, it's ID is saved to the `fluent-forward` state. In case `fluentd-forward` crashes, it will pick the stream up from a latest successful event.
-* Once all events are sent, `fluentd-forward` starts polling for new evetns. It happens every 5 seconds by default.
-* If storage directory gets lost, you may specify latest event id value. `fluentd-forward` will pick streaming up from the next event after it.
+* `teleport-fluentd-forward` takes the Audit Log event stream from Teleport. It loads events in batches of 20 by default. Every event gets sent to fluentd.
+* Once event is successfully received by fluentd, it's ID is saved to the `teleport-fluent-forward` state. In case `teleport-fluentd-forward` crashes, it will pick the stream up from a latest successful event.
+* Once all events are sent, `teleport-fluentd-forward` starts polling for new evetns. It happens every 5 seconds by default.
+* If storage directory gets lost, you may specify latest event id value. `teleport-fluentd-forward` will pick streaming up from the next event after it.
 
 ## Configuration options
 
@@ -243,22 +243,22 @@ TOML configuration keys are the same as CLI args. Teleport and Fluentd variables
  tsh login --proxy test.teleport.sh:443 --user test@evilmartians.com
  ```
 
-### Create `fluentd-forward` user and role
+### Create `teleport-fluentd-forward` user and role
 
 Follow the ["Create user and role for access audit log events"](#user) section of this document.
 
 Export the identity file after you're done:
 
 ```sh
-tctl auth sign --out identity --user fluentd-forward
+tctl auth sign --out identity --user teleport-fluentd-forward
 ```
 
-### Configure fluentd-forward
+### Configure teleport-fluentd-forward
 
 Put the following contents into fluent-forward.toml:
 
 ```toml
-storage = "./fluentd-forward-storage" # Plugin will save it's state here
+storage = "./teleport-fluentd-forward-storage" # Plugin will save it's state here
 timeout = "10s"
 batch = 10
 namespace = "default"

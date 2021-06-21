@@ -48,23 +48,23 @@ clean:
 
 .PHONY: build
 build: clean
-	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/fluentd-forward $(BUILDFLAGS)
+	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/teleport-fluentd-forward $(BUILDFLAGS)
 
 .PHONY: install
 install: build
 	go install
 
 .PHONY: fluentd
-fluentd: #gen-example-mtls
+fluentd: gen-example-mtls
 	docker run -p 8888:8888 -v $(LOCALDIR)example/keys:/fluentd/etc/keys -v $(LOCALDIR)example/fluent.conf:/fluentd/etc/fluent.conf fluent/fluentd:edge 
 
 .PHONY: example
 example: build
-	./build/fluentd-forward start --fluentd-cert example/keys/client.crt --fluentd-key example/keys/client.key --fluentd-ca example/keys/ca.crt --fluentd-url https://localhost:8888/test.log --teleport-ca ~/www/teleport-installation/tf.cas --teleport-cert ~/www/teleport-installation/tf.crt --teleport-key ~/www/teleport-installation/tf.key --teleport-addr localhost:3025 --storage /tmp/storage --batch 10 --timeout 3s --start-time 2021-04-28T00:00:00Z
+	./build/teleport-fluentd-forward start --fluentd-cert example/keys/client.crt --fluentd-key example/keys/client.key --fluentd-ca example/keys/ca.crt --fluentd-url https://localhost:8888/test.log --teleport-ca ~/www/teleport-installation/tf.cas --teleport-cert ~/www/teleport-installation/tf.crt --teleport-key ~/www/teleport-installation/tf.key --teleport-addr localhost:3025 --storage /tmp/storage --batch 10 --timeout 3s --start-time 2021-04-28T00:00:00Z
 
 .PHONY: example-cloud
 example-cloud: build
-	./build/fluentd-forward start --fluentd-cert example/keys/client.crt --fluentd-key example/keys/client.key --fluentd-ca example/keys/ca.crt --fluentd-url https://localhost:8888/test.log --teleport-identity $(IDENTITY_FILE) --teleport-addr $(CLOUD_ADDR) --storage /tmp/storage-cloud --batch 10 --timeout 10s --start-time 2021-01-01T00:00:00Z
+	./build/teleport-fluentd-forward start --fluentd-cert example/keys/client.crt --fluentd-key example/keys/client.key --fluentd-ca example/keys/ca.crt --fluentd-url https://localhost:8888/test.log --teleport-identity $(IDENTITY_FILE) --teleport-addr $(CLOUD_ADDR) --storage /tmp/storage-cloud --batch 10 --timeout 10s --start-time 2021-01-01T00:00:00Z
 
 .PHONY: test
 test: gen-example-mtls

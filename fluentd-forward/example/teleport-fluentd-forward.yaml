@@ -1,13 +1,13 @@
 kind: user
 metadata:
-  name: fluentd-forward
+  name: teleport-fluentd-forward
 spec:
-  roles: ['fluentd-forward']
+  roles: ['teleport-fluentd-forward']
 version: v2
 ---
 kind: role
 metadata:
-  name: fluentd-forward
+  name: teleport-fluentd-forward
 spec:
   allow:
     rules:

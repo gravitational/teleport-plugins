@@ -49,4 +49,4 @@ test: build
 .PHONY: install
 install: build
 	mkdir -p $(BINDIR)
-	cp ../build/fluentd-forward $(BINDIR)
+	cp ../build/teleport-fluentd-forward $(BINDIR)
