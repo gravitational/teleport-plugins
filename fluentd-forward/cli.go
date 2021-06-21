@@ -38,8 +38,8 @@ type CLI struct {
 	// Start is the start command configuration
 	Start StartCmd `cmd:"true" help:"Start log ingestion"`
 
-	// GenCerts is the generate certificates command configuration
-	GenCerts GenCertsCmd `cmd:"true" help:"Generate mTLS certificates for Fluentd"`
+	// Configure is the generate certificates command configuration
+	Configure ConfigureCmd `cmd:"true" help:"Generate mTLS certificates for Fluentd"`
 }
 
 // Validate validates base CLI structure, switches on debug logging if needed

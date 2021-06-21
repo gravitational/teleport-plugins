@@ -76,15 +76,15 @@ Here and below follow along and create yaml resources using `tctl create -f`:
 tctl create -f teleport-fluentd-forward.yaml
 ```
 
-### Export teleport-fluentd-forward Certificate
+### Export teleport-fluentd-forward identity file
 
 Teleport Plugin use the fluentd role and user to read the events. We export the identity files, using tctl auth sign.
 
 ```sh
-tctl auth sign --format=tls --user=teleport-fluentd-forward --out=fd --ttl=720h
+tctl auth sign --out identity --user teleport-fluentd-forward
 ```
 
-This will generate `fd.cas`, `fd.crt` and `fd.key` which will be used to connect plugin to your Teleport instance.
+This will generate `identity` which contains TLS certificates and will be used to connect plugin to your Teleport instance.
 
 ## Setup fluentd
 
@@ -153,9 +153,7 @@ url = "https://localhost:8888/test.log"
 
 [teleport]
 addr = "localhost:3025"
-ca = "fd.cas" 
-cert = "fd.crt"
-key  = "fd.key"
+identity = "identity"
 ```
 
 ## <a name="run"></a>Run test setup

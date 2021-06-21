@@ -21,6 +21,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -32,15 +33,11 @@ import (
 
 	"github.com/gravitational/trace"
 	"github.com/manifoldco/promptui"
-	log "github.com/sirupsen/logrus"
 )
 
-type GenCertsCmd struct {
+type ConfigureCmd struct {
 	// Out path and file prefix to put certificates into
 	Out string `arg:"true" help:"Output directory" type:"existingdir" required:"true"`
-
-	// Pwd key passphrase
-	Pwd string `arg:"true" help:"Passphrase" required:"true"`
 
 	// CAName CA certificate and key name
 	CAName string `arg:"true" help:"CA certificate and key name" required:"true" default:"ca"`
@@ -75,10 +72,40 @@ var (
 const (
 	// perms certificate/key file permissions
 	perms = 0066
+
+	// passwordLength represents rand password length
+	passwordLength = 32
+
+	// passwordFileName is the default password file name
+	passwordFileName = "password.file"
 )
 
 // Run runs the generator
-func (c *GenCertsCmd) Run() error {
+func (c *ConfigureCmd) Run() error {
+	pwd, gen, err := c.getPwd()
+	if err != nil {
+		return err
+	}
+
+	// Save password if it was generated on the first
+	if gen {
+		err = c.writePwd(pwd)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Generate certificates
+	err = c.genCerts(pwd)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Generates fluentd certificates
+func (c *ConfigureCmd) genCerts(pwd string) error {
 	entity := pkix.Name{
 		CommonName: c.CN,
 		Country:    []string{"US"},
@@ -162,7 +189,7 @@ func (c *GenCertsCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	err = c.writeKeyAndCert(path.Join(c.Out, c.ServerName), serverCertBytes, serverPK, c.Pwd)
+	err = c.writeKeyAndCert(path.Join(c.Out, c.ServerName), serverCertBytes, serverPK, pwd)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -187,7 +214,7 @@ func (c *GenCertsCmd) Run() error {
 }
 
 // writeKeyAndCert writes private key and certificate on disk
-func (c *GenCertsCmd) writeKeyAndCert(prefix string, certBytes []byte, pk *rsa.PrivateKey, pwd string) error {
+func (c *ConfigureCmd) writeKeyAndCert(prefix string, certBytes []byte, pk *rsa.PrivateKey, pwd string) error {
 	crtPath := prefix + ".crt"
 	keyPath := prefix + ".key"
 
@@ -222,14 +249,11 @@ func (c *GenCertsCmd) writeKeyAndCert(prefix string, certBytes []byte, pk *rsa.P
 		return trace.Wrap(err)
 	}
 
-	log.WithField("path", crtPath).Info("Certificate saved")
-	log.WithField("key", keyPath).Info("Private key saved")
-
 	return nil
 }
 
 // appendSANs appends subjectAltName
-func (c *GenCertsCmd) appendSANs(cert *x509.Certificate) error {
+func (c *ConfigureCmd) appendSANs(cert *x509.Certificate) error {
 	cert.DNSNames = c.DNSNames
 
 	if len(c.IP) == 0 {
@@ -247,6 +271,40 @@ func (c *GenCertsCmd) appendSANs(cert *x509.Certificate) error {
 		for _, ip := range c.IP {
 			cert.IPAddresses = append(cert.IPAddresses, net.ParseIP(ip))
 		}
+	}
+
+	return nil
+}
+
+// getPwd returns password read from STDIN or generates new if no password is provided
+func (c *ConfigureCmd) getPwd() (string, bool, error) {
+	stat, _ := os.Stdin.Stat()
+	if (stat.Mode() & os.ModeCharDevice) == 0 {
+		// Get password from provided file
+		pwdFromStdin, err := ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			return "", false, err
+		}
+
+		return string(pwdFromStdin), false, nil
+	}
+
+	// Otherwise, generate random hex token
+	bytes := make([]byte, passwordLength)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", false, err
+	}
+
+	return hex.EncodeToString(bytes), true, nil
+}
+
+// writePwd writes generated password to the file
+func (c *ConfigureCmd) writePwd(pwd string) error {
+	pwdPath := path.Join(c.Out, passwordFileName)
+
+	err := ioutil.WriteFile(pwdPath, []byte(pwd), perms)
+	if err != nil {
+		return trace.Wrap(err)
 	}
 
 	return nil
