@@ -74,7 +74,7 @@ var (
 
 const (
 	// perms certificate/key file permissions
-	perms = 0444
+	perms = 0066
 )
 
 // Run runs the generator

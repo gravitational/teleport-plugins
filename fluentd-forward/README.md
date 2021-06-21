@@ -67,7 +67,7 @@ spec:
     rules:
       - resources: ['event']
         verbs: ['list','read']
-version: v3
+version: v4
 ```
 
 Here and below follow along and create yaml resources using `tctl create -f`:
