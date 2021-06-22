@@ -39,6 +39,8 @@ func main() {
 	)
 
 	err := ctx.Run()
-	fmt.Printf("%v", trace.DebugReport(err))
+	if cli.Debug {
+		fmt.Printf("%v\n", trace.DebugReport(err))
+	}
 	ctx.FatalIfErrorf(err)
 }

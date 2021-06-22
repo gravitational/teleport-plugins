@@ -13,4 +13,4 @@ spec:
     rules:
       - resources: ['event']
         verbs: ['list','read']
-version: v4
+version: v3

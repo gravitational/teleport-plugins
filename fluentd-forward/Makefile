@@ -54,24 +54,22 @@ build: clean
 install: build
 	go install
 
-.PHONY: fluentd
-fluentd: gen-example-mtls
-	docker run -p 8888:8888 -v $(LOCALDIR)example/keys:/fluentd/etc/keys -v $(LOCALDIR)example/fluent.conf:/fluentd/etc/fluent.conf fluent/fluentd:edge 
-
-.PHONY: example
-example: build
-	./build/teleport-fluentd-forward start --fluentd-cert example/keys/client.crt --fluentd-key example/keys/client.key --fluentd-ca example/keys/ca.crt --fluentd-url https://localhost:8888/test.log --teleport-ca ~/www/teleport-installation/tf.cas --teleport-cert ~/www/teleport-installation/tf.crt --teleport-key ~/www/teleport-installation/tf.key --teleport-addr localhost:3025 --storage /tmp/storage --batch 10 --timeout 3s --start-time 2021-04-28T00:00:00Z
-
-.PHONY: example-cloud
-example-cloud: build
-	./build/teleport-fluentd-forward start --fluentd-cert example/keys/client.crt --fluentd-key example/keys/client.key --fluentd-ca example/keys/ca.crt --fluentd-url https://localhost:8888/test.log --teleport-identity $(IDENTITY_FILE) --teleport-addr $(CLOUD_ADDR) --storage /tmp/storage-cloud --batch 10 --timeout 10s --start-time 2021-01-01T00:00:00Z
-
 .PHONY: test
 test: gen-example-mtls
 	rm -rf tmp && mkdir -p tmp
 	go test -coverprofile=cover.out
 
-.PHONY: test-configure
-test-configure: build
+.PHONY: configure
+configure: build
 	rm -rf tmp/*
 	./build/teleport-fluentd-forward configure tmp
+	tctl create -f tmp/teleport-fluentd-forward-role.yaml
+	tctl auth sign --out tmp/identity --user teleport-fluentd-forward
+
+.PHONY: fluentd
+fluentd:
+	docker run -p 8888:8888 -v $(LOCALDIR)tmp:/keys -v $(LOCALDIR)tmp/fluent.conf:/fluentd/etc/fluent.conf fluent/fluentd:edge 
+
+.PHONY: example
+example: build
+	./build/teleport-fluentd-forward start --config tmp/teleport-fluentd-forward.toml --start-time 2020-01-01T00:00:00Z
