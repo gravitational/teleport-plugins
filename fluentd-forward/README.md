@@ -74,7 +74,7 @@ Where `ca.crt` and `ca.key` would be Fluentd self-signed CA certificate and priv
 
 ### <a name="user"></a>Create user and role for access audit log events
 
-`teleport-fluentd-forward-role.yaml` would contain the following content:
+The generated `teleport-fluentd-forward-role.yaml` would contain the following content:
 
 ```yaml
 kind: user
@@ -127,7 +127,7 @@ The plugin will send events to the fluentd instance using keys generated on the 
         ca_path /keys/ca.crt
         cert_path /keys/server.crt
         private_key_path /keys/server.key
-        private_key_passphrase 1234 # Specify password used to generate keys
+        private_key_passphrase ********** # Passphrase generated along with the keys
     </transport>
 
     <parse>
@@ -146,7 +146,7 @@ The plugin will send events to the fluentd instance using keys generated on the 
 </match>
 ```
 
-Start fluentd instance by running:
+Start fluentd instance:
 
 ```sh
 docker run -p 8888:8888 -v $(pwd):/keys -v $(pwd)/fluent.conf:/fluentd/etc/fluent.conf fluent/fluentd:edge 
@@ -154,12 +154,12 @@ docker run -p 8888:8888 -v $(pwd):/keys -v $(pwd)/fluent.conf:/fluentd/etc/fluen
 
 ### Configure the plugin
 
-`teleport-fluentd-forward.toml` would contain the following plugin configuration:
+The generated `teleport-fluentd-forward.toml` would contain the following plugin configuration:
 
 ```toml
 storage = "./storage" # Plugin will save it's state here
 timeout = "10s"
-batch = 10
+batch = 20
 namespace = "default"
 
 [fluentd]
@@ -169,7 +169,7 @@ ca = "ca.crt"
 url = "https://localhost:8888/test.log"
 
 [teleport]
-addr = "localhost:3025"
+addr = "localhost:3025" # Default local Teleport instance address
 identity = "identity" # Identity file exported on previous step
 ```
 
