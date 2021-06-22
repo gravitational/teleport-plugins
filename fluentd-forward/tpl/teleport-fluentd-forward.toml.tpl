@@ -1,5 +1,5 @@
 # fluentd forwarder example key file
-storage = "example/storage"
+storage = "./storage"
 timeout = "10s"
 batch = 20
 namespace = "default"

@@ -70,3 +70,8 @@ example-cloud: build
 test: gen-example-mtls
 	rm -rf tmp && mkdir -p tmp
 	go test -coverprofile=cover.out
+
+.PHONY: test-configure
+test-configure: build
+	rm -rf tmp/*
+	./build/teleport-fluentd-forward configure tmp

@@ -17,7 +17,10 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
+
 	"github.com/alecthomas/kong"
+	"github.com/gravitational/trace"
 )
 
 func init() {
@@ -36,5 +39,6 @@ func main() {
 	)
 
 	err := ctx.Run()
+	fmt.Printf("%v", trace.DebugReport(err))
 	ctx.FatalIfErrorf(err)
 }

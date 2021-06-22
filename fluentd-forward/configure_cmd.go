@@ -149,7 +149,7 @@ const (
 	roleDefFileName = "teleport-fluentd-forward-role.yaml"
 
 	// fluentdConfFileName is fluentd config file name
-	fluentdConfFileName = "fluentd.conf"
+	fluentdConfFileName = "fluent.conf"
 
 	// confFileName is plugin configuration file name
 	confFileName = "teleport-fluentd-forward.toml"
@@ -364,10 +364,16 @@ func (c *ConfigureCmd) writeRoleDef() error {
 func (c *ConfigureCmd) writeFluentdConf(pwd string) error {
 	var b bytes.Buffer
 	var pipeline = struct {
-		CaPaths     []string
-		ServerPaths []string
-		Pwd         string
-	}{c.caPaths, c.serverPaths, pwd}
+		CaCertFileName     string
+		ServerCertFileName string
+		ServerKeyFileName  string
+		Pwd                string
+	}{
+		path.Base(c.caPaths[0]),
+		path.Base(c.serverPaths[0]),
+		path.Base(c.serverPaths[1]),
+		pwd,
+	}
 
 	err := c.renderTemplate(fluentdConfTpl, pipeline, &b)
 	if err != nil {

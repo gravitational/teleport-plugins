@@ -11,6 +11,6 @@ metadata:
 spec:
   allow:
     rules:
-      - resources: ['events']
+      - resources: ['event']
         verbs: ['list','read']
 version: v4

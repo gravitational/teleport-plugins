@@ -56,7 +56,7 @@ func (c *ConfigureCmd) genCertAndPK(cert x509.Certificate, parent *x509.Certific
 	}
 
 	// Generate and sign cert
-	certBytes, err := x509.CreateCertificate(rand.Reader, &cert, p, &s.PublicKey, s)
+	certBytes, err := x509.CreateCertificate(rand.Reader, &cert, p, &pk.PublicKey, s)
 	if err != nil {
 		return nil, nil, trace.Wrap(err)
 	}
