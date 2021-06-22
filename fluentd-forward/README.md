@@ -72,6 +72,8 @@ https://goteleport.com/setup/guides/fluentd
 
 Where `ca.crt` and `ca.key` would be Fluentd self-signed CA certificate and private key, `server.crt` and `server.key` would be fluentd server certificate and key, `client.crt` and `client.key` would be Fluentd client certificate and key, all signed by the generated CA.
 
+Check ```teleport-fluentd-forward configure --help``` usage instructions. You may set several configuration options, including key/cert file names, server key encryption password and Teleport auth proxy address.
+
 ### Create user and role for access audit log events
 
 The generated `teleport-fluentd-forward-role.yaml` would contain the following content:
