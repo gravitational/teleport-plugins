@@ -47,9 +47,34 @@ sudo cp build/teleport-fluentd-forward /usr/local/bin
 
 In sections below we assume that you have `teleport-fluentd-forward` executable available in your `$PATH` or cwd.
 
-## <a name="user"></a>Create user and role for access audit log events
+## <a name="user"></a>Generate example configuration
 
-Log into Teleport Authentication Server, this is where you normally run tctl. Create a new user and role that only has read-only API access to the `event` API. The below script will create a [yaml resource file](example/teleport-fluentd-forward.yaml) for a new user and role.
+Run:
+
+```sh
+teleport-fluentd-forward configure .
+```
+
+You'll see the following output:
+
+```sh
+Teleport fluentd-forwarder 0.0.1 07617b0ad0829db043fe779faf1669defdc8d84e
+
+[1] mTLS Fluentd certificates generated and saved to ca.crt, ca.key, server.crt, server.key, client.crt, client.key
+[2] Generated sample teleport-fluentd-forward role and user file teleport-fluentd-forward-role.yaml
+[3] Generated sample fluentd configuration file fluent.conf
+[4] Generated plugin configuration file teleport-fluentd-forward.toml
+
+Follow-along with our getting started guide:
+
+https://goteleport.com/setup/guides/fluentd
+```
+
+Where `ca.crt` and `ca.key` would be Fluentd self-signed CA certificate and private key, `server.crt` and `server.key` would be fluentd server certificate and key, `client.crt` and `client.key` would be Fluentd client certificate and key, all signed by the generated CA.
+
+### <a name="user"></a>Create user and role for access audit log events
+
+`teleport-fluentd-forward-role.yaml` would contain the following content:
 
 ```yaml
 kind: user
@@ -70,10 +95,12 @@ spec:
 version: v4
 ```
 
-Here and below follow along and create yaml resources using `tctl create -f`:
+It defines `teleport-fluentd-forward` role and user which has read-only access to the `event` API.
+
+Log into Teleport Authentication Server, this is where you normally run `tctl`. Run `tctl` to create role and user:
 
 ```sh
-tctl create -f teleport-fluentd-forward.yaml
+tctl create -f teleport-fluentd-forward-role.yaml
 ```
 
 ### Export teleport-fluentd-forward identity file
@@ -86,25 +113,9 @@ tctl auth sign --out identity --user teleport-fluentd-forward
 
 This will generate `identity` which contains TLS certificates and will be used to connect plugin to your Teleport instance.
 
-## Setup fluentd
+### <a name="fd"></a>Run fluentd
 
-For the purpose of testing, we will run the local fluentd instance first. For the purpose of security, we require mutual TLS to be enabled on the fluentd side.
-
-### <a name="mtls"></a>Generate mTLS certificates
-
-Run the following command:
-
-```sh
-teleport-fluentd-forward gen-certs . 1234
-```
-
-It will generate certificate authority certificate (`ca.crt`, `ca.key`), fluentd server certificate (`server.crt`, `server.key`) and teleport-fluentd-forward client certificate (`client.crt`, `client.key`) and save them to current folder. `1234` is the passphrase used for server private key. Please, use something more secure here.
-
-Alternatively, you can generate certificates manually. Check ["Generate mTLS certificates using OpenSSL/LibreSSL"](#mtls_advanced) section below.
-
-### <a name="fd"></a>Configure fluentd
-
-The plugin will send events to the fluentd instance using keys generated on the previous step. Put the following contents into `fluent.conf`:
+The plugin will send events to the fluentd instance using keys generated on the previous step. Generated `fluent.conf` file would contain the following content:
 
 ```
 <source>
@@ -135,12 +146,18 @@ The plugin will send events to the fluentd instance using keys generated on the 
 </match>
 ```
 
-## Configure the plugin
+Start fluentd instance by running:
 
-Save the following content to `teleport-fluentd-forward.toml`:
+```sh
+docker run -p 8888:8888 -v $(pwd):/keys -v $(pwd)/fluent.conf:/fluentd/etc/fluent.conf fluent/fluentd:edge 
+```
+
+### Configure the plugin
+
+`teleport-fluentd-forward.toml` would contain the following plugin configuration:
 
 ```toml
-storage = "./teleport-fluentd-forward-storage" # Plugin will save it's state here
+storage = "./storage" # Plugin will save it's state here
 timeout = "10s"
 batch = 10
 namespace = "default"
@@ -153,18 +170,10 @@ url = "https://localhost:8888/test.log"
 
 [teleport]
 addr = "localhost:3025"
-identity = "identity"
+identity = "identity" # Identity file exported on previous step
 ```
 
-## <a name="run"></a>Run test setup
-
-* Start `fluentd`:
-
-```sh
-docker run -p 8888:8888 -v $(pwd):/keys -v $(pwd)/fluent.conf:/fluentd/etc/fluent.conf fluent/fluentd:edge 
-```
-
-* Start `teleport-fluentd-forward`:
+### Start the plugin
 
 ```sh
 teleport-fluentd-forward start --config teleport-fluentd-forward.toml --start-time 2021-01-01T00:00:00Z

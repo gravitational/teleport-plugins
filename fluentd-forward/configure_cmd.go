@@ -30,6 +30,7 @@ import (
 	"net"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 	"text/template"
 	"time"
@@ -183,6 +184,12 @@ func (c *ConfigureCmd) Run() error {
 
 	c.step = 1
 
+	rel, err := os.Getwd()
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	// Get password either from STDIN or generated string
 	pwd, err := c.getPwd()
 	if err != nil {
 		return err
@@ -195,6 +202,15 @@ func (c *ConfigureCmd) Run() error {
 	}
 
 	paths := append(append(c.caPaths, c.serverPaths...), c.clientPaths...)
+	for i, p := range paths {
+		r, err := filepath.Rel(rel, p)
+
+		if err != nil {
+			return trace.Wrap(err)
+		}
+
+		paths[i] = r
+	}
 
 	c.printStep("mTLS Fluentd certificates generated and saved to %v", strings.Join(paths, ", "))
 
@@ -204,7 +220,12 @@ func (c *ConfigureCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	c.printStep("Generated sample teleport-fluentd-forward role and user file %v", c.roleDefPath)
+	p, err := filepath.Rel(rel, c.roleDefPath)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	c.printStep("Generated sample teleport-fluentd-forward role and user file %v", p)
 
 	// Write fluentd configuration file
 	err = c.writeFluentdConf(pwd)
@@ -212,7 +233,12 @@ func (c *ConfigureCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	c.printStep("Generated sample fluentd configuration file %v", c.fluentdConfPath)
+	p, err = filepath.Rel(rel, c.fluentdConfPath)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	c.printStep("Generated sample fluentd configuration file %v", p)
 
 	// Write main configuration file
 	err = c.writeConf()
@@ -220,7 +246,12 @@ func (c *ConfigureCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	c.printStep("Generated plugin configuration file %v", c.confPath)
+	p, err = filepath.Rel(rel, c.confPath)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	c.printStep("Generated plugin configuration file %v", p)
 
 	fmt.Println()
 	fmt.Println("Follow-along with our getting started guide:")
