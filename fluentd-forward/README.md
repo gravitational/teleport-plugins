@@ -47,7 +47,7 @@ sudo cp build/teleport-fluentd-forward /usr/local/bin
 
 In sections below we assume that you have `teleport-fluentd-forward` executable available in your `$PATH` or cwd.
 
-## <a name="user"></a>Generate example configuration
+## Generate example configuration
 
 Run:
 
@@ -72,7 +72,7 @@ https://goteleport.com/setup/guides/fluentd
 
 Where `ca.crt` and `ca.key` would be Fluentd self-signed CA certificate and private key, `server.crt` and `server.key` would be fluentd server certificate and key, `client.crt` and `client.key` would be Fluentd client certificate and key, all signed by the generated CA.
 
-### <a name="user"></a>Create user and role for access audit log events
+### Create user and role for access audit log events
 
 The generated `teleport-fluentd-forward-role.yaml` would contain the following content:
 
@@ -103,7 +103,7 @@ Log into Teleport Authentication Server, this is where you normally run `tctl`. 
 tctl create -f teleport-fluentd-forward-role.yaml
 ```
 
-### Export teleport-fluentd-forward identity file
+### <a name="export"></a>Export teleport-fluentd-forward identity file
 
 Teleport Plugin use the fluentd role and user to read the events. We export the identity files, using tctl auth sign.
 
@@ -113,7 +113,7 @@ tctl auth sign --out identity --user teleport-fluentd-forward
 
 This will generate `identity` which contains TLS certificates and will be used to connect plugin to your Teleport instance.
 
-### <a name="fd"></a>Run fluentd
+### Run fluentd
 
 The plugin will send events to the fluentd instance using keys generated on the previous step. Generated `fluent.conf` file would contain the following content:
 
@@ -124,6 +124,8 @@ The plugin will send events to the fluentd instance using keys generated on the 
 
     <transport tls>
         client_cert_auth true
+
+        # We are going to run fluentd in Docker. /keys will be mounted from the host file system.
         ca_path /keys/ca.crt
         cert_path /keys/server.crt
         private_key_path /keys/server.key
@@ -170,7 +172,7 @@ url = "https://localhost:8888/test.log"
 
 [teleport]
 addr = "localhost:3025" # Default local Teleport instance address
-identity = "identity" # Identity file exported on previous step
+identity = "identity"   # Identity file exported on previous step
 ```
 
 ### Start the plugin
@@ -250,44 +252,13 @@ TOML configuration keys are the same as CLI args. Teleport and Fluentd variables
  tsh login --proxy test.teleport.sh:443 --user test@evilmartians.com
  ```
 
-### Create `teleport-fluentd-forward` user and role
-
-Follow the ["Create user and role for access audit log events"](#user) section of this document.
-
-Export the identity file after you're done:
+### Generate sample configuration using the cloud address:
 
 ```sh
-tctl auth sign --out identity --user teleport-fluentd-forward
+teleport-fluentd-forward configure . test.teleport.sh:443
 ```
 
-### Configure teleport-fluentd-forward
-
-Put the following contents into fluent-forward.toml:
-
-```toml
-storage = "./teleport-fluentd-forward-storage" # Plugin will save it's state here
-timeout = "10s"
-batch = 10
-namespace = "default"
-
-[fluentd]
-cert = "client.crt"
-key = "client.key" 
-ca = "ca.crt"
-url = "https://localhost:8888/test.log"
-
-[teleport]
-addr = "test.teleport.sh:443"
-identity = "identity"
-```
-
-### Generate mTLS keys and configure fluentd
-
-Follow the ["Generate mTLS certificates"](#mtls) section and ["Configure fluentd"](#fd) sections of this document.
-
-### Run test setup
-
-Follow the ["Run test setup"](#run) section.
+Then follow the manual starting at ["Export teleport-fluentd-forward identity file"](#export) section.
 
 ## Advanced topics
 
