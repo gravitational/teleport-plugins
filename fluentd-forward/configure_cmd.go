@@ -21,14 +21,18 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	_ "embed"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/big"
 	"net"
 	"os"
 	"path"
+	"strings"
+	"text/template"
 	"time"
 
 	"github.com/gravitational/trace"
@@ -62,6 +66,9 @@ type ConfigureCmd struct {
 
 	// CN certificate common name
 	CN string `help:"Common name for server cert" default:"localhost"`
+
+	// step holds step number for cli messages
+	step int
 }
 
 var (
@@ -71,7 +78,7 @@ var (
 
 const (
 	// perms certificate/key file permissions
-	perms = 0066
+	perms = 0600
 
 	// passwordLength represents rand password length
 	passwordLength = 32
@@ -82,30 +89,42 @@ const (
 
 // Run runs the generator
 func (c *ConfigureCmd) Run() error {
+	fmt.Printf("Teleport fluentd-forwarder %v %v\n\n", Version, Sha)
+
+	c.step = 1
+
 	pwd, gen, err := c.getPwd()
 	if err != nil {
 		return err
 	}
 
-	// Save password if it was generated on the first
+	// Save password if it was generated on the first step
 	if gen {
-		err = c.writePwd(pwd)
+		path, err := c.writePwd(pwd)
 		if err != nil {
 			return err
+		}
+
+		if path != "" {
+			c.printStep("Fluentd private key password generated and saved to %v", path)
+		} else {
+			return trace.Errorf("Sorry, but you can not proceed without saving the password!")
 		}
 	}
 
 	// Generate certificates
-	err = c.genCerts(pwd)
+	paths, err := c.genCerts(pwd)
 	if err != nil {
 		return err
 	}
+
+	c.printStep("mTLS Fluentd certificates generated and saved to %v", strings.Join(paths, ", "))
 
 	return nil
 }
 
 // Generates fluentd certificates
-func (c *ConfigureCmd) genCerts(pwd string) error {
+func (c *ConfigureCmd) genCerts(pwd string) ([]string, error) {
 	entity := pkix.Name{
 		CommonName: c.CN,
 		Country:    []string{"US"},
@@ -114,7 +133,7 @@ func (c *ConfigureCmd) genCerts(pwd string) error {
 	// CA CSR
 	sn, err := rand.Int(rand.Reader, maxBigInt)
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
 	notBefore := time.Now()
@@ -133,7 +152,7 @@ func (c *ConfigureCmd) genCerts(pwd string) error {
 	// Client CSR
 	sn, err = rand.Int(rand.Reader, maxBigInt)
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
 	clientCert := &x509.Certificate{
@@ -147,7 +166,7 @@ func (c *ConfigureCmd) genCerts(pwd string) error {
 
 	sn, err = rand.Int(rand.Reader, maxBigInt)
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
 	// Server CSR
@@ -165,64 +184,69 @@ func (c *ConfigureCmd) genCerts(pwd string) error {
 	// Generate CA key and certificate
 	caPK, err := rsa.GenerateKey(rand.Reader, c.Length)
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
 	caCertBytes, err := x509.CreateCertificate(rand.Reader, caCert, caCert, &caPK.PublicKey, caPK)
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
-	err = c.writeKeyAndCert(path.Join(c.Out, c.CAName), caCertBytes, caPK, "")
+	caPaths, err := c.writeKeyAndCert(path.Join(c.Out, c.CAName), caCertBytes, caPK, "")
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
 	// Generate server key and certificate
 	serverPK, err := rsa.GenerateKey(rand.Reader, c.Length)
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
 	serverCertBytes, err := x509.CreateCertificate(rand.Reader, serverCert, caCert, &serverPK.PublicKey, caPK)
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
-	err = c.writeKeyAndCert(path.Join(c.Out, c.ServerName), serverCertBytes, serverPK, pwd)
+	serverPaths, err := c.writeKeyAndCert(path.Join(c.Out, c.ServerName), serverCertBytes, serverPK, pwd)
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
 	// Generate client key and certificate
 	clientPK, err := rsa.GenerateKey(rand.Reader, c.Length)
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
 	clientCertBytes, err := x509.CreateCertificate(rand.Reader, clientCert, caCert, &clientPK.PublicKey, caPK)
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
-	err = c.writeKeyAndCert(path.Join(c.Out, c.ClientName), clientCertBytes, clientPK, "")
+	clientPaths, err := c.writeKeyAndCert(path.Join(c.Out, c.ClientName), clientCertBytes, clientPK, "")
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
-	return nil
+	r := []string{}
+	r = append(r, caPaths...)
+	r = append(r, serverPaths...)
+	r = append(r, clientPaths...)
+
+	return r, nil
 }
 
 // writeKeyAndCert writes private key and certificate on disk
-func (c *ConfigureCmd) writeKeyAndCert(prefix string, certBytes []byte, pk *rsa.PrivateKey, pwd string) error {
+func (c *ConfigureCmd) writeKeyAndCert(prefix string, certBytes []byte, pk *rsa.PrivateKey, pwd string) ([]string, error) {
+	var err error
+
 	crtPath := prefix + ".crt"
 	keyPath := prefix + ".key"
 
-	_, err := os.Stat(crtPath)
-	if !os.IsNotExist(err) {
-		if !yesNo(fmt.Sprintf("Do you want to overwrite %s?", crtPath)) {
-			return nil
-		}
+	ok := askOverwrite(crtPath)
+	if !ok {
+		return nil, nil
 	}
 
 	pkBlock := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(pk)}
@@ -233,7 +257,7 @@ func (c *ConfigureCmd) writeKeyAndCert(prefix string, certBytes []byte, pk *rsa.
 		//nolint // deprecated, but we still need it to be encrypted because of fluentd requirements
 		pkBlock, err = x509.EncryptPEMBlock(rand.Reader, pkBlock.Type, pkBlock.Bytes, []byte(pwd), x509.PEMCipherAES256)
 		if err != nil {
-			return nil
+			return nil, trace.Wrap(err)
 		}
 	}
 
@@ -241,15 +265,15 @@ func (c *ConfigureCmd) writeKeyAndCert(prefix string, certBytes []byte, pk *rsa.
 
 	err = ioutil.WriteFile(crtPath, bytesPEM, perms)
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
 	err = ioutil.WriteFile(keyPath, pkBytesPEM, perms)
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
-	return nil
+	return []string{crtPath, keyPath}, nil
 }
 
 // appendSANs appends subjectAltName
@@ -299,10 +323,37 @@ func (c *ConfigureCmd) getPwd() (string, bool, error) {
 }
 
 // writePwd writes generated password to the file
-func (c *ConfigureCmd) writePwd(pwd string) error {
+func (c *ConfigureCmd) writePwd(pwd string) (string, error) {
 	pwdPath := path.Join(c.Out, passwordFileName)
 
+	ok := askOverwrite(pwdPath)
+	if !ok {
+		return "", nil
+	}
+
 	err := ioutil.WriteFile(pwdPath, []byte(pwd), perms)
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+
+	return pwdPath, nil
+}
+
+// printStep prints step with number
+func (c *ConfigureCmd) printStep(message string, args ...interface{}) {
+	p := append([]interface{}{c.step}, args...)
+	fmt.Printf("[%v] "+message+"\n", p...)
+	c.step++
+}
+
+// template renders template to writer
+func (c *ConfigureCmd) template(content string, pipeline interface{}, w io.Writer) error {
+	tpl, err := template.New("template").Parse(content)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	err = tpl.ExecuteTemplate(w, "template", pipeline)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -323,4 +374,14 @@ func yesNo(message string) bool {
 	}
 
 	return result == "y"
+}
+
+// askOverwrite asks question if the user wants to overwrite specified file if it exists
+func askOverwrite(path string) bool {
+	_, err := os.Stat(path)
+	if !os.IsNotExist(err) {
+		return yesNo(fmt.Sprintf("Do you want to overwrite %s?", path))
+	}
+
+	return true
 }

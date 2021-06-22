@@ -18,7 +18,6 @@ package main
 
 import (
 	"github.com/alecthomas/kong"
-	log "github.com/sirupsen/logrus"
 )
 
 func init() {
@@ -35,8 +34,6 @@ func main() {
 		kong.Name("Teleport fluentd-forwarder"),
 		kong.Description("Forwards Teleport AuditLog to Fluentd"),
 	)
-
-	log.WithFields(log.Fields{"version": Version, "sha": Sha}).Printf("Teleport fluentd-forwarder")
 
 	err := ctx.Run()
 	ctx.FatalIfErrorf(err)

@@ -274,7 +274,7 @@ identity = "identity"
 
 ### Generate mTLS keys and configure fluentd
 
-Follow the ["Generate mTLS certificates"](#mtls) section and ["Configure fluentd"](#md) sections of this document.
+Follow the ["Generate mTLS certificates"](#mtls) section and ["Configure fluentd"](#fd) sections of this document.
 
 ### Run test setup
 

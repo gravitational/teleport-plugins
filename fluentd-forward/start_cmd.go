@@ -72,6 +72,8 @@ type StartCmd struct {
 
 // Validate validates start command arguments and prints them to log
 func (c *StartCmd) Validate() error {
+	log.WithFields(log.Fields{"version": Version, "sha": Sha}).Printf("Teleport fluentd-forwarder")
+
 	// Truncate microseconds
 	if c.StartTime != nil {
 		t := c.StartTime.Truncate(time.Second)
