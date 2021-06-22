@@ -4,9 +4,9 @@
 
     <transport tls>
         client_cert_auth true
-        ca_path {{index .CaPaths 0}}
-        cert_path {{index .ServerPaths 0}}
-        private_key_path {{index .ServerPaths 1}}
+        ca_path "{{index .CaPaths 0}}"
+        cert_path "{{index .ServerPaths 0}}"
+        private_key_path "{{index .ServerPaths 1}}"
         private_key_passphrase "{{.Pwd}}"
     </transport>
 
