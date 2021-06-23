@@ -34,8 +34,8 @@ func main() {
 		&cli,
 		kong.UsageOnError(),
 		kong.Configuration(TOML),
-		kong.Name("Teleport fluentd-forwarder"),
-		kong.Description("Forwards Teleport AuditLog to Fluentd"),
+		kong.Name("Teleport event handler"),
+		kong.Description("Forwards Teleport AuditLog to external sources"),
 	)
 
 	err := ctx.Run()

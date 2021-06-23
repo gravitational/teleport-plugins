@@ -1,13 +1,13 @@
 kind: user
 metadata:
-  name: teleport-fluentd-forward
+  name: teleport-event-handler
 spec:
-  roles: ['teleport-fluentd-forward']
+  roles: ['teleport-event-handler']
 version: v2
 ---
 kind: role
 metadata:
-  name: teleport-fluentd-forward
+  name: teleport-event-handler
 spec:
   allow:
     rules:

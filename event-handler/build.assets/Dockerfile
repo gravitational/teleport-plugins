@@ -12,12 +12,12 @@ RUN set -ex && \
     getent passwd $UID || useradd builder --uid=$UID --gid=$GID --create-home --shell=/bin/sh;
 
 RUN set -ex && (mkdir -p /.cache && \
-     mkdir -p /teleport-fluentd-forward && \
+     mkdir -p /teleport-event-handler && \
      mkdir -p /var/lib/teleport && \
      chown -R $UID:$GID /go && \
      chown -R $UID:$GID /var/lib/teleport && \
      chmod 777 /.cache && \
-     chmod 777 /teleport-fluentd-forward && \
+     chmod 777 /teleport-event-handler && \
      chmod 777 /tmp && \
      chmod 777 /var/lib/teleport)
 

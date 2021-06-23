@@ -1,6 +1,6 @@
 LOCALDIR := $(dir $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
 TOP ?= $(abspath $(LOCALDIR)/../..)
-SRCDIR=/go/src/github.com/gravitational/teleport-plugins/fluentd-forward
+SRCDIR=/go/src/github.com/gravitational/teleport-plugins/event-handler
 VERSION=0.0.1
 CGOFLAG ?= CGO_ENABLED=1
 BUILDDIR=$(TOP)/build
@@ -8,7 +8,7 @@ OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
 
 HOSTNAME=buildbox
-BUILDBOX ?= teleport-plugins-fluentd-forward:$(VERSION)
+BUILDBOX ?= teleport-plugins-event-handler:$(VERSION)
 GOCACHE ?= $(HOME)/.cache/go-build
 DOCKERFLAGS := --rm \
 	-v "$(TOP)":$(SRCDIR) \
@@ -39,14 +39,14 @@ buildbox:
 .PHONY: build
 build: buildbox
 	docker run $(DOCKERFLAGS) $(BUILDFORHOST) $(NOROOT) $(BUILDBOX) \
-		dumb-init make -C $(SRCDIR)/fluentd-forward build
+		dumb-init make -C $(SRCDIR)/event-handler build
 
 .PHONY: test
 test: build
 	docker run $(DOCKERFLAGS) $(BUILDFORHOST) $(NOROOT) $(BUILDBOX) \
-		dumb-init make -C $(SRCDIR)/fluentd-forward test
+		dumb-init make -C $(SRCDIR)/event-handler test
 
 .PHONY: install
 install: build
 	mkdir -p $(BINDIR)
-	cp ../build/teleport-fluentd-forward $(BINDIR)
+	cp ../build/teleport-event-handler $(BINDIR)

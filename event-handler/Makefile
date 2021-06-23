@@ -48,7 +48,7 @@ clean:
 
 .PHONY: build
 build: clean
-	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/teleport-fluentd-forward $(BUILDFLAGS)
+	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/teleport-event-handler $(BUILDFLAGS)
 
 .PHONY: install
 install: build
@@ -62,9 +62,9 @@ test: gen-example-mtls
 .PHONY: configure
 configure: build
 	rm -rf tmp/*
-	./build/teleport-fluentd-forward configure tmp
-	tctl create -f tmp/teleport-fluentd-forward-role.yaml
-	tctl auth sign --out tmp/identity --user teleport-fluentd-forward
+	./build/teleport-event-handler configure tmp
+	tctl create -f tmp/teleport-event-handler-role.yaml
+	tctl auth sign --out tmp/identity --user teleport-event-handler
 
 .PHONY: fluentd
 fluentd:
@@ -72,4 +72,4 @@ fluentd:
 
 .PHONY: example
 example: build
-	./build/teleport-fluentd-forward start --config tmp/teleport-fluentd-forward.toml --start-time 2020-01-01T00:00:00Z
+	./build/teleport-event-handler start --config tmp/teleport-event-handler.toml --start-time 2020-01-01T00:00:00Z

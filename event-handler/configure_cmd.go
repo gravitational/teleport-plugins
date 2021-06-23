@@ -96,10 +96,10 @@ var (
 	// maxBigInt is a reader for serial number random
 	maxBigInt *big.Int = new(big.Int).Lsh(big.NewInt(1), 128)
 
-	//go:embed tpl/teleport-fluentd-forward-role.yaml.tpl
+	//go:embed tpl/teleport-event-handler-role.yaml.tpl
 	roleTpl string
 
-	//go:embed tpl/teleport-fluentd-forward.toml.tpl
+	//go:embed tpl/teleport-event-handler.toml.tpl
 	confTpl string
 
 	//go:embed tpl/fluent.conf.tpl
@@ -147,13 +147,13 @@ const (
 	passwordLength = 32
 
 	// roleDefFileName is role definition file name
-	roleDefFileName = "teleport-fluentd-forward-role.yaml"
+	roleDefFileName = "teleport-event-handler-role.yaml"
 
 	// fluentdConfFileName is fluentd config file name
 	fluentdConfFileName = "fluent.conf"
 
 	// confFileName is plugin configuration file name
-	confFileName = "teleport-fluentd-forward.toml"
+	confFileName = "teleport-event-handler.toml"
 
 	// guideURL is getting started guide URL
 	guideURL = "https://goteleport.com/setup/guides/forward-events"
@@ -180,7 +180,7 @@ func (c *ConfigureCmd) Validate() error {
 
 // Run runs the generator
 func (c *ConfigureCmd) Run() error {
-	fmt.Printf("Teleport fluentd-forwarder %v %v\n\n", Version, Sha)
+	fmt.Printf("Teleport event handler %v %v\n\n", Version, Sha)
 
 	c.step = 1
 
@@ -209,7 +209,7 @@ func (c *ConfigureCmd) Run() error {
 			return trace.Wrap(err)
 		}
 
-		paths[i] = r
+		paths[i] = filepath.Clean(r)
 	}
 
 	c.printStep("mTLS Fluentd certificates generated and saved to %v", strings.Join(paths, ", "))
@@ -225,7 +225,7 @@ func (c *ConfigureCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	c.printStep("Generated sample teleport-fluentd-forward role and user file %v", p)
+	c.printStep("Generated sample teleport-event-handler role and user file %v", filepath.Clean(p))
 
 	// Write fluentd configuration file
 	err = c.writeFluentdConf(pwd)
@@ -238,7 +238,7 @@ func (c *ConfigureCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	c.printStep("Generated sample fluentd configuration file %v", p)
+	c.printStep("Generated sample fluentd configuration file %v", filepath.Clean(p))
 
 	// Write main configuration file
 	err = c.writeConf()
@@ -251,7 +251,7 @@ func (c *ConfigureCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	c.printStep("Generated plugin configuration file %v", p)
+	c.printStep("Generated plugin configuration file %v", filepath.Clean(p))
 
 	fmt.Println()
 	fmt.Println("Follow-along with our getting started guide:")
