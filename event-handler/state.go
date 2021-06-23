@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	// cacheSizeMax max memory cache
-	cacheSizeMax = 1024
+	// cacheSizeMaxBytes max memory cache
+	cacheSizeMaxBytes = 1024
 )
 
 // State is the state repository
@@ -57,7 +57,7 @@ func NewState(c *StartCmd) (*State, error) {
 	dv := diskv.New(diskv.Options{
 		BasePath:     c.StorageDir,
 		Transform:    flatTransform,
-		CacheSizeMax: cacheSizeMax,
+		CacheSizeMax: cacheSizeMaxBytes,
 	})
 
 	host, port, err := net.SplitHostPort(c.TeleportAddr)
