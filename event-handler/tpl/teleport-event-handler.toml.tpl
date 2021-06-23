@@ -3,7 +3,7 @@ timeout = "10s"
 batch = 20
 namespace = "default"
 
-[fluentd]
+[forward.fluentd]
 ca = "{{index .CaPaths 0}}"
 cert = "{{index .ClientPaths 0}}"
 key = "{{index .ClientPaths 1}}"

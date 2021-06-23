@@ -42,6 +42,11 @@ type CLI struct {
 	Configure ConfigureCmd `cmd:"true" help:"Generate mTLS certificates for Fluentd"`
 }
 
+const (
+	// fdPrefix contains section name which will be prepended with "handler."
+	fdPrefix = "fluentd"
+)
+
 // Validate validates base CLI structure, switches on debug logging if needed
 func (c *CLI) Validate() error {
 	if c.Debug {
@@ -60,8 +65,14 @@ func TOML(r io.Reader) (kong.Resolver, error) {
 
 	// ResolverFunc reads configuration variables from the external source, TOML file in this case
 	var f kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
-		value := config.Get(flag.Name)
-		valueWithinSeciton := config.Get(strings.ReplaceAll(flag.Name, "-", "."))
+		name := flag.Name
+
+		if strings.HasPrefix(name, fdPrefix) {
+			name = strings.Join([]string{"forward", fdPrefix, name[len(fdPrefix)+1:]}, ".")
+		}
+
+		value := config.Get(name)
+		valueWithinSeciton := config.Get(strings.ReplaceAll(name, "-", "."))
 
 		if valueWithinSeciton != nil {
 			return valueWithinSeciton, nil
