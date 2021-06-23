@@ -50,3 +50,8 @@ test: build
 install: build
 	mkdir -p $(BINDIR)
 	cp ../build/teleport-event-handler $(BINDIR)
+
+.PHONY: release
+release: buildbox
+	docker run $(DOCKERFLAGS) $(BUILDFORHOST) $(NOROOT) $(BUILDBOX) \
+		dumb-init make -C $(SRCDIR)/event-handler release

@@ -18,6 +18,8 @@ PASS ?= 1234
 CLOUD_ADDR=evilmartians.teleport.sh:443
 IDENTITY_FILE=example/keys/identity
 
+RELEASE = terraform-event-handler-v$(VERSION)-$(OS)-$(ARCH)-bin
+
 .PHONY: gen-example-mtls
 gen-example-mtls:
 	mkdir -p example/keys
@@ -73,3 +75,7 @@ fluentd:
 .PHONY: example
 example: build
 	./build/teleport-event-handler start --config tmp/teleport-event-handler.toml --start-time 2020-01-01T00:00:00Z
+
+.PHONY: release
+release: build
+	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
