@@ -43,6 +43,9 @@ type ConfigureCmd struct {
 	// Out path and file prefix to put certificates into
 	Out string `arg:"true" help:"Output directory" type:"existingdir" required:"true"`
 
+	// Configure is a mock arg for now, it specifies export target
+	Output string `help:"Export target service" type:"string" required:"true" default:"fluentd"`
+
 	// Addr is Teleport auth proxy instance address
 	Addr string `arg:"true" help:"Teleport auth proxy instance address" type:"string" required:"true" default:"localhost:3025"`
 
@@ -212,7 +215,7 @@ func (c *ConfigureCmd) Run() error {
 		paths[i] = filepath.Clean(r)
 	}
 
-	c.printStep("mTLS Fluentd certificates generated and saved to %v", strings.Join(paths, ", "))
+	c.printStep("Generate mTLS Fluentd certificates %v", strings.Join(paths, ", "))
 
 	// Write role definition file
 	err = c.writeRoleDef()

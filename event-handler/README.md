@@ -1,4 +1,4 @@
-# Teleport-fluentd-forward
+# Teleport-event-handler
 
 This plugin is used to export Audit Log events to Fluentd service.
 
@@ -23,14 +23,14 @@ Please ensure that Docker is running!
 
 ```sh
 git clone https://github.com/gravitational/teleport-plugins.git --depth 1
-cd teleport-plugins/fluentd-forward/build.assets
+cd teleport-plugins/event-handler/build.assets
 make install
 ```
 
-This command will build `build/teleport-fluentd-forward` executable and place it to `/usr/local/bin` folder. The following error means that you do not have write permissions on target folder:
+This command will build `build/teleport-event-handler` executable and place it to `/usr/local/bin` folder. The following error means that you do not have write permissions on target folder:
 
 ```sh
-cp: /usr/local/bin/teleport-fluentd-forward: Operation not permitted
+cp: /usr/local/bin/teleport-event-handler: Operation not permitted
 ```
 
 To fix this, you can either set target folder to something listed in your `$PATH`:
@@ -42,28 +42,28 @@ make install BINDIR=/tmp/test-fluentd-setup
 or copy binary file manually with `sudo`:
 
 ```sh
-sudo cp build/teleport-fluentd-forward /usr/local/bin
+sudo cp build/teleport-event-handler /usr/local/bin
 ```
 
-In sections below we assume that you have `teleport-fluentd-forward` executable available in your `$PATH` or cwd.
+In sections below we assume that you have `teleport-event-handler` executable available in your `$PATH` or cwd.
 
 ## Generate example configuration
 
 Run:
 
 ```sh
-teleport-fluentd-forward configure .
+teleport-event-handler configure .
 ```
 
 You'll see the following output:
 
 ```sh
-Teleport fluentd-forwarder 0.0.1 07617b0ad0829db043fe779faf1669defdc8d84e
+Teleport event handler 0.0.1 07617b0ad0829db043fe779faf1669defdc8d84e
 
 [1] mTLS Fluentd certificates generated and saved to ca.crt, ca.key, server.crt, server.key, client.crt, client.key
-[2] Generated sample teleport-fluentd-forward role and user file teleport-fluentd-forward-role.yaml
+[2] Generated sample teleport-event-handler role and user file teleport-event-handler-role.yaml
 [3] Generated sample fluentd configuration file fluent.conf
-[4] Generated plugin configuration file teleport-fluentd-forward.toml
+[4] Generated plugin configuration file teleport-event-handler.toml
 
 Follow-along with our getting started guide:
 
@@ -72,23 +72,23 @@ https://goteleport.com/setup/guides/fluentd
 
 Where `ca.crt` and `ca.key` would be Fluentd self-signed CA certificate and private key, `server.crt` and `server.key` would be fluentd server certificate and key, `client.crt` and `client.key` would be Fluentd client certificate and key, all signed by the generated CA.
 
-Check ```teleport-fluentd-forward configure --help``` usage instructions. You may set several configuration options, including key/cert file names, server key encryption password and Teleport auth proxy address.
+Check ```teleport-event-handler configure --help``` usage instructions. You may set several configuration options, including key/cert file names, server key encryption password and Teleport auth proxy address.
 
 ### Create user and role for access audit log events
 
-The generated `teleport-fluentd-forward-role.yaml` would contain the following content:
+The generated `teleport-event-handler-role.yaml` would contain the following content:
 
 ```yaml
 kind: user
 metadata:
-  name: teleport-fluentd-forward
+  name: teleport-event-handler
 spec:
-  roles: ['teleport-fluentd-forward']
+  roles: ['teleport-event-handler']
 version: v2
 ---
 kind: role
 metadata:
-  name: teleport-fluentd-forward
+  name: teleport-event-handler
 spec:
   allow:
     rules:
@@ -97,20 +97,20 @@ spec:
 version: v4
 ```
 
-It defines `teleport-fluentd-forward` role and user which has read-only access to the `event` API.
+It defines `teleport-event-handler` role and user which has read-only access to the `event` API.
 
 Log into Teleport Authentication Server, this is where you normally run `tctl`. Run `tctl` to create role and user:
 
 ```sh
-tctl create -f teleport-fluentd-forward-role.yaml
+tctl create -f teleport-event-handler-role.yaml
 ```
 
-### <a name="export"></a>Export teleport-fluentd-forward identity file
+### <a name="export"></a>Export teleport-event-handler identity file
 
 Teleport Plugin use the fluentd role and user to read the events. We export the identity files, using tctl auth sign.
 
 ```sh
-tctl auth sign --out identity --user teleport-fluentd-forward
+tctl auth sign --out identity --user teleport-event-handler
 ```
 
 This will generate `identity` which contains TLS certificates and will be used to connect plugin to your Teleport instance.
@@ -158,7 +158,7 @@ docker run -p 8888:8888 -v $(pwd):/keys -v $(pwd)/fluent.conf:/fluentd/etc/fluen
 
 ### Configure the plugin
 
-The generated `teleport-fluentd-forward.toml` would contain the following plugin configuration:
+The generated `teleport-event-handler.toml` would contain the following plugin configuration:
 
 ```toml
 storage = "./storage" # Plugin will save it's state here
@@ -180,10 +180,10 @@ identity = "identity"   # Identity file exported on previous step
 ### Start the plugin
 
 ```sh
-teleport-fluentd-forward start --config teleport-fluentd-forward.toml --start-time 2021-01-01T00:00:00Z
+teleport-event-handler start --config teleport-event-handler.toml --start-time 2021-01-01T00:00:00Z
 ```
 
-Note that here we used start time at the beginning of year 2021. Supposedly you have some events at the Teleport instance you are connecting to. Otherwise, you can omit `--start-time` flag, start the service and generate an events using `tctl create -f teleport-fluentd-forward.yaml` then from the first step. `teleport-fluentd-forward` will wait for that new events to appear and will send them to the fluentd.
+Note that here we used start time at the beginning of year 2021. Supposedly you have some events at the Teleport instance you are connecting to. Otherwise, you can omit `--start-time` flag, start the service and generate an events using `tctl create -f teleport-event-handler.yaml` then from the first step. `teleport-event-handler` will wait for that new events to appear and will send them to the fluentd.
 
 You should see something like this:
 
@@ -202,23 +202,23 @@ By default, all events starting from the current moment will be exported. If you
 This will start an export from May 5 2021:
 
 ```sh
-teleport-fluentd-forward start --config teleport-fluentd-forward.toml --start-time "2021-05-05T00:00:00Z"
+teleport-event-handler start --config teleport-event-handler.toml --start-time "2021-05-05T00:00:00Z"
 ```
 
 This will export new events from a moment the service did start:
 
 ```sh
-teleport-fluentd-forward start --config teleport-fluentd-forward.toml
+teleport-event-handler start --config teleport-event-handler.toml
 ```
 
 Note that start time can be set only once, on the first run of the tool. If you want to change the time frame later, remove plugin state dir which you had specified in `storage-dir` argument.s
 
 ## How it works
 
-* `teleport-fluentd-forward` takes the Audit Log event stream from Teleport. It loads events in batches of 20 by default. Every event gets sent to fluentd.
-* Once event is successfully received by fluentd, it's ID is saved to the `teleport-fluent-forward` state. In case `teleport-fluentd-forward` crashes, it will pick the stream up from a latest successful event.
-* Once all events are sent, `teleport-fluentd-forward` starts polling for new evetns. It happens every 5 seconds by default.
-* If storage directory gets lost, you may specify latest event id value. `teleport-fluentd-forward` will pick streaming up from the next event after it.
+* `teleport-event-handler` takes the Audit Log event stream from Teleport. It loads events in batches of 20 by default. Every event gets sent to fluentd.
+* Once event is successfully received by fluentd, it's ID is saved to the `teleport-event-handler` state. In case `teleport-event-handler` crashes, it will pick the stream up from a latest successful event.
+* Once all events are sent, `teleport-event-handler` starts polling for new evetns. It happens every 5 seconds by default.
+* If storage directory gets lost, you may specify latest event id value. `teleport-event-handler` will pick streaming up from the next event after it.
 
 ## Configuration options
 
@@ -257,10 +257,10 @@ TOML configuration keys are the same as CLI args. Teleport and Fluentd variables
 ### Generate sample configuration using the cloud address:
 
 ```sh
-teleport-fluentd-forward configure . test.teleport.sh:443
+teleport-event-handler configure . test.teleport.sh:443
 ```
 
-Then follow the manual starting at ["Export teleport-fluentd-forward identity file"](#export) section.
+Then follow the manual starting at ["Export teleport-event-handler identity file"](#export) section.
 
 ## Advanced topics
 
