@@ -215,7 +215,7 @@ func (c *ConfigureCmd) Run() error {
 		paths[i] = filepath.Clean(r)
 	}
 
-	c.printStep("Generate mTLS Fluentd certificates %v", strings.Join(paths, ", "))
+	c.printStep("Generated mTLS Fluentd certificates %v", strings.Join(paths, ", "))
 
 	// Write role definition file
 	err = c.writeRoleDef()
