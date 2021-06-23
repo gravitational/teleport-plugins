@@ -156,7 +156,7 @@ const (
 	confFileName = "teleport-fluentd-forward.toml"
 
 	// guideURL is getting started guide URL
-	guideURL = "https://goteleport.com/setup/guides/fluentd"
+	guideURL = "https://goteleport.com/setup/guides/forward-events"
 )
 
 // Validate fills in missing utility values
