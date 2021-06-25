@@ -139,6 +139,7 @@ func Provider() *schema.Provider {
 			"teleport_saml_connector":   dataSourceTeleportSAMLConnector(),
 			"teleport_provision_token":  dataSourceTeleportProvisionToken(),
 			"teleport_trusted_cluster":  dataSourceTeleportTrustedCluster(),
+			"teleport_auth_preference":  dataSourceAuthPreference(),
 		},
 		ConfigureContextFunc: configureContext,
 	}
