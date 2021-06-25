@@ -19,7 +19,6 @@ provider "teleport" {
 
 resource "teleport_auth_preference" "example" {
   metadata {
-    name = "base"
     description = "Auth preference"
   }
 

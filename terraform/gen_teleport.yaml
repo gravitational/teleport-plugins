@@ -31,6 +31,9 @@ exclude_fields:
     - "types.RoleV4.Spec.Allow.Namespaces" # These fields are not settable via API
     - "types.RoleV4.Spec.Deny.Namespaces"
 
+    # AuthPreference
+    - "types.AuthPreferenceV2.Metadata.Name" # It's a signleton resource
+
 # These fields will be marked as Computed: true
 computed_fields:
 
@@ -122,8 +125,10 @@ defaults:
 
     # Auth preference
     "types.AuthPreferenceV2.Version": "v2"
-    "types.AuthPreferenceV2.Kind": "auth_preference"
+    "types.AuthPreferenceV2.Kind": "cluster_auth_preference"
     "types.AuthPreferenceV2.SubKind": ""
+    "types.AuthPreferenceV2.Spec.SecondFactor": "otp"
+    "types.AuthPreferenceV2.Spec.Type": "local"
 
 # These fields will be marked as ConfigMode: schema.SchemaConfigModeAttrs
 config_mode_attr_fields:

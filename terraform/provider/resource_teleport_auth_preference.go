@@ -52,23 +52,6 @@ func resourceAuthPreferenceCreate(ctx context.Context, d *schema.ResourceData, m
 		return diagFromErr(err)
 	}
 
-	// n, err := getResourceName(d, "auth_preference")
-	// if err != nil {
-	// 	return diagFromErr(err)
-	// }
-
-	// _, err = c.GetAuthPreference(ctx)
-	// if err == nil {
-	// 	// TODO: change the message
-	// 	existErr := "GitHub connector " + n + " exists in Teleport. Either remove it (tctl rm github/" + n + ")" +
-	// 		" or import it to the existing state (terraform import teleport_github_connector." + n + " " + n + ")"
-
-	// 	return diagFromErr(trace.Errorf(existErr))
-	// }
-	// if err != nil && !trace.IsNotFound(err) {
-	// 	return diagFromErr(describeErr(err, "github"))
-	// }
-
 	cn, err := types.NewAuthPreference(types.AuthPreferenceSpecV2{})
 	if err != nil {
 		return diagFromErr(describeErr(err, "cluster_auth_preference"))
@@ -102,8 +85,6 @@ func resourceAuthPreferenceRead(ctx context.Context, d *schema.ResourceData, m i
 		return diagFromErr(err)
 	}
 
-	//id := d.Id()
-
 	cn, err := c.GetAuthPreference(ctx)
 	if trace.IsNotFound(err) {
 		d.SetId("")
@@ -116,13 +97,15 @@ func resourceAuthPreferenceRead(ctx context.Context, d *schema.ResourceData, m i
 
 	cn3, ok := cn.(*types.AuthPreferenceV2)
 	if !ok {
-		return diagFromErr(fmt.Errorf("failed to convert created user to types.AuthPreferenceV3 from %T", cn))
+		return diagFromErr(fmt.Errorf("failed to convert created cluster_auth_preference to types.AuthPreferenceV3 from %T", cn))
 	}
 
 	err = tfschema.SetAuthPreferenceV2(cn3, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
+
+	d.SetId("cluster_auth_preference")
 
 	return diag.Diagnostics{}
 }
@@ -134,10 +117,7 @@ func resourceAuthPreferenceUpdate(ctx context.Context, d *schema.ResourceData, m
 		return diagFromErr(err)
 	}
 
-	// id := d.Id()
-
-	// This is the existence check. Since, there is no separate CreateAuthPreference method, we need to
-	// check that connector we are updating exists to avoid it's creation via UpsertAuthPreference.
+	// It always exists
 	cn, err := c.GetAuthPreference(ctx)
 	if err != nil {
 		return diagFromErr(err)
@@ -161,20 +141,17 @@ func resourceAuthPreferenceUpdate(ctx context.Context, d *schema.ResourceData, m
 	return resourceAuthPreferenceRead(ctx, d, m)
 }
 
-// resourceAuthPreferenceDelete deletes Teleport github connector from resource definition
+// resourceAuthPreferenceDelete resets cluster_auth_preference resource
 func resourceAuthPreferenceDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	// NOT IMPLEMENTED
+	c, err := getClient(m)
+	if err != nil {
+		return diagFromErr(err)
+	}
 
-	// c, err := getClient(m)
-	// if err != nil {
-	// 	return diagFromErr(err)
-	// }
-
-	// id := d.Id()
-	// err = c.DeleteAuthPreference(ctx, id)
-	// if err != nil {
-	// 	return diagFromErr(describeErr(err, "github"))
-	// }
+	err = c.ResetAuthPreference(ctx)
+	if err != nil {
+		return diagFromErr(describeErr(err, "cluster_auth_preference"))
+	}
 
 	return diag.Diagnostics{}
 }
