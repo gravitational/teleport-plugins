@@ -19,7 +19,10 @@ provider "teleport" {
 
 resource "teleport_auth_preference" "example" {
   metadata {
-    description = "Auth preference"
+    description = "Auth preference, singleton"
+    labels = {
+      "example" = "yes"
+    }
   }
 
   spec {

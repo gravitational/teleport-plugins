@@ -28,6 +28,11 @@ import (
 	"github.com/gravitational/teleport/api/types"
 )
 
+const (
+	// AuthPreference resource is singular, it does not need dynamic resource
+	clusterAuthPreferenceID = "cluster_auth_preference"
+)
+
 // resourceTeleportAuthPreference returns Teleport auth_preference resource definition
 func resourceTeleportAuthPreference() *schema.Resource {
 	return &schema.Resource{
@@ -72,7 +77,7 @@ func resourceAuthPreferenceCreate(ctx context.Context, d *schema.ResourceData, m
 		return diagFromErr(describeErr(err, "cluster_auth_preference"))
 	}
 
-	d.SetId(cn3.GetName())
+	d.SetId(clusterAuthPreferenceID)
 
 	return resourceAuthPreferenceRead(ctx, d, m)
 }
@@ -100,12 +105,14 @@ func resourceAuthPreferenceRead(ctx context.Context, d *schema.ResourceData, m i
 		return diagFromErr(fmt.Errorf("failed to convert created cluster_auth_preference to types.AuthPreferenceV3 from %T", cn))
 	}
 
+	removeOriginLabel(cn3)
+
 	err = tfschema.SetAuthPreferenceV2(cn3, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	d.SetId("cluster_auth_preference")
+	d.SetId(clusterAuthPreferenceID)
 
 	return diag.Diagnostics{}
 }
@@ -154,4 +161,10 @@ func resourceAuthPreferenceDelete(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	return diag.Diagnostics{}
+}
+
+func removeOriginLabel(r *types.AuthPreferenceV2) {
+	if r.Metadata.Labels["teleport.dev/origin"] == "dynamic" {
+		delete(r.Metadata.Labels, "teleport.dev/origin")
+	}
 }
