@@ -129,6 +129,7 @@ func Provider() *schema.Provider {
 			"teleport_saml_connector":   resourceTeleportSAMLConnector(),
 			"teleport_provision_token":  resourceTeleportProvisionToken(),
 			"teleport_trusted_cluster":  resourceTeleportTrustedCluster(),
+			"teleport_auth_preference":  resourceTeleportAuthPreference(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"teleport_role":             dataSourceTeleportRole(),

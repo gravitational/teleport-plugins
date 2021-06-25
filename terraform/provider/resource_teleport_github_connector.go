@@ -65,10 +65,13 @@ func resourceGithubConnectorCreate(ctx context.Context, d *schema.ResourceData, 
 		return diagFromErr(trace.Errorf(existErr))
 	}
 	if err != nil && !trace.IsNotFound(err) {
-		return diagFromErr(describeErr(err, "role"))
+		return diagFromErr(describeErr(err, "github"))
 	}
 
-	cn := types.NewGithubConnector(n, types.GithubConnectorSpecV3{})
+	cn, err := types.NewGithubConnector(n, types.GithubConnectorSpecV3{})
+	if err != nil {
+		return diagFromErr(describeErr(err, "github"))
+	}
 
 	cn3, ok := cn.(*types.GithubConnectorV3)
 	if !ok {

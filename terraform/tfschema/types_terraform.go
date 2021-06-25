@@ -40,6 +40,10 @@ var _ = math.Inf
 var _ = time.Kitchen
 
 var (
+	// SchemaAuthPreferenceV2 is schema for AuthPreferenceV2 implements the AuthPreference interface.
+	SchemaAuthPreferenceV2 = GenSchemaAuthPreferenceV2()
+	// SchemaMetaAuthPreferenceV2 is schema metadata for AuthPreferenceV2 implements the AuthPreference interface.
+	SchemaMetaAuthPreferenceV2 = GenSchemaMetaAuthPreferenceV2()
 	// SchemaGithubConnectorV3 is schema for GithubConnectorV3 represents a Github connector.
 	SchemaGithubConnectorV3 = GenSchemaGithubConnectorV3()
 	// SchemaMetaGithubConnectorV3 is schema metadata for GithubConnectorV3 represents a Github connector.
@@ -52,10 +56,10 @@ var (
 	SchemaProvisionTokenV2 = GenSchemaProvisionTokenV2()
 	// SchemaMetaProvisionTokenV2 is schema metadata for ProvisionTokenV2 specifies provisioning token
 	SchemaMetaProvisionTokenV2 = GenSchemaMetaProvisionTokenV2()
-	// SchemaRoleV3 is schema for RoleV3 represents role resource specification
-	SchemaRoleV3 = GenSchemaRoleV3()
-	// SchemaMetaRoleV3 is schema metadata for RoleV3 represents role resource specification
-	SchemaMetaRoleV3 = GenSchemaMetaRoleV3()
+	// SchemaRoleV4 is schema for RoleV4 represents role resource specification
+	SchemaRoleV4 = GenSchemaRoleV4()
+	// SchemaMetaRoleV4 is schema metadata for RoleV4 represents role resource specification
+	SchemaMetaRoleV4 = GenSchemaMetaRoleV4()
 	// SchemaSAMLConnectorV2 is schema for SAMLConnectorV2 represents a SAML connector.
 	SchemaSAMLConnectorV2 = GenSchemaSAMLConnectorV2()
 	// SchemaMetaSAMLConnectorV2 is schema metadata for SAMLConnectorV2 represents a SAML connector.
@@ -84,6 +88,13 @@ func SuppressDurationChange(k string, old string, new string, d *schema.Resource
 
 	return o == n
 }
+func GetAuthPreferenceV2(obj *types.AuthPreferenceV2, data *schema.ResourceData) error {
+	return accessors.Get(obj, data, SchemaAuthPreferenceV2, SchemaMetaAuthPreferenceV2)
+}
+
+func SetAuthPreferenceV2(obj *types.AuthPreferenceV2, data *schema.ResourceData) error {
+	return accessors.Set(obj, data, SchemaAuthPreferenceV2, SchemaMetaAuthPreferenceV2)
+}
 func GetGithubConnectorV3(obj *types.GithubConnectorV3, data *schema.ResourceData) error {
 	return accessors.Get(obj, data, SchemaGithubConnectorV3, SchemaMetaGithubConnectorV3)
 }
@@ -105,12 +116,12 @@ func GetProvisionTokenV2(obj *types.ProvisionTokenV2, data *schema.ResourceData)
 func SetProvisionTokenV2(obj *types.ProvisionTokenV2, data *schema.ResourceData) error {
 	return accessors.Set(obj, data, SchemaProvisionTokenV2, SchemaMetaProvisionTokenV2)
 }
-func GetRoleV3(obj *types.RoleV3, data *schema.ResourceData) error {
-	return accessors.Get(obj, data, SchemaRoleV3, SchemaMetaRoleV3)
+func GetRoleV4(obj *types.RoleV4, data *schema.ResourceData) error {
+	return accessors.Get(obj, data, SchemaRoleV4, SchemaMetaRoleV4)
 }
 
-func SetRoleV3(obj *types.RoleV3, data *schema.ResourceData) error {
-	return accessors.Set(obj, data, SchemaRoleV3, SchemaMetaRoleV3)
+func SetRoleV4(obj *types.RoleV4, data *schema.ResourceData) error {
+	return accessors.Set(obj, data, SchemaRoleV4, SchemaMetaRoleV4)
 }
 func GetSAMLConnectorV2(obj *types.SAMLConnectorV2, data *schema.ResourceData) error {
 	return accessors.Get(obj, data, SchemaSAMLConnectorV2, SchemaMetaSAMLConnectorV2)
@@ -132,6 +143,2333 @@ func GetUserV2(obj *types.UserV2, data *schema.ResourceData) error {
 
 func SetUserV2(obj *types.UserV2, data *schema.ResourceData) error {
 	return accessors.Set(obj, data, SchemaUserV2, SchemaMetaUserV2)
+}
+
+// SchemaRoleV4 returns schema for RoleV4
+//
+// RoleV4 represents role resource specification
+func GenSchemaRoleV4() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		// Kind is a resource kind
+		"kind": {
+			Type:        schema.TypeString,
+			Description: "Kind is a resource kind",
+			Optional:    true,
+			Default:     "role",
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Type:        schema.TypeString,
+			Description: "SubKind is an optional resource sub kind, used in some resources",
+			Optional:    true,
+			Default:     "",
+		},
+		// Version is version
+		"version": {
+			Type:        schema.TypeString,
+			Description: "Version is version",
+			Optional:    true,
+			Default:     "v4",
+		},
+		// Metadata is resource metadata
+		"metadata": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "Metadata is resource metadata",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Name is an object name
+					"name": {
+						Type:        schema.TypeString,
+						Description: "Name is an object name",
+						Required:    true,
+						ForceNew:    true,
+					},
+					// Namespace is object namespace. The field should be called "namespace"
+					// when it returns in Teleport 2.4.
+					"namespace": {
+						Type:        schema.TypeString,
+						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
+						Optional:    true,
+						Default:     "default",
+					},
+					// Description is object description
+					"description": {
+						Type:        schema.TypeString,
+						Description: "Description is object description",
+						Optional:    true,
+					},
+					// Labels is a set of labels
+					"labels": {
+
+						Optional:    true,
+						Type:        schema.TypeMap,
+						Description: "Labels is a set of labels",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Expires is a global expiry time header can be set on any resource in the
+					// system.
+					"expires": {
+						Type:         schema.TypeString,
+						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
+						ValidateFunc: validation.IsRFC3339Time,
+						StateFunc:    TruncateMs,
+						Optional:     true,
+					},
+				},
+			},
+		},
+		// Spec is a role specification
+		"spec": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "RoleSpecV4 is role specification for RoleV4.",
+
+			Required: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Options is for OpenSSH options like agent forwarding.
+					"options": {
+						Type:        schema.TypeList,
+						MaxItems:    1,
+						Description: "RoleOptions is a set of role options",
+
+						Optional: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// ForwardAgent is SSH agent forwarding.
+								"forward_agent": {
+									Type:        schema.TypeBool,
+									Description: "ForwardAgent is SSH agent forwarding.",
+									Optional:    true,
+								},
+								// MaxSessionTTL defines how long a SSH session can last for.
+								"max_session_ttl": {
+									Type:             schema.TypeString,
+									Description:      "MaxSessionTTL defines how long a SSH session can last for.",
+									DiffSuppressFunc: SuppressDurationChange,
+									Optional:         true,
+									Default:          "30h",
+								},
+								// PortForwarding defines if the certificate will have
+								// "permit-port-forwarding"
+								// in the certificate. PortForwarding is "yes" if not set,
+								// that's why this is a pointer
+								"port_forwarding": SchemaBoolOption(),
+								// CertificateFormat defines the format of the user certificate to allow
+								// compatibility with older versions of OpenSSH.
+								"certificate_format": {
+									Type:        schema.TypeString,
+									Description: "CertificateFormat defines the format of the user certificate to allow  compatibility with older versions of OpenSSH.",
+									Optional:    true,
+									Default:     "standard",
+								},
+								// ClientIdleTimeout sets disconnect clients on idle timeout behavior,
+								// if set to 0 means do not disconnect, otherwise is set to the idle
+								// duration.
+								"client_idle_timeout": {
+									Type:             schema.TypeString,
+									Description:      "ClientIdleTimeout sets disconnect clients on idle timeout behavior,  if set to 0 means do not disconnect, otherwise is set to the idle  duration.",
+									DiffSuppressFunc: SuppressDurationChange,
+									Optional:         true,
+								},
+								// DisconnectExpiredCert sets disconnect clients on expired certificates.
+								"disconnect_expired_cert": {
+									Type:        schema.TypeBool,
+									Description: "DisconnectExpiredCert sets disconnect clients on expired certificates.",
+									Optional:    true,
+								},
+								// BPF defines what events to record for the BPF-based session recorder.
+								"bpf": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "BPF defines what events to record for the BPF-based session recorder.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// PermitX11Forwarding authorizes use of X11 forwarding.
+								"permit_x11forwarding": {
+									Type:        schema.TypeBool,
+									Description: "PermitX11Forwarding authorizes use of X11 forwarding.",
+									Optional:    true,
+								},
+								// MaxConnections defines the maximum number of
+								// concurrent connections a user may hold.
+								"max_connections": {
+									Type:        schema.TypeInt,
+									Description: "MaxConnections defines the maximum number of  concurrent connections a user may hold.",
+									Optional:    true,
+								},
+								// MaxSessions defines the maximum number of
+								// concurrent sessions per connection.
+								"max_sessions": {
+									Type:        schema.TypeInt,
+									Description: "MaxSessions defines the maximum number of  concurrent sessions per connection.",
+									Optional:    true,
+								},
+								// RequestAccess defines the access request stategy (optional|note|always)
+								// where optional is the default.
+								"request_access": {
+									Type:        schema.TypeString,
+									Description: "RequestAccess defines the access request stategy (optional|note|always)  where optional is the default.",
+									Optional:    true,
+								},
+								// RequestPrompt is an optional message which tells users what they aught to
+								"request_prompt": {
+									Type:        schema.TypeString,
+									Description: "RequestPrompt is an optional message which tells users what they aught to",
+									Optional:    true,
+								},
+								// RequireSessionMFA specifies whether a user is required to do an MFA
+								// check for every session.
+								"require_session_mfa": {
+									Type:        schema.TypeBool,
+									Description: "RequireSessionMFA specifies whether a user is required to do an MFA  check for every session.",
+									Optional:    true,
+								},
+							},
+						},
+					},
+					// Allow is the set of conditions evaluated to grant access.
+					"allow": {
+						Type:        schema.TypeList,
+						MaxItems:    1,
+						Description: "RoleConditions is a set of conditions that must all match to be allowed or  denied access.",
+
+						Optional: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// Logins is a list of *nix system logins.
+								"logins": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "Logins is a list of *nix system logins.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// NodeLabels is a map of node labels (used to dynamically grant access to
+								// nodes).
+								"node_labels": SchemaLabels(),
+								// Rules is a list of rules and their access levels. Rules are a high level
+								// construct used for access control.
+								"rules": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "Rules is a list of rules and their access levels. Rules are a high level  construct used for access control.",
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Resources is a list of resources
+											"resources": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Resources is a list of resources",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Verbs is a list of verbs
+											"verbs": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Verbs is a list of verbs",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Where specifies optional advanced matcher
+											"where": {
+												Type:        schema.TypeString,
+												Description: "Where specifies optional advanced matcher",
+												Optional:    true,
+											},
+											// Actions specifies optional actions taken when this rule matches
+											"actions": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Actions specifies optional actions taken when this rule matches",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+										},
+									},
+								},
+								// KubeGroups is a list of kubernetes groups
+								"kube_groups": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "KubeGroups is a list of kubernetes groups",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+
+								"request": {
+									Type:        schema.TypeList,
+									MaxItems:    1,
+									Description: "AccessRequestConditions is a matcher for allow/deny restrictions on  access-requests.",
+
+									Optional: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Roles is the name of roles which will match the request rule.
+											"roles": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Roles is the name of roles which will match the request rule.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
+											"claims_to_roles": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.",
+												Elem: &schema.Resource{
+													Schema: map[string]*schema.Schema{
+														// Claim is a claim name.
+														"claim": {
+															Type:        schema.TypeString,
+															Description: "Claim is a claim name.",
+															Optional:    true,
+														},
+														// Value is a claim value to match.
+														"value": {
+															Type:        schema.TypeString,
+															Description: "Value is a claim value to match.",
+															Optional:    true,
+														},
+														// Roles is a list of static teleport roles to match.
+														"roles": {
+
+															Optional:    true,
+															Type:        schema.TypeList,
+															Description: "Roles is a list of static teleport roles to match.",
+															Elem: &schema.Schema{
+																Type: schema.TypeString,
+															},
+														},
+													},
+												},
+											},
+											// Annotations is a collection of annotations to be programmatically
+											// appended to pending access requests at the time of their creation.
+											// These annotations serve as a mechanism to propagate extra information
+											// to plugins.  Since these annotations support variable interpolation
+											// syntax, they also offer a mechanism for forwarding claims from an
+											// external identity provider, to a plugin via `{{external.trait_name}}`
+											// style substitutions.
+											"annotations": SchemaTraits(),
+											// Thresholds is a list of thresholds, one of which must be met in order for reviews
+											// to trigger a state-transition.  If no thresholds are provided, a default threshold
+											// of 1 for approval and denial is used.
+											"thresholds": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Thresholds is a list of thresholds, one of which must be met in order for reviews  to trigger a state-transition.  If no thresholds are provided, a default threshold  of 1 for approval and denial is used.",
+												Elem: &schema.Resource{
+													Schema: map[string]*schema.Schema{
+														// Name is the optional human-readable name of the threshold.
+														"name": {
+															Type:        schema.TypeString,
+															Description: "Name is the optional human-readable name of the threshold.",
+															Optional:    true,
+														},
+														// Filter is an optional predicate used to determine which reviews
+														// count toward this threshold.
+														"filter": {
+															Type:        schema.TypeString,
+															Description: "Filter is an optional predicate used to determine which reviews  count toward this threshold.",
+															Optional:    true,
+														},
+														// Approve is the number of matching approvals needed for state-transition.
+														"approve": {
+															Type:        schema.TypeInt,
+															Description: "Approve is the number of matching approvals needed for state-transition.",
+															Optional:    true,
+														},
+														// Deny is the number of denials needed for state-transition.
+														"deny": {
+															Type:        schema.TypeInt,
+															Description: "Deny is the number of denials needed for state-transition.",
+															Optional:    true,
+														},
+													},
+												},
+											},
+											// SuggestedReviewers is a list of reviewer suggestions.  These can be teleport usernames, but
+											// that is not a requirement.
+											"suggested_reviewers": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "SuggestedReviewers is a list of reviewer suggestions.  These can be teleport usernames, but  that is not a requirement.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+										},
+									},
+								},
+								// KubeUsers is an optional kubernetes users to impersonate
+								"kube_users": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "KubeUsers is an optional kubernetes users to impersonate",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// AppLabels is a map of labels used as part of the RBAC system.
+								"app_labels": SchemaLabels(),
+								// ClusterLabels is a map of node labels (used to dynamically grant access to
+								// clusters).
+								"cluster_labels": SchemaLabels(),
+								// KubernetesLabels is a map of kubernetes cluster labels used for RBAC.
+								"kubernetes_labels": SchemaLabels(),
+								// DatabaseLabels are used in RBAC system to allow/deny access to databases.
+								"database_labels": SchemaLabels(),
+								// DatabaseNames is a list of database names this role is allowed to connect to.
+								"database_names": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "DatabaseNames is a list of database names this role is allowed to connect to.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// DatabaseUsers is a list of databaes users this role is allowed to connect as.
+								"database_users": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "DatabaseUsers is a list of databaes users this role is allowed to connect as.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// Impersonate specifies what users and roles this role is allowed to impersonate
+								// by issuing certificates or other possible means.
+								"impersonate": {
+									Type:        schema.TypeList,
+									MaxItems:    1,
+									Description: "ImpersonateConditions specifies whether users are allowed  to issue certificates for other users or groups.",
+
+									Optional: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Users is a list of resources this role is allowed to impersonate,
+											// could be an empty list or a Wildcard pattern
+											"users": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Users is a list of resources this role is allowed to impersonate,  could be an empty list or a Wildcard pattern",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Roles is a list of resources this role is allowed to impersonate
+											"roles": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Roles is a list of resources this role is allowed to impersonate",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Where specifies optional advanced matcher
+											"where": {
+												Type:        schema.TypeString,
+												Description: "Where specifies optional advanced matcher",
+												Optional:    true,
+											},
+										},
+									},
+								},
+								// ReviewRequests defines conditions for submitting access reviews.
+								"review_requests": {
+									Type:        schema.TypeList,
+									MaxItems:    1,
+									Description: "AccessReviewConditions is a matcher for allow/deny restrictions on  access reviews.",
+
+									Optional: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Roles is the name of roles which may be reviewed.
+											"roles": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Roles is the name of roles which may be reviewed.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
+											"claims_to_roles": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.",
+												Elem: &schema.Resource{
+													Schema: map[string]*schema.Schema{
+														// Claim is a claim name.
+														"claim": {
+															Type:        schema.TypeString,
+															Description: "Claim is a claim name.",
+															Optional:    true,
+														},
+														// Value is a claim value to match.
+														"value": {
+															Type:        schema.TypeString,
+															Description: "Value is a claim value to match.",
+															Optional:    true,
+														},
+														// Roles is a list of static teleport roles to match.
+														"roles": {
+
+															Optional:    true,
+															Type:        schema.TypeList,
+															Description: "Roles is a list of static teleport roles to match.",
+															Elem: &schema.Schema{
+																Type: schema.TypeString,
+															},
+														},
+													},
+												},
+											},
+											// Where is an optional predicate which further limits which requests are
+											// reviewable.
+											"where": {
+												Type:        schema.TypeString,
+												Description: "Where is an optional predicate which further limits which requests are  reviewable.",
+												Optional:    true,
+												Default:     "",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					// Deny is the set of conditions evaluated to deny access. Deny takes priority
+					// over allow.
+					"deny": {
+						Type:        schema.TypeList,
+						MaxItems:    1,
+						Description: "RoleConditions is a set of conditions that must all match to be allowed or  denied access.",
+
+						Optional: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// Logins is a list of *nix system logins.
+								"logins": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "Logins is a list of *nix system logins.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// NodeLabels is a map of node labels (used to dynamically grant access to
+								// nodes).
+								"node_labels": SchemaLabels(),
+								// Rules is a list of rules and their access levels. Rules are a high level
+								// construct used for access control.
+								"rules": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "Rules is a list of rules and their access levels. Rules are a high level  construct used for access control.",
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Resources is a list of resources
+											"resources": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Resources is a list of resources",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Verbs is a list of verbs
+											"verbs": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Verbs is a list of verbs",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Where specifies optional advanced matcher
+											"where": {
+												Type:        schema.TypeString,
+												Description: "Where specifies optional advanced matcher",
+												Optional:    true,
+											},
+											// Actions specifies optional actions taken when this rule matches
+											"actions": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Actions specifies optional actions taken when this rule matches",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+										},
+									},
+								},
+								// KubeGroups is a list of kubernetes groups
+								"kube_groups": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "KubeGroups is a list of kubernetes groups",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+
+								"request": {
+									Type:        schema.TypeList,
+									MaxItems:    1,
+									Description: "AccessRequestConditions is a matcher for allow/deny restrictions on  access-requests.",
+
+									Optional: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Roles is the name of roles which will match the request rule.
+											"roles": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Roles is the name of roles which will match the request rule.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
+											"claims_to_roles": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.",
+												Elem: &schema.Resource{
+													Schema: map[string]*schema.Schema{
+														// Claim is a claim name.
+														"claim": {
+															Type:        schema.TypeString,
+															Description: "Claim is a claim name.",
+															Optional:    true,
+														},
+														// Value is a claim value to match.
+														"value": {
+															Type:        schema.TypeString,
+															Description: "Value is a claim value to match.",
+															Optional:    true,
+														},
+														// Roles is a list of static teleport roles to match.
+														"roles": {
+
+															Optional:    true,
+															Type:        schema.TypeList,
+															Description: "Roles is a list of static teleport roles to match.",
+															Elem: &schema.Schema{
+																Type: schema.TypeString,
+															},
+														},
+													},
+												},
+											},
+											// Annotations is a collection of annotations to be programmatically
+											// appended to pending access requests at the time of their creation.
+											// These annotations serve as a mechanism to propagate extra information
+											// to plugins.  Since these annotations support variable interpolation
+											// syntax, they also offer a mechanism for forwarding claims from an
+											// external identity provider, to a plugin via `{{external.trait_name}}`
+											// style substitutions.
+											"annotations": SchemaTraits(),
+											// Thresholds is a list of thresholds, one of which must be met in order for reviews
+											// to trigger a state-transition.  If no thresholds are provided, a default threshold
+											// of 1 for approval and denial is used.
+											"thresholds": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Thresholds is a list of thresholds, one of which must be met in order for reviews  to trigger a state-transition.  If no thresholds are provided, a default threshold  of 1 for approval and denial is used.",
+												Elem: &schema.Resource{
+													Schema: map[string]*schema.Schema{
+														// Name is the optional human-readable name of the threshold.
+														"name": {
+															Type:        schema.TypeString,
+															Description: "Name is the optional human-readable name of the threshold.",
+															Optional:    true,
+														},
+														// Filter is an optional predicate used to determine which reviews
+														// count toward this threshold.
+														"filter": {
+															Type:        schema.TypeString,
+															Description: "Filter is an optional predicate used to determine which reviews  count toward this threshold.",
+															Optional:    true,
+														},
+														// Approve is the number of matching approvals needed for state-transition.
+														"approve": {
+															Type:        schema.TypeInt,
+															Description: "Approve is the number of matching approvals needed for state-transition.",
+															Optional:    true,
+														},
+														// Deny is the number of denials needed for state-transition.
+														"deny": {
+															Type:        schema.TypeInt,
+															Description: "Deny is the number of denials needed for state-transition.",
+															Optional:    true,
+														},
+													},
+												},
+											},
+											// SuggestedReviewers is a list of reviewer suggestions.  These can be teleport usernames, but
+											// that is not a requirement.
+											"suggested_reviewers": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "SuggestedReviewers is a list of reviewer suggestions.  These can be teleport usernames, but  that is not a requirement.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+										},
+									},
+								},
+								// KubeUsers is an optional kubernetes users to impersonate
+								"kube_users": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "KubeUsers is an optional kubernetes users to impersonate",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// AppLabels is a map of labels used as part of the RBAC system.
+								"app_labels": SchemaLabels(),
+								// ClusterLabels is a map of node labels (used to dynamically grant access to
+								// clusters).
+								"cluster_labels": SchemaLabels(),
+								// KubernetesLabels is a map of kubernetes cluster labels used for RBAC.
+								"kubernetes_labels": SchemaLabels(),
+								// DatabaseLabels are used in RBAC system to allow/deny access to databases.
+								"database_labels": SchemaLabels(),
+								// DatabaseNames is a list of database names this role is allowed to connect to.
+								"database_names": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "DatabaseNames is a list of database names this role is allowed to connect to.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// DatabaseUsers is a list of databaes users this role is allowed to connect as.
+								"database_users": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "DatabaseUsers is a list of databaes users this role is allowed to connect as.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// Impersonate specifies what users and roles this role is allowed to impersonate
+								// by issuing certificates or other possible means.
+								"impersonate": {
+									Type:        schema.TypeList,
+									MaxItems:    1,
+									Description: "ImpersonateConditions specifies whether users are allowed  to issue certificates for other users or groups.",
+
+									Optional: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Users is a list of resources this role is allowed to impersonate,
+											// could be an empty list or a Wildcard pattern
+											"users": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Users is a list of resources this role is allowed to impersonate,  could be an empty list or a Wildcard pattern",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Roles is a list of resources this role is allowed to impersonate
+											"roles": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Roles is a list of resources this role is allowed to impersonate",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Where specifies optional advanced matcher
+											"where": {
+												Type:        schema.TypeString,
+												Description: "Where specifies optional advanced matcher",
+												Optional:    true,
+											},
+										},
+									},
+								},
+								// ReviewRequests defines conditions for submitting access reviews.
+								"review_requests": {
+									Type:        schema.TypeList,
+									MaxItems:    1,
+									Description: "AccessReviewConditions is a matcher for allow/deny restrictions on  access reviews.",
+
+									Optional: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Roles is the name of roles which may be reviewed.
+											"roles": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Roles is the name of roles which may be reviewed.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
+											"claims_to_roles": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.",
+												Elem: &schema.Resource{
+													Schema: map[string]*schema.Schema{
+														// Claim is a claim name.
+														"claim": {
+															Type:        schema.TypeString,
+															Description: "Claim is a claim name.",
+															Optional:    true,
+														},
+														// Value is a claim value to match.
+														"value": {
+															Type:        schema.TypeString,
+															Description: "Value is a claim value to match.",
+															Optional:    true,
+														},
+														// Roles is a list of static teleport roles to match.
+														"roles": {
+
+															Optional:    true,
+															Type:        schema.TypeList,
+															Description: "Roles is a list of static teleport roles to match.",
+															Elem: &schema.Schema{
+																Type: schema.TypeString,
+															},
+														},
+													},
+												},
+											},
+											// Where is an optional predicate which further limits which requests are
+											// reviewable.
+											"where": {
+												Type:        schema.TypeString,
+												Description: "Where is an optional predicate which further limits which requests are  reviewable.",
+												Optional:    true,
+												Default:     "",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// GenSchemaMetaRoleV4 returns schema for RoleV4
+//
+// RoleV4 represents role resource specification
+func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
+	return map[string]*accessors.SchemaMeta{
+		// Kind is a resource kind
+		"kind": {
+			Name:       "Kind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Name:       "SubKind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Version is version
+		"version": {
+			Name:       "Version",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Metadata is resource metadata
+		"metadata": {
+			Name:       "Metadata",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Name is an object name
+				"name": {
+					Name:       "Name",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Namespace is object namespace. The field should be called "namespace"
+				// when it returns in Teleport 2.4.
+				"namespace": {
+					Name:       "Namespace",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Description is object description
+				"description": {
+					Name:       "Description",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Labels is a set of labels
+				"labels": {
+					Name:       "Labels",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Expires is a global expiry time header can be set on any resource in the
+				// system.
+				"expires": {
+					Name:       "Expires",
+					IsTime:     true,
+					IsDuration: false,
+				},
+			},
+		},
+		// Spec is a role specification
+		"spec": {
+			Name:       "Spec",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Options is for OpenSSH options like agent forwarding.
+				"options": {
+					Name:       "Options",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// ForwardAgent is SSH agent forwarding.
+						"forward_agent": {
+							Name:       "ForwardAgent",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// MaxSessionTTL defines how long a SSH session can last for.
+						"max_session_ttl": {
+							Name:       "MaxSessionTTL",
+							IsTime:     false,
+							IsDuration: true,
+						},
+						// PortForwarding defines if the certificate will have
+						// "permit-port-forwarding"
+						// in the certificate. PortForwarding is "yes" if not set,
+						// that's why this is a pointer
+						"port_forwarding": {
+							Name:       "PortForwarding",
+							IsTime:     false,
+							IsDuration: false,
+							Getter:     GetBoolOption,
+							Setter:     SetBoolOption,
+						},
+						// CertificateFormat defines the format of the user certificate to allow
+						// compatibility with older versions of OpenSSH.
+						"certificate_format": {
+							Name:       "CertificateFormat",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// ClientIdleTimeout sets disconnect clients on idle timeout behavior,
+						// if set to 0 means do not disconnect, otherwise is set to the idle
+						// duration.
+						"client_idle_timeout": {
+							Name:       "ClientIdleTimeout",
+							IsTime:     false,
+							IsDuration: true,
+						},
+						// DisconnectExpiredCert sets disconnect clients on expired certificates.
+						"disconnect_expired_cert": {
+							Name:       "DisconnectExpiredCert",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// BPF defines what events to record for the BPF-based session recorder.
+						"bpf": {
+							Name:       "BPF",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// PermitX11Forwarding authorizes use of X11 forwarding.
+						"permit_x11forwarding": {
+							Name:       "PermitX11Forwarding",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// MaxConnections defines the maximum number of
+						// concurrent connections a user may hold.
+						"max_connections": {
+							Name:       "MaxConnections",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// MaxSessions defines the maximum number of
+						// concurrent sessions per connection.
+						"max_sessions": {
+							Name:       "MaxSessions",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// RequestAccess defines the access request stategy (optional|note|always)
+						// where optional is the default.
+						"request_access": {
+							Name:       "RequestAccess",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// RequestPrompt is an optional message which tells users what they aught to
+						"request_prompt": {
+							Name:       "RequestPrompt",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// RequireSessionMFA specifies whether a user is required to do an MFA
+						// check for every session.
+						"require_session_mfa": {
+							Name:       "RequireSessionMFA",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// Allow is the set of conditions evaluated to grant access.
+				"allow": {
+					Name:       "Allow",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// Logins is a list of *nix system logins.
+						"logins": {
+							Name:       "Logins",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// NodeLabels is a map of node labels (used to dynamically grant access to
+						// nodes).
+						"node_labels": {
+							Name:       "NodeLabels",
+							IsTime:     false,
+							IsDuration: false,
+							Getter:     GetLabels,
+							Setter:     SetLabels,
+						},
+						// Rules is a list of rules and their access levels. Rules are a high level
+						// construct used for access control.
+						"rules": {
+							Name:       "Rules",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Resources is a list of resources
+								"resources": {
+									Name:       "Resources",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Verbs is a list of verbs
+								"verbs": {
+									Name:       "Verbs",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Where specifies optional advanced matcher
+								"where": {
+									Name:       "Where",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Actions specifies optional actions taken when this rule matches
+								"actions": {
+									Name:       "Actions",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
+						},
+						// KubeGroups is a list of kubernetes groups
+						"kube_groups": {
+							Name:       "KubeGroups",
+							IsTime:     false,
+							IsDuration: false,
+						},
+
+						"request": {
+							Name:       "Request",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Roles is the name of roles which will match the request rule.
+								"roles": {
+									Name:       "Roles",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
+								"claims_to_roles": {
+									Name:       "ClaimsToRoles",
+									IsTime:     false,
+									IsDuration: false,
+									Nested: map[string]*accessors.SchemaMeta{
+										// Claim is a claim name.
+										"claim": {
+											Name:       "Claim",
+											IsTime:     false,
+											IsDuration: false,
+										},
+										// Value is a claim value to match.
+										"value": {
+											Name:       "Value",
+											IsTime:     false,
+											IsDuration: false,
+										},
+										// Roles is a list of static teleport roles to match.
+										"roles": {
+											Name:       "Roles",
+											IsTime:     false,
+											IsDuration: false,
+										},
+									},
+								},
+								// Annotations is a collection of annotations to be programmatically
+								// appended to pending access requests at the time of their creation.
+								// These annotations serve as a mechanism to propagate extra information
+								// to plugins.  Since these annotations support variable interpolation
+								// syntax, they also offer a mechanism for forwarding claims from an
+								// external identity provider, to a plugin via `{{external.trait_name}}`
+								// style substitutions.
+								"annotations": {
+									Name:       "Annotations",
+									IsTime:     false,
+									IsDuration: false,
+									Getter:     GetTraits,
+									Setter:     SetTraits,
+								},
+								// Thresholds is a list of thresholds, one of which must be met in order for reviews
+								// to trigger a state-transition.  If no thresholds are provided, a default threshold
+								// of 1 for approval and denial is used.
+								"thresholds": {
+									Name:       "Thresholds",
+									IsTime:     false,
+									IsDuration: false,
+									Nested: map[string]*accessors.SchemaMeta{
+										// Name is the optional human-readable name of the threshold.
+										"name": {
+											Name:       "Name",
+											IsTime:     false,
+											IsDuration: false,
+										},
+										// Filter is an optional predicate used to determine which reviews
+										// count toward this threshold.
+										"filter": {
+											Name:       "Filter",
+											IsTime:     false,
+											IsDuration: false,
+										},
+										// Approve is the number of matching approvals needed for state-transition.
+										"approve": {
+											Name:       "Approve",
+											IsTime:     false,
+											IsDuration: false,
+										},
+										// Deny is the number of denials needed for state-transition.
+										"deny": {
+											Name:       "Deny",
+											IsTime:     false,
+											IsDuration: false,
+										},
+									},
+								},
+								// SuggestedReviewers is a list of reviewer suggestions.  These can be teleport usernames, but
+								// that is not a requirement.
+								"suggested_reviewers": {
+									Name:       "SuggestedReviewers",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
+						},
+						// KubeUsers is an optional kubernetes users to impersonate
+						"kube_users": {
+							Name:       "KubeUsers",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// AppLabels is a map of labels used as part of the RBAC system.
+						"app_labels": {
+							Name:       "AppLabels",
+							IsTime:     false,
+							IsDuration: false,
+							Getter:     GetLabels,
+							Setter:     SetLabels,
+						},
+						// ClusterLabels is a map of node labels (used to dynamically grant access to
+						// clusters).
+						"cluster_labels": {
+							Name:       "ClusterLabels",
+							IsTime:     false,
+							IsDuration: false,
+							Getter:     GetLabels,
+							Setter:     SetLabels,
+						},
+						// KubernetesLabels is a map of kubernetes cluster labels used for RBAC.
+						"kubernetes_labels": {
+							Name:       "KubernetesLabels",
+							IsTime:     false,
+							IsDuration: false,
+							Getter:     GetLabels,
+							Setter:     SetLabels,
+						},
+						// DatabaseLabels are used in RBAC system to allow/deny access to databases.
+						"database_labels": {
+							Name:       "DatabaseLabels",
+							IsTime:     false,
+							IsDuration: false,
+							Getter:     GetLabels,
+							Setter:     SetLabels,
+						},
+						// DatabaseNames is a list of database names this role is allowed to connect to.
+						"database_names": {
+							Name:       "DatabaseNames",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// DatabaseUsers is a list of databaes users this role is allowed to connect as.
+						"database_users": {
+							Name:       "DatabaseUsers",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Impersonate specifies what users and roles this role is allowed to impersonate
+						// by issuing certificates or other possible means.
+						"impersonate": {
+							Name:       "Impersonate",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Users is a list of resources this role is allowed to impersonate,
+								// could be an empty list or a Wildcard pattern
+								"users": {
+									Name:       "Users",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Roles is a list of resources this role is allowed to impersonate
+								"roles": {
+									Name:       "Roles",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Where specifies optional advanced matcher
+								"where": {
+									Name:       "Where",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
+						},
+						// ReviewRequests defines conditions for submitting access reviews.
+						"review_requests": {
+							Name:       "ReviewRequests",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Roles is the name of roles which may be reviewed.
+								"roles": {
+									Name:       "Roles",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
+								"claims_to_roles": {
+									Name:       "ClaimsToRoles",
+									IsTime:     false,
+									IsDuration: false,
+									Nested: map[string]*accessors.SchemaMeta{
+										// Claim is a claim name.
+										"claim": {
+											Name:       "Claim",
+											IsTime:     false,
+											IsDuration: false,
+										},
+										// Value is a claim value to match.
+										"value": {
+											Name:       "Value",
+											IsTime:     false,
+											IsDuration: false,
+										},
+										// Roles is a list of static teleport roles to match.
+										"roles": {
+											Name:       "Roles",
+											IsTime:     false,
+											IsDuration: false,
+										},
+									},
+								},
+								// Where is an optional predicate which further limits which requests are
+								// reviewable.
+								"where": {
+									Name:       "Where",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
+						},
+					},
+				},
+				// Deny is the set of conditions evaluated to deny access. Deny takes priority
+				// over allow.
+				"deny": {
+					Name:       "Deny",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// Logins is a list of *nix system logins.
+						"logins": {
+							Name:       "Logins",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// NodeLabels is a map of node labels (used to dynamically grant access to
+						// nodes).
+						"node_labels": {
+							Name:       "NodeLabels",
+							IsTime:     false,
+							IsDuration: false,
+							Getter:     GetLabels,
+							Setter:     SetLabels,
+						},
+						// Rules is a list of rules and their access levels. Rules are a high level
+						// construct used for access control.
+						"rules": {
+							Name:       "Rules",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Resources is a list of resources
+								"resources": {
+									Name:       "Resources",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Verbs is a list of verbs
+								"verbs": {
+									Name:       "Verbs",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Where specifies optional advanced matcher
+								"where": {
+									Name:       "Where",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Actions specifies optional actions taken when this rule matches
+								"actions": {
+									Name:       "Actions",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
+						},
+						// KubeGroups is a list of kubernetes groups
+						"kube_groups": {
+							Name:       "KubeGroups",
+							IsTime:     false,
+							IsDuration: false,
+						},
+
+						"request": {
+							Name:       "Request",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Roles is the name of roles which will match the request rule.
+								"roles": {
+									Name:       "Roles",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
+								"claims_to_roles": {
+									Name:       "ClaimsToRoles",
+									IsTime:     false,
+									IsDuration: false,
+									Nested: map[string]*accessors.SchemaMeta{
+										// Claim is a claim name.
+										"claim": {
+											Name:       "Claim",
+											IsTime:     false,
+											IsDuration: false,
+										},
+										// Value is a claim value to match.
+										"value": {
+											Name:       "Value",
+											IsTime:     false,
+											IsDuration: false,
+										},
+										// Roles is a list of static teleport roles to match.
+										"roles": {
+											Name:       "Roles",
+											IsTime:     false,
+											IsDuration: false,
+										},
+									},
+								},
+								// Annotations is a collection of annotations to be programmatically
+								// appended to pending access requests at the time of their creation.
+								// These annotations serve as a mechanism to propagate extra information
+								// to plugins.  Since these annotations support variable interpolation
+								// syntax, they also offer a mechanism for forwarding claims from an
+								// external identity provider, to a plugin via `{{external.trait_name}}`
+								// style substitutions.
+								"annotations": {
+									Name:       "Annotations",
+									IsTime:     false,
+									IsDuration: false,
+									Getter:     GetTraits,
+									Setter:     SetTraits,
+								},
+								// Thresholds is a list of thresholds, one of which must be met in order for reviews
+								// to trigger a state-transition.  If no thresholds are provided, a default threshold
+								// of 1 for approval and denial is used.
+								"thresholds": {
+									Name:       "Thresholds",
+									IsTime:     false,
+									IsDuration: false,
+									Nested: map[string]*accessors.SchemaMeta{
+										// Name is the optional human-readable name of the threshold.
+										"name": {
+											Name:       "Name",
+											IsTime:     false,
+											IsDuration: false,
+										},
+										// Filter is an optional predicate used to determine which reviews
+										// count toward this threshold.
+										"filter": {
+											Name:       "Filter",
+											IsTime:     false,
+											IsDuration: false,
+										},
+										// Approve is the number of matching approvals needed for state-transition.
+										"approve": {
+											Name:       "Approve",
+											IsTime:     false,
+											IsDuration: false,
+										},
+										// Deny is the number of denials needed for state-transition.
+										"deny": {
+											Name:       "Deny",
+											IsTime:     false,
+											IsDuration: false,
+										},
+									},
+								},
+								// SuggestedReviewers is a list of reviewer suggestions.  These can be teleport usernames, but
+								// that is not a requirement.
+								"suggested_reviewers": {
+									Name:       "SuggestedReviewers",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
+						},
+						// KubeUsers is an optional kubernetes users to impersonate
+						"kube_users": {
+							Name:       "KubeUsers",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// AppLabels is a map of labels used as part of the RBAC system.
+						"app_labels": {
+							Name:       "AppLabels",
+							IsTime:     false,
+							IsDuration: false,
+							Getter:     GetLabels,
+							Setter:     SetLabels,
+						},
+						// ClusterLabels is a map of node labels (used to dynamically grant access to
+						// clusters).
+						"cluster_labels": {
+							Name:       "ClusterLabels",
+							IsTime:     false,
+							IsDuration: false,
+							Getter:     GetLabels,
+							Setter:     SetLabels,
+						},
+						// KubernetesLabels is a map of kubernetes cluster labels used for RBAC.
+						"kubernetes_labels": {
+							Name:       "KubernetesLabels",
+							IsTime:     false,
+							IsDuration: false,
+							Getter:     GetLabels,
+							Setter:     SetLabels,
+						},
+						// DatabaseLabels are used in RBAC system to allow/deny access to databases.
+						"database_labels": {
+							Name:       "DatabaseLabels",
+							IsTime:     false,
+							IsDuration: false,
+							Getter:     GetLabels,
+							Setter:     SetLabels,
+						},
+						// DatabaseNames is a list of database names this role is allowed to connect to.
+						"database_names": {
+							Name:       "DatabaseNames",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// DatabaseUsers is a list of databaes users this role is allowed to connect as.
+						"database_users": {
+							Name:       "DatabaseUsers",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Impersonate specifies what users and roles this role is allowed to impersonate
+						// by issuing certificates or other possible means.
+						"impersonate": {
+							Name:       "Impersonate",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Users is a list of resources this role is allowed to impersonate,
+								// could be an empty list or a Wildcard pattern
+								"users": {
+									Name:       "Users",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Roles is a list of resources this role is allowed to impersonate
+								"roles": {
+									Name:       "Roles",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Where specifies optional advanced matcher
+								"where": {
+									Name:       "Where",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
+						},
+						// ReviewRequests defines conditions for submitting access reviews.
+						"review_requests": {
+							Name:       "ReviewRequests",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Roles is the name of roles which may be reviewed.
+								"roles": {
+									Name:       "Roles",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
+								"claims_to_roles": {
+									Name:       "ClaimsToRoles",
+									IsTime:     false,
+									IsDuration: false,
+									Nested: map[string]*accessors.SchemaMeta{
+										// Claim is a claim name.
+										"claim": {
+											Name:       "Claim",
+											IsTime:     false,
+											IsDuration: false,
+										},
+										// Value is a claim value to match.
+										"value": {
+											Name:       "Value",
+											IsTime:     false,
+											IsDuration: false,
+										},
+										// Roles is a list of static teleport roles to match.
+										"roles": {
+											Name:       "Roles",
+											IsTime:     false,
+											IsDuration: false,
+										},
+									},
+								},
+								// Where is an optional predicate which further limits which requests are
+								// reviewable.
+								"where": {
+									Name:       "Where",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// SchemaUserV2 returns schema for UserV2
+//
+// UserV2 is version 2 resource spec of the user
+func GenSchemaUserV2() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		// Kind is a resource kind
+		"kind": {
+			Type:        schema.TypeString,
+			Description: "Kind is a resource kind",
+			Optional:    true,
+			Default:     "user",
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Type:        schema.TypeString,
+			Description: "SubKind is an optional resource sub kind, used in some resources",
+			Optional:    true,
+			Default:     "",
+		},
+		// Version is version
+		"version": {
+			Type:        schema.TypeString,
+			Description: "Version is version",
+			Optional:    true,
+			Default:     "v2",
+		},
+		// Metadata is resource metadata
+		"metadata": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "Metadata is resource metadata",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Name is an object name
+					"name": {
+						Type:        schema.TypeString,
+						Description: "Name is an object name",
+						Required:    true,
+						ForceNew:    true,
+					},
+					// Namespace is object namespace. The field should be called "namespace"
+					// when it returns in Teleport 2.4.
+					"namespace": {
+						Type:        schema.TypeString,
+						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
+						Optional:    true,
+						Default:     "default",
+					},
+					// Description is object description
+					"description": {
+						Type:        schema.TypeString,
+						Description: "Description is object description",
+						Optional:    true,
+					},
+					// Labels is a set of labels
+					"labels": {
+
+						Optional:    true,
+						Type:        schema.TypeMap,
+						Description: "Labels is a set of labels",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Expires is a global expiry time header can be set on any resource in the
+					// system.
+					"expires": {
+						Type:         schema.TypeString,
+						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
+						ValidateFunc: validation.IsRFC3339Time,
+						StateFunc:    TruncateMs,
+						Optional:     true,
+					},
+				},
+			},
+		},
+		// Spec is a user specification
+		"spec": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "UserSpecV2 is a specification for V2 user",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// OIDCIdentities lists associated OpenID Connect identities
+					// that let user log in using externally verified identity
+					"oidc_identities": {
+
+						Optional:    true,
+						Type:        schema.TypeList,
+						Description: "OIDCIdentities lists associated OpenID Connect identities  that let user log in using externally verified identity",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
+								"connector_id": {
+									Type:        schema.TypeString,
+									Description: "ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'",
+									Optional:    true,
+								},
+								// Username is username supplied by external identity provider
+								"username": {
+									Type:        schema.TypeString,
+									Description: "Username is username supplied by external identity provider",
+									Optional:    true,
+								},
+							},
+						},
+					},
+					// SAMLIdentities lists associated SAML identities
+					// that let user log in using externally verified identity
+					"saml_identities": {
+
+						Optional:    true,
+						Type:        schema.TypeList,
+						Description: "SAMLIdentities lists associated SAML identities  that let user log in using externally verified identity",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
+								"connector_id": {
+									Type:        schema.TypeString,
+									Description: "ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'",
+									Optional:    true,
+								},
+								// Username is username supplied by external identity provider
+								"username": {
+									Type:        schema.TypeString,
+									Description: "Username is username supplied by external identity provider",
+									Optional:    true,
+								},
+							},
+						},
+					},
+					// GithubIdentities list associated Github OAuth2 identities
+					// that let user log in using externally verified identity
+					"github_identities": {
+
+						Optional:    true,
+						Type:        schema.TypeList,
+						Description: "GithubIdentities list associated Github OAuth2 identities  that let user log in using externally verified identity",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
+								"connector_id": {
+									Type:        schema.TypeString,
+									Description: "ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'",
+									Optional:    true,
+								},
+								// Username is username supplied by external identity provider
+								"username": {
+									Type:        schema.TypeString,
+									Description: "Username is username supplied by external identity provider",
+									Optional:    true,
+								},
+							},
+						},
+					},
+					// Roles is a list of roles assigned to user
+					"roles": {
+
+						Optional:    true,
+						Type:        schema.TypeList,
+						Description: "Roles is a list of roles assigned to user",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Traits are key/value pairs received from an identity provider (through
+					// OIDC claims or SAML assertions) or from a system administrator for local
+					// accounts. Traits are used to populate role variables.
+					"traits": SchemaTraits(),
+				},
+			},
+		},
+	}
+}
+
+// GenSchemaMetaUserV2 returns schema for UserV2
+//
+// UserV2 is version 2 resource spec of the user
+func GenSchemaMetaUserV2() map[string]*accessors.SchemaMeta {
+	return map[string]*accessors.SchemaMeta{
+		// Kind is a resource kind
+		"kind": {
+			Name:       "Kind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Name:       "SubKind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Version is version
+		"version": {
+			Name:       "Version",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Metadata is resource metadata
+		"metadata": {
+			Name:       "Metadata",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Name is an object name
+				"name": {
+					Name:       "Name",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Namespace is object namespace. The field should be called "namespace"
+				// when it returns in Teleport 2.4.
+				"namespace": {
+					Name:       "Namespace",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Description is object description
+				"description": {
+					Name:       "Description",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Labels is a set of labels
+				"labels": {
+					Name:       "Labels",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Expires is a global expiry time header can be set on any resource in the
+				// system.
+				"expires": {
+					Name:       "Expires",
+					IsTime:     true,
+					IsDuration: false,
+				},
+			},
+		},
+		// Spec is a user specification
+		"spec": {
+			Name:       "Spec",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// OIDCIdentities lists associated OpenID Connect identities
+				// that let user log in using externally verified identity
+				"oidc_identities": {
+					Name:       "OIDCIdentities",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
+						"connector_id": {
+							Name:       "ConnectorID",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Username is username supplied by external identity provider
+						"username": {
+							Name:       "Username",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// SAMLIdentities lists associated SAML identities
+				// that let user log in using externally verified identity
+				"saml_identities": {
+					Name:       "SAMLIdentities",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
+						"connector_id": {
+							Name:       "ConnectorID",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Username is username supplied by external identity provider
+						"username": {
+							Name:       "Username",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// GithubIdentities list associated Github OAuth2 identities
+				// that let user log in using externally verified identity
+				"github_identities": {
+					Name:       "GithubIdentities",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
+						"connector_id": {
+							Name:       "ConnectorID",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Username is username supplied by external identity provider
+						"username": {
+							Name:       "Username",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// Roles is a list of roles assigned to user
+				"roles": {
+					Name:       "Roles",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Traits are key/value pairs received from an identity provider (through
+				// OIDC claims or SAML assertions) or from a system administrator for local
+				// accounts. Traits are used to populate role variables.
+				"traits": {
+					Name:       "Traits",
+					IsTime:     false,
+					IsDuration: false,
+					Getter:     GetTraits,
+					Setter:     SetTraits,
+				},
+			},
+		},
+	}
+}
+
+// SchemaOIDCConnectorV2 returns schema for OIDCConnectorV2
+//
+// OIDCConnectorV2 represents an OIDC connector.
+func GenSchemaOIDCConnectorV2() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		// Kind is a resource kind.
+		"kind": {
+			Type:        schema.TypeString,
+			Description: "Kind is a resource kind.",
+			Optional:    true,
+			Default:     "oidc",
+		},
+		// SubKind is an optional resource sub kind, used in some resources.
+		"sub_kind": {
+			Type:        schema.TypeString,
+			Description: "SubKind is an optional resource sub kind, used in some resources.",
+			Optional:    true,
+			Default:     "",
+		},
+		// Version is a resource version.
+		"version": {
+			Type:        schema.TypeString,
+			Description: "Version is a resource version.",
+			Optional:    true,
+			Default:     "v2",
+		},
+		// Metadata holds resource metadata.
+		"metadata": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "Metadata is resource metadata",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Name is an object name
+					"name": {
+						Type:        schema.TypeString,
+						Description: "Name is an object name",
+						Required:    true,
+						ForceNew:    true,
+					},
+					// Namespace is object namespace. The field should be called "namespace"
+					// when it returns in Teleport 2.4.
+					"namespace": {
+						Type:        schema.TypeString,
+						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
+						Optional:    true,
+						Default:     "default",
+					},
+					// Description is object description
+					"description": {
+						Type:        schema.TypeString,
+						Description: "Description is object description",
+						Optional:    true,
+					},
+					// Labels is a set of labels
+					"labels": {
+
+						Optional:    true,
+						Type:        schema.TypeMap,
+						Description: "Labels is a set of labels",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Expires is a global expiry time header can be set on any resource in the
+					// system.
+					"expires": {
+						Type:         schema.TypeString,
+						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
+						ValidateFunc: validation.IsRFC3339Time,
+						StateFunc:    TruncateMs,
+						Optional:     true,
+					},
+				},
+			},
+		},
+		// Spec is an OIDC connector specification.
+		"spec": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "OIDCConnectorSpecV2 is an OIDC connector specification.   It specifies configuration for Open ID Connect compatible external  identity provider: https://openid.net/specs/openid-connect-core-1_0.html",
+
+			Required: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// IssuerURL is the endpoint of the provider, e.g. https://accounts.google.com.
+					"issuer_url": {
+						Type:        schema.TypeString,
+						Description: "IssuerURL is the endpoint of the provider, e.g. https://accounts.google.com.",
+						Optional:    true,
+					},
+					// ClientID is the id of the authentication client (Teleport Auth server).
+					"client_id": {
+						Type:        schema.TypeString,
+						Description: "ClientID is the id of the authentication client (Teleport Auth server).",
+						Optional:    true,
+					},
+					// ClientSecret is used to authenticate the client.
+					"client_secret": {
+						Type:        schema.TypeString,
+						Description: "ClientSecret is used to authenticate the client.",
+						Optional:    true,
+					},
+					// RedirectURL is a URL that will redirect the client's browser
+					// back to the identity provider after successful authentication.
+					// This should match the URL on the Provider's side.
+					"redirect_url": {
+						Type:        schema.TypeString,
+						Description: "RedirectURL is a URL that will redirect the client's browser  back to the identity provider after successful authentication.  This should match the URL on the Provider's side.",
+						Optional:    true,
+					},
+					// ACR is an Authentication Context Class Reference value. The meaning of the ACR
+					// value is context-specific and varies for identity providers.
+					"acr": {
+						Type:        schema.TypeString,
+						Description: "ACR is an Authentication Context Class Reference value. The meaning of the ACR  value is context-specific and varies for identity providers.",
+						Optional:    true,
+					},
+					// Provider is the external identity provider.
+					"provider": {
+						Type:        schema.TypeString,
+						Description: "Provider is the external identity provider.",
+						Optional:    true,
+					},
+					// Display is the friendly name for this provider.
+					"display": {
+						Type:        schema.TypeString,
+						Description: "Display is the friendly name for this provider.",
+						Optional:    true,
+					},
+					// Scope specifies additional scopes set by provider.
+					"scope": {
+
+						Optional:    true,
+						Type:        schema.TypeList,
+						Description: "Scope specifies additional scopes set by provider.",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Prompt is an optional OIDC prompt. An empty string omits prompt.
+					// If not specified, it defaults to select_account for backwards compatibility.
+					"prompt": {
+						Type:        schema.TypeString,
+						Description: "Prompt is an optional OIDC prompt. An empty string omits prompt.  If not specified, it defaults to select_account for backwards compatibility.",
+						Optional:    true,
+					},
+					// ClaimsToRoles specifies a dynamic mapping from claims to roles.
+					"claims_to_roles": {
+
+						Optional:    true,
+						Type:        schema.TypeList,
+						Description: "ClaimsToRoles specifies a dynamic mapping from claims to roles.",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// Claim is a claim name.
+								"claim": {
+									Type:        schema.TypeString,
+									Description: "Claim is a claim name.",
+									Optional:    true,
+								},
+								// Value is a claim value to match.
+								"value": {
+									Type:        schema.TypeString,
+									Description: "Value is a claim value to match.",
+									Optional:    true,
+								},
+								// Roles is a list of static teleport roles to match.
+								"roles": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "Roles is a list of static teleport roles to match.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+							},
+						},
+					},
+					// GoogleServiceAccountURI is a path to a google service account uri.
+					"google_service_account_uri": {
+						Type:        schema.TypeString,
+						Description: "GoogleServiceAccountURI is a path to a google service account uri.",
+						Optional:    true,
+					},
+					// GoogleServiceAccount is a string containing google service account credentials.
+					"google_service_account": {
+						Type:        schema.TypeString,
+						Description: "GoogleServiceAccount is a string containing google service account credentials.",
+						Optional:    true,
+					},
+					// GoogleAdminEmail is the email of a google admin to impersonate.
+					"google_admin_email": {
+						Type:        schema.TypeString,
+						Description: "GoogleAdminEmail is the email of a google admin to impersonate.",
+						Optional:    true,
+					},
+				},
+			},
+		},
+	}
+}
+
+// GenSchemaMetaOIDCConnectorV2 returns schema for OIDCConnectorV2
+//
+// OIDCConnectorV2 represents an OIDC connector.
+func GenSchemaMetaOIDCConnectorV2() map[string]*accessors.SchemaMeta {
+	return map[string]*accessors.SchemaMeta{
+		// Kind is a resource kind.
+		"kind": {
+			Name:       "Kind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// SubKind is an optional resource sub kind, used in some resources.
+		"sub_kind": {
+			Name:       "SubKind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Version is a resource version.
+		"version": {
+			Name:       "Version",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Metadata holds resource metadata.
+		"metadata": {
+			Name:       "Metadata",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Name is an object name
+				"name": {
+					Name:       "Name",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Namespace is object namespace. The field should be called "namespace"
+				// when it returns in Teleport 2.4.
+				"namespace": {
+					Name:       "Namespace",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Description is object description
+				"description": {
+					Name:       "Description",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Labels is a set of labels
+				"labels": {
+					Name:       "Labels",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Expires is a global expiry time header can be set on any resource in the
+				// system.
+				"expires": {
+					Name:       "Expires",
+					IsTime:     true,
+					IsDuration: false,
+				},
+			},
+		},
+		// Spec is an OIDC connector specification.
+		"spec": {
+			Name:       "Spec",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// IssuerURL is the endpoint of the provider, e.g. https://accounts.google.com.
+				"issuer_url": {
+					Name:       "IssuerURL",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// ClientID is the id of the authentication client (Teleport Auth server).
+				"client_id": {
+					Name:       "ClientID",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// ClientSecret is used to authenticate the client.
+				"client_secret": {
+					Name:       "ClientSecret",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// RedirectURL is a URL that will redirect the client's browser
+				// back to the identity provider after successful authentication.
+				// This should match the URL on the Provider's side.
+				"redirect_url": {
+					Name:       "RedirectURL",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// ACR is an Authentication Context Class Reference value. The meaning of the ACR
+				// value is context-specific and varies for identity providers.
+				"acr": {
+					Name:       "ACR",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Provider is the external identity provider.
+				"provider": {
+					Name:       "Provider",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Display is the friendly name for this provider.
+				"display": {
+					Name:       "Display",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Scope specifies additional scopes set by provider.
+				"scope": {
+					Name:       "Scope",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Prompt is an optional OIDC prompt. An empty string omits prompt.
+				// If not specified, it defaults to select_account for backwards compatibility.
+				"prompt": {
+					Name:       "Prompt",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// ClaimsToRoles specifies a dynamic mapping from claims to roles.
+				"claims_to_roles": {
+					Name:       "ClaimsToRoles",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// Claim is a claim name.
+						"claim": {
+							Name:       "Claim",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Value is a claim value to match.
+						"value": {
+							Name:       "Value",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Roles is a list of static teleport roles to match.
+						"roles": {
+							Name:       "Roles",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// GoogleServiceAccountURI is a path to a google service account uri.
+				"google_service_account_uri": {
+					Name:       "GoogleServiceAccountURI",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// GoogleServiceAccount is a string containing google service account credentials.
+				"google_service_account": {
+					Name:       "GoogleServiceAccount",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// GoogleAdminEmail is the email of a google admin to impersonate.
+				"google_admin_email": {
+					Name:       "GoogleAdminEmail",
+					IsTime:     false,
+					IsDuration: false,
+				},
+			},
+		},
+	}
 }
 
 // SchemaSAMLConnectorV2 returns schema for SAMLConnectorV2
@@ -1192,7 +3530,7 @@ func GenSchemaProvisionTokenV2() map[string]*schema.Schema {
 			Optional:    true,
 			Default:     "v2",
 		},
-		// Metadata is User metadata
+		// Metadata is resource metadata
 		"metadata": {
 			Type:        schema.TypeList,
 			MaxItems:    1,
@@ -1294,7 +3632,7 @@ func GenSchemaMetaProvisionTokenV2() map[string]*accessors.SchemaMeta {
 			IsTime:     false,
 			IsDuration: false,
 		},
-		// Metadata is User metadata
+		// Metadata is resource metadata
 		"metadata": {
 			Name:       "Metadata",
 			IsTime:     false,
@@ -1353,17 +3691,17 @@ func GenSchemaMetaProvisionTokenV2() map[string]*accessors.SchemaMeta {
 	}
 }
 
-// SchemaRoleV3 returns schema for RoleV3
+// SchemaAuthPreferenceV2 returns schema for AuthPreferenceV2
 //
-// RoleV3 represents role resource specification
-func GenSchemaRoleV3() map[string]*schema.Schema {
+// AuthPreferenceV2 implements the AuthPreference interface.
+func GenSchemaAuthPreferenceV2() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		// Kind is a resource kind
 		"kind": {
 			Type:        schema.TypeString,
 			Description: "Kind is a resource kind",
 			Optional:    true,
-			Default:     "role",
+			Default:     "auth_preference",
 		},
 		// SubKind is an optional resource sub kind, used in some resources
 		"sub_kind": {
@@ -1372,14 +3710,14 @@ func GenSchemaRoleV3() map[string]*schema.Schema {
 			Optional:    true,
 			Default:     "",
 		},
-		// Version is version
+		// Version is a resource version
 		"version": {
 			Type:        schema.TypeString,
-			Description: "Version is version",
+			Description: "Version is a resource version",
 			Optional:    true,
-			Default:     "v3",
+			Default:     "v2",
 		},
-		// Metadata is User metadata
+		// Metadata is resource metadata
 		"metadata": {
 			Type:        schema.TypeList,
 			MaxItems:    1,
@@ -1431,804 +3769,95 @@ func GenSchemaRoleV3() map[string]*schema.Schema {
 				},
 			},
 		},
-		// Spec is a role specification
+		// Spec is an AuthPreference specification
 		"spec": {
 			Type:        schema.TypeList,
 			MaxItems:    1,
-			Description: "RoleSpecV3 is role specification for RoleV3.",
+			Description: "AuthPreferenceSpecV2 is the actual data we care about for AuthPreference.",
 
 			Required: true,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
-					// Options is for OpenSSH options like agent forwarding.
-					"options": {
-						Type:        schema.TypeList,
-						MaxItems:    1,
-						Description: "RoleOptions is a set of role options",
-
-						Optional: true,
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								// ForwardAgent is SSH agent forwarding.
-								"forward_agent": {
-									Type:        schema.TypeBool,
-									Description: "ForwardAgent is SSH agent forwarding.",
-									Optional:    true,
-								},
-								// MaxSessionTTL defines how long a SSH session can last for.
-								"max_session_ttl": {
-									Type:             schema.TypeString,
-									Description:      "MaxSessionTTL defines how long a SSH session can last for.",
-									DiffSuppressFunc: SuppressDurationChange,
-									Optional:         true,
-									Default:          "30h",
-								},
-								// PortForwarding defines if the certificate will have
-								// "permit-port-forwarding"
-								// in the certificate. PortForwarding is "yes" if not set,
-								// that's why this is a pointer
-								"port_forwarding": SchemaBoolOption(),
-								// CertificateFormat defines the format of the user certificate to allow
-								// compatibility with older versions of OpenSSH.
-								"certificate_format": {
-									Type:        schema.TypeString,
-									Description: "CertificateFormat defines the format of the user certificate to allow  compatibility with older versions of OpenSSH.",
-									Optional:    true,
-									Default:     "standard",
-								},
-								// ClientIdleTimeout sets disconnect clients on idle timeout behavior,
-								// if set to 0 means do not disconnect, otherwise is set to the idle
-								// duration.
-								"client_idle_timeout": {
-									Type:             schema.TypeString,
-									Description:      "ClientIdleTimeout sets disconnect clients on idle timeout behavior,  if set to 0 means do not disconnect, otherwise is set to the idle  duration.",
-									DiffSuppressFunc: SuppressDurationChange,
-									Optional:         true,
-								},
-								// DisconnectExpiredCert sets disconnect clients on expired certificates.
-								"disconnect_expired_cert": {
-									Type:        schema.TypeBool,
-									Description: "DisconnectExpiredCert sets disconnect clients on expired certificates.",
-									Optional:    true,
-								},
-								// BPF defines what events to record for the BPF-based session recorder.
-								"bpf": {
-
-									Optional:    true,
-									Type:        schema.TypeList,
-									Description: "BPF defines what events to record for the BPF-based session recorder.",
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-								// PermitX11Forwarding authorizes use of X11 forwarding.
-								"permit_x11forwarding": {
-									Type:        schema.TypeBool,
-									Description: "PermitX11Forwarding authorizes use of X11 forwarding.",
-									Optional:    true,
-								},
-								// MaxConnections defines the maximum number of
-								// concurrent connections a user may hold.
-								"max_connections": {
-									Type:        schema.TypeInt,
-									Description: "MaxConnections defines the maximum number of  concurrent connections a user may hold.",
-									Optional:    true,
-								},
-								// MaxSessions defines the maximum number of
-								// concurrent sessions per connection.
-								"max_sessions": {
-									Type:        schema.TypeInt,
-									Description: "MaxSessions defines the maximum number of  concurrent sessions per connection.",
-									Optional:    true,
-								},
-								// RequestAccess defines the access request stategy (optional|note|always)
-								// where optional is the default.
-								"request_access": {
-									Type:        schema.TypeString,
-									Description: "RequestAccess defines the access request stategy (optional|note|always)  where optional is the default.",
-									Optional:    true,
-								},
-								// RequestPrompt is an optional message which tells users what they aught to
-								"request_prompt": {
-									Type:        schema.TypeString,
-									Description: "RequestPrompt is an optional message which tells users what they aught to",
-									Optional:    true,
-								},
-								// RequireSessionMFA specifies whether a user is required to do an MFA
-								// check for every session.
-								"require_session_mfa": {
-									Type:        schema.TypeBool,
-									Description: "RequireSessionMFA specifies whether a user is required to do an MFA  check for every session.",
-									Optional:    true,
-								},
-							},
-						},
+					// Type is the type of authentication.
+					"type": {
+						Type:        schema.TypeString,
+						Description: "Type is the type of authentication.",
+						Optional:    true,
 					},
-					// Allow is the set of conditions evaluated to grant access.
-					"allow": {
+					// SecondFactor is the type of second factor.
+					"second_factor": {
+						Type:        schema.TypeString,
+						Description: "SecondFactor is the type of second factor.",
+						Optional:    true,
+					},
+					// ConnectorName is the name of the OIDC or SAML connector. If this value is
+					// not set the first connector in the backend will be used.
+					"connector_name": {
+						Type:        schema.TypeString,
+						Description: "ConnectorName is the name of the OIDC or SAML connector. If this value is  not set the first connector in the backend will be used.",
+						Optional:    true,
+					},
+					// U2F are the settings for the U2F device.
+					"u2f": {
 						Type:        schema.TypeList,
 						MaxItems:    1,
-						Description: "RoleConditions is a set of conditions that must all match to be allowed or  denied access.",
+						Description: "U2F defines settings for U2F device.",
 
 						Optional: true,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
-								// Logins is a list of *nix system logins.
-								"logins": {
+								// AppID returns the application ID for universal second factor.
+								"app_id": {
+									Type:        schema.TypeString,
+									Description: "AppID returns the application ID for universal second factor.",
+									Optional:    true,
+								},
+								// Facets returns the facets for universal second factor.
+								"facets": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
-									Description: "Logins is a list of *nix system logins.",
+									Description: "Facets returns the facets for universal second factor.",
 									Elem: &schema.Schema{
 										Type: schema.TypeString,
 									},
 								},
-								// NodeLabels is a map of node labels (used to dynamically grant access to
-								// nodes).
-								"node_labels": SchemaLabels(),
-								// Rules is a list of rules and their access levels. Rules are a high level
-								// construct used for access control.
-								"rules": {
+								// DeviceAttestationCAs contains the trusted attestation CAs for U2F
+								// devices.
+								"device_attestation_c_as": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
-									Description: "Rules is a list of rules and their access levels. Rules are a high level  construct used for access control.",
-									Elem: &schema.Resource{
-										Schema: map[string]*schema.Schema{
-											// Resources is a list of resources
-											"resources": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Resources is a list of resources",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-											// Verbs is a list of verbs
-											"verbs": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Verbs is a list of verbs",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-											// Where specifies optional advanced matcher
-											"where": {
-												Type:        schema.TypeString,
-												Description: "Where specifies optional advanced matcher",
-												Optional:    true,
-											},
-											// Actions specifies optional actions taken when this rule matches
-											"actions": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Actions specifies optional actions taken when this rule matches",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-										},
-									},
-								},
-								// KubeGroups is a list of kubernetes groups
-								"kube_groups": {
-
-									Optional:    true,
-									Type:        schema.TypeList,
-									Description: "KubeGroups is a list of kubernetes groups",
+									Description: "DeviceAttestationCAs contains the trusted attestation CAs for U2F  devices.",
 									Elem: &schema.Schema{
 										Type: schema.TypeString,
-									},
-								},
-
-								"request": {
-									Type:        schema.TypeList,
-									MaxItems:    1,
-									Description: "AccessRequestConditions is a matcher for allow/deny restrictions on  access-requests.",
-
-									Optional: true,
-									Elem: &schema.Resource{
-										Schema: map[string]*schema.Schema{
-											// Roles is the name of roles which will match the request rule.
-											"roles": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Roles is the name of roles which will match the request rule.",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-											// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
-											"claims_to_roles": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.",
-												Elem: &schema.Resource{
-													Schema: map[string]*schema.Schema{
-														// Claim is a claim name.
-														"claim": {
-															Type:        schema.TypeString,
-															Description: "Claim is a claim name.",
-															Optional:    true,
-														},
-														// Value is a claim value to match.
-														"value": {
-															Type:        schema.TypeString,
-															Description: "Value is a claim value to match.",
-															Optional:    true,
-														},
-														// Roles is a list of static teleport roles to match.
-														"roles": {
-
-															Optional:    true,
-															Type:        schema.TypeList,
-															Description: "Roles is a list of static teleport roles to match.",
-															Elem: &schema.Schema{
-																Type: schema.TypeString,
-															},
-														},
-													},
-												},
-											},
-											// Annotations is a collection of annotations to be programmatically
-											// appended to pending access requests at the time of their creation.
-											// These annotations serve as a mechanism to propagate extra information
-											// to plugins.  Since these annotations support variable interpolation
-											// syntax, they also offer a mechanism for forwarding claims from an
-											// external identity provider, to a plugin via `{{external.trait_name}}`
-											// style substitutions.
-											"annotations": SchemaTraits(),
-											// Thresholds is a list of thresholds, one of which must be met in order for reviews
-											// to trigger a state-transition.  If no thresholds are provided, a default threshold
-											// of 1 for approval and denial is used.
-											"thresholds": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Thresholds is a list of thresholds, one of which must be met in order for reviews  to trigger a state-transition.  If no thresholds are provided, a default threshold  of 1 for approval and denial is used.",
-												Elem: &schema.Resource{
-													Schema: map[string]*schema.Schema{
-														// Name is the optional human-readable name of the threshold.
-														"name": {
-															Type:        schema.TypeString,
-															Description: "Name is the optional human-readable name of the threshold.",
-															Optional:    true,
-														},
-														// Filter is an optional predicate used to determine which reviews
-														// count toward this threshold.
-														"filter": {
-															Type:        schema.TypeString,
-															Description: "Filter is an optional predicate used to determine which reviews  count toward this threshold.",
-															Optional:    true,
-														},
-														// Approve is the number of matching approvals needed for state-transition.
-														"approve": {
-															Type:        schema.TypeInt,
-															Description: "Approve is the number of matching approvals needed for state-transition.",
-															Optional:    true,
-														},
-														// Deny is the number of denials needed for state-transition.
-														"deny": {
-															Type:        schema.TypeInt,
-															Description: "Deny is the number of denials needed for state-transition.",
-															Optional:    true,
-														},
-													},
-												},
-											},
-											// SuggestedReviewers is a list of reviewer suggestions.  These can be teleport usernames, but
-											// that is not a requirement.
-											"suggested_reviewers": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "SuggestedReviewers is a list of reviewer suggestions.  These can be teleport usernames, but  that is not a requirement.",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-										},
-									},
-								},
-								// KubeUsers is an optional kubernetes users to impersonate
-								"kube_users": {
-
-									Optional:    true,
-									Type:        schema.TypeList,
-									Description: "KubeUsers is an optional kubernetes users to impersonate",
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-								// AppLabels is a map of labels used as part of the RBAC system.
-								"app_labels": SchemaLabels(),
-								// ClusterLabels is a map of node labels (used to dynamically grant access to
-								// clusters).
-								"cluster_labels": SchemaLabels(),
-								// KubernetesLabels is a map of kubernetes cluster labels used for RBAC.
-								"kubernetes_labels": SchemaLabels(),
-								// DatabaseLabels are used in RBAC system to allow/deny access to databases.
-								"database_labels": SchemaLabels(),
-								// DatabaseNames is a list of database names this role is allowed to connect to.
-								"database_names": {
-
-									Optional:    true,
-									Type:        schema.TypeList,
-									Description: "DatabaseNames is a list of database names this role is allowed to connect to.",
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-								// DatabaseUsers is a list of databaes users this role is allowed to connect as.
-								"database_users": {
-
-									Optional:    true,
-									Type:        schema.TypeList,
-									Description: "DatabaseUsers is a list of databaes users this role is allowed to connect as.",
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-								// Impersonate specifies what users and roles this role is allowed to impersonate
-								// by issuing certificates or other possible means.
-								"impersonate": {
-									Type:        schema.TypeList,
-									MaxItems:    1,
-									Description: "ImpersonateConditions specifies whether users are allowed  to issue certificates for other users or groups.",
-
-									Optional: true,
-									Elem: &schema.Resource{
-										Schema: map[string]*schema.Schema{
-											// Users is a list of resources this role is allowed to impersonate,
-											// could be an empty list or a Wildcard pattern
-											"users": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Users is a list of resources this role is allowed to impersonate,  could be an empty list or a Wildcard pattern",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-											// Roles is a list of resources this role is allowed to impersonate
-											"roles": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Roles is a list of resources this role is allowed to impersonate",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-											// Where specifies optional advanced matcher
-											"where": {
-												Type:        schema.TypeString,
-												Description: "Where specifies optional advanced matcher",
-												Optional:    true,
-											},
-										},
-									},
-								},
-								// ReviewRequests defines conditions for submitting access reviews.
-								"review_requests": {
-									Type:        schema.TypeList,
-									MaxItems:    1,
-									Description: "AccessReviewConditions is a matcher for allow/deny restrictions on  access reviews.",
-
-									Optional: true,
-									Elem: &schema.Resource{
-										Schema: map[string]*schema.Schema{
-											// Roles is the name of roles which may be reviewed.
-											"roles": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Roles is the name of roles which may be reviewed.",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-											// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
-											"claims_to_roles": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.",
-												Elem: &schema.Resource{
-													Schema: map[string]*schema.Schema{
-														// Claim is a claim name.
-														"claim": {
-															Type:        schema.TypeString,
-															Description: "Claim is a claim name.",
-															Optional:    true,
-														},
-														// Value is a claim value to match.
-														"value": {
-															Type:        schema.TypeString,
-															Description: "Value is a claim value to match.",
-															Optional:    true,
-														},
-														// Roles is a list of static teleport roles to match.
-														"roles": {
-
-															Optional:    true,
-															Type:        schema.TypeList,
-															Description: "Roles is a list of static teleport roles to match.",
-															Elem: &schema.Schema{
-																Type: schema.TypeString,
-															},
-														},
-													},
-												},
-											},
-											// Where is an optional predicate which further limits which requests are
-											// reviewable.
-											"where": {
-												Type:        schema.TypeString,
-												Description: "Where is an optional predicate which further limits which requests are  reviewable.",
-												Optional:    true,
-												Default:     "",
-											},
-										},
 									},
 								},
 							},
 						},
 					},
-					// Deny is the set of conditions evaluated to deny access. Deny takes priority
-					// over allow.
-					"deny": {
-						Type:        schema.TypeList,
-						MaxItems:    1,
-						Description: "RoleConditions is a set of conditions that must all match to be allowed or  denied access.",
-
-						Optional: true,
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								// Logins is a list of *nix system logins.
-								"logins": {
-
-									Optional:    true,
-									Type:        schema.TypeList,
-									Description: "Logins is a list of *nix system logins.",
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-								// NodeLabels is a map of node labels (used to dynamically grant access to
-								// nodes).
-								"node_labels": SchemaLabels(),
-								// Rules is a list of rules and their access levels. Rules are a high level
-								// construct used for access control.
-								"rules": {
-
-									Optional:    true,
-									Type:        schema.TypeList,
-									Description: "Rules is a list of rules and their access levels. Rules are a high level  construct used for access control.",
-									Elem: &schema.Resource{
-										Schema: map[string]*schema.Schema{
-											// Resources is a list of resources
-											"resources": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Resources is a list of resources",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-											// Verbs is a list of verbs
-											"verbs": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Verbs is a list of verbs",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-											// Where specifies optional advanced matcher
-											"where": {
-												Type:        schema.TypeString,
-												Description: "Where specifies optional advanced matcher",
-												Optional:    true,
-											},
-											// Actions specifies optional actions taken when this rule matches
-											"actions": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Actions specifies optional actions taken when this rule matches",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-										},
-									},
-								},
-								// KubeGroups is a list of kubernetes groups
-								"kube_groups": {
-
-									Optional:    true,
-									Type:        schema.TypeList,
-									Description: "KubeGroups is a list of kubernetes groups",
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-
-								"request": {
-									Type:        schema.TypeList,
-									MaxItems:    1,
-									Description: "AccessRequestConditions is a matcher for allow/deny restrictions on  access-requests.",
-
-									Optional: true,
-									Elem: &schema.Resource{
-										Schema: map[string]*schema.Schema{
-											// Roles is the name of roles which will match the request rule.
-											"roles": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Roles is the name of roles which will match the request rule.",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-											// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
-											"claims_to_roles": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.",
-												Elem: &schema.Resource{
-													Schema: map[string]*schema.Schema{
-														// Claim is a claim name.
-														"claim": {
-															Type:        schema.TypeString,
-															Description: "Claim is a claim name.",
-															Optional:    true,
-														},
-														// Value is a claim value to match.
-														"value": {
-															Type:        schema.TypeString,
-															Description: "Value is a claim value to match.",
-															Optional:    true,
-														},
-														// Roles is a list of static teleport roles to match.
-														"roles": {
-
-															Optional:    true,
-															Type:        schema.TypeList,
-															Description: "Roles is a list of static teleport roles to match.",
-															Elem: &schema.Schema{
-																Type: schema.TypeString,
-															},
-														},
-													},
-												},
-											},
-											// Annotations is a collection of annotations to be programmatically
-											// appended to pending access requests at the time of their creation.
-											// These annotations serve as a mechanism to propagate extra information
-											// to plugins.  Since these annotations support variable interpolation
-											// syntax, they also offer a mechanism for forwarding claims from an
-											// external identity provider, to a plugin via `{{external.trait_name}}`
-											// style substitutions.
-											"annotations": SchemaTraits(),
-											// Thresholds is a list of thresholds, one of which must be met in order for reviews
-											// to trigger a state-transition.  If no thresholds are provided, a default threshold
-											// of 1 for approval and denial is used.
-											"thresholds": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Thresholds is a list of thresholds, one of which must be met in order for reviews  to trigger a state-transition.  If no thresholds are provided, a default threshold  of 1 for approval and denial is used.",
-												Elem: &schema.Resource{
-													Schema: map[string]*schema.Schema{
-														// Name is the optional human-readable name of the threshold.
-														"name": {
-															Type:        schema.TypeString,
-															Description: "Name is the optional human-readable name of the threshold.",
-															Optional:    true,
-														},
-														// Filter is an optional predicate used to determine which reviews
-														// count toward this threshold.
-														"filter": {
-															Type:        schema.TypeString,
-															Description: "Filter is an optional predicate used to determine which reviews  count toward this threshold.",
-															Optional:    true,
-														},
-														// Approve is the number of matching approvals needed for state-transition.
-														"approve": {
-															Type:        schema.TypeInt,
-															Description: "Approve is the number of matching approvals needed for state-transition.",
-															Optional:    true,
-														},
-														// Deny is the number of denials needed for state-transition.
-														"deny": {
-															Type:        schema.TypeInt,
-															Description: "Deny is the number of denials needed for state-transition.",
-															Optional:    true,
-														},
-													},
-												},
-											},
-											// SuggestedReviewers is a list of reviewer suggestions.  These can be teleport usernames, but
-											// that is not a requirement.
-											"suggested_reviewers": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "SuggestedReviewers is a list of reviewer suggestions.  These can be teleport usernames, but  that is not a requirement.",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-										},
-									},
-								},
-								// KubeUsers is an optional kubernetes users to impersonate
-								"kube_users": {
-
-									Optional:    true,
-									Type:        schema.TypeList,
-									Description: "KubeUsers is an optional kubernetes users to impersonate",
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-								// AppLabels is a map of labels used as part of the RBAC system.
-								"app_labels": SchemaLabels(),
-								// ClusterLabels is a map of node labels (used to dynamically grant access to
-								// clusters).
-								"cluster_labels": SchemaLabels(),
-								// KubernetesLabels is a map of kubernetes cluster labels used for RBAC.
-								"kubernetes_labels": SchemaLabels(),
-								// DatabaseLabels are used in RBAC system to allow/deny access to databases.
-								"database_labels": SchemaLabels(),
-								// DatabaseNames is a list of database names this role is allowed to connect to.
-								"database_names": {
-
-									Optional:    true,
-									Type:        schema.TypeList,
-									Description: "DatabaseNames is a list of database names this role is allowed to connect to.",
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-								// DatabaseUsers is a list of databaes users this role is allowed to connect as.
-								"database_users": {
-
-									Optional:    true,
-									Type:        schema.TypeList,
-									Description: "DatabaseUsers is a list of databaes users this role is allowed to connect as.",
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-								// Impersonate specifies what users and roles this role is allowed to impersonate
-								// by issuing certificates or other possible means.
-								"impersonate": {
-									Type:        schema.TypeList,
-									MaxItems:    1,
-									Description: "ImpersonateConditions specifies whether users are allowed  to issue certificates for other users or groups.",
-
-									Optional: true,
-									Elem: &schema.Resource{
-										Schema: map[string]*schema.Schema{
-											// Users is a list of resources this role is allowed to impersonate,
-											// could be an empty list or a Wildcard pattern
-											"users": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Users is a list of resources this role is allowed to impersonate,  could be an empty list or a Wildcard pattern",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-											// Roles is a list of resources this role is allowed to impersonate
-											"roles": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Roles is a list of resources this role is allowed to impersonate",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-											// Where specifies optional advanced matcher
-											"where": {
-												Type:        schema.TypeString,
-												Description: "Where specifies optional advanced matcher",
-												Optional:    true,
-											},
-										},
-									},
-								},
-								// ReviewRequests defines conditions for submitting access reviews.
-								"review_requests": {
-									Type:        schema.TypeList,
-									MaxItems:    1,
-									Description: "AccessReviewConditions is a matcher for allow/deny restrictions on  access reviews.",
-
-									Optional: true,
-									Elem: &schema.Resource{
-										Schema: map[string]*schema.Schema{
-											// Roles is the name of roles which may be reviewed.
-											"roles": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "Roles is the name of roles which may be reviewed.",
-												Elem: &schema.Schema{
-													Type: schema.TypeString,
-												},
-											},
-											// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
-											"claims_to_roles": {
-
-												Optional:    true,
-												Type:        schema.TypeList,
-												Description: "ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.",
-												Elem: &schema.Resource{
-													Schema: map[string]*schema.Schema{
-														// Claim is a claim name.
-														"claim": {
-															Type:        schema.TypeString,
-															Description: "Claim is a claim name.",
-															Optional:    true,
-														},
-														// Value is a claim value to match.
-														"value": {
-															Type:        schema.TypeString,
-															Description: "Value is a claim value to match.",
-															Optional:    true,
-														},
-														// Roles is a list of static teleport roles to match.
-														"roles": {
-
-															Optional:    true,
-															Type:        schema.TypeList,
-															Description: "Roles is a list of static teleport roles to match.",
-															Elem: &schema.Schema{
-																Type: schema.TypeString,
-															},
-														},
-													},
-												},
-											},
-											// Where is an optional predicate which further limits which requests are
-											// reviewable.
-											"where": {
-												Type:        schema.TypeString,
-												Description: "Where is an optional predicate which further limits which requests are  reviewable.",
-												Optional:    true,
-												Default:     "",
-											},
-										},
-									},
-								},
-							},
-						},
+					// RequireSessionMFA causes all sessions in this cluster to require MFA
+					// checks.
+					"require_session_mfa": {
+						Type:        schema.TypeBool,
+						Description: "RequireSessionMFA causes all sessions in this cluster to require MFA  checks.",
+						Optional:    true,
 					},
+					// DisconnectExpiredCert provides disconnect expired certificate setting -
+					// if true, connections with expired client certificates will get disconnected
+					"disconnect_expired_cert": SchemaBoolOption(),
+					// AllowLocalAuth is true if local authentication is enabled.
+					"allow_local_auth": SchemaBoolOption(),
 				},
 			},
 		},
 	}
 }
 
-// GenSchemaMetaRoleV3 returns schema for RoleV3
+// GenSchemaMetaAuthPreferenceV2 returns schema for AuthPreferenceV2
 //
-// RoleV3 represents role resource specification
-func GenSchemaMetaRoleV3() map[string]*accessors.SchemaMeta {
+// AuthPreferenceV2 implements the AuthPreference interface.
+func GenSchemaMetaAuthPreferenceV2() map[string]*accessors.SchemaMeta {
 	return map[string]*accessors.SchemaMeta{
 		// Kind is a resource kind
 		"kind": {
@@ -2242,13 +3871,13 @@ func GenSchemaMetaRoleV3() map[string]*accessors.SchemaMeta {
 			IsTime:     false,
 			IsDuration: false,
 		},
-		// Version is version
+		// Version is a resource version
 		"version": {
 			Name:       "Version",
 			IsTime:     false,
 			IsDuration: false,
 		},
-		// Metadata is User metadata
+		// Metadata is resource metadata
 		"metadata": {
 			Name:       "Metadata",
 			IsTime:     false,
@@ -2288,1392 +3917,81 @@ func GenSchemaMetaRoleV3() map[string]*accessors.SchemaMeta {
 				},
 			},
 		},
-		// Spec is a role specification
+		// Spec is an AuthPreference specification
 		"spec": {
 			Name:       "Spec",
 			IsTime:     false,
 			IsDuration: false,
 			Nested: map[string]*accessors.SchemaMeta{
-				// Options is for OpenSSH options like agent forwarding.
-				"options": {
-					Name:       "Options",
+				// Type is the type of authentication.
+				"type": {
+					Name:       "Type",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// SecondFactor is the type of second factor.
+				"second_factor": {
+					Name:       "SecondFactor",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// ConnectorName is the name of the OIDC or SAML connector. If this value is
+				// not set the first connector in the backend will be used.
+				"connector_name": {
+					Name:       "ConnectorName",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// U2F are the settings for the U2F device.
+				"u2f": {
+					Name:       "U2F",
 					IsTime:     false,
 					IsDuration: false,
 					Nested: map[string]*accessors.SchemaMeta{
-						// ForwardAgent is SSH agent forwarding.
-						"forward_agent": {
-							Name:       "ForwardAgent",
+						// AppID returns the application ID for universal second factor.
+						"app_id": {
+							Name:       "AppID",
 							IsTime:     false,
 							IsDuration: false,
 						},
-						// MaxSessionTTL defines how long a SSH session can last for.
-						"max_session_ttl": {
-							Name:       "MaxSessionTTL",
-							IsTime:     false,
-							IsDuration: true,
-						},
-						// PortForwarding defines if the certificate will have
-						// "permit-port-forwarding"
-						// in the certificate. PortForwarding is "yes" if not set,
-						// that's why this is a pointer
-						"port_forwarding": {
-							Name:       "PortForwarding",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetBoolOption,
-							Setter:     SetBoolOption,
-						},
-						// CertificateFormat defines the format of the user certificate to allow
-						// compatibility with older versions of OpenSSH.
-						"certificate_format": {
-							Name:       "CertificateFormat",
+						// Facets returns the facets for universal second factor.
+						"facets": {
+							Name:       "Facets",
 							IsTime:     false,
 							IsDuration: false,
 						},
-						// ClientIdleTimeout sets disconnect clients on idle timeout behavior,
-						// if set to 0 means do not disconnect, otherwise is set to the idle
-						// duration.
-						"client_idle_timeout": {
-							Name:       "ClientIdleTimeout",
-							IsTime:     false,
-							IsDuration: true,
-						},
-						// DisconnectExpiredCert sets disconnect clients on expired certificates.
-						"disconnect_expired_cert": {
-							Name:       "DisconnectExpiredCert",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// BPF defines what events to record for the BPF-based session recorder.
-						"bpf": {
-							Name:       "BPF",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// PermitX11Forwarding authorizes use of X11 forwarding.
-						"permit_x11forwarding": {
-							Name:       "PermitX11Forwarding",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// MaxConnections defines the maximum number of
-						// concurrent connections a user may hold.
-						"max_connections": {
-							Name:       "MaxConnections",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// MaxSessions defines the maximum number of
-						// concurrent sessions per connection.
-						"max_sessions": {
-							Name:       "MaxSessions",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// RequestAccess defines the access request stategy (optional|note|always)
-						// where optional is the default.
-						"request_access": {
-							Name:       "RequestAccess",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// RequestPrompt is an optional message which tells users what they aught to
-						"request_prompt": {
-							Name:       "RequestPrompt",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// RequireSessionMFA specifies whether a user is required to do an MFA
-						// check for every session.
-						"require_session_mfa": {
-							Name:       "RequireSessionMFA",
+						// DeviceAttestationCAs contains the trusted attestation CAs for U2F
+						// devices.
+						"device_attestation_c_as": {
+							Name:       "DeviceAttestationCAs",
 							IsTime:     false,
 							IsDuration: false,
 						},
 					},
 				},
-				// Allow is the set of conditions evaluated to grant access.
-				"allow": {
-					Name:       "Allow",
-					IsTime:     false,
-					IsDuration: false,
-					Nested: map[string]*accessors.SchemaMeta{
-						// Logins is a list of *nix system logins.
-						"logins": {
-							Name:       "Logins",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// NodeLabels is a map of node labels (used to dynamically grant access to
-						// nodes).
-						"node_labels": {
-							Name:       "NodeLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
-						},
-						// Rules is a list of rules and their access levels. Rules are a high level
-						// construct used for access control.
-						"rules": {
-							Name:       "Rules",
-							IsTime:     false,
-							IsDuration: false,
-							Nested: map[string]*accessors.SchemaMeta{
-								// Resources is a list of resources
-								"resources": {
-									Name:       "Resources",
-									IsTime:     false,
-									IsDuration: false,
-								},
-								// Verbs is a list of verbs
-								"verbs": {
-									Name:       "Verbs",
-									IsTime:     false,
-									IsDuration: false,
-								},
-								// Where specifies optional advanced matcher
-								"where": {
-									Name:       "Where",
-									IsTime:     false,
-									IsDuration: false,
-								},
-								// Actions specifies optional actions taken when this rule matches
-								"actions": {
-									Name:       "Actions",
-									IsTime:     false,
-									IsDuration: false,
-								},
-							},
-						},
-						// KubeGroups is a list of kubernetes groups
-						"kube_groups": {
-							Name:       "KubeGroups",
-							IsTime:     false,
-							IsDuration: false,
-						},
-
-						"request": {
-							Name:       "Request",
-							IsTime:     false,
-							IsDuration: false,
-							Nested: map[string]*accessors.SchemaMeta{
-								// Roles is the name of roles which will match the request rule.
-								"roles": {
-									Name:       "Roles",
-									IsTime:     false,
-									IsDuration: false,
-								},
-								// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
-								"claims_to_roles": {
-									Name:       "ClaimsToRoles",
-									IsTime:     false,
-									IsDuration: false,
-									Nested: map[string]*accessors.SchemaMeta{
-										// Claim is a claim name.
-										"claim": {
-											Name:       "Claim",
-											IsTime:     false,
-											IsDuration: false,
-										},
-										// Value is a claim value to match.
-										"value": {
-											Name:       "Value",
-											IsTime:     false,
-											IsDuration: false,
-										},
-										// Roles is a list of static teleport roles to match.
-										"roles": {
-											Name:       "Roles",
-											IsTime:     false,
-											IsDuration: false,
-										},
-									},
-								},
-								// Annotations is a collection of annotations to be programmatically
-								// appended to pending access requests at the time of their creation.
-								// These annotations serve as a mechanism to propagate extra information
-								// to plugins.  Since these annotations support variable interpolation
-								// syntax, they also offer a mechanism for forwarding claims from an
-								// external identity provider, to a plugin via `{{external.trait_name}}`
-								// style substitutions.
-								"annotations": {
-									Name:       "Annotations",
-									IsTime:     false,
-									IsDuration: false,
-									Getter:     GetTraits,
-									Setter:     SetTraits,
-								},
-								// Thresholds is a list of thresholds, one of which must be met in order for reviews
-								// to trigger a state-transition.  If no thresholds are provided, a default threshold
-								// of 1 for approval and denial is used.
-								"thresholds": {
-									Name:       "Thresholds",
-									IsTime:     false,
-									IsDuration: false,
-									Nested: map[string]*accessors.SchemaMeta{
-										// Name is the optional human-readable name of the threshold.
-										"name": {
-											Name:       "Name",
-											IsTime:     false,
-											IsDuration: false,
-										},
-										// Filter is an optional predicate used to determine which reviews
-										// count toward this threshold.
-										"filter": {
-											Name:       "Filter",
-											IsTime:     false,
-											IsDuration: false,
-										},
-										// Approve is the number of matching approvals needed for state-transition.
-										"approve": {
-											Name:       "Approve",
-											IsTime:     false,
-											IsDuration: false,
-										},
-										// Deny is the number of denials needed for state-transition.
-										"deny": {
-											Name:       "Deny",
-											IsTime:     false,
-											IsDuration: false,
-										},
-									},
-								},
-								// SuggestedReviewers is a list of reviewer suggestions.  These can be teleport usernames, but
-								// that is not a requirement.
-								"suggested_reviewers": {
-									Name:       "SuggestedReviewers",
-									IsTime:     false,
-									IsDuration: false,
-								},
-							},
-						},
-						// KubeUsers is an optional kubernetes users to impersonate
-						"kube_users": {
-							Name:       "KubeUsers",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// AppLabels is a map of labels used as part of the RBAC system.
-						"app_labels": {
-							Name:       "AppLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
-						},
-						// ClusterLabels is a map of node labels (used to dynamically grant access to
-						// clusters).
-						"cluster_labels": {
-							Name:       "ClusterLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
-						},
-						// KubernetesLabels is a map of kubernetes cluster labels used for RBAC.
-						"kubernetes_labels": {
-							Name:       "KubernetesLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
-						},
-						// DatabaseLabels are used in RBAC system to allow/deny access to databases.
-						"database_labels": {
-							Name:       "DatabaseLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
-						},
-						// DatabaseNames is a list of database names this role is allowed to connect to.
-						"database_names": {
-							Name:       "DatabaseNames",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// DatabaseUsers is a list of databaes users this role is allowed to connect as.
-						"database_users": {
-							Name:       "DatabaseUsers",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// Impersonate specifies what users and roles this role is allowed to impersonate
-						// by issuing certificates or other possible means.
-						"impersonate": {
-							Name:       "Impersonate",
-							IsTime:     false,
-							IsDuration: false,
-							Nested: map[string]*accessors.SchemaMeta{
-								// Users is a list of resources this role is allowed to impersonate,
-								// could be an empty list or a Wildcard pattern
-								"users": {
-									Name:       "Users",
-									IsTime:     false,
-									IsDuration: false,
-								},
-								// Roles is a list of resources this role is allowed to impersonate
-								"roles": {
-									Name:       "Roles",
-									IsTime:     false,
-									IsDuration: false,
-								},
-								// Where specifies optional advanced matcher
-								"where": {
-									Name:       "Where",
-									IsTime:     false,
-									IsDuration: false,
-								},
-							},
-						},
-						// ReviewRequests defines conditions for submitting access reviews.
-						"review_requests": {
-							Name:       "ReviewRequests",
-							IsTime:     false,
-							IsDuration: false,
-							Nested: map[string]*accessors.SchemaMeta{
-								// Roles is the name of roles which may be reviewed.
-								"roles": {
-									Name:       "Roles",
-									IsTime:     false,
-									IsDuration: false,
-								},
-								// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
-								"claims_to_roles": {
-									Name:       "ClaimsToRoles",
-									IsTime:     false,
-									IsDuration: false,
-									Nested: map[string]*accessors.SchemaMeta{
-										// Claim is a claim name.
-										"claim": {
-											Name:       "Claim",
-											IsTime:     false,
-											IsDuration: false,
-										},
-										// Value is a claim value to match.
-										"value": {
-											Name:       "Value",
-											IsTime:     false,
-											IsDuration: false,
-										},
-										// Roles is a list of static teleport roles to match.
-										"roles": {
-											Name:       "Roles",
-											IsTime:     false,
-											IsDuration: false,
-										},
-									},
-								},
-								// Where is an optional predicate which further limits which requests are
-								// reviewable.
-								"where": {
-									Name:       "Where",
-									IsTime:     false,
-									IsDuration: false,
-								},
-							},
-						},
-					},
-				},
-				// Deny is the set of conditions evaluated to deny access. Deny takes priority
-				// over allow.
-				"deny": {
-					Name:       "Deny",
-					IsTime:     false,
-					IsDuration: false,
-					Nested: map[string]*accessors.SchemaMeta{
-						// Logins is a list of *nix system logins.
-						"logins": {
-							Name:       "Logins",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// NodeLabels is a map of node labels (used to dynamically grant access to
-						// nodes).
-						"node_labels": {
-							Name:       "NodeLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
-						},
-						// Rules is a list of rules and their access levels. Rules are a high level
-						// construct used for access control.
-						"rules": {
-							Name:       "Rules",
-							IsTime:     false,
-							IsDuration: false,
-							Nested: map[string]*accessors.SchemaMeta{
-								// Resources is a list of resources
-								"resources": {
-									Name:       "Resources",
-									IsTime:     false,
-									IsDuration: false,
-								},
-								// Verbs is a list of verbs
-								"verbs": {
-									Name:       "Verbs",
-									IsTime:     false,
-									IsDuration: false,
-								},
-								// Where specifies optional advanced matcher
-								"where": {
-									Name:       "Where",
-									IsTime:     false,
-									IsDuration: false,
-								},
-								// Actions specifies optional actions taken when this rule matches
-								"actions": {
-									Name:       "Actions",
-									IsTime:     false,
-									IsDuration: false,
-								},
-							},
-						},
-						// KubeGroups is a list of kubernetes groups
-						"kube_groups": {
-							Name:       "KubeGroups",
-							IsTime:     false,
-							IsDuration: false,
-						},
-
-						"request": {
-							Name:       "Request",
-							IsTime:     false,
-							IsDuration: false,
-							Nested: map[string]*accessors.SchemaMeta{
-								// Roles is the name of roles which will match the request rule.
-								"roles": {
-									Name:       "Roles",
-									IsTime:     false,
-									IsDuration: false,
-								},
-								// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
-								"claims_to_roles": {
-									Name:       "ClaimsToRoles",
-									IsTime:     false,
-									IsDuration: false,
-									Nested: map[string]*accessors.SchemaMeta{
-										// Claim is a claim name.
-										"claim": {
-											Name:       "Claim",
-											IsTime:     false,
-											IsDuration: false,
-										},
-										// Value is a claim value to match.
-										"value": {
-											Name:       "Value",
-											IsTime:     false,
-											IsDuration: false,
-										},
-										// Roles is a list of static teleport roles to match.
-										"roles": {
-											Name:       "Roles",
-											IsTime:     false,
-											IsDuration: false,
-										},
-									},
-								},
-								// Annotations is a collection of annotations to be programmatically
-								// appended to pending access requests at the time of their creation.
-								// These annotations serve as a mechanism to propagate extra information
-								// to plugins.  Since these annotations support variable interpolation
-								// syntax, they also offer a mechanism for forwarding claims from an
-								// external identity provider, to a plugin via `{{external.trait_name}}`
-								// style substitutions.
-								"annotations": {
-									Name:       "Annotations",
-									IsTime:     false,
-									IsDuration: false,
-									Getter:     GetTraits,
-									Setter:     SetTraits,
-								},
-								// Thresholds is a list of thresholds, one of which must be met in order for reviews
-								// to trigger a state-transition.  If no thresholds are provided, a default threshold
-								// of 1 for approval and denial is used.
-								"thresholds": {
-									Name:       "Thresholds",
-									IsTime:     false,
-									IsDuration: false,
-									Nested: map[string]*accessors.SchemaMeta{
-										// Name is the optional human-readable name of the threshold.
-										"name": {
-											Name:       "Name",
-											IsTime:     false,
-											IsDuration: false,
-										},
-										// Filter is an optional predicate used to determine which reviews
-										// count toward this threshold.
-										"filter": {
-											Name:       "Filter",
-											IsTime:     false,
-											IsDuration: false,
-										},
-										// Approve is the number of matching approvals needed for state-transition.
-										"approve": {
-											Name:       "Approve",
-											IsTime:     false,
-											IsDuration: false,
-										},
-										// Deny is the number of denials needed for state-transition.
-										"deny": {
-											Name:       "Deny",
-											IsTime:     false,
-											IsDuration: false,
-										},
-									},
-								},
-								// SuggestedReviewers is a list of reviewer suggestions.  These can be teleport usernames, but
-								// that is not a requirement.
-								"suggested_reviewers": {
-									Name:       "SuggestedReviewers",
-									IsTime:     false,
-									IsDuration: false,
-								},
-							},
-						},
-						// KubeUsers is an optional kubernetes users to impersonate
-						"kube_users": {
-							Name:       "KubeUsers",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// AppLabels is a map of labels used as part of the RBAC system.
-						"app_labels": {
-							Name:       "AppLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
-						},
-						// ClusterLabels is a map of node labels (used to dynamically grant access to
-						// clusters).
-						"cluster_labels": {
-							Name:       "ClusterLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
-						},
-						// KubernetesLabels is a map of kubernetes cluster labels used for RBAC.
-						"kubernetes_labels": {
-							Name:       "KubernetesLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
-						},
-						// DatabaseLabels are used in RBAC system to allow/deny access to databases.
-						"database_labels": {
-							Name:       "DatabaseLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
-						},
-						// DatabaseNames is a list of database names this role is allowed to connect to.
-						"database_names": {
-							Name:       "DatabaseNames",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// DatabaseUsers is a list of databaes users this role is allowed to connect as.
-						"database_users": {
-							Name:       "DatabaseUsers",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// Impersonate specifies what users and roles this role is allowed to impersonate
-						// by issuing certificates or other possible means.
-						"impersonate": {
-							Name:       "Impersonate",
-							IsTime:     false,
-							IsDuration: false,
-							Nested: map[string]*accessors.SchemaMeta{
-								// Users is a list of resources this role is allowed to impersonate,
-								// could be an empty list or a Wildcard pattern
-								"users": {
-									Name:       "Users",
-									IsTime:     false,
-									IsDuration: false,
-								},
-								// Roles is a list of resources this role is allowed to impersonate
-								"roles": {
-									Name:       "Roles",
-									IsTime:     false,
-									IsDuration: false,
-								},
-								// Where specifies optional advanced matcher
-								"where": {
-									Name:       "Where",
-									IsTime:     false,
-									IsDuration: false,
-								},
-							},
-						},
-						// ReviewRequests defines conditions for submitting access reviews.
-						"review_requests": {
-							Name:       "ReviewRequests",
-							IsTime:     false,
-							IsDuration: false,
-							Nested: map[string]*accessors.SchemaMeta{
-								// Roles is the name of roles which may be reviewed.
-								"roles": {
-									Name:       "Roles",
-									IsTime:     false,
-									IsDuration: false,
-								},
-								// ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.
-								"claims_to_roles": {
-									Name:       "ClaimsToRoles",
-									IsTime:     false,
-									IsDuration: false,
-									Nested: map[string]*accessors.SchemaMeta{
-										// Claim is a claim name.
-										"claim": {
-											Name:       "Claim",
-											IsTime:     false,
-											IsDuration: false,
-										},
-										// Value is a claim value to match.
-										"value": {
-											Name:       "Value",
-											IsTime:     false,
-											IsDuration: false,
-										},
-										// Roles is a list of static teleport roles to match.
-										"roles": {
-											Name:       "Roles",
-											IsTime:     false,
-											IsDuration: false,
-										},
-									},
-								},
-								// Where is an optional predicate which further limits which requests are
-								// reviewable.
-								"where": {
-									Name:       "Where",
-									IsTime:     false,
-									IsDuration: false,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-// SchemaUserV2 returns schema for UserV2
-//
-// UserV2 is version 2 resource spec of the user
-func GenSchemaUserV2() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		// Kind is a resource kind
-		"kind": {
-			Type:        schema.TypeString,
-			Description: "Kind is a resource kind",
-			Optional:    true,
-			Default:     "user",
-		},
-		// SubKind is an optional resource sub kind, used in some resources
-		"sub_kind": {
-			Type:        schema.TypeString,
-			Description: "SubKind is an optional resource sub kind, used in some resources",
-			Optional:    true,
-			Default:     "",
-		},
-		// Version is version
-		"version": {
-			Type:        schema.TypeString,
-			Description: "Version is version",
-			Optional:    true,
-			Default:     "v2",
-		},
-		// Metadata is User metadata
-		"metadata": {
-			Type:        schema.TypeList,
-			MaxItems:    1,
-			Description: "Metadata is resource metadata",
-
-			Optional: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					// Name is an object name
-					"name": {
-						Type:        schema.TypeString,
-						Description: "Name is an object name",
-						Required:    true,
-						ForceNew:    true,
-					},
-					// Namespace is object namespace. The field should be called "namespace"
-					// when it returns in Teleport 2.4.
-					"namespace": {
-						Type:        schema.TypeString,
-						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
-						Optional:    true,
-						Default:     "default",
-					},
-					// Description is object description
-					"description": {
-						Type:        schema.TypeString,
-						Description: "Description is object description",
-						Optional:    true,
-					},
-					// Labels is a set of labels
-					"labels": {
-
-						Optional:    true,
-						Type:        schema.TypeMap,
-						Description: "Labels is a set of labels",
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					// Expires is a global expiry time header can be set on any resource in the
-					// system.
-					"expires": {
-						Type:         schema.TypeString,
-						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
-						ValidateFunc: validation.IsRFC3339Time,
-						StateFunc:    TruncateMs,
-						Optional:     true,
-					},
-				},
-			},
-		},
-		// Spec is a user specification
-		"spec": {
-			Type:        schema.TypeList,
-			MaxItems:    1,
-			Description: "UserSpecV2 is a specification for V2 user",
-
-			Optional: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					// OIDCIdentities lists associated OpenID Connect identities
-					// that let user log in using externally verified identity
-					"oidc_identities": {
-
-						Optional:    true,
-						Type:        schema.TypeList,
-						Description: "OIDCIdentities lists associated OpenID Connect identities  that let user log in using externally verified identity",
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
-								"connector_id": {
-									Type:        schema.TypeString,
-									Description: "ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'",
-									Optional:    true,
-								},
-								// Username is username supplied by external identity provider
-								"username": {
-									Type:        schema.TypeString,
-									Description: "Username is username supplied by external identity provider",
-									Optional:    true,
-								},
-							},
-						},
-					},
-					// SAMLIdentities lists associated SAML identities
-					// that let user log in using externally verified identity
-					"saml_identities": {
-
-						Optional:    true,
-						Type:        schema.TypeList,
-						Description: "SAMLIdentities lists associated SAML identities  that let user log in using externally verified identity",
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
-								"connector_id": {
-									Type:        schema.TypeString,
-									Description: "ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'",
-									Optional:    true,
-								},
-								// Username is username supplied by external identity provider
-								"username": {
-									Type:        schema.TypeString,
-									Description: "Username is username supplied by external identity provider",
-									Optional:    true,
-								},
-							},
-						},
-					},
-					// GithubIdentities list associated Github OAuth2 identities
-					// that let user log in using externally verified identity
-					"github_identities": {
-
-						Optional:    true,
-						Type:        schema.TypeList,
-						Description: "GithubIdentities list associated Github OAuth2 identities  that let user log in using externally verified identity",
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
-								"connector_id": {
-									Type:        schema.TypeString,
-									Description: "ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'",
-									Optional:    true,
-								},
-								// Username is username supplied by external identity provider
-								"username": {
-									Type:        schema.TypeString,
-									Description: "Username is username supplied by external identity provider",
-									Optional:    true,
-								},
-							},
-						},
-					},
-					// Roles is a list of roles assigned to user
-					"roles": {
-
-						Optional:    true,
-						Type:        schema.TypeList,
-						Description: "Roles is a list of roles assigned to user",
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					// Traits are key/value pairs received from an identity provider (through
-					// OIDC claims or SAML assertions) or from a system administrator for local
-					// accounts. Traits are used to populate role variables.
-					"traits": SchemaTraits(),
-				},
-			},
-		},
-	}
-}
-
-// GenSchemaMetaUserV2 returns schema for UserV2
-//
-// UserV2 is version 2 resource spec of the user
-func GenSchemaMetaUserV2() map[string]*accessors.SchemaMeta {
-	return map[string]*accessors.SchemaMeta{
-		// Kind is a resource kind
-		"kind": {
-			Name:       "Kind",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// SubKind is an optional resource sub kind, used in some resources
-		"sub_kind": {
-			Name:       "SubKind",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// Version is version
-		"version": {
-			Name:       "Version",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// Metadata is User metadata
-		"metadata": {
-			Name:       "Metadata",
-			IsTime:     false,
-			IsDuration: false,
-			Nested: map[string]*accessors.SchemaMeta{
-				// Name is an object name
-				"name": {
-					Name:       "Name",
+				// RequireSessionMFA causes all sessions in this cluster to require MFA
+				// checks.
+				"require_session_mfa": {
+					Name:       "RequireSessionMFA",
 					IsTime:     false,
 					IsDuration: false,
 				},
-				// Namespace is object namespace. The field should be called "namespace"
-				// when it returns in Teleport 2.4.
-				"namespace": {
-					Name:       "Namespace",
+				// DisconnectExpiredCert provides disconnect expired certificate setting -
+				// if true, connections with expired client certificates will get disconnected
+				"disconnect_expired_cert": {
+					Name:       "DisconnectExpiredCert",
 					IsTime:     false,
 					IsDuration: false,
+					Getter:     GetBoolOption,
+					Setter:     SetBoolOption,
 				},
-				// Description is object description
-				"description": {
-					Name:       "Description",
+				// AllowLocalAuth is true if local authentication is enabled.
+				"allow_local_auth": {
+					Name:       "AllowLocalAuth",
 					IsTime:     false,
 					IsDuration: false,
-				},
-				// Labels is a set of labels
-				"labels": {
-					Name:       "Labels",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Expires is a global expiry time header can be set on any resource in the
-				// system.
-				"expires": {
-					Name:       "Expires",
-					IsTime:     true,
-					IsDuration: false,
-				},
-			},
-		},
-		// Spec is a user specification
-		"spec": {
-			Name:       "Spec",
-			IsTime:     false,
-			IsDuration: false,
-			Nested: map[string]*accessors.SchemaMeta{
-				// OIDCIdentities lists associated OpenID Connect identities
-				// that let user log in using externally verified identity
-				"oidc_identities": {
-					Name:       "OIDCIdentities",
-					IsTime:     false,
-					IsDuration: false,
-					Nested: map[string]*accessors.SchemaMeta{
-						// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
-						"connector_id": {
-							Name:       "ConnectorID",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// Username is username supplied by external identity provider
-						"username": {
-							Name:       "Username",
-							IsTime:     false,
-							IsDuration: false,
-						},
-					},
-				},
-				// SAMLIdentities lists associated SAML identities
-				// that let user log in using externally verified identity
-				"saml_identities": {
-					Name:       "SAMLIdentities",
-					IsTime:     false,
-					IsDuration: false,
-					Nested: map[string]*accessors.SchemaMeta{
-						// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
-						"connector_id": {
-							Name:       "ConnectorID",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// Username is username supplied by external identity provider
-						"username": {
-							Name:       "Username",
-							IsTime:     false,
-							IsDuration: false,
-						},
-					},
-				},
-				// GithubIdentities list associated Github OAuth2 identities
-				// that let user log in using externally verified identity
-				"github_identities": {
-					Name:       "GithubIdentities",
-					IsTime:     false,
-					IsDuration: false,
-					Nested: map[string]*accessors.SchemaMeta{
-						// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
-						"connector_id": {
-							Name:       "ConnectorID",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// Username is username supplied by external identity provider
-						"username": {
-							Name:       "Username",
-							IsTime:     false,
-							IsDuration: false,
-						},
-					},
-				},
-				// Roles is a list of roles assigned to user
-				"roles": {
-					Name:       "Roles",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Traits are key/value pairs received from an identity provider (through
-				// OIDC claims or SAML assertions) or from a system administrator for local
-				// accounts. Traits are used to populate role variables.
-				"traits": {
-					Name:       "Traits",
-					IsTime:     false,
-					IsDuration: false,
-					Getter:     GetTraits,
-					Setter:     SetTraits,
-				},
-			},
-		},
-	}
-}
-
-// SchemaOIDCConnectorV2 returns schema for OIDCConnectorV2
-//
-// OIDCConnectorV2 represents an OIDC connector.
-func GenSchemaOIDCConnectorV2() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		// Kind is a resource kind.
-		"kind": {
-			Type:        schema.TypeString,
-			Description: "Kind is a resource kind.",
-			Optional:    true,
-			Default:     "oidc",
-		},
-		// SubKind is an optional resource sub kind, used in some resources.
-		"sub_kind": {
-			Type:        schema.TypeString,
-			Description: "SubKind is an optional resource sub kind, used in some resources.",
-			Optional:    true,
-			Default:     "",
-		},
-		// Version is a resource version.
-		"version": {
-			Type:        schema.TypeString,
-			Description: "Version is a resource version.",
-			Optional:    true,
-			Default:     "v2",
-		},
-		// Metadata holds resource metadata.
-		"metadata": {
-			Type:        schema.TypeList,
-			MaxItems:    1,
-			Description: "Metadata is resource metadata",
-
-			Optional: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					// Name is an object name
-					"name": {
-						Type:        schema.TypeString,
-						Description: "Name is an object name",
-						Required:    true,
-						ForceNew:    true,
-					},
-					// Namespace is object namespace. The field should be called "namespace"
-					// when it returns in Teleport 2.4.
-					"namespace": {
-						Type:        schema.TypeString,
-						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
-						Optional:    true,
-						Default:     "default",
-					},
-					// Description is object description
-					"description": {
-						Type:        schema.TypeString,
-						Description: "Description is object description",
-						Optional:    true,
-					},
-					// Labels is a set of labels
-					"labels": {
-
-						Optional:    true,
-						Type:        schema.TypeMap,
-						Description: "Labels is a set of labels",
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					// Expires is a global expiry time header can be set on any resource in the
-					// system.
-					"expires": {
-						Type:         schema.TypeString,
-						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
-						ValidateFunc: validation.IsRFC3339Time,
-						StateFunc:    TruncateMs,
-						Optional:     true,
-					},
-				},
-			},
-		},
-		// Spec is an OIDC connector specification.
-		"spec": {
-			Type:        schema.TypeList,
-			MaxItems:    1,
-			Description: "OIDCConnectorSpecV2 is an OIDC connector specification.   It specifies configuration for Open ID Connect compatible external  identity provider: https://openid.net/specs/openid-connect-core-1_0.html",
-
-			Required: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					// IssuerURL is the endpoint of the provider, e.g. https://accounts.google.com.
-					"issuer_url": {
-						Type:        schema.TypeString,
-						Description: "IssuerURL is the endpoint of the provider, e.g. https://accounts.google.com.",
-						Optional:    true,
-					},
-					// ClientID is the id of the authentication client (Teleport Auth server).
-					"client_id": {
-						Type:        schema.TypeString,
-						Description: "ClientID is the id of the authentication client (Teleport Auth server).",
-						Optional:    true,
-					},
-					// ClientSecret is used to authenticate the client.
-					"client_secret": {
-						Type:        schema.TypeString,
-						Description: "ClientSecret is used to authenticate the client.",
-						Optional:    true,
-					},
-					// RedirectURL is a URL that will redirect the client's browser
-					// back to the identity provider after successful authentication.
-					// This should match the URL on the Provider's side.
-					"redirect_url": {
-						Type:        schema.TypeString,
-						Description: "RedirectURL is a URL that will redirect the client's browser  back to the identity provider after successful authentication.  This should match the URL on the Provider's side.",
-						Optional:    true,
-					},
-					// ACR is an Authentication Context Class Reference value. The meaning of the ACR
-					// value is context-specific and varies for identity providers.
-					"acr": {
-						Type:        schema.TypeString,
-						Description: "ACR is an Authentication Context Class Reference value. The meaning of the ACR  value is context-specific and varies for identity providers.",
-						Optional:    true,
-					},
-					// Provider is the external identity provider.
-					"provider": {
-						Type:        schema.TypeString,
-						Description: "Provider is the external identity provider.",
-						Optional:    true,
-					},
-					// Display is the friendly name for this provider.
-					"display": {
-						Type:        schema.TypeString,
-						Description: "Display is the friendly name for this provider.",
-						Optional:    true,
-					},
-					// Scope specifies additional scopes set by provider.
-					"scope": {
-
-						Optional:    true,
-						Type:        schema.TypeList,
-						Description: "Scope specifies additional scopes set by provider.",
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					// Prompt is an optional OIDC prompt. An empty string omits prompt.
-					// If not specified, it defaults to select_account for backwards compatibility.
-					"prompt": {
-						Type:        schema.TypeString,
-						Description: "Prompt is an optional OIDC prompt. An empty string omits prompt.  If not specified, it defaults to select_account for backwards compatibility.",
-						Optional:    true,
-					},
-					// ClaimsToRoles specifies a dynamic mapping from claims to roles.
-					"claims_to_roles": {
-
-						Optional:    true,
-						Type:        schema.TypeList,
-						Description: "ClaimsToRoles specifies a dynamic mapping from claims to roles.",
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								// Claim is a claim name.
-								"claim": {
-									Type:        schema.TypeString,
-									Description: "Claim is a claim name.",
-									Optional:    true,
-								},
-								// Value is a claim value to match.
-								"value": {
-									Type:        schema.TypeString,
-									Description: "Value is a claim value to match.",
-									Optional:    true,
-								},
-								// Roles is a list of static teleport roles to match.
-								"roles": {
-
-									Optional:    true,
-									Type:        schema.TypeList,
-									Description: "Roles is a list of static teleport roles to match.",
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-							},
-						},
-					},
-					// GoogleServiceAccountURI is a path to a google service account uri.
-					"google_service_account_uri": {
-						Type:        schema.TypeString,
-						Description: "GoogleServiceAccountURI is a path to a google service account uri.",
-						Optional:    true,
-					},
-					// GoogleServiceAccount is a string containing google service account credentials.
-					"google_service_account": {
-						Type:        schema.TypeString,
-						Description: "GoogleServiceAccount is a string containing google service account credentials.",
-						Optional:    true,
-					},
-					// GoogleAdminEmail is the email of a google admin to impersonate.
-					"google_admin_email": {
-						Type:        schema.TypeString,
-						Description: "GoogleAdminEmail is the email of a google admin to impersonate.",
-						Optional:    true,
-					},
-				},
-			},
-		},
-	}
-}
-
-// GenSchemaMetaOIDCConnectorV2 returns schema for OIDCConnectorV2
-//
-// OIDCConnectorV2 represents an OIDC connector.
-func GenSchemaMetaOIDCConnectorV2() map[string]*accessors.SchemaMeta {
-	return map[string]*accessors.SchemaMeta{
-		// Kind is a resource kind.
-		"kind": {
-			Name:       "Kind",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// SubKind is an optional resource sub kind, used in some resources.
-		"sub_kind": {
-			Name:       "SubKind",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// Version is a resource version.
-		"version": {
-			Name:       "Version",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// Metadata holds resource metadata.
-		"metadata": {
-			Name:       "Metadata",
-			IsTime:     false,
-			IsDuration: false,
-			Nested: map[string]*accessors.SchemaMeta{
-				// Name is an object name
-				"name": {
-					Name:       "Name",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Namespace is object namespace. The field should be called "namespace"
-				// when it returns in Teleport 2.4.
-				"namespace": {
-					Name:       "Namespace",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Description is object description
-				"description": {
-					Name:       "Description",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Labels is a set of labels
-				"labels": {
-					Name:       "Labels",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Expires is a global expiry time header can be set on any resource in the
-				// system.
-				"expires": {
-					Name:       "Expires",
-					IsTime:     true,
-					IsDuration: false,
-				},
-			},
-		},
-		// Spec is an OIDC connector specification.
-		"spec": {
-			Name:       "Spec",
-			IsTime:     false,
-			IsDuration: false,
-			Nested: map[string]*accessors.SchemaMeta{
-				// IssuerURL is the endpoint of the provider, e.g. https://accounts.google.com.
-				"issuer_url": {
-					Name:       "IssuerURL",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// ClientID is the id of the authentication client (Teleport Auth server).
-				"client_id": {
-					Name:       "ClientID",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// ClientSecret is used to authenticate the client.
-				"client_secret": {
-					Name:       "ClientSecret",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// RedirectURL is a URL that will redirect the client's browser
-				// back to the identity provider after successful authentication.
-				// This should match the URL on the Provider's side.
-				"redirect_url": {
-					Name:       "RedirectURL",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// ACR is an Authentication Context Class Reference value. The meaning of the ACR
-				// value is context-specific and varies for identity providers.
-				"acr": {
-					Name:       "ACR",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Provider is the external identity provider.
-				"provider": {
-					Name:       "Provider",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Display is the friendly name for this provider.
-				"display": {
-					Name:       "Display",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Scope specifies additional scopes set by provider.
-				"scope": {
-					Name:       "Scope",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Prompt is an optional OIDC prompt. An empty string omits prompt.
-				// If not specified, it defaults to select_account for backwards compatibility.
-				"prompt": {
-					Name:       "Prompt",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// ClaimsToRoles specifies a dynamic mapping from claims to roles.
-				"claims_to_roles": {
-					Name:       "ClaimsToRoles",
-					IsTime:     false,
-					IsDuration: false,
-					Nested: map[string]*accessors.SchemaMeta{
-						// Claim is a claim name.
-						"claim": {
-							Name:       "Claim",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// Value is a claim value to match.
-						"value": {
-							Name:       "Value",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// Roles is a list of static teleport roles to match.
-						"roles": {
-							Name:       "Roles",
-							IsTime:     false,
-							IsDuration: false,
-						},
-					},
-				},
-				// GoogleServiceAccountURI is a path to a google service account uri.
-				"google_service_account_uri": {
-					Name:       "GoogleServiceAccountURI",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// GoogleServiceAccount is a string containing google service account credentials.
-				"google_service_account": {
-					Name:       "GoogleServiceAccount",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// GoogleAdminEmail is the email of a google admin to impersonate.
-				"google_admin_email": {
-					Name:       "GoogleAdminEmail",
-					IsTime:     false,
-					IsDuration: false,
+					Getter:     GetBoolOption,
+					Setter:     SetBoolOption,
 				},
 			},
 		},
