@@ -160,7 +160,11 @@ trigger:
     - tag
   ref:
     include:
-      - refs/tags/teleport-*-v*
+      - refs/tags/teleport-gitlab-v*
+      - refs/tags/teleport-jira-v*
+      - refs/tags/teleport-mattermost-v*
+      - refs/tags/teleport-pagerduty-v*
+      - refs/tags/teleport-slack-v*
 
 depends_on:
   - test-linux
@@ -406,6 +410,6 @@ steps:
 
 ---
 kind: signature
-hmac: dd316ae2cbb9e169d4d361f1051040c99441a1e14794d56ed6c0aeaacb74cc58
+hmac: 85996ae533d9b29477d4a987f62c061cc97d0a16a2732395992558ea2421593d
 
 ...
