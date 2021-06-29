@@ -26,7 +26,7 @@ const exampleConfig = `# example slack plugin configuration TOML file
 [teleport]
 auth_server = "0.0.0.0:3025"                              # Teleport Auth Server GRPC API address
 
-# tctl auth sign --format=file --auth-server=slack.go-teleport.com:3025 --user=access-plugin --out=auth --ttl=1h
+# tctl auth sign --format=file --auth-server=auth.example.com:3025 --user=access-plugin --out=auth --ttl=1h
 identity = "/var/lib/teleport/plugins/slack/auth"         # Teleport certificate ("file" format)
 
 # tctl auth sign --format=tls --auth-server=auth.example.com:3025 --user=access-plugin --out=auth --ttl=1h
