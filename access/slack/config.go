@@ -24,8 +24,15 @@ type SlackConfig struct {
 const exampleConfig = `# example slack plugin configuration TOML file
 
 [teleport]
-auth_server = "0.0.0.0:3025"                       # Teleport Auth Server GRPC API address
-identity = "/var/lib/teleport/plugins/slack/auth"  # Teleport certificate in "file" format
+auth_server = "0.0.0.0:3025"                              # Teleport Auth Server GRPC API address
+
+# tctl auth sign --format=file --auth-server=slack.go-teleport.com:3025 --user=access-plugin --out=auth --ttl=1h
+identity = "/var/lib/teleport/plugins/slack/auth"         # Teleport certificate ("file" format)
+
+# tctl auth sign --format=tls --auth-server=auth.example.com:3025 --user=access-plugin --out=auth --ttl=1h
+# client_key = "/var/lib/teleport/plugins/slack/auth.key" # Teleport GRPC client secret key ("tls" format")
+# client_crt = "/var/lib/teleport/plugins/slack/auth.crt" # Teleport GRPC client certificate ("tls" format")
+# root_cas = "/var/lib/teleport/plugins/slack/auth.cas"   # Teleport cluster CA certs ("tls" format")
 
 [slack]
 token = "xoxb-11xx"                                # Slack Bot OAuth token
