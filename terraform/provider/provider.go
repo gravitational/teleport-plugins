@@ -163,53 +163,71 @@ func configureContext(ctx context.Context, d *schema.ResourceData) (interface{},
 
 // getConfig loads client config from a given identity source
 func getConfig(d *schema.ResourceData) (*client.Config, error) {
-	_, ok_cert := d.GetOk(certPathKey)
-	_, ok_root_ca := d.GetOk(rootCaPathKey)
-	_, ok_key := d.GetOk(keyPathKey)
-	_, ok_id_file := d.GetOk(identityFilePath)
-
-	switch {
-	case ok_cert || ok_root_ca || ok_key:
-		log.Debug("authenticating using file certificates")
-		return getConfigFromCerts(d)
-	case ok_id_file:
-		log.Debug("authenticating using identity file")
-		return getConfigFromIdentityFile(d)
-	default:
-		log.Debug("authenticating using profile")
-		return getConfigFromProfile(d)
-	}
-}
-
-// getConfigFromIdentityFile returns client configuration which uses identity file
-func getConfigFromIdentityFile(d *schema.ResourceData) (*client.Config, error) {
-	p := d.Get(identityFilePath)
-	path, ok := p.(string)
-	if !ok {
-		return nil, trace.Errorf("can not convert Teleport config value %s %s to string", identityFilePath, p)
-	}
-
-	log.WithFields(log.Fields{"path": path}).Debug("Identity file is set")
-
-	identity := client.LoadIdentityFile(path)
+	var creds []client.Credentials = make([]client.Credentials, 0)
 
 	addr, err := getAddr(d, addrKey)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
-	log.WithFields(log.Fields{"addr": addr}).Debug("Addr is set set")
+	log.WithFields(log.Fields{"addr": addr}).Debug("Addr provided")
 
-	config := client.Config{
-		Addrs:       []string{addr},
-		Credentials: []client.Credentials{identity},
+	_, okKey := d.GetOk(keyPathKey)
+	_, okIdentity := d.GetOk(identityFilePath)
+
+	if okKey {
+		log.Debug("certificate files provided")
+
+		c, err := getConfigFromCerts(d)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		creds = append(creds, c)
 	}
 
-	return &config, nil
+	if okIdentity {
+		log.Debug("identity file provided")
+
+		c, err := getConfigFromIdentityFile(d)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		creds = append(creds, c)
+	}
+
+	log.Debug("using profile as the default auth method")
+
+	c, err := getConfigFromProfile(d)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	creds = append(creds, c)
+
+	return &client.Config{
+		Addrs:       []string{addr},
+		Credentials: creds,
+	}, nil
+
+}
+
+// getConfigFromIdentityFile returns client configuration which uses identity file
+func getConfigFromIdentityFile(d *schema.ResourceData) (client.Credentials, error) {
+	p := d.Get(identityFilePath)
+	path, ok := p.(string)
+	if !ok {
+		return nil, trace.Errorf("can not convert Teleport config value %s %s to string", identityFilePath, p)
+	}
+
+	log.WithField("path", path).Debug("Identity file is set")
+
+	return client.LoadIdentityFile(path), nil
 }
 
 // getConfigFromProfile returns client configuration which uses tsh profile
-func getConfigFromProfile(d *schema.ResourceData) (*client.Config, error) {
+func getConfigFromProfile(d *schema.ResourceData) (client.Credentials, error) {
 	var name, dir string
 	var ok bool
 
@@ -231,25 +249,11 @@ func getConfigFromProfile(d *schema.ResourceData) (*client.Config, error) {
 
 	log.WithFields(log.Fields{"name": name, "dir": dir}).Debug("Profile is set")
 
-	profile := client.LoadProfile(name, dir)
-
-	addr, err := getAddr(d, addrKey)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	log.WithFields(log.Fields{"addr": addr}).Debug("Addr is set set")
-
-	config := client.Config{
-		Addrs:       []string{addr},
-		Credentials: []client.Credentials{profile},
-	}
-
-	return &config, nil
+	return client.LoadProfile(name, dir), nil
 }
 
 // getConfigFromCerts returns client configuration which uses certificates
-func getConfigFromCerts(d *schema.ResourceData) (*client.Config, error) {
+func getConfigFromCerts(d *schema.ResourceData) (client.Credentials, error) {
 	certPath, err := getPath(d, certPathKey)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -265,23 +269,11 @@ func getConfigFromCerts(d *schema.ResourceData) (*client.Config, error) {
 		return nil, trace.Wrap(err)
 	}
 
-	addr, err := getAddr(d, addrKey)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
 	log.WithFields(
-		log.Fields{"certPath": certPath, "keyPath": keyPath, "rootCAsPath": rootCAsPath, "addr": addr},
+		log.Fields{"certPath": certPath, "keyPath": keyPath, "rootCAsPath": rootCAsPath},
 	).Debug("Key files are set")
 
-	config := client.Config{
-		Addrs: []string{addr},
-		Credentials: []client.Credentials{
-			client.LoadKeyPair(certPath, keyPath, rootCAsPath),
-		},
-	}
-
-	return &config, nil
+	return client.LoadKeyPair(certPath, keyPath, rootCAsPath), nil
 }
 
 // getPath reads path with specified key from provider configuration and checks if it exists
