@@ -15,7 +15,7 @@ the repository root. The `configure` command will produce an example
 configuration file that looks something like this:
 
 ```toml
-# example slack plugin configuration TOML file
+# Example slack plugin configuration TOML file
 
 [teleport]
 auth_server = "0.0.0.0:3025"                              # Teleport Auth Server GRPC API address
@@ -29,8 +29,9 @@ identity = "/var/lib/teleport/plugins/slack/auth"         # Teleport certificate
 # root_cas = "/var/lib/teleport/plugins/slack/auth.cas"   # Teleport cluster CA certs ("tls" format")
 
 [slack]
-token = "xoxb-11xx"                                # Slack Bot OAuth token
-recipients = ["person@email.com","YYYYYYY"]        # Optional Slack Rooms
+token = "xoxb-11xx"                                 # Slack Bot OAuth token
+# recipients = ["person@email.com","YYYYYYY"]       # Optional Slack Rooms 
+                                                    # Can also set suggested_reviewers for each role
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/slack.log"
