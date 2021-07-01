@@ -1,29 +1,20 @@
+/*
+Copyright 2020-2021 Gravitational, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
-
-import (
-	"fmt"
-	"strings"
-	"time"
-
-	"github.com/gravitational/teleport-plugins/access"
-)
-
-// Plugin data
-
-type RequestData struct {
-	User    string
-	Roles   []string
-	Created time.Time
-}
-
-type PagerdutyData struct {
-	ID string
-}
-
-type PluginData struct {
-	RequestData
-	PagerdutyData
-}
 
 // PagerDuty API types
 
@@ -89,12 +80,6 @@ type ExtensionResult struct {
 	Extension Extension `json:"extension"`
 }
 
-type ListExtensionsQuery struct {
-	PaginationQuery
-	ExtensionObjectID string `url:"extension_object_id,omitempty"`
-	ExtensionSchemaID string `url:"extension_schema_id,omitempty"`
-}
-
 type ListExtensionsResult struct {
 	PaginationResult
 	Extensions []Extension `json:"extensions"`
@@ -110,13 +95,29 @@ type ServiceResult struct {
 	Service Service `json:"service"`
 }
 
+type ListServicesQuery struct {
+	PaginationQuery
+	Query string `url:"query,omitempty"`
+}
+
+type ListServicesResult struct {
+	PaginationResult
+	Services []Service `json:"services"`
+}
+
 type Incident struct {
-	ID          string    `json:"id"`
-	Title       string    `json:"title"`
-	Status      string    `json:"status"`
-	IncidentKey string    `json:"incident_key"`
-	Service     Reference `json:"service"`
-	Body        Details   `json:"body"`
+	ID          string               `json:"id"`
+	Title       string               `json:"title"`
+	Status      string               `json:"status"`
+	IncidentKey string               `json:"incident_key"`
+	Service     Reference            `json:"service"`
+	Assignments []IncidentAssignment `json:"assignments"`
+	Body        Details              `json:"body"`
+}
+
+type IncidentAssignment struct {
+	At       string    `json:"at"`
+	Assignee Reference `json:"assignee"`
 }
 
 type IncidentBody struct {
@@ -135,6 +136,18 @@ type IncidentBodyWrap struct {
 
 type IncidentResult struct {
 	Incident Incident `json:"incident"`
+}
+
+type ListIncidentsQuery struct {
+	PaginationQuery
+	UserIDs    []string `url:"user_ids,omitempty,brackets"`
+	Statuses   []string `url:"statuses,omitempty,brackets"`
+	ServiceIDs []string `url:"service_ids,omitempty,brackets"`
+}
+
+type ListIncidentsResult struct {
+	PaginationResult
+	Incidents []Incident `json:"incidents"`
 }
 
 type IncidentNote struct {
@@ -186,24 +199,6 @@ type ListOnCallsQuery struct {
 }
 
 type ListOnCallsResult struct {
+	PaginationResult
 	OnCalls []OnCall `json:"oncalls"`
-}
-
-func DecodePluginData(dataMap access.PluginDataMap) (data PluginData) {
-	var created int64
-	data.User = dataMap["user"]
-	data.Roles = strings.Split(dataMap["roles"], ",")
-	fmt.Sscanf(dataMap["created"], "%d", &created)
-	data.Created = time.Unix(created, 0)
-	data.ID = dataMap["incident_id"]
-	return
-}
-
-func EncodePluginData(data PluginData) access.PluginDataMap {
-	return access.PluginDataMap{
-		"incident_id": data.ID,
-		"user":        data.User,
-		"roles":       strings.Join(data.Roles, ","),
-		"created":     fmt.Sprintf("%d", data.Created.Unix()),
-	}
 }
