@@ -17,8 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"net"
-	"strings"
 	"time"
 
 	"github.com/gravitational/trace"
@@ -35,19 +33,18 @@ const (
 type State struct {
 	// dv is a diskv instance
 	dv *diskv.Diskv
+}
 
-	// prefix is the state variable prefix
-	prefix string
-
+const (
 	// startTimeName is the start time variable name
-	startTimeName string
+	startTimeName = "start_time"
 
 	// cursorName is the cursor variable name
-	cursorName string
+	cursorName = "cursor"
 
 	// idName is the id variable name
-	idName string
-}
+	idName = "id"
+)
 
 // NewCursor creates new cursor instance
 func NewState(c *StartCmd) (*State, error) {
@@ -60,21 +57,9 @@ func NewState(c *StartCmd) (*State, error) {
 		CacheSizeMax: cacheSizeMaxBytes,
 	})
 
-	host, port, err := net.SplitHostPort(c.TeleportAddr)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
+	s := State{dv}
 
-	prefix := strings.TrimSpace(host + "_" + port)
-	if prefix == "_" {
-		return nil, trace.Errorf("Can not generate cursor name from Teleport host %s", c.TeleportAddr)
-	}
-
-	log.WithField("prefix", prefix).Info("Using state prefix")
-
-	s := State{dv, prefix, prefix + "_start_time", prefix + "_cursor", prefix + "_id"}
-
-	err = s.resetOnStartTimeChanged(c)
+	err := s.resetOnStartTimeChanged(c)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -123,11 +108,11 @@ func (s *State) resetOnStartTimeChanged(c *StartCmd) error {
 
 // GetStartTime gets current start time
 func (s *State) GetStartTime() (*time.Time, error) {
-	if !s.dv.Has(s.startTimeName) {
+	if !s.dv.Has(startTimeName) {
 		return nil, nil
 	}
 
-	b, err := s.dv.Read(s.startTimeName)
+	b, err := s.dv.Read(startTimeName)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -150,31 +135,31 @@ func (s *State) GetStartTime() (*time.Time, error) {
 // SetStartTime sets current start time
 func (s *State) SetStartTime(t *time.Time) error {
 	if t == nil {
-		return s.dv.Write(s.startTimeName, []byte(""))
+		return s.dv.Write(startTimeName, []byte(""))
 	}
 
 	v := t.Truncate(time.Second).Format(time.RFC3339)
-	return s.dv.Write(s.startTimeName, []byte(v))
+	return s.dv.Write(startTimeName, []byte(v))
 }
 
 // GetCursor sets current cursor value
 func (s *State) GetCursor() (string, error) {
-	return s.getStringValue(s.cursorName)
+	return s.getStringValue(cursorName)
 }
 
 // SetCursor sets cursor value
 func (s *State) SetCursor(v string) error {
-	return s.setStringValue(s.cursorName, v)
+	return s.setStringValue(cursorName, v)
 }
 
 // GetID sets current ID value
 func (s *State) GetID() (string, error) {
-	return s.getStringValue(s.idName)
+	return s.getStringValue(idName)
 }
 
 // SetID sets cursor value
 func (s *State) SetID(v string) error {
-	return s.setStringValue(s.idName, v)
+	return s.setStringValue(idName, v)
 }
 
 // getStringValue gets a string value

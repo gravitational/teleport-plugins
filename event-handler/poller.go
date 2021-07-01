@@ -37,6 +37,12 @@ type Poller struct {
 
 	// timeout is polling timeout
 	timeout time.Duration
+
+	// dryRun is dry run flag
+	dryRun bool
+
+	// exitOnLastEvent exit on last event
+	exitOnLastEvent bool
 }
 
 // NewPoller builds new Poller structure
@@ -75,7 +81,14 @@ func NewPoller(c *StartCmd) (*Poller, error) {
 		return nil, trace.Wrap(err)
 	}
 
-	return &Poller{fluentd: f, teleport: t, state: s, timeout: c.Timeout}, nil
+	return &Poller{
+		fluentd:         f,
+		teleport:        t,
+		state:           s,
+		timeout:         c.Timeout,
+		dryRun:          c.DryRun,
+		exitOnLastEvent: c.ExitOnLastEvent,
+	}, nil
 }
 
 // Close closes all connections
@@ -94,15 +107,22 @@ func (p *Poller) Run() error {
 
 		// No events in queue, wait and try again
 		if e == nil {
+			if p.exitOnLastEvent {
+				log.Info("All events have been processed! Exiting...")
+				return nil
+			}
+
 			log.WithField("timeout", p.timeout).Debug("Idling")
 			time.Sleep(p.timeout)
 			continue
 		}
 
 		// Send event to fluentd
-		err = p.fluentd.Send(e)
-		if err != nil {
-			return trace.Wrap(err)
+		if !p.dryRun {
+			err = p.fluentd.Send(e)
+			if err != nil {
+				return trace.Wrap(err)
+			}
 		}
 
 		// Save latest successful id & cursor value to the state
