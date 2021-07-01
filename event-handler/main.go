@@ -38,6 +38,7 @@ func main() {
 		kong.Description("Forwards Teleport AuditLog to external sources"),
 	)
 
+	// See respective commands Run() methods
 	err := ctx.Run()
 	if cli.Debug {
 		fmt.Printf("%v\n", trace.DebugReport(err))
