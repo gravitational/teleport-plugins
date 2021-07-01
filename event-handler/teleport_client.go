@@ -55,14 +55,8 @@ type TeleportClient struct {
 	// batch current events batch
 	batch []events.AuditEvent
 
-	// batchSize is fetch batch size
-	batchSize int
-
-	// namespace is events namespace
-	namespace string
-
-	// types is events types list
-	types []string
+	// cmd is a reference to start command instance
+	cmd *StartCmd
 
 	// startTime is event time frame start
 	startTime time.Time
@@ -90,8 +84,7 @@ func NewTeleportClient(ctx context.Context, c *StartCmd, startTime time.Time, cu
 		client:    client,
 		pos:       -1,
 		cursor:    cursor,
-		batchSize: c.BatchSize,
-		namespace: c.Namespace,
+		cmd:       c,
 		startTime: startTime,
 	}
 
@@ -168,9 +161,9 @@ func (t *TeleportClient) getEvents() ([]events.AuditEvent, string, error) {
 		t.context,
 		t.startTime,
 		time.Now().UTC(),
-		t.namespace,
-		t.types,
-		t.batchSize,
+		t.cmd.Namespace,
+		t.cmd.Types,
+		t.cmd.BatchSize,
 		t.cursor,
 	)
 }

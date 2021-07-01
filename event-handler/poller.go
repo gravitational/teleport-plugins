@@ -35,14 +35,8 @@ type Poller struct {
 	// state is current persisted state
 	state *State
 
-	// timeout is polling timeout
-	timeout time.Duration
-
-	// dryRun is dry run flag
-	dryRun bool
-
-	// exitOnLastEvent exit on last event
-	exitOnLastEvent bool
+	// cmd is a reference to StartCmd with configuration options
+	cmd *StartCmd
 }
 
 // NewPoller builds new Poller structure
@@ -82,12 +76,10 @@ func NewPoller(c *StartCmd) (*Poller, error) {
 	}
 
 	return &Poller{
-		fluentd:         f,
-		teleport:        t,
-		state:           s,
-		timeout:         c.Timeout,
-		dryRun:          c.DryRun,
-		exitOnLastEvent: c.ExitOnLastEvent,
+		fluentd:  f,
+		teleport: t,
+		state:    s,
+		cmd:      c,
 	}, nil
 }
 
@@ -107,18 +99,18 @@ func (p *Poller) Run() error {
 
 		// No events in queue, wait and try again
 		if e == nil {
-			if p.exitOnLastEvent {
+			if p.cmd.ExitOnLastEvent {
 				log.Info("All events have been processed! Exiting...")
 				return nil
 			}
 
-			log.WithField("timeout", p.timeout).Debug("Idling")
-			time.Sleep(p.timeout)
+			log.WithField("timeout", p.cmd.Timeout).Debug("Idling")
+			time.Sleep(p.cmd.Timeout)
 			continue
 		}
 
 		// Send event to fluentd
-		if !p.dryRun {
+		if !p.cmd.DryRun {
 			err = p.fluentd.Send(e)
 			if err != nil {
 				return trace.Wrap(err)

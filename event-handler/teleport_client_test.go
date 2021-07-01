@@ -47,9 +47,11 @@ func newTeleportClient(e []events.AuditEvent) *TeleportClient {
 	teleportClient := &mockTeleportClient{events: e}
 
 	client := &TeleportClient{
-		client:    teleportClient,
-		pos:       -1,
-		batchSize: 5,
+		client: teleportClient,
+		pos:    -1,
+		cmd: &StartCmd{
+			BatchSize: 5,
+		},
 	}
 
 	return client
