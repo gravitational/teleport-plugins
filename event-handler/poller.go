@@ -105,6 +105,21 @@ func (p *Poller) Close() {
 	p.teleport.Close()
 }
 
+func (p *Poller) sendEvent(e events.AuditEvent) error {
+	// Send event to fluentd if it is not a dry run
+	if !p.cmd.DryRun {
+		err := p.fluentd.Send(e)
+		if err != nil {
+			return trace.Wrap(err)
+		}
+	}
+
+	log.WithFields(log.Fields{"id": e.GetID(), "type": e.GetType(), "ts": e.GetTime(), "index": e.GetIndex()}).Info("Event sent")
+	log.WithField("event", e).Debug("Event dump")
+
+	return nil
+}
+
 // pollSession polls session events
 func (p *Poller) pollSession(e events.AuditEvent) error {
 	evt, err := events.ToOneOf(e)
@@ -114,21 +129,25 @@ func (p *Poller) pollSession(e events.AuditEvent) error {
 
 	id := evt.GetSessionEnd().SessionID
 
-	log.WithField("id", id).Info("Start session events ingest")
+	log.WithField("id", id).Info("Started session events ingest")
 
-	chanEvt, chanErr := p.teleport.StreamSessionEvents(p.context, id, 0)
+	chEvt, chErr := p.teleport.StreamSessionEvents(p.context, id, 0)
 
 	for {
 		select {
-		case evt := <-chanEvt:
-			log.WithField("evt", evt).Info("Session event read")
+		case err := <-chErr:
+			return trace.Wrap(err)
 
-		case err := <-chanErr:
-			return err
+		case evt := <-chEvt:
+			if evt == nil {
+				log.WithField("id", id).Info("Finished session events ingest")
+				return nil
+			}
 
-		default:
-			log.WithField("id", id).Info("Session events read")
-			return nil
+			err = p.sendEvent(evt)
+			if err != nil {
+				return trace.Wrap(err)
+			}
 		}
 	}
 }
@@ -154,12 +173,9 @@ func (p *Poller) pollAuditLog() error {
 			continue
 		}
 
-		// Send event to fluentd if it is not a dry run
-		if !p.cmd.DryRun {
-			err = p.fluentd.Send(e)
-			if err != nil {
-				return trace.Wrap(err)
-			}
+		err = p.sendEvent(e)
+		if err != nil {
+			return trace.Wrap(err)
 		}
 
 		// Start session export
@@ -172,9 +188,6 @@ func (p *Poller) pollAuditLog() error {
 		// Save latest successful id & cursor value to the state
 		p.state.SetID(e.GetID())
 		p.state.SetCursor(cursor)
-
-		log.WithFields(log.Fields{"id": e.GetID(), "type": e.GetType(), "ts": e.GetTime()}).Info("Event sent")
-		log.WithField("event", e).Debug("Event dump")
 	}
 }
 
