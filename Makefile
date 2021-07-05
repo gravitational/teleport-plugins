@@ -83,6 +83,8 @@ update-version:
 	make -C access/mattermost version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' access/slack/Makefile
 	make -C access/slack version.go
+	sed -i '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
+	make -C access/pagerduty version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
 
 .PHONY: update-tag
@@ -94,12 +96,14 @@ update-tag:
 	git tag teleport-jira-v$(VERSION)
 	git tag teleport-mattermost-v$(VERSION)
 	git tag teleport-slack-v$(VERSION)
+	git tag teleport-pagerduty-v$(VERSION)
 	git tag terraform-provider-teleport-v$(VERSION)
 	# Push all releases to origin.
 	git push origin teleport-event-handler-v$(VERSION)
 	git push origin teleport-jira-v$(VERSION)
 	git push origin teleport-mattermost-v$(VERSION)
 	git push origin teleport-slack-v$(VERSION)
+	git push origin teleport-pagerduty-v$(VERSION)
 	git push origin terraform-provider-teleport-v$(VERSION)
 
 #
