@@ -38,6 +38,11 @@ func (c *mockTeleportClient) SearchEvents(ctx context.Context, fromUTC, toUTC ti
 	return e, "test", nil
 }
 
+// StreamSessionEvents returns session events stream
+func (c *mockTeleportClient) StreamSessionEvents(ctx context.Context, sessionID string, startIndex int) (chan events.AuditEvent, chan error) {
+	return nil, nil
+}
+
 // Close is mock close method
 func (c *mockTeleportClient) Close() error {
 	return nil

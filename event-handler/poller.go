@@ -20,8 +20,10 @@ import (
 	"context"
 	"time"
 
+	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 )
 
 // Poller represents periodical event poll
@@ -37,10 +39,21 @@ type Poller struct {
 
 	// cmd is a reference to StartCmd with configuration options
 	cmd *StartCmd
+
+	// context is the poller context
+	context context.Context
+
+	// eg is an errgroup for all session routines
+	eg *errgroup.Group
 }
 
+const (
+	// sessionEndType type name for session end event
+	sessionEndType = "session.end"
+)
+
 // NewPoller builds new Poller structure
-func NewPoller(c *StartCmd) (*Poller, error) {
+func NewPoller(ctx context.Context, c *StartCmd) (*Poller, error) {
 	s, err := NewState(c)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -70,16 +83,20 @@ func NewPoller(c *StartCmd) (*Poller, error) {
 	log.WithField("id", id).Info("Using initial ID value")
 	log.WithField("value", st).Info("Using start time from state")
 
-	t, err := NewTeleportClient(context.Background(), c, *st, cursor, id)
+	eg, egCtx := errgroup.WithContext(ctx)
+
+	t, err := NewTeleportClient(ctx, c, *st, cursor, id)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
 	return &Poller{
+		context:  egCtx,
 		fluentd:  f,
 		teleport: t,
 		state:    s,
 		cmd:      c,
+		eg:       eg,
 	}, nil
 }
 
@@ -88,8 +105,36 @@ func (p *Poller) Close() {
 	p.teleport.Close()
 }
 
-// Run is an infinite polling loop
-func (p *Poller) Run() error {
+// pollSession polls session events
+func (p *Poller) pollSession(e events.AuditEvent) error {
+	evt, err := events.ToOneOf(e)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	id := evt.GetSessionEnd().SessionID
+
+	log.WithField("id", id).Info("Start session events ingest")
+
+	chanEvt, chanErr := p.teleport.StreamSessionEvents(p.context, id, 0)
+
+	for {
+		select {
+		case evt := <-chanEvt:
+			log.WithField("evt", evt).Info("Session event read")
+
+		case err := <-chanErr:
+			return err
+
+		default:
+			log.WithField("id", id).Info("Session events read")
+			return nil
+		}
+	}
+}
+
+// pollAuditLog polls an audit log
+func (p *Poller) pollAuditLog() error {
 	for {
 		// Get next event from
 		e, cursor, err := p.teleport.Next()
@@ -109,12 +154,19 @@ func (p *Poller) Run() error {
 			continue
 		}
 
-		// Send event to fluentd
+		// Send event to fluentd if it is not a dry run
 		if !p.cmd.DryRun {
 			err = p.fluentd.Send(e)
 			if err != nil {
 				return trace.Wrap(err)
 			}
+		}
+
+		// Start session export
+		if e.GetType() == sessionEndType {
+			p.eg.Go(func() error {
+				return p.pollSession(e)
+			})
 		}
 
 		// Save latest successful id & cursor value to the state
@@ -124,4 +176,16 @@ func (p *Poller) Run() error {
 		log.WithFields(log.Fields{"id": e.GetID(), "type": e.GetType(), "ts": e.GetTime()}).Info("Event sent")
 		log.WithField("event", e).Debug("Event dump")
 	}
+}
+
+// Run polling loop
+func (p *Poller) Run() error {
+	p.eg.Go(p.pollAuditLog)
+
+	err := p.eg.Wait()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

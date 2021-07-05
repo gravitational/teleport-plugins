@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"crypto/rand"
 	"math/big"
 	"net"
@@ -166,7 +167,7 @@ func (c *StartCmd) getStorageDir() (string, error) {
 
 // Run runs the ingestion
 func (c *StartCmd) Run() error {
-	p, err := NewPoller(c)
+	p, err := NewPoller(context.Background(), c)
 	if err != nil {
 		log.Debug(trace.DebugReport(err))
 		log.Error(err)
