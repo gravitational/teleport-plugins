@@ -57,11 +57,13 @@ workspace:
   path: /tmp/teleport-plugins/test-darwin
 
 steps:
-  - name: Clean up exec runner storage (pre)
+  - name: Clean up exec runner storage
     commands:
+      # This will remove subdirectories under pkg/mod which 0400 permissions.
+      # See for more details: https://github.com/golang/go/issues/27455
+      - go clean -modcache
       - rm -rf /tmp/teleport-plugins/test-darwin/go
       - mkdir -p /tmp/teleport-plugins/test-darwin/go
-      - chmod -R u+rw /tmp/teleport-plugins/test-darwin/go
 
   - name: Run tests
     environment:
@@ -70,10 +72,6 @@ steps:
     commands:
       - go version
       - make test
-
-  - name: Clean up exec runner storage (post)
-    commands:
-      - rm -rf /tmp/teleport-plugins/test-darwin/go
 
 ---
 kind: pipeline
@@ -135,9 +133,11 @@ workspace:
 steps:
   - name: Clean up exec runner storage (pre)
     commands:
+      # This will remove subdirectories under pkg/mod which 0400 permissions.
+      # See for more details: https://github.com/golang/go/issues/27455
+      - go clean -modcache
       - rm -rf /tmp/teleport-plugins/build-darwin/go
       - mkdir -p /tmp/teleport-plugins/build-darwin/go/cache
-      - chmod -R u+rw /tmp/teleport-plugins/build-darwin/go
 
   - name: Build artifacts (darwin)
     environment:
@@ -145,10 +145,6 @@ steps:
       GOCACHE: /tmp/teleport-plugins/build-darwin/go/cache
     commands:
       - make build-all
-
-  - name: Clean up exec runner storage (post)
-    commands:
-      - rm -rf /tmp/teleport-plugins/build-darwin/go
 
 ---
 kind: pipeline
@@ -410,6 +406,6 @@ steps:
 
 ---
 kind: signature
-hmac: 85996ae533d9b29477d4a987f62c061cc97d0a16a2732395992558ea2421593d
+hmac: 48edcb309ad905e50c7a910696764a9d9bcf619dd2b94500c64ddc3fbdcd7b9f
 
 ...
