@@ -1,3 +1,19 @@
+/*
+Copyright 2020-2021 Gravitational, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
@@ -32,10 +48,21 @@ type GitlabConfig struct {
 
 const exampleConfig = `# example teleport-gitlab configuration TOML file
 [teleport]
-auth_server = "example.com:3025"                         # Teleport Auth Server GRPC API address
-client_key = "/var/lib/teleport/plugins/gitlab/auth.key" # Teleport GRPC API client secret key
-client_crt = "/var/lib/teleport/plugins/gitlab/auth.crt" # Teleport GRPC client certificate
-root_cas = "/var/lib/teleport/plugins/gitlab/auth.cas"   # Teleport cluster CA certs
+# Teleport Auth/Proxy Server address.
+#
+# Should be port 3025 for Auth Server and 3080 or 443 for Proxy.
+# For Teleport Cloud, should be in the form "your-account.teleport.sh:443".
+addr = "example.com:3025"
+
+# Credentials.
+#
+# When using --format=file:
+# identity = "/var/lib/teleport/plugins/gitlab/auth_id"    # Identity file
+#
+# When using --format=tls:
+# client_key = "/var/lib/teleport/plugins/gitlab/auth.key" # Teleport TLS secret key
+# client_crt = "/var/lib/teleport/plugins/gitlab/auth.crt" # Teleport TLS certificate
+# root_cas = "/var/lib/teleport/plugins/gitlab/auth.cas"   # Teleport CA certs
 
 [db]
 path = "/var/lib/teleport/plugins/gitlab/database" # Path to the database file
@@ -73,17 +100,8 @@ func LoadConfig(filepath string) (*Config, error) {
 }
 
 func (c *Config) CheckAndSetDefaults() error {
-	if c.Teleport.AuthServer == "" {
-		c.Teleport.AuthServer = "localhost:3025"
-	}
-	if c.Teleport.ClientKey == "" {
-		c.Teleport.ClientKey = "client.key"
-	}
-	if c.Teleport.ClientCrt == "" {
-		c.Teleport.ClientCrt = "client.pem"
-	}
-	if c.Teleport.RootCAs == "" {
-		c.Teleport.RootCAs = "cas.pem"
+	if err := c.Teleport.CheckAndSetDefaults(); err != nil {
+		return trace.Wrap(err)
 	}
 	if c.DB.Path == "" {
 		c.DB.Path = path.Join(DefaultDir, "/database")

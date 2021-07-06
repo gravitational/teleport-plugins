@@ -154,7 +154,7 @@ In Slack section, use the OAuth token provided by Slack.
 # Example slack plugin configuration TOML file
 
 [teleport]
-auth_server = "0.0.0.0:3025"                              # Teleport Auth Server GRPC API address
+addr = "0.0.0.0:3025"                                     # Teleport Auth Server GRPC API address
 
 # tctl auth sign --format=file --auth-server=auth.example.com:3025 --user=access-plugin --out=auth --ttl=1h
 identity = "/var/lib/teleport/plugins/slack/auth"         # Teleport certificate ("file" format)
@@ -178,7 +178,7 @@ To use with Teleport Cloud, you should set a path to identity file exported with
 
 ```TOML
 [teleport]
-auth_server = "yourproxy.teleport.sh"             # Teleport proxy address
+addr = "yourproxy.teleport.sh:443"                # Teleport proxy address
 identity = "/var/lib/teleport/plugins/slack/auth" # Teleport identity file
 ```
 
