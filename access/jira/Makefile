@@ -1,4 +1,4 @@
-VERSION=6.2.7
+VERSION=6.2.7-dev.2
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-jira
