@@ -141,7 +141,7 @@ Then, edit the config as needed.
 ```TOML
 # example mattermost configuration TOML file
 [teleport]
-auth_server = "example.com:3025"  # Teleport Auth Server GRPC API address
+addr = "example.com:3025" # Teleport Auth Server GRPC API address
 client_key = "/var/lib/teleport/plugins/mattermost/auth.key" # Teleport GRPC client secret key
 client_crt = "/var/lib/teleport/plugins/mattermost/auth.crt" # Teleport GRPC client certificate
 root_cas = "/var/lib/teleport/plugins/mattermost/auth.cas"   # Teleport cluster CA certs
@@ -159,7 +159,7 @@ To use with Teleport Cloud, you should set a path to identity file exported with
 
 ```TOML
 [teleport]
-auth_server = "yourproxy.teleport.sh"                  # Teleport proxy address
+addr = "yourproxy.teleport.sh:443"                     # Teleport proxy address
 identity = "/var/lib/teleport/plugins/mattermost/auth" # Teleport identity file
 ```
 

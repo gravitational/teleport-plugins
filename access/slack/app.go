@@ -5,14 +5,16 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/stringset"
 	"github.com/gravitational/teleport-plugins/lib/watcherjob"
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
+	"github.com/jonboulle/clockwork"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/backoff"
+	grpcbackoff "google.golang.org/grpc/backoff"
 
 	"github.com/gravitational/trace"
 )
@@ -22,14 +24,16 @@ const (
 	minServerVersion = "6.1.0-beta.1"
 	// pluginName is used to tag PluginData and as a Delegator in Audit log.
 	pluginName = "slack"
-	// backoffMaxDelay is a maximum time GRPC client waits before reconnection attempt.
-	backoffMaxDelay = time.Second * 2
+	// grpcBackoffMaxDelay is a maximum time GRPC client waits before reconnection attempt.
+	grpcBackoffMaxDelay = time.Second * 2
 	// initTimeout is used to bound execution time of health check and teleport version check.
 	initTimeout = time.Second * 10
 	// handlerTimeout is used to bound the execution time of watcher event handler.
 	handlerTimeout = time.Second * 5
-	// maxModifyPluginDataTries is a maximum number of compare-and-swap tries when modifying plugin data.
-	maxModifyPluginDataTries = 5
+	// modifyPluginDataBackoffBase is an initial (minimum) backoff value.
+	modifyPluginDataBackoffBase = time.Millisecond
+	// modifyPluginDataBackoffMax is a backoff threshold
+	modifyPluginDataBackoffMax = time.Second
 )
 
 // App contains global application state.
@@ -114,10 +118,10 @@ func (a *App) init(ctx context.Context) error {
 		pong proto.PingResponse
 	)
 
-	bk := backoff.DefaultConfig
-	bk.MaxDelay = backoffMaxDelay
+	bk := grpcbackoff.DefaultConfig
+	bk.MaxDelay = grpcBackoffMaxDelay
 	if a.apiClient, err = client.New(ctx, client.Config{
-		Addrs:       []string{a.conf.Teleport.AuthServer},
+		Addrs:       a.conf.Teleport.GetAddrs(),
 		Credentials: a.conf.Teleport.Credentials(),
 		DialOpts:    []grpc.DialOption{grpc.WithConnectParams(grpc.ConnectParams{Backoff: bk, MinConnectTimeout: initTimeout})},
 	}); err != nil {
@@ -435,11 +439,19 @@ func (a *App) updateMessages(ctx context.Context, reqID string, resolution Resol
 }
 
 // modifyPluginData performs a compare-and-swap update of access request's plugin data.
+// Callback function parameter is nil if plugin data hasn't been created yet.
+// Otherwise, callback function parameter is a pointer to current plugin data contents.
+// Callback function return value is an updated plugin data contents plus the boolean flag
+// indicating whether it should be written or not.
+// Note that callback function fn might be called more than once due to retry mechanism baked in
+// so make sure that the function is "pure" i.e. it doesn't interact with the outside world:
+// it doesn't perform any sort of I/O operations so even things like Go channels must be avoided.
+// Indeed, this limitation is not that ultimate at least if you know what you're doing.
 func (a *App) modifyPluginData(ctx context.Context, reqID string, fn func(data *PluginData) (PluginData, bool)) (bool, error) {
-	var lastErr error
-	for i := 0; i < maxModifyPluginDataTries; i++ {
+	backoff := backoff.NewDecorr(modifyPluginDataBackoffBase, modifyPluginDataBackoffMax, clockwork.NewRealClock())
+	for {
 		oldData, err := a.getPluginData(ctx, reqID)
-		if err != nil {
+		if err != nil && !trace.IsNotFound(err) {
 			return false, trace.Wrap(err)
 		}
 		newData, ok := fn(oldData)
@@ -454,13 +466,13 @@ func (a *App) modifyPluginData(ctx context.Context, reqID string, fn func(data *
 		if err == nil {
 			return true, nil
 		}
-		if trace.IsCompareFailed(err) {
-			lastErr = err
-			continue
+		if !trace.IsCompareFailed(err) {
+			return false, trace.Wrap(err)
 		}
-		return false, err
+		if err := backoff.Do(ctx); err != nil {
+			return false, trace.Wrap(err)
+		}
 	}
-	return false, lastErr
 }
 
 // getPluginData loads a plugin data for a given access request. It returns nil if it's not found.
@@ -474,11 +486,11 @@ func (a *App) getPluginData(ctx context.Context, reqID string) (*PluginData, err
 		return nil, trace.Wrap(err)
 	}
 	if len(dataMaps) == 0 {
-		return nil, nil
+		return nil, trace.NotFound("plugin data not found")
 	}
 	entry := dataMaps[0].Entries()[pluginName]
 	if entry == nil {
-		return nil, nil
+		return nil, trace.NotFound("plugin data entry not found")
 	}
 	data := DecodePluginData(entry.Data)
 	return &data, nil

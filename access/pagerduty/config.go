@@ -44,17 +44,21 @@ const ServicesDefaultAnnotation = "pagerduty_services"
 
 const exampleConfig = `# example teleport-pagerduty configuration TOML file
 [teleport]
-auth_server = "example.com:3025"                            # Teleport Auth/Proxy Server address (should be port 443 for Teleport Cloud)
+# Teleport Auth/Proxy Server address.
+#
+# Should be port 3025 for Auth Server and 3080 or 443 for Proxy.
+# For Teleport Cloud, should be in the form "your-account.teleport.sh:443".
+addr = "example.com:3025"
 
 # Credentials.
 #
 # When using --format=file:
-# identity = "/var/lib/teleport/plugins/pagerduty/auth"       # Identity file
+# identity = "/var/lib/teleport/plugins/pagerduty/auth_id"    # Identity file
 #
 # When using --format=tls:
-# client_key = "/var/lib/teleport/plugins/pagerduty/auth.key" # Teleport GRPC client secret key
-# client_crt = "/var/lib/teleport/plugins/pagerduty/auth.crt" # Teleport GRPC client certificate
-# root_cas = "/var/lib/teleport/plugins/pagerduty/auth.cas"   # Teleport cluster CA certs
+# client_key = "/var/lib/teleport/plugins/pagerduty/auth.key" # Teleport TLS secret key
+# client_crt = "/var/lib/teleport/plugins/pagerduty/auth.crt" # Teleport TLS certificate
+# root_cas = "/var/lib/teleport/plugins/pagerduty/auth.cas"   # Teleport CA certs
 
 [pagerduty]
 api_key = "key"               # PagerDuty API Key
@@ -81,6 +85,9 @@ func LoadConfig(filepath string) (*Config, error) {
 }
 
 func (c *Config) CheckAndSetDefaults() error {
+	if err := c.Teleport.CheckAndSetDefaults(); err != nil {
+		return trace.Wrap(err)
+	}
 	if c.Pagerduty.APIKey == "" {
 		return trace.BadParameter("missing required value pagerduty.api_key")
 	}
