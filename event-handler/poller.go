@@ -230,8 +230,9 @@ func (p *Poller) Run() error {
 
 	if len(s) > 0 {
 		for id, idx := range s {
-			go func(id string, idx int) {
+			func(id string, idx int) {
 				log.WithFields(log.Fields{"id": id, "index": idx}).Info("Restarting session ingestion")
+
 				p.eg.Go(func() error {
 					return p.pollSession(id, idx)
 				})
