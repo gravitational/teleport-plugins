@@ -223,7 +223,7 @@ func (t *TeleportClient) Next() (events.AuditEvent, string, error) {
 	return event, t.cursor, nil
 }
 
-// StreamSessionEvents returns session event stream, that's simple delegate
+// StreamSessionEvents returns session event stream, that's the simple delegate to an API function
 func (t *TeleportClient) StreamSessionEvents(ctx context.Context, id string, index int) (chan events.AuditEvent, chan error) {
 	return t.client.StreamSessionEvents(ctx, id, index)
 }

@@ -31,7 +31,11 @@ import (
 )
 
 type StartCmd struct {
+	// FluentdURL fluentd url for audit log events
 	FluentdURL string `help:"fluentd url" required:"true" env:"FDFWD_FLUENTD_URL"`
+
+	// FluentdSessionURL
+	FluentdSessionURL string `help:"fluentd session url" required:"true" env:"FDFWD_FLUENTD_SESSION_URL"`
 
 	// FluentdCert is a path to fluentd cert
 	FluentdCert string `help:"fluentd TLS certificate file" required:"true" type:"existingfile" env:"FDWRD_FLUENTD_CERT"`
@@ -72,6 +76,9 @@ type StartCmd struct {
 	// Types are event types to log
 	Types []string `help:"Comma-separated list of event types to forward" env:"FDFWD_TYPES"`
 
+	// SkipSessionTypes are session event types to skip
+	SkipSessionTypes []string `help:"Comma-separated list of session event types to skip" default:"session.print" env:"FDFWD_SKIP_SESSION_TYPES"`
+
 	// StartTime is a time to start ingestion from
 	StartTime *time.Time `help:"Minimum event time in RFC3339 format" env:"FDFWD_START_TIME"`
 
@@ -83,6 +90,9 @@ type StartCmd struct {
 
 	// ExitOnLastEvent exit when last event is processed
 	ExitOnLastEvent bool `help:"Exit when last event is processed"`
+
+	// skipSessionTypes is a map generated from SkipSessionTypes
+	skipSessionTypes map[string]struct{}
 }
 
 // Validate validates start command arguments and prints them to log
@@ -111,6 +121,13 @@ func (c *StartCmd) Validate() error {
 		}
 	}
 
+	// Convert SkipSessionTypes to anonymous map (as the replacement of contains)
+	c.skipSessionTypes = make(map[string]struct{})
+
+	for _, v := range c.SkipSessionTypes {
+		c.skipSessionTypes[v] = struct{}{}
+	}
+
 	// Log configuration variables
 	log.WithField("dir", c.StorageDir).Info("Using storage dir")
 	log.WithField("batch", c.BatchSize).Info("Using batch size")
@@ -119,6 +136,7 @@ func (c *StartCmd) Validate() error {
 	log.WithField("value", c.StartTime).Info("Using start time")
 	log.WithField("timeout", c.Timeout).Info("Using timeout")
 	log.WithField("url", c.FluentdURL).Info("Using Fluentd url")
+	log.WithField("url", c.FluentdSessionURL).Info("Using Fluentd session url")
 	log.WithField("ca", c.FluentdCA).Info("Using Fluentd ca")
 	log.WithField("cert", c.FluentdCert).Info("Using Fluentd cert")
 	log.WithField("key", c.FluentdKey).Info("Using Fluentd key")

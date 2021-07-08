@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"encoding/binary"
 	"time"
 
 	"github.com/gravitational/trace"
@@ -27,15 +28,7 @@ import (
 const (
 	// cacheSizeMaxBytes max memory cache
 	cacheSizeMaxBytes = 1024
-)
 
-// State is the state repository
-type State struct {
-	// dv is a diskv instance
-	dv *diskv.Diskv
-}
-
-const (
 	// startTimeName is the start time variable name
 	startTimeName = "start_time"
 
@@ -44,7 +37,16 @@ const (
 
 	// idName is the id variable name
 	idName = "id"
+
+	// sessionPrefix is the session key prefix
+	sessionPrefix = "session"
 )
+
+// State is the state repository
+type State struct {
+	// dv is a diskv instance
+	dv *diskv.Diskv
+}
 
 // NewCursor creates new cursor instance
 func NewState(c *StartCmd) (*State, error) {
@@ -180,4 +182,35 @@ func (s *State) getStringValue(name string) (string, error) {
 func (s *State) setStringValue(name string, value string) error {
 	err := s.dv.Write(name, []byte(value))
 	return trace.Wrap(err)
+}
+
+// GetSessions get active sessions (map[id]index)
+func (s *State) GetSessions() (map[string]int64, error) {
+	r := make(map[string]int64)
+
+	for key := range s.dv.KeysPrefix(sessionPrefix, nil) {
+		b, err := s.dv.Read(key)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		id := key[len(sessionPrefix):]
+		r[id] = int64(binary.BigEndian.Uint64(b))
+	}
+
+	return r, nil
+}
+
+// SetSessionIndex writes current session index into state
+func (s *State) SetSessionIndex(id string, index int64) error {
+	var b []byte = make([]byte, 8)
+
+	binary.BigEndian.PutUint64(b, uint64(index))
+
+	return s.dv.Write(sessionPrefix+id, b)
+}
+
+// RemoveSession removes session from the state
+func (s *State) RemoveSession(id string) error {
+	return s.dv.Erase(sessionPrefix + id)
 }

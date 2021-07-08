@@ -59,7 +59,7 @@ func NewPoller(ctx context.Context, c *StartCmd) (*Poller, error) {
 		return nil, trace.Wrap(err)
 	}
 
-	f, err := NewFluentdClient(c)
+	f, err := NewFluentdClient(c.FluentdURL, c)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -105,10 +105,10 @@ func (p *Poller) Close() {
 	p.teleport.Close()
 }
 
-func (p *Poller) sendEvent(e events.AuditEvent) error {
+func (p *Poller) sendEvent(c *FluentdClient, e events.AuditEvent) error {
 	// Send event to fluentd if it is not a dry run
 	if !p.cmd.DryRun {
-		err := p.fluentd.Send(e)
+		err := c.Send(e)
 		if err != nil {
 			return trace.Wrap(err)
 		}
@@ -120,18 +120,32 @@ func (p *Poller) sendEvent(e events.AuditEvent) error {
 	return nil
 }
 
-// pollSession polls session events
-func (p *Poller) pollSession(e events.AuditEvent) error {
-	evt, err := events.ToOneOf(e)
-	if err != nil {
-		return trace.Wrap(err)
-	}
+// startPollSessionOnSessionEnd starts session poll based on session.end event
+func (p *Poller) startPollSessionOnSessionEnd(e events.AuditEvent) error {
+	evt := events.MustToOneOf(e)
 
 	id := evt.GetSessionEnd().SessionID
 
 	log.WithField("id", id).Info("Started session events ingest")
 
-	chEvt, chErr := p.teleport.StreamSessionEvents(p.context, id, 0)
+	return p.pollSession(id, 0)
+}
+
+// pollSession polls session events
+func (p *Poller) pollSession(id string, index int) error {
+	log.WithField("id", id).Info("Started session events ingest")
+
+	fluentd, err := NewFluentdClient(p.cmd.FluentdSessionURL+"."+id+".log", p.cmd)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	chEvt, chErr := p.teleport.StreamSessionEvents(p.context, id, index)
+
+	err = p.state.SetSessionIndex(id, 0)
+	if err != nil {
+		return trace.Wrap(err)
+	}
 
 	for {
 		select {
@@ -141,10 +155,26 @@ func (p *Poller) pollSession(e events.AuditEvent) error {
 		case evt := <-chEvt:
 			if evt == nil {
 				log.WithField("id", id).Info("Finished session events ingest")
+
+				// Session export has finished, we do not need it's state anymore
+				err := p.state.RemoveSession(id)
+				if err != nil {
+					return trace.Wrap(err)
+				}
+
 				return nil
 			}
 
-			err = p.sendEvent(evt)
+			_, ok := p.cmd.skipSessionTypes[evt.GetType()]
+			if !ok {
+				err = p.sendEvent(fluentd, evt)
+				if err != nil {
+					return trace.Wrap(err)
+				}
+			}
+
+			// Set session index
+			err = p.state.SetSessionIndex(id, evt.GetIndex())
 			if err != nil {
 				return trace.Wrap(err)
 			}
@@ -173,7 +203,7 @@ func (p *Poller) pollAuditLog() error {
 			continue
 		}
 
-		err = p.sendEvent(e)
+		err = p.sendEvent(p.fluentd, e)
 		if err != nil {
 			return trace.Wrap(err)
 		}
@@ -181,7 +211,7 @@ func (p *Poller) pollAuditLog() error {
 		// Start session export
 		if e.GetType() == sessionEndType {
 			p.eg.Go(func() error {
-				return p.pollSession(e)
+				return p.startPollSessionOnSessionEnd(e)
 			})
 		}
 
@@ -193,11 +223,27 @@ func (p *Poller) pollAuditLog() error {
 
 // Run polling loop
 func (p *Poller) Run() error {
+	s, err := p.state.GetSessions()
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	if len(s) > 0 {
+		for id, idx := range s {
+			go func(id string, idx int) {
+				log.WithFields(log.Fields{"id": id, "index": idx}).Info("Restarting session ingestion")
+				p.eg.Go(func() error {
+					return p.pollSession(id, idx)
+				})
+			}(id, int(idx)) // That's weird that index is not int64 while it is in the event itself
+		}
+	}
+
 	p.eg.Go(p.pollAuditLog)
 
-	err := p.eg.Wait()
+	err = p.eg.Wait()
 	if err != nil {
-		return err
+		return trace.Wrap(err)
 	}
 
 	return nil

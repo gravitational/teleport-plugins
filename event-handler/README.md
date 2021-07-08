@@ -92,7 +92,7 @@ metadata:
 spec:
   allow:
     rules:
-      - resources: ['event']
+      - resources: ['event','session']
         verbs: ['list','read']
 version: v4
 ```
@@ -148,6 +148,11 @@ The plugin will send events to the fluentd instance using keys generated on the 
 <match test.log> 
   @type stdout
 </match>
+
+# Events sent to session.*.log will be dumped to STDOUT.
+<match session.*.log> 
+  @type stdout
+</match>
 ```
 
 Start fluentd instance:
@@ -171,6 +176,7 @@ cert = "client.crt"
 key = "client.key" 
 ca = "ca.crt"
 url = "https://localhost:8888/test.log"
+session-url = "https://localhost:8888/session" # .<session id>.log will be appended to this URL
 
 [teleport]
 addr = "localhost:3025" # Default local Teleport instance address
@@ -224,27 +230,31 @@ Note that start time can be set only once, on the first run of the tool. If you 
 
 You may specify configuration options via command line arguments, environment variables or TOML file.
 
-| CLI arg name       | Description                                    | Env var name            |
-| -------------------|------------------------------------------------|-------------------------|
-| teleport-addr      | Teleport host and port                         | FDFWD_TELEPORT_ADDR     |
-| teleport-ca        | Teleport TLS CA file                           | FDFWD_TELEPORT_CA       |
-| teleport-cert      | Teleport TLS certificate file                  | FDWRD_TELEPORT_CERT     |
-| teleport-key       | Teleport TLS key file                          | FDFWD_TELEPORT_KEY      |
-| teleport-identity  | Teleport identity file                         | FDFWD_TELEPORT_IDENTITY |
-| fluentd-url        | Fluentd url                                    | FDFWD_FLUENTD_URL       |
-| fluentd-ca         | fluentd TLS CA file                            | FDFWD_FLUENTD_CA        |
-| fluentd-cert       | Fluentd TLS certificate file                   | FDFWD_FLUENTD_CERT      |
-| fluentd-key        | Fluentd TLS key file                           | FDFWD_FLUENTD_KEY       |
-| storage            | Storage directory                              | FDFWD_STORAGE           |
-| batch              | Fetch batch size                               | FDFWD_BATCH             |
-| namespace          | Events namespace                               | FDFWD_NAMESPACE         |
-| types              | Comma-separated list of event types to forward | FDFWD_TYPES             |
-| start-time         | Minimum event time (RFC3339 format)            | FDFWD_START_TIME        |
-| timeout            | Polling timeout                                | FDFWD_TIMEOUT           |
-| cursor             | Start cursor value                             | FDFWD_CURSOR            |
-| debug              | Debug logging                                  | FDFWD_DEBUG             |
+| CLI arg name        | Description                                         | Env var name              |
+| --------------------|-----------------------------------------------------|---------------------------|
+| teleport-addr       | Teleport host and port                              | FDFWD_TELEPORT_ADDR       |
+| teleport-ca         | Teleport TLS CA file                                | FDFWD_TELEPORT_CA         |
+| teleport-cert       | Teleport TLS certificate file                       | FDWRD_TELEPORT_CERT       |
+| teleport-key        | Teleport TLS key file                               | FDFWD_TELEPORT_KEY        |
+| teleport-identity   | Teleport identity file                              | FDFWD_TELEPORT_IDENTITY   |
+| fluentd-url         | Fluentd URL                                         | FDFWD_FLUENTD_URL         |
+| fluentd-session-url | Fluentd session URL                                 | FDFWD_FLUENTD_SESSION_URL |
+| fluentd-ca          | fluentd TLS CA file                                 | FDFWD_FLUENTD_CA          |
+| fluentd-cert        | Fluentd TLS certificate file                        | FDFWD_FLUENTD_CERT        |
+| fluentd-key         | Fluentd TLS key file                                | FDFWD_FLUENTD_KEY         |
+| storage             | Storage directory                                   | FDFWD_STORAGE             |
+| batch               | Fetch batch size                                    | FDFWD_BATCH               |
+| namespace           | Events namespace                                    | FDFWD_NAMESPACE           |
+| types               | Comma-separated list of event types to forward      | FDFWD_TYPES               |
+| skip-session-types  | Comma-separated list of session event types to skip | FDFWD_SKIP_SESSION_TYPES  |
+| start-time          | Minimum event time (RFC3339 format)                 | FDFWD_START_TIME          |
+| timeout             | Polling timeout                                     | FDFWD_TIMEOUT             |
+| cursor              | Start cursor value                                  | FDFWD_CURSOR              |
+| debug               | Debug logging                                       | FDFWD_DEBUG               |
 
 TOML configuration keys are the same as CLI args. Teleport and Fluentd variables can be grouped into sections. See [example TOML](example/config.toml). You can specify TOML file location using `--config` CLI flag.
+
+You could use `--dry-run` argument if you want event handler to simulate event export (it will not connect to Fluentd). `--exit-on-last-event` can be used to terminate service after the last event is processed.
 
 ## Using with Teleport Cloud
 

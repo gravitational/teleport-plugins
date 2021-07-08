@@ -37,8 +37,8 @@ type FluentdClient struct {
 	url string
 }
 
-// New creates new FluentdClient
-func NewFluentdClient(c *StartCmd) (*FluentdClient, error) {
+// NewFluentdClient creates new FluentdClient
+func NewFluentdClient(url string, c *StartCmd) (*FluentdClient, error) {
 	cert, err := tls.LoadX509KeyPair(c.FluentdCert, c.FluentdKey)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -58,7 +58,7 @@ func NewFluentdClient(c *StartCmd) (*FluentdClient, error) {
 		},
 	}
 
-	return &FluentdClient{client: client, url: c.FluentdURL}, nil
+	return &FluentdClient{client: client, url: url}, nil
 }
 
 // getCertPool reads CA certificate and returns CA cert pool if passed
