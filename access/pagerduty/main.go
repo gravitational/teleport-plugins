@@ -1,3 +1,19 @@
+/*
+Copyright 2020-2021 Gravitational, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
@@ -11,10 +27,6 @@ import (
 
 	"github.com/gravitational/kingpin"
 	"github.com/gravitational/trace"
-)
-
-const (
-	DefaultDir = "/var/lib/teleport/plugins/pagerduty"
 )
 
 func main() {
@@ -32,9 +44,6 @@ func main() {
 	debug := startCmd.Flag("debug", "Enable verbose logging to stderr").
 		Short('d').
 		Bool()
-	insecure := startCmd.Flag("insecure-no-tls", "Disable TLS for the callback server").
-		Default("false").
-		Bool()
 
 	selectedCmd, err := app.Parse(os.Args[1:])
 	if err != nil {
@@ -47,7 +56,7 @@ func main() {
 	case "version":
 		lib.PrintVersion(app.Name, Version, Gitref)
 	case "start":
-		if err := run(*path, *insecure, *debug); err != nil {
+		if err := run(*path, *debug); err != nil {
 			lib.Bail(err)
 		} else {
 			logger.Standard().Info("Successfully shut down")
@@ -55,7 +64,7 @@ func main() {
 	}
 }
 
-func run(configPath string, insecure bool, debug bool) error {
+func run(configPath string, debug bool) error {
 	conf, err := LoadConfig(configPath)
 	if err != nil {
 		return trace.Wrap(err)
@@ -72,7 +81,6 @@ func run(configPath string, insecure bool, debug bool) error {
 		logger.Standard().Debugf("DEBUG logging enabled")
 	}
 
-	conf.HTTP.Insecure = insecure
 	app, err := NewApp(*conf)
 	if err != nil {
 		return trace.Wrap(err)
