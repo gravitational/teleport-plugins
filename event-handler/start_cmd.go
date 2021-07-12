@@ -96,7 +96,7 @@ type IngestConfig struct {
 	Timeout time.Duration `help:"Polling timeout" default:"5s" env:"FDFWD_TIMEOUT"`
 
 	// skipSessionTypes is a map generated from SkipSessionTypes
-	skipSessionTypes map[string]struct{}
+	skipSessionTypes map[string]struct{} //nolint For some reason, it shows that this is unused
 }
 
 // DebugConfig debug parameters
