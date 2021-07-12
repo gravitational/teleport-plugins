@@ -56,15 +56,25 @@ type TeleportClient struct {
 	// batch current events batch
 	batch []events.AuditEvent
 
-	// cmd is a reference to start command instance
-	cmd *StartCmd
+	// config is teleport config
+	config *TeleportConfig
+
+	// ingestConfig is ingest config
+	ingestConfig *IngestConfig
 
 	// startTime is event time frame start
 	startTime time.Time
 }
 
 // NewTeleportClient builds Teleport client instance
-func NewTeleportClient(ctx context.Context, c *StartCmd, startTime time.Time, cursor string, id string) (*TeleportClient, error) {
+func NewTeleportClient(
+	ctx context.Context,
+	c *TeleportConfig,
+	ic *IngestConfig,
+	startTime time.Time,
+	cursor string,
+	id string,
+) (*TeleportClient, error) {
 	var err error
 
 	config := client.Config{
@@ -81,12 +91,13 @@ func NewTeleportClient(ctx context.Context, c *StartCmd, startTime time.Time, cu
 	}
 
 	tc := TeleportClient{
-		context:   ctx,
-		client:    client,
-		pos:       -1,
-		cursor:    cursor,
-		cmd:       c,
-		startTime: startTime,
+		context:      ctx,
+		client:       client,
+		pos:          -1,
+		cursor:       cursor,
+		config:       c,
+		ingestConfig: ic,
+		startTime:    startTime,
 	}
 
 	// Get the initial page and find last known event
@@ -162,9 +173,9 @@ func (t *TeleportClient) getEvents() ([]events.AuditEvent, string, error) {
 		t.context,
 		t.startTime,
 		time.Now().UTC(),
-		t.cmd.Namespace,
-		t.cmd.Types,
-		t.cmd.BatchSize,
+		t.ingestConfig.Namespace,
+		t.ingestConfig.Types,
+		t.ingestConfig.BatchSize,
 		t.cursor,
 	)
 }

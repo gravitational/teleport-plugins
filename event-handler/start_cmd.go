@@ -30,7 +30,8 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-type StartCmd struct {
+// FluentdConfig represents fluentd instance configuration
+type FluentdConfig struct {
 	// FluentdURL fluentd url for audit log events
 	FluentdURL string `help:"fluentd url" required:"true" env:"FDFWD_FLUENTD_URL"`
 
@@ -45,7 +46,10 @@ type StartCmd struct {
 
 	// FluentdCA is a path to fluentd CA
 	FluentdCA string `help:"fluentd TLS CA file" type:"existingfile" env:"FDWRD_FLUENTD_CA"`
+}
 
+// TeleportConfig is Teleport instance configuration
+type TeleportConfig struct {
 	// TeleportAddr is a Teleport addr
 	TeleportAddr string `help:"Teleport addr" env:"FDFWD_TELEPORT_ADDR"`
 
@@ -60,13 +64,19 @@ type StartCmd struct {
 
 	// TeleportKey is a path to Teleport key file
 	TeleportKey string `help:"Teleport TLS key file" type:"existingfile" env:"FDFWD_TELEPORT_KEY"`
+}
 
+// StorageConfig represents storage config
+type StorageConfig struct {
 	// BaseStorageDir is a path to dv storage dir
 	BaseStorageDir string `help:"Storage directory" required:"true" env:"FDFWD_STORAGE" name:"storage"`
 
 	// StorageDir is a final storage dir prefixed with host and suffixed with dry-run
 	StorageDir string
+}
 
+// IngestConfig ingestion configuration
+type IngestConfig struct {
 	// BatchSize is a fetch batch size
 	BatchSize int `help:"Fetch batch size" default:"20" env:"FDFWD_BATCH" name:"batch"`
 
@@ -85,14 +95,26 @@ type StartCmd struct {
 	// Timeout is the time poller will wait before the new request if there are no events in the queue
 	Timeout time.Duration `help:"Polling timeout" default:"5s" env:"FDFWD_TIMEOUT"`
 
+	// skipSessionTypes is a map generated from SkipSessionTypes
+	skipSessionTypes map[string]struct{}
+}
+
+// DebugConfig debug parameters
+type DebugConfig struct {
 	// DryRun is the flag which simulates execution without sending events to fluentd
 	DryRun bool `help:"Events are read from Teleport, but are not sent to fluentd. Separate stroage is used. Debug flag."`
 
 	// ExitOnLastEvent exit when last event is processed
 	ExitOnLastEvent bool `help:"Exit when last event is processed"`
+}
 
-	// skipSessionTypes is a map generated from SkipSessionTypes
-	skipSessionTypes map[string]struct{}
+// StartCmd is start command description
+type StartCmd struct {
+	FluentdConfig
+	TeleportConfig
+	StorageConfig
+	IngestConfig
+	DebugConfig
 }
 
 // Validate validates start command arguments and prints them to log

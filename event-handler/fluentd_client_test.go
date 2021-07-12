@@ -43,7 +43,7 @@ const (
 
 var (
 	// fluentdConfig is app configuration with all required client variables
-	fluentdConfig = &StartCmd{
+	fluentdConfig = &FluentdConfig{
 		FluentdCA:   caCrtPath,
 		FluentdCert: "example/keys/client.crt",
 		FluentdKey:  "example/keys/client.key",

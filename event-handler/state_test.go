@@ -35,11 +35,17 @@ var (
 	// currentTime is current time
 	currentTime = time.Now().UTC().Truncate(time.Second)
 
-	// configWithStartTime represents required config
-	configWithStartTime = &StartCmd{
-		StorageDir:   storagePath,
-		TeleportAddr: osAndPort,
-		StartTime:    &currentTime,
+	// startCmd represents required config
+	startCmd = &StartCmd{
+		StorageConfig: StorageConfig{
+			StorageDir: storagePath,
+		},
+		TeleportConfig: TeleportConfig{
+			TeleportAddr: osAndPort,
+		},
+		IngestConfig: IngestConfig{
+			StartTime: &currentTime,
+		},
 	}
 )
 
@@ -53,7 +59,7 @@ func setup(t *testing.T) {
 func TestStatePersist(t *testing.T) {
 	setup(t)
 
-	state, err := NewState(configWithStartTime)
+	state, err := NewState(&startCmd.StorageConfig, &startCmd.IngestConfig)
 	require.NoError(t, err)
 
 	startTime, errt := state.GetStartTime()
@@ -74,7 +80,7 @@ func TestStatePersist(t *testing.T) {
 	require.NoError(t, errc)
 	require.NoError(t, erri)
 
-	state, err = NewState(configWithStartTime)
+	state, err = NewState(&startCmd.StorageConfig, &startCmd.IngestConfig)
 	require.NoError(t, err)
 
 	startTime, errt = state.GetStartTime()

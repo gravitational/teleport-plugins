@@ -54,12 +54,12 @@ const (
 
 // NewPoller builds new Poller structure
 func NewPoller(ctx context.Context, c *StartCmd) (*Poller, error) {
-	s, err := NewState(c)
+	s, err := NewState(&c.StorageConfig, &c.IngestConfig)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
-	f, err := NewFluentdClient(c.FluentdURL, c)
+	f, err := NewFluentdClient(c.FluentdURL, &c.FluentdConfig)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -85,7 +85,7 @@ func NewPoller(ctx context.Context, c *StartCmd) (*Poller, error) {
 
 	eg, egCtx := errgroup.WithContext(ctx)
 
-	t, err := NewTeleportClient(ctx, c, *st, cursor, id)
+	t, err := NewTeleportClient(ctx, &c.TeleportConfig, &c.IngestConfig, *st, cursor, id)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -135,7 +135,7 @@ func (p *Poller) startPollSessionOnSessionEnd(e events.AuditEvent) error {
 func (p *Poller) pollSession(id string, index int) error {
 	log.WithField("id", id).Info("Started session events ingest")
 
-	fluentd, err := NewFluentdClient(p.cmd.FluentdSessionURL+"."+id+".log", p.cmd)
+	fluentd, err := NewFluentdClient(p.cmd.FluentdSessionURL+"."+id+".log", &p.cmd.FluentdConfig)
 	if err != nil {
 		return trace.Wrap(err)
 	}

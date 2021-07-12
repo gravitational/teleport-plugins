@@ -54,7 +54,7 @@ func newTeleportClient(e []events.AuditEvent) *TeleportClient {
 	client := &TeleportClient{
 		client: teleportClient,
 		pos:    -1,
-		cmd: &StartCmd{
+		ingestConfig: &IngestConfig{
 			BatchSize: 5,
 		},
 	}
