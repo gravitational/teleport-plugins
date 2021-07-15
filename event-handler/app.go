@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
+	"time"
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
-	"golang.org/x/sync/errgroup"
 )
 
 // App is the app structure
@@ -30,6 +30,7 @@ type App struct {
 	*lib.Process
 }
 
+// NewApp creates new app instance
 func NewApp(c *StartCmdConfig) (*App, error) {
 	app := &App{config: c}
 	app.mainJob = lib.NewServiceJob(app.run)
@@ -56,11 +57,67 @@ func (a *App) Err() error {
 
 func (a *App) run(ctx context.Context) error {
 	log := logger.Get(ctx)
-	log.Infof("Starting Teleport event-handler")
+
+	log.WithField("version", Version).WithField("sha", Sha).Printf("Teleport event handler")
+
+	a.config.Dump()
+
+	err := a.init(ctx)
+	if err != nil {
+		return trace.Wrap(err)
+	}
 
 	// a.mainJob.SetReady(true)
 
 	// a.Terminate()
+
+	return nil
+}
+
+func (a *App) init(ctx context.Context) error {
+	a.config.Dump()
+
+	s, err := NewState(a.config)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	a.state = s
+
+	err = a.setStartTime(ctx)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	return nil
+}
+
+// setStartTime sets start time or fails if start time has changed from the last run
+func (a *App) setStartTime(ctx context.Context) error {
+	log := logger.Get(ctx)
+
+	prevStartTime, err := a.state.GetStartTime()
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	if prevStartTime == nil {
+		log.WithField("value", a.config.StartTime).Debug("Setting start time")
+
+		t := a.config.StartTime
+		if t == nil {
+			now := time.Now().UTC().Truncate(time.Second)
+			t = &now
+		}
+
+		return a.state.SetStartTime(t)
+	}
+
+	// If there is a time saved in the state and this time does not equal to the time passed from CLI and a
+	// time was explicitly passed from CLI
+	if prevStartTime != nil && a.config.StartTime != nil && *prevStartTime != *a.config.StartTime {
+		return trace.Errorf("You can not change start time in the middle of ingestion. To restart the ingestion, rm -rf %v", a.config.StorageDir)
+	}
 
 	return nil
 }

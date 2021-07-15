@@ -18,11 +18,16 @@ package main
 
 import (
 	"encoding/binary"
+	"net"
+	"os"
+	"path"
+	"strings"
 	"time"
 
+	"github.com/gravitational/teleport-plugins/event-handler/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 	"github.com/peterbourgon/diskv"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -40,6 +45,9 @@ const (
 
 	// sessionPrefix is the session key prefix
 	sessionPrefix = "session"
+
+	// storageDirPerms is storage directory permissions when created
+	storageDirPerms = 0755
 )
 
 // State is the state repository
@@ -49,63 +57,64 @@ type State struct {
 }
 
 // NewCursor creates new cursor instance
-func NewState(c *StorageConfig, ic *IngestConfig) (*State, error) {
+func NewState(c *StartCmdConfig) (*State, error) {
 	// Simplest transform function: put all the data files into the base dir.
 	flatTransform := func(s string) []string { return []string{} }
 
+	dir, err := createStorageDir(c)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
 	dv := diskv.New(diskv.Options{
-		BasePath:     c.StorageDir,
+		BasePath:     dir,
 		Transform:    flatTransform,
 		CacheSizeMax: cacheSizeMaxBytes,
 	})
 
 	s := State{dv}
 
-	err := s.resetOnStartTimeChanged(c, ic)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	t, err := s.GetStartTime()
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	log.WithField("value", t).Info("Using start time")
-
 	return &s, nil
 }
 
-// resetOnStartTimeChanged resets state if start time explicitly changed from the previous run
-func (s *State) resetOnStartTimeChanged(c *StorageConfig, ic *IngestConfig) error {
-	prevStartTime, err := s.GetStartTime()
+// createStorageDir is used to calculate storage dir path and create dir if it does not exits
+func createStorageDir(c *StartCmdConfig) (string, error) {
+	log := logger.Standard()
+
+	host, port, err := net.SplitHostPort(c.TeleportAddr)
 	if err != nil {
-		return trace.Wrap(err)
+		return "", trace.Wrap(err)
 	}
 
-	if prevStartTime == nil {
-		log.WithField("value", ic.StartTime).Debug("Setting start time")
+	dir := strings.TrimSpace(host + "_" + port)
+	if dir == "_" {
+		return "", trace.Errorf("Can not generate cursor name from Teleport host %s", c.TeleportAddr)
+	}
 
-		err := s.dv.EraseAll()
+	if c.DryRun {
+		rs, err := lib.RandomString(32)
 		if err != nil {
-			return trace.Wrap(err)
+			return "", trace.Wrap(err)
 		}
 
-		if ic.StartTime == nil {
-			t := time.Now().UTC().Truncate(time.Second)
-			return s.SetStartTime(&t)
+		dir = path.Join(dir, "dry_run", rs)
+	}
+
+	dir = path.Join(c.StorageDir, dir)
+
+	_, err = os.Stat(dir)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(dir, storageDirPerms)
+		if err != nil {
+			return "", trace.Errorf("Can not create storage directory %v : %w", dir, err)
 		}
 
-		return s.SetStartTime(ic.StartTime)
+		log.WithField("dir", dir).Info("Created storage directory")
+	} else {
+		log.WithField("dir", dir).Info("Using existing storage directory")
 	}
 
-	// If there is a time saved in the state and this time does not equal to the time passed from CLI and a
-	// time was explicitly passed from CLI
-	if prevStartTime != nil && ic.StartTime != nil && *prevStartTime != *ic.StartTime {
-		return trace.Errorf("You can not change start time in the middle of ingestion. To restart the ingestion, rm -rf %v", c.StorageDir)
-	}
-
-	return nil
+	return dir, nil
 }
 
 // GetStartTime gets current start time

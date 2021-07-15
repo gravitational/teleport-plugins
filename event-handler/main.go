@@ -37,6 +37,9 @@ const (
 
 	// pluginDescription is the plugin description
 	pluginDescription = "Forwards Teleport AuditLog to external sources"
+
+	// gracefulShutdownTimeout is the graceful shutdown timeout
+	gracefulShutdownTimeout = 15 * time.Second
 )
 
 func main() {
@@ -45,7 +48,7 @@ func main() {
 	ctx := kong.Parse(
 		&cli,
 		kong.UsageOnError(),
-		kong.Configuration(TOML),
+		kong.Configuration(KongTOMLResolver),
 		kong.Name(pluginName),
 		kong.Description(pluginDescription),
 	)
@@ -76,12 +79,12 @@ func main() {
 
 // start spawns the main process
 func start() error {
-	app, err := NewApp()
+	app, err := NewApp(&cli.Start)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	go lib.ServeSignals(app, 15*time.Second)
+	go lib.ServeSignals(app, gracefulShutdownTimeout)
 
 	return trace.Wrap(
 		app.Run(context.Background()),

@@ -38,7 +38,7 @@ type Poller struct {
 	state *State
 
 	// cmd is a reference to StartCmd with configuration options
-	cmd *StartCmd
+	cmd *StartCmdConfig
 
 	// context is the poller context
 	context context.Context
@@ -53,51 +53,53 @@ const (
 )
 
 // NewPoller builds new Poller structure
-func NewPoller(ctx context.Context, c *StartCmd) (*Poller, error) {
-	s, err := NewState(&c.StorageConfig, &c.IngestConfig)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
+func NewPoller(ctx context.Context, c *StartCmdConfig) (*Poller, error) {
+	// s, err := NewState(&c.StorageConfig, &c.IngestConfig)
+	// if err != nil {
+	// 	return nil, trace.Wrap(err)
+	// }
 
-	f, err := NewFluentdClient(c.FluentdURL, &c.FluentdConfig)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
+	// f, err := NewFluentdClient(c.FluentdURL, &c.FluentdConfig)
+	// if err != nil {
+	// 	return nil, trace.Wrap(err)
+	// }
 
-	cursor, err := s.GetCursor()
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
+	// cursor, err := s.GetCursor()
+	// if err != nil {
+	// 	return nil, trace.Wrap(err)
+	// }
 
-	id, err := s.GetID()
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
+	// id, err := s.GetID()
+	// if err != nil {
+	// 	return nil, trace.Wrap(err)
+	// }
 
-	st, err := s.GetStartTime()
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
+	// st, err := s.GetStartTime()
+	// if err != nil {
+	// 	return nil, trace.Wrap(err)
+	// }
 
-	log.WithField("cursor", cursor).Info("Using initial cursor value")
-	log.WithField("id", id).Info("Using initial ID value")
-	log.WithField("value", st).Info("Using start time from state")
+	// log.WithField("cursor", cursor).Info("Using initial cursor value")
+	// log.WithField("id", id).Info("Using initial ID value")
+	// log.WithField("value", st).Info("Using start time from state")
 
-	eg, egCtx := errgroup.WithContext(ctx)
+	// eg, egCtx := errgroup.WithContext(ctx)
 
-	t, err := NewTeleportClient(ctx, &c.TeleportConfig, &c.IngestConfig, *st, cursor, id)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
+	// t, err := NewTeleportClient(ctx, &c.TeleportConfig, &c.IngestConfig, *st, cursor, id)
+	// if err != nil {
+	// 	return nil, trace.Wrap(err)
+	// }
 
-	return &Poller{
-		context:  egCtx,
-		fluentd:  f,
-		teleport: t,
-		state:    s,
-		cmd:      c,
-		eg:       eg,
-	}, nil
+	// return &Poller{
+	// 	context:  egCtx,
+	// 	fluentd:  f,
+	// 	teleport: t,
+	// 	state:    s,
+	// 	cmd:      c,
+	// 	eg:       eg,
+	// }, nil
+
+	return nil, nil
 }
 
 // Close closes all connections

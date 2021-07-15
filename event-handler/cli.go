@@ -17,18 +17,12 @@ limitations under the License.
 package main
 
 import (
-	"io"
-	"net"
-	"path"
-	"strings"
 	"time"
 
 	"github.com/alecthomas/kong"
-	"github.com/gravitational/trace"
-
-	toml "github.com/pelletier/go-toml"
 
 	"github.com/gravitational/teleport-plugins/event-handler/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 )
 
 // FluentdConfig represents fluentd instance configuration
@@ -67,17 +61,11 @@ type TeleportConfig struct {
 	TeleportKey string `help:"Teleport TLS key file" type:"existingfile" env:"FDFWD_TELEPORT_KEY"`
 }
 
-// StorageConfig represents storage config
-type StorageConfig struct {
-	// BaseStorageDir is a path to dv storage dir
-	BaseStorageDir string `help:"Storage directory" required:"true" env:"FDFWD_STORAGE" name:"storage"`
-
-	// StorageDir is a final storage dir prefixed with host and suffixed with dry-run
-	StorageDir string `kong:"-"`
-}
-
 // IngestConfig ingestion configuration
 type IngestConfig struct {
+	// StorageDir is a path to dv storage dir
+	StorageDir string `help:"Storage directory" required:"true" env:"FDFWD_STORAGE" name:"storage"`
+
 	// BatchSize is a fetch batch size
 	BatchSize int `help:"Fetch batch size" default:"20" env:"FDFWD_BATCH" name:"batch"`
 
@@ -90,23 +78,27 @@ type IngestConfig struct {
 	// SkipSessionTypes are session event types to skip
 	SkipSessionTypesRaw []string `name:"skip-session-types" help:"Comma-separated list of session event types to skip" default:"session.print" env:"FDFWD_SKIP_SESSION_TYPES"`
 
+	// SkipSessionTypes is a map generated from SkipSessionTypes
+	SkipSessionTypes map[string]struct{} `kong:"-"`
+
 	// StartTime is a time to start ingestion from
 	StartTime *time.Time `help:"Minimum event time in RFC3339 format" env:"FDFWD_START_TIME"`
 
 	// Timeout is the time poller will wait before the new request if there are no events in the queue
 	Timeout time.Duration `help:"Polling timeout" default:"5s" env:"FDFWD_TIMEOUT"`
 
-	// skipSessionTypes is a map generated from SkipSessionTypes
-	SkipSessionTypes map[string]struct{} `kong:"-"`
-}
-
-// DebugConfig debug parameters
-type DebugConfig struct {
 	// DryRun is the flag which simulates execution without sending events to fluentd
 	DryRun bool `help:"Events are read from Teleport, but are not sent to fluentd. Separate stroage is used. Debug flag."`
 
 	// ExitOnLastEvent exit when last event is processed
 	ExitOnLastEvent bool `help:"Exit when last event is processed"`
+}
+
+// StartCmdConfig is start command description
+type StartCmdConfig struct {
+	FluentdConfig
+	TeleportConfig
+	IngestConfig
 }
 
 // ConfigureCmdConfig holds CLI options for teleport-event-handler configure
@@ -145,15 +137,6 @@ type ConfigureCmdConfig struct {
 	CN string `help:"Common name for server cert" default:"localhost"`
 }
 
-// StartCmdConfig is start command description
-type StartCmdConfig struct {
-	FluentdConfig
-	TeleportConfig
-	StorageConfig
-	IngestConfig
-	DebugConfig
-}
-
 // CLI represents command structure
 type CLI struct {
 	// Config is the path to configuration file
@@ -172,81 +155,46 @@ type CLI struct {
 	Start StartCmdConfig `cmd:"true" help:"Start log ingestion"`
 }
 
-const (
-	// fdPrefix contains section name which will be prepended with "forward."
-	fdPrefix = "fluentd"
-
-	// forwardPrefix contains prefix which must be prepended to "fluentd" section
-	forwardPrefix = "forward"
-)
-
 // Validate validates start command arguments and prints them to log
 func (c *StartCmdConfig) Validate() error {
-	// Truncate microseconds
 	if c.StartTime != nil {
 		t := c.StartTime.Truncate(time.Second)
 		c.StartTime = &t
 	}
 
-	d, err := c.getStorageDir()
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	c.StorageDir = path.Join(c.BaseStorageDir, d)
 	c.SkipSessionTypes = lib.SliceToAnonymousMap(c.SkipSessionTypesRaw)
 
 	return nil
 }
 
-// getStorageDir returns sub dir name
-func (c *StartCmdConfig) getStorageDir() (string, error) {
-	host, port, err := net.SplitHostPort(c.TeleportAddr)
-	if err != nil {
-		return "", trace.Wrap(err)
+// Dump dumps configuration values to the log
+func (c *StartCmdConfig) Dump() {
+	log := logger.Standard()
+
+	// Log configuration variables
+	log.WithField("batch", c.BatchSize).Info("Using batch size")
+	log.WithField("namespace", c.Namespace).Info("Using namespace")
+	log.WithField("types", c.Types).Info("Using type filter")
+	log.WithField("value", c.StartTime).Info("Using start time")
+	log.WithField("timeout", c.Timeout).Info("Using timeout")
+	log.WithField("url", c.FluentdURL).Info("Using Fluentd url")
+	log.WithField("url", c.FluentdSessionURL).Info("Using Fluentd session url")
+	log.WithField("ca", c.FluentdCA).Info("Using Fluentd ca")
+	log.WithField("cert", c.FluentdCert).Info("Using Fluentd cert")
+	log.WithField("key", c.FluentdKey).Info("Using Fluentd key")
+
+	if c.TeleportIdentityFile != "" {
+		log.WithField("file", c.TeleportIdentityFile).Info("Using Teleport identity file")
 	}
 
-	dir := strings.TrimSpace(host + "_" + port)
-	if dir == "_" {
-		return "", trace.Errorf("Can not generate cursor name from Teleport host %s", c.TeleportAddr)
+	if c.TeleportKey != "" {
+		log.WithField("addr", c.TeleportAddr).Info("Using Teleport addr")
+		log.WithField("ca", c.TeleportCA).Info("Using Teleport CA")
+		log.WithField("cert", c.TeleportCert).Info("Using Teleport cert")
+		log.WithField("key", c.TeleportKey).Info("Using Teleport key")
 	}
 
 	if c.DryRun {
-		rs, err := lib.RandomString(32)
-		if err != nil {
-			return "", trace.Wrap(err)
-		}
-
-		dir = path.Join(dir, "dry_run", rs)
+		log.Warn("Dry run! Events are not sent to Fluentd. Separate storage is used.")
 	}
-
-	return dir, nil
-}
-
-// TOML is the kong resolver function for toml configuration file
-func TOML(r io.Reader) (kong.Resolver, error) {
-	config, err := toml.LoadReader(r)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	// ResolverFunc reads configuration variables from the external source, TOML file in this case
-	var f kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
-		name := flag.Name
-
-		if strings.HasPrefix(name, fdPrefix) {
-			name = strings.Join([]string{forwardPrefix, fdPrefix, name[len(fdPrefix)+1:]}, ".")
-		}
-
-		value := config.Get(name)
-		valueWithinSeciton := config.Get(strings.ReplaceAll(name, "-", "."))
-
-		if valueWithinSeciton != nil {
-			return valueWithinSeciton, nil
-		}
-
-		return value, nil
-	}
-
-	return f, nil
 }
