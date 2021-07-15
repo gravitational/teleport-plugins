@@ -11,13 +11,17 @@
 #   Stable releases:   "1.0.0"
 #   Pre-releases:      "1.0.0-alpha.1", "1.0.0-beta.2", "1.0.0-rc.3"
 #   Master/dev branch: "1.0.0-dev"
-VERSION=6.2.1
+VERSION=7.0.0-dev
 
 DOCKER_IMAGE ?= quay.io/gravitational/teleport
 DOCKER_IMAGE_CI ?= quay.io/gravitational/teleport-ci
 
 # These are standard autotools variables, don't change them please
+ifneq ("$(wildcard /bin/bash)","")
+SHELL := /bin/bash
+endif
 BUILDDIR ?= build
+ASSETS_BUILDDIR ?= lib/web/build
 BINDIR ?= /usr/local/bin
 DATADIR ?= /usr/local/share/teleport
 ADDFLAGS ?=
@@ -43,8 +47,6 @@ ifeq ("$(ARCH)","arm64")
 CGOFLAG = CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc
 endif
 endif
-
-GO_LINTERS ?= "unused,govet,typecheck,deadcode,goimports,varcheck,structcheck,bodyclose,staticcheck,ineffassign,unconvert,misspell,gosimple,golint"
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
@@ -76,12 +78,37 @@ endif
 # BPF support will only be built into Teleport if headers exist at build time.
 BPF_MESSAGE := "without BPF support"
 
-# BPF cannot currently be compiled on ARMv7 due to this bug: https://github.com/iovisor/gobpf/issues/272
-# ARM64 builds are not affected.
-ifneq ("$(ARCH)","arm")
-ifneq ("$(wildcard /usr/include/bcc/libbpf.h)","")
+# We don't compile BPF for anything except regular non-FIPS linux/amd64 for now, as other builds
+# have compilation issues that require fixing.
+with_bpf := no
+ifeq ("$(OS)","linux")
+ifeq ("$(ARCH)","amd64")
+ifeq ("$(FIPS)","")
+ifneq ("$(wildcard /usr/include/bpf/libbpf.h)","")
+with_bpf := yes
 BPF_TAG := bpf
 BPF_MESSAGE := "with BPF support"
+CLANG ?= $(shell which clang || which clang-10)
+CLANG_FORMAT ?= $(shell which clang-format || which clang-format-10)
+LLVM_STRIP ?= $(shell which llvm-strip || which llvm-strip-10)
+KERNEL_ARCH := $(shell uname -m | sed 's/x86_64/x86/')
+INCLUDES :=
+BPF_BUILDDIR := lib/bpf/bytecode
+
+# Get Clang's default includes on this system. We'll explicitly add these dirs
+# to the includes list when compiling with `-target bpf` because otherwise some
+# architecture-specific dirs will be "missing" on some architectures/distros -
+# headers such as asm/types.h, asm/byteorder.h, asm/socket.h, asm/sockios.h,
+# sys/cdefs.h etc. might be missing.
+#
+# Use '-idirafter': Don't interfere with include mechanics except where the
+# build would have failed anyways.
+CLANG_BPF_SYS_INCLUDES = $(shell $(CLANG) -v -E - </dev/null 2>&1 \
+	| sed -n '/<...> search starts here:/,/End of search list./{ s| \(/.*\)|-idirafter \1|p }')
+
+CGOFLAG = CGO_ENABLED=1 CGO_LDFLAGS="-Wl,-Bstatic -lbpf -Wl,-Bdynamic"
+endif
+endif
 endif
 endif
 
@@ -93,7 +120,7 @@ ifeq ("$(OS)","windows")
 BINARIES=$(BUILDDIR)/tsh
 endif
 
-VERSRC = version.go gitref.go
+VERSRC = version.go gitref.go api/version.go
 
 KUBECONFIG ?=
 TEST_KUBE ?=
@@ -107,7 +134,7 @@ export
 #            This is the default build target for convenience of working on
 #            a web UI.
 .PHONY: all
-all: $(VERSRC)
+all: version
 	@echo "---> Building OSS binaries."
 	$(MAKE) $(BINARIES)
 
@@ -121,12 +148,38 @@ $(BUILDDIR)/tctl:
 	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG)" -o $(BUILDDIR)/tctl $(BUILDFLAGS) ./tool/tctl
 
 .PHONY: $(BUILDDIR)/teleport
-$(BUILDDIR)/teleport: ensure-webassets
-	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG)" -o $(BUILDDIR)/teleport $(BUILDFLAGS) ./tool/teleport
+$(BUILDDIR)/teleport: ensure-webassets bpf-bytecode
+	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG) $(WEBASSETS_TAG)" -o $(BUILDDIR)/teleport $(BUILDFLAGS) ./tool/teleport
 
 .PHONY: $(BUILDDIR)/tsh
 $(BUILDDIR)/tsh:
 	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -tags "$(PAM_TAG) $(FIPS_TAG)" -o $(BUILDDIR)/tsh $(BUILDFLAGS) ./tool/tsh
+
+#
+# BPF support (IF ENABLED)
+# Requires a recent version of clang and libbpf installed.
+#
+ifeq ("$(with_bpf)","yes")
+$(BPF_BUILDDIR):
+	mkdir -p $(BPF_BUILDDIR)
+
+# Build BPF code
+$(BPF_BUILDDIR)/%.bpf.o: bpf/%.bpf.c $(wildcard bpf/*.h) | $(BPF_BUILDDIR)
+	$(CLANG) -g -O2 -target bpf -D__TARGET_ARCH_$(KERNEL_ARCH) $(INCLUDES) $(CLANG_BPF_SYS_INCLUDES) -c $(filter %.c,$^) -o $@
+	$(LLVM_STRIP) -g $@ # strip useless DWARF info
+
+.PHONY: bpf-bytecode
+bpf-bytecode: $(BPF_BUILDDIR)/command.bpf.o $(BPF_BUILDDIR)/disk.bpf.o $(BPF_BUILDDIR)/network.bpf.o $(BPF_BUILDDIR)/counter_test.bpf.o
+
+# Generate vmlinux.h based on the installed kernel
+.PHONY: update-vmlinux-h
+update-vmlinux-h:
+	bpftool btf dump file /sys/kernel/btf/vmlinux format c >bpf/vmlinux.h
+
+else
+.PHONY: bpf-bytecode
+bpf-bytecode:
+endif
 
 #
 # make full - Builds Teleport binaries with the built-in web assets and
@@ -134,12 +187,9 @@ $(BUILDDIR)/tsh:
 # only tsh is built.
 #
 .PHONY:full
-full: all $(BUILDDIR)/webassets.zip
+full: $(ASSETS_BUILDDIR)/webassets.zip
 ifneq ("$(OS)", "windows")
-	@echo "---> Attaching OSS web assets."
-	cat $(BUILDDIR)/webassets.zip >> $(BUILDDIR)/teleport
-	rm -fr $(BUILDDIR)/webassets.zip
-	zip -q -A $(BUILDDIR)/teleport
+	$(MAKE) all WEBASSETS_TAG="webassets_embed"
 endif
 
 #
@@ -148,7 +198,9 @@ endif
 .PHONY:full-ent
 full-ent:
 ifneq ("$(OS)", "windows")
-	@if [ -f e/Makefile ]; then $(MAKE) -C e full; fi
+	@if [ -f e/Makefile ]; then \
+	rm $(ASSETS_BUILDDIR)/webassets.zip; \
+	$(MAKE) -C e full; fi
 endif
 
 #
@@ -158,6 +210,7 @@ endif
 clean:
 	@echo "---> Cleaning up OSS build artifacts."
 	rm -rf $(BUILDDIR)
+	rm -rf $(BPF_BUILDDIR)
 	-go clean -cache
 	rm -rf $(GOPKGDIR)
 	rm -rf teleport
@@ -213,7 +266,10 @@ release-unix: clean full
 	tar -czf $(RELEASE).tar.gz teleport
 	rm -rf teleport
 	@echo "---> Created $(RELEASE).tar.gz."
-	@if [ -f e/Makefile ]; then $(MAKE) -C e release; fi
+	@if [ -f e/Makefile ]; then \
+		rm -fr $(ASSETS_BUILDDIR)/webassets.zip; \
+		$(MAKE) -C e release; \
+	fi
 
 #
 # make release-windows - Produces a binary release tarball containing teleport,
@@ -263,18 +319,34 @@ docs-test-whitespace:
 
 
 #
-# Runs all tests except integration, called by CI/CD.
-#
-# Chaos tests have high concurrency, run without race detector and have TestChaos prefix.
+# Runs all Go/shell tests, called by CI/CD.
 #
 .PHONY: test
-test: ensure-webassets
-test: FLAGS ?= '-race'
-test: PACKAGES := $(shell go list ./... | grep -v integration)
-test: CHAOS_FOLDERS := $(shell find . -type f -name '*chaos*.go' -not -path '*/vendor/*' | xargs dirname | uniq)
-test: $(VERSRC)
-	go test -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG)" $(PACKAGES) $(FLAGS) $(ADDFLAGS)
-	go test -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG)" -test.run=TestChaos $(CHAOS_FOLDERS) -cover
+test: test-sh test-api test-go
+
+#
+# Runs all Go tests except integration, called by CI/CD.
+# Chaos tests have high concurrency, run without race detector and have TestChaos prefix.
+#
+.PHONY: test-go
+test-go: ensure-webassets bpf-bytecode
+test-go: FLAGS ?= '-race'
+test-go: PACKAGES := $(shell go list ./... | grep -v integration)
+test-go: CHAOS_FOLDERS := $(shell find . -type f -name '*chaos*.go' -not -path '*/vendor/*' | xargs dirname | uniq)
+test-go: $(VERSRC)
+	$(CGOFLAG) go test -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG)" $(PACKAGES) $(FLAGS) $(ADDFLAGS)
+	$(CGOFLAG) go test -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG)" -test.run=TestChaos $(CHAOS_FOLDERS) -cover
+
+#
+# Runs all Go tests except integration and chaos, called by CI/CD.
+#
+UNIT_ROOT_REGEX := ^TestRoot
+.PHONY: test-go-root
+test-go-root: ensure-webassets bpf-bytecode
+test-go-root: FLAGS ?= '-race'
+test-go-root: PACKAGES := $(shell go list ./... | grep -v integration)
+test-go-root: $(VERSRC)
+	$(CGOFLAG) go test -run "$(UNIT_ROOT_REGEX)" -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG)" $(PACKAGES) $(FLAGS) $(ADDFLAGS)
 
 # Runs API Go tests. These have to be run separately as the package name is different.
 #
@@ -283,7 +355,7 @@ test-api:
 test-api: FLAGS ?= '-race'
 test-api: PACKAGES := $(shell cd api && go list ./...)
 test-api: $(VERSRC)
-	GOMODCACHE=/tmp go test -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG)" $(PACKAGES) $(FLAGS) $(ADDFLAGS)
+	$(CGOFLAG) go test -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG)" $(PACKAGES) $(FLAGS) $(ADDFLAGS)
 
 # Find and run all shell script unit tests (using https://github.com/bats-core/bats-core)
 .PHONY: test-sh
@@ -304,7 +376,7 @@ integration: FLAGS ?= -v -race
 integration: PACKAGES := $(shell go list ./... | grep integration)
 integration:
 	@echo KUBECONFIG is: $(KUBECONFIG), TEST_KUBE: $(TEST_KUBE)
-	go test -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG)" $(PACKAGES) $(FLAGS)
+	$(CGOFLAG) go test -tags "$(PAM_TAG) $(FIPS_TAG) $(BPF_TAG)" $(PACKAGES) $(FLAGS)
 
 #
 # Integration tests which need to be run as root in order to complete successfully
@@ -315,30 +387,27 @@ INTEGRATION_ROOT_REGEX := ^TestRoot
 integration-root: FLAGS ?= -v -race
 integration-root: PACKAGES := $(shell go list ./... | grep integration)
 integration-root:
-	go test -run "$(INTEGRATION_ROOT_REGEX)" $(PACKAGES) $(FLAGS)
+	$(CGOFLAG) go test -run "$(INTEGRATION_ROOT_REGEX)" $(PACKAGES) $(FLAGS)
 
 #
 # Lint the Go code.
-# By default lint scans the entire repo. Pass FLAGS='--new' to only scan local
+# By default lint scans the entire repo. Pass GO_LINT_FLAGS='--new' to only scan local
 # changes (or last commit).
 #
 .PHONY: lint
-lint: lint-sh lint-helm lint-go
+lint: lint-sh lint-helm lint-api lint-go
 
 .PHONY: lint-go
 lint-go: GO_LINT_FLAGS ?=
 lint-go:
-	golangci-lint run \
-		--disable-all \
-		--exclude-use-default \
-		--exclude='S1002: should omit comparison to bool constant' \
-		--skip-dirs vendor \
-		--uniq-by-line=false \
-		--max-same-issues=0 \
-		--max-issues-per-linter 0 \
-		--timeout=5m \
-		--enable $(GO_LINTERS) \
-		$(GO_LINT_FLAGS)
+	golangci-lint run -c .golangci.yml $(GO_LINT_FLAGS)
+
+# api is no longer part of the teleport package, so golangci-lint skips it by default
+# GOMODCACHE needs to be set here as api downloads dependencies and cannot write to /go/pkg/mod/cache
+.PHONY: lint-api
+lint-api: GO_LINT_API_FLAGS ?=
+lint-api:
+	cd api && golangci-lint run -c ../.golangci.yml $(GO_LINT_API_FLAGS)
 
 # TODO(awly): remove the `--exclude` flag after cleaning up existing scripts
 .PHONY: lint-sh
@@ -388,7 +457,11 @@ lint-helm:
 		fi; \
 	done
 
-# This rule triggers re-generation of version.go and gitref.go if Makefile changes
+# This rule triggers re-generation of version files if Makefile changes.
+.PHONY: version
+version: $(VERSRC)
+
+# This rule triggers re-generation of version files specified if Makefile changes.
 $(VERSRC): Makefile
 	VERSION=$(VERSION) $(MAKE) -f version.mk setver
 
@@ -406,11 +479,16 @@ tag:
 
 # build/webassets.zip archive contains the web assets (UI) which gets
 # appended to teleport binary
-$(BUILDDIR)/webassets.zip:
+$(ASSETS_BUILDDIR)/webassets.zip: ensure-webassets $(ASSETS_BUILDDIR)
 ifneq ("$(OS)", "windows")
-	@echo "---> Building OSS web assets."
-	cd webassets/teleport/ ; zip -qr ../../$(BUILDDIR)/webassets.zip .
+	@echo "---> Building OSS web assets."; \
+	rm $(ASSETS_BUILDDIR)/webassets.zip; \
+	cd webassets/teleport/ ; zip -qr ../../$@ .
 endif
+
+$(ASSETS_BUILDDIR):
+	mkdir -p $@
+
 
 .PHONY: test-package
 test-package: remove-temp-files
@@ -452,35 +530,18 @@ docker-binaries: clean
 enter:
 	make -C build.assets enter
 
-PROTOC_VER ?= 3.6.1
-GOGO_PROTO_TAG ?= v1.1.1
-PLATFORM := linux-x86_64
-BUILDBOX_TAG := teleport-grpc-buildbox:0.0.1
-
-# buildbox builds docker buildbox image used to compile binaries and generate GRPc stuff
-.PHONY: buildbox
-buildbox:
-	cd build.assets/grpc && docker build \
-          --build-arg PROTOC_VER=$(PROTOC_VER) \
-          --build-arg GOGO_PROTO_TAG=$(GOGO_PROTO_TAG) \
-          --build-arg PLATFORM=$(PLATFORM) \
-          -t $(BUILDBOX_TAG) .
-
-# proto generates GRPC defs from service definitions
+# grpc generates GRPC stubs from service definitions
 .PHONY: grpc
-grpc: buildbox
-	docker run \
-		--rm \
-		-v $(shell pwd):/go/src/github.com/gravitational/teleport $(BUILDBOX_TAG) \
-		make -C /go/src/github.com/gravitational/teleport buildbox-grpc
+grpc:
+	make -C build.assets grpc
 
-# proto generates GRPC stuff inside buildbox
+# buildbox-grpc generates GRPC stubs inside buildbox
 .PHONY: buildbox-grpc
 buildbox-grpc:
 # standard GRPC output
 	echo $$PROTO_INCLUDE
-	find lib/ -iname *.proto | xargs clang-format -i -style='{ColumnLimit: 100, IndentWidth: 4, Language: Proto}'
-	find api/ -iname *.proto | xargs clang-format -i -style='{ColumnLimit: 100, IndentWidth: 4, Language: Proto}'
+	find lib/ -iname *.proto | xargs $(CLANG_FORMAT) -i -style='{ColumnLimit: 100, IndentWidth: 4, Language: Proto}'
+	find api/ -iname *.proto | xargs $(CLANG_FORMAT) -i -style='{ColumnLimit: 100, IndentWidth: 4, Language: Proto}'
 
 	protoc -I=.:$$PROTO_INCLUDE \
 		--proto_path=api/types/events \
@@ -601,6 +662,7 @@ rpm:
 	mkdir -p $(BUILDDIR)/
 	cp ./build.assets/build-package.sh $(BUILDDIR)/
 	chmod +x $(BUILDDIR)/build-package.sh
+	cp -a ./build.assets/rpm $(BUILDDIR)/
 	cp -a ./build.assets/rpm-sign $(BUILDDIR)/
 	cd $(BUILDDIR) && ./build-package.sh -t oss -v $(VERSION) -p rpm -a $(ARCH) $(RUNTIME_SECTION) $(TARBALL_PATH_SECTION)
 	if [ -f e/Makefile ]; then $(MAKE) -C e rpm; fi
@@ -658,6 +720,9 @@ init-submodules-e: init-webapps-submodules-e
 
 .PHONY: update-vendor
 update-vendor:
+	# update modules in api/
+	cd api && go mod tidy
+	# update modules in root directory
 	go mod tidy
 	go mod vendor
 	# delete the vendored api package. In its place

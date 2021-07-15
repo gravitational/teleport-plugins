@@ -18,95 +18,16 @@ package main
 
 import (
 	"context"
-	"crypto/rand"
-	"math/big"
 	"net"
 	"os"
 	"path"
 	"strings"
 	"time"
 
+	"github.com/gravitational/teleport-plugins/event-handler/lib"
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
 )
-
-// FluentdConfig represents fluentd instance configuration
-type FluentdConfig struct {
-	// FluentdURL fluentd url for audit log events
-	FluentdURL string `help:"fluentd url" required:"true" env:"FDFWD_FLUENTD_URL"`
-
-	// FluentdSessionURL
-	FluentdSessionURL string `help:"fluentd session url" required:"true" env:"FDFWD_FLUENTD_SESSION_URL"`
-
-	// FluentdCert is a path to fluentd cert
-	FluentdCert string `help:"fluentd TLS certificate file" required:"true" type:"existingfile" env:"FDWRD_FLUENTD_CERT"`
-
-	// FluentdKey is a path to fluentd key
-	FluentdKey string `help:"fluentd TLS key file" required:"true" type:"existingfile" env:"FDWRD_FLUENTD_KEY"`
-
-	// FluentdCA is a path to fluentd CA
-	FluentdCA string `help:"fluentd TLS CA file" type:"existingfile" env:"FDWRD_FLUENTD_CA"`
-}
-
-// TeleportConfig is Teleport instance configuration
-type TeleportConfig struct {
-	// TeleportAddr is a Teleport addr
-	TeleportAddr string `help:"Teleport addr" env:"FDFWD_TELEPORT_ADDR"`
-
-	// TeleportIdentityFile is a path to Teleport identity file
-	TeleportIdentityFile string `help:"Teleport identity file" type:"existingfile" name:"teleport-identity" env:"FDFWD_TELEPORT_IDENTITY"`
-
-	// TeleportCA is a path to Teleport CA file
-	TeleportCA string `help:"Teleport TLS CA file" type:"existingfile" env:"FDFWD_TELEPORT_CA"`
-
-	// TeleportCert is a path to Teleport cert file
-	TeleportCert string `help:"Teleport TLS certificate file" type:"existingfile" env:"FDWRD_TELEPORT_CERT"`
-
-	// TeleportKey is a path to Teleport key file
-	TeleportKey string `help:"Teleport TLS key file" type:"existingfile" env:"FDFWD_TELEPORT_KEY"`
-}
-
-// StorageConfig represents storage config
-type StorageConfig struct {
-	// BaseStorageDir is a path to dv storage dir
-	BaseStorageDir string `help:"Storage directory" required:"true" env:"FDFWD_STORAGE" name:"storage"`
-
-	// StorageDir is a final storage dir prefixed with host and suffixed with dry-run
-	StorageDir string
-}
-
-// IngestConfig ingestion configuration
-type IngestConfig struct {
-	// BatchSize is a fetch batch size
-	BatchSize int `help:"Fetch batch size" default:"20" env:"FDFWD_BATCH" name:"batch"`
-
-	// Namespace is events namespace
-	Namespace string `help:"Events namespace" default:"default" env:"FDFWD_NAMESPACE"`
-
-	// Types are event types to log
-	Types []string `help:"Comma-separated list of event types to forward" env:"FDFWD_TYPES"`
-
-	// SkipSessionTypes are session event types to skip
-	SkipSessionTypes []string `help:"Comma-separated list of session event types to skip" default:"session.print" env:"FDFWD_SKIP_SESSION_TYPES"`
-
-	// StartTime is a time to start ingestion from
-	StartTime *time.Time `help:"Minimum event time in RFC3339 format" env:"FDFWD_START_TIME"`
-
-	// Timeout is the time poller will wait before the new request if there are no events in the queue
-	Timeout time.Duration `help:"Polling timeout" default:"5s" env:"FDFWD_TIMEOUT"`
-
-	// skipSessionTypes is a map generated from SkipSessionTypes
-	skipSessionTypes map[string]struct{} //nolint For some reason, it shows that this is unused
-}
-
-// DebugConfig debug parameters
-type DebugConfig struct {
-	// DryRun is the flag which simulates execution without sending events to fluentd
-	DryRun bool `help:"Events are read from Teleport, but are not sent to fluentd. Separate stroage is used. Debug flag."`
-
-	// ExitOnLastEvent exit when last event is processed
-	ExitOnLastEvent bool `help:"Exit when last event is processed"`
-}
 
 // StartCmd is start command description
 type StartCmd struct {
@@ -144,11 +65,11 @@ func (c *StartCmd) Validate() error {
 	}
 
 	// Convert SkipSessionTypes to anonymous map (as the replacement of contains)
-	c.skipSessionTypes = make(map[string]struct{})
+	// c.skipSessionTypes = make(map[string]struct{})
 
-	for _, v := range c.SkipSessionTypes {
-		c.skipSessionTypes[v] = struct{}{}
-	}
+	// for _, v := range c.SkipSessionTypes {
+	// 	c.skipSessionTypes[v] = struct{}{}
+	// }
 
 	// Log configuration variables
 	log.WithField("dir", c.StorageDir).Info("Using storage dir")
@@ -194,7 +115,7 @@ func (c *StartCmd) getStorageDir() (string, error) {
 	}
 
 	if c.DryRun {
-		rs, err := c.randomString(32)
+		rs, err := lib.RandomString(32)
 		if err != nil {
 			return "", trace.Wrap(err)
 		}
@@ -223,19 +144,4 @@ func (c *StartCmd) Run() error {
 	}
 
 	return nil
-}
-
-// randomString returns random string of length n
-func (c *StartCmd) randomString(n int) (string, error) {
-	const letters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-"
-	ret := make([]byte, n)
-	for i := 0; i < n; i++ {
-		num, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
-		if err != nil {
-			return "", err
-		}
-		ret[i] = letters[num.Int64()]
-	}
-
-	return string(ret), nil
 }

@@ -36,7 +36,7 @@ var (
 	currentTime = time.Now().UTC().Truncate(time.Second)
 
 	// startCmd represents required config
-	startCmd = &StartCmd{
+	startC = &StartCmd{
 		StorageConfig: StorageConfig{
 			StorageDir: storagePath,
 		},
@@ -59,7 +59,7 @@ func setup(t *testing.T) {
 func TestStatePersist(t *testing.T) {
 	setup(t)
 
-	state, err := NewState(&startCmd.StorageConfig, &startCmd.IngestConfig)
+	state, err := NewState(&startC.StorageConfig, &startC.IngestConfig)
 	require.NoError(t, err)
 
 	startTime, errt := state.GetStartTime()
@@ -80,7 +80,7 @@ func TestStatePersist(t *testing.T) {
 	require.NoError(t, errc)
 	require.NoError(t, erri)
 
-	state, err = NewState(&startCmd.StorageConfig, &startCmd.IngestConfig)
+	state, err = NewState(&startC.StorageConfig, &startC.IngestConfig)
 	require.NoError(t, err)
 
 	startTime, errt = state.GetStartTime()

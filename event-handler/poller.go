@@ -140,7 +140,7 @@ func (p *Poller) pollSession(id string, index int) error {
 		return trace.Wrap(err)
 	}
 
-	chEvt, chErr := p.teleport.StreamSessionEvents(p.context, id, index)
+	chEvt, chErr := p.teleport.StreamSessionEvents(p.context, id, int64(index))
 
 	err = p.state.SetSessionIndex(id, 0)
 	if err != nil {
@@ -165,7 +165,7 @@ func (p *Poller) pollSession(id string, index int) error {
 				return nil
 			}
 
-			_, ok := p.cmd.skipSessionTypes[evt.GetType()]
+			_, ok := p.cmd.SkipSessionTypes[evt.GetType()]
 			if !ok {
 				err = p.sendEvent(fluentd, evt)
 				if err != nil {

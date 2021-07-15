@@ -39,7 +39,7 @@ func (c *mockTeleportClient) SearchEvents(ctx context.Context, fromUTC, toUTC ti
 }
 
 // StreamSessionEvents returns session events stream
-func (c *mockTeleportClient) StreamSessionEvents(ctx context.Context, sessionID string, startIndex int) (chan events.AuditEvent, chan error) {
+func (c *mockTeleportClient) StreamSessionEvents(ctx context.Context, sessionID string, startIndex int64) (chan events.AuditEvent, chan error) {
 	return nil, nil
 }
 

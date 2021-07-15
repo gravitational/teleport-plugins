@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport"
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/lib/backend"
 
 	"github.com/google/btree"
@@ -163,7 +164,7 @@ func (m *Memory) Create(ctx context.Context, i backend.Item) (*backend.Lease, er
 		return nil, trace.AlreadyExists("key %q already exists", string(i.Key))
 	}
 	event := backend.Event{
-		Type: backend.OpPut,
+		Type: types.OpPut,
 		Item: i,
 	}
 	m.processEvent(event)
@@ -204,7 +205,7 @@ func (m *Memory) Update(ctx context.Context, i backend.Item) (*backend.Lease, er
 		i.ID = m.generateID()
 	}
 	event := backend.Event{
-		Type: backend.OpPut,
+		Type: types.OpPut,
 		Item: i,
 	}
 	m.processEvent(event)
@@ -215,7 +216,7 @@ func (m *Memory) Update(ctx context.Context, i backend.Item) (*backend.Lease, er
 }
 
 // Put puts value into backend (creates if it does not
-// exists, updates it otherwise)
+// exist, updates it otherwise)
 func (m *Memory) Put(ctx context.Context, i backend.Item) (*backend.Lease, error) {
 	if len(i.Key) == 0 {
 		return nil, trace.BadParameter("missing parameter key")
@@ -223,8 +224,11 @@ func (m *Memory) Put(ctx context.Context, i backend.Item) (*backend.Lease, error
 	m.Lock()
 	defer m.Unlock()
 	m.removeExpired()
+	if !m.Mirror {
+		i.ID = m.generateID()
+	}
 	event := backend.Event{
-		Type: backend.OpPut,
+		Type: types.OpPut,
 		Item: i,
 	}
 	m.processEvent(event)
@@ -234,8 +238,8 @@ func (m *Memory) Put(ctx context.Context, i backend.Item) (*backend.Lease, error
 	return m.newLease(i), nil
 }
 
-// PutRange puts range of items into backend (creates if items does not
-// exists, updates it otherwise)
+// PutRange puts range of items into backend (creates if items do not
+// exist, updates it otherwise)
 func (m *Memory) PutRange(ctx context.Context, items []backend.Item) error {
 	for i := range items {
 		if items[i].Key == nil {
@@ -247,7 +251,7 @@ func (m *Memory) PutRange(ctx context.Context, items []backend.Item) error {
 	m.removeExpired()
 	for _, item := range items {
 		event := backend.Event{
-			Type: backend.OpPut,
+			Type: types.OpPut,
 			Item: item,
 		}
 		if !m.Mirror {
@@ -274,7 +278,7 @@ func (m *Memory) Delete(ctx context.Context, key []byte) error {
 		return trace.NotFound("key %q is not found", string(key))
 	}
 	event := backend.Event{
-		Type: backend.OpDelete,
+		Type: types.OpDelete,
 		Item: backend.Item{
 			Key: key,
 		},
@@ -301,7 +305,7 @@ func (m *Memory) DeleteRange(ctx context.Context, startKey, endKey []byte) error
 	re := m.getRange(ctx, startKey, endKey, backend.NoLimit)
 	for _, item := range re.Items {
 		event := backend.Event{
-			Type: backend.OpDelete,
+			Type: types.OpDelete,
 			Item: item,
 		}
 		m.processEvent(event)
@@ -344,8 +348,12 @@ func (m *Memory) KeepAlive(ctx context.Context, lease backend.Lease, expires tim
 	}
 	item := i.(*btreeItem).Item
 	item.Expires = expires
+	if !m.Mirror {
+		// ID is updated on keep alive for consistency with other backends
+		item.ID = m.generateID()
+	}
 	event := backend.Event{
-		Type: backend.OpPut,
+		Type: types.OpPut,
 		Item: item,
 	}
 	m.processEvent(event)
@@ -378,7 +386,7 @@ func (m *Memory) CompareAndSwap(ctx context.Context, expected backend.Item, repl
 		return nil, trace.CompareFailed("current value does not match expected for %v", string(expected.Key))
 	}
 	event := backend.Event{
-		Type: backend.OpPut,
+		Type: types.OpPut,
 		Item: replaceWith,
 	}
 	m.processEvent(event)
@@ -447,7 +455,7 @@ func (m *Memory) removeExpired() int {
 		removed++
 
 		event := backend.Event{
-			Type: backend.OpDelete,
+			Type: types.OpDelete,
 			Item: backend.Item{
 				Key: item.Key,
 			},
@@ -464,7 +472,7 @@ func (m *Memory) removeExpired() int {
 
 func (m *Memory) processEvent(event backend.Event) {
 	switch event.Type {
-	case backend.OpPut:
+	case types.OpPut:
 		item := &btreeItem{Item: event.Item, index: -1}
 		treeItem := m.tree.Get(item)
 		var existingItem *btreeItem
@@ -500,7 +508,7 @@ func (m *Memory) processEvent(event backend.Event) {
 		default:
 			// skip adding or updating the item that has expired
 		}
-	case backend.OpDelete:
+	case types.OpDelete:
 		treeItem := m.tree.Get(&btreeItem{Item: event.Item})
 		if treeItem != nil {
 			item := treeItem.(*btreeItem)

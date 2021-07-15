@@ -1,23 +1,12 @@
 # Changelog
 
-## 6.2.1
+## 7.0
 
-This release of Teleport contains an improvement and several bug fixes.
+Teleport 7.0 is a major release with new features, functionality, and bug fixes.
 
-## Improvements
+## Breaking Changes
 
-* Improve performance of DynamoDB events migration introduced in `v6.2.0`.
-  [#7083](https://github.com/gravitational/teleport/pull/7083)
-
-## Fixes
-
-* Fixed an issue with connecting to etcd in insecure mode.
-  [#7049](https://github.com/gravitational/teleport/pull/7049)
-* Fixed an issue with running Teleport on systems without utmp/wtmp support such
-  as alpine. [#7059](https://github.com/gravitational/teleport/pull/7059)
-* Fixed an issue with signing database certificates using `tctl auth sign` via
-  proxy. See [#7071](https://github.com/gravitational/teleport/discussions/7071)
-  for details. [#7038](https://github.com/gravitational/teleport/pull/7038)
+* Proxy services whose configuration includes a `kube_listen_addr` but no `kubernetes` section will no longer publish a Kubernetes cluster named after the Teleport cluster.
 
 ## 6.2
 
@@ -219,7 +208,7 @@ In addition, some Access Workflow Plugins will now become available to open sour
 
 API and Client Libraries support was introduced in [RFD #10](https://github.com/gravitational/teleport/blob/master/rfd/0010-api.md).
 
-The new API and client library reduces the dependencies needed to use the Teleport API as well as making it easier to user. An example of using the new API is below.
+The new API and client library reduces the dependencies needed to use the Teleport API as well as making it easier to use. An example of using the new API is below.
 
 ```go
 // Create a client connected to the Auth server with an exported identity file.

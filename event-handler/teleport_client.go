@@ -29,7 +29,7 @@ import (
 // TeleportSearchEventsClient is an interface for client.Client, required for testing
 type TeleportSearchEventsClient interface {
 	SearchEvents(ctx context.Context, fromUTC, toUTC time.Time, namespace string, eventTypes []string, limit int, startKey string) ([]events.AuditEvent, string, error)
-	StreamSessionEvents(ctx context.Context, sessionID string, startIndex int) (chan events.AuditEvent, chan error)
+	StreamSessionEvents(ctx context.Context, sessionID string, startIndex int64) (chan events.AuditEvent, chan error)
 	Close() error
 }
 
@@ -235,6 +235,6 @@ func (t *TeleportClient) Next() (events.AuditEvent, string, error) {
 }
 
 // StreamSessionEvents returns session event stream, that's the simple delegate to an API function
-func (t *TeleportClient) StreamSessionEvents(ctx context.Context, id string, index int) (chan events.AuditEvent, chan error) {
+func (t *TeleportClient) StreamSessionEvents(ctx context.Context, id string, index int64) (chan events.AuditEvent, chan error) {
 	return t.client.StreamSessionEvents(ctx, id, index)
 }
