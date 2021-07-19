@@ -54,7 +54,11 @@ func main() {
 	)
 
 	if cli.Debug {
-		logger.Setup(logger.Config{Severity: "debug"})
+		err := logger.Setup(logger.Config{Severity: "debug", Output: "stderr"})
+		if err != nil {
+			fmt.Println(trace.DebugReport(err))
+			os.Exit(-1)
+		}
 	}
 
 	switch ctx.Command() {

@@ -17,8 +17,12 @@ limitations under the License.
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"time"
 
+	"github.com/gravitational/teleport-plugins/event-handler/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
@@ -57,20 +61,31 @@ type TeleportClient struct {
 	batch []events.AuditEvent
 
 	// config is teleport config
-	config *TeleportConfig
-
-	// ingestConfig is ingest config
-	ingestConfig *IngestConfig
+	config *StartCmdConfig
 
 	// startTime is event time frame start
 	startTime time.Time
+
+	// log is the context-specific logrus instance
+	log log.FieldLogger
+}
+
+// eventWithCursor is used in event consumption logic
+type eventWithCursor struct {
+	// event is the event
+	event events.AuditEvent
+
+	// cursor is the event ID (real/artificial when empty)
+	id string
+
+	// cursor is the current cursor value
+	cursor string
 }
 
 // NewTeleportClient builds Teleport client instance
 func NewTeleportClient(
 	ctx context.Context,
-	c *TeleportConfig,
-	ic *IngestConfig,
+	c *StartCmdConfig,
 	startTime time.Time,
 	cursor string,
 	id string,
@@ -85,25 +100,19 @@ func NewTeleportClient(
 		},
 	}
 
-	client, err := client.New(context.Background(), config)
+	client, err := client.New(ctx, config)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
 	tc := TeleportClient{
-		context:      ctx,
-		client:       client,
-		pos:          -1,
-		cursor:       cursor,
-		config:       c,
-		ingestConfig: ic,
-		startTime:    startTime,
-	}
-
-	// Get the initial page and find last known event
-	err = tc.fetch(id)
-	if err != nil {
-		return nil, trace.Wrap(err)
+		context:   ctx,
+		client:    client,
+		pos:       -1,
+		cursor:    cursor,
+		config:    c,
+		startTime: startTime,
+		log:       logger.Get(ctx),
 	}
 
 	return &tc, nil
@@ -122,12 +131,13 @@ func (t *TeleportClient) flipPage() bool {
 
 	t.cursor = t.nextCursor
 	t.pos = -1
+	t.batch = []events.AuditEvent{}
 
 	return true
 }
 
-// fetch fetches the initial page and sets the position to the event after latest known
-func (t *TeleportClient) fetch(latestID string) error {
+// fetch fetches the page and sets the position to the event after latest known
+func (t *TeleportClient) fetch() error {
 	batch, nextCursor, err := t.getEvents()
 	if err != nil {
 		return trace.Wrap(err)
@@ -139,7 +149,7 @@ func (t *TeleportClient) fetch(latestID string) error {
 	// Mark position as unresolved (the page is empty)
 	t.pos = -1
 
-	log.WithFields(log.Fields{"cursor": t.cursor, "next": nextCursor, "len": len(batch)}).Info("Fetched page")
+	t.log.WithField("cursor", t.cursor).WithField("next", nextCursor).WithField("len", len(batch)).Info("Fetched page")
 
 	// Page is empty: do nothing, return
 	if len(batch) == 0 {
@@ -149,11 +159,16 @@ func (t *TeleportClient) fetch(latestID string) error {
 	pos := 0
 
 	// If last known id is not empty, let's try to find it's pos
-	if latestID != "" {
+	if t.id != "" {
 		for i, v := range batch {
-			if v.GetID() == latestID {
+			id, err := t.getID(v)
+			if err != nil {
+				return trace.Wrap(err)
+			}
+
+			if id == t.id {
 				pos = i + 1
-				t.id = latestID
+				t.id = id
 			}
 		}
 	}
@@ -162,7 +177,7 @@ func (t *TeleportClient) fetch(latestID string) error {
 	t.pos = pos
 	t.batch = batch
 
-	log.WithFields(log.Fields{"id": t.id, "new_pos": t.pos}).Info("Skipping last known event")
+	t.log.WithField("id", t.id).WithField("new_pos", t.pos).Info("Skipping last known event")
 
 	return nil
 }
@@ -173,65 +188,119 @@ func (t *TeleportClient) getEvents() ([]events.AuditEvent, string, error) {
 		t.context,
 		t.startTime,
 		time.Now().UTC(),
-		t.ingestConfig.Namespace,
-		t.ingestConfig.Types,
-		t.ingestConfig.BatchSize,
+		t.config.Namespace,
+		t.config.Types,
+		t.config.BatchSize,
 		t.cursor,
 	)
 }
 
+// pause sleeps for timeout seconds
+func (t *TeleportClient) pause() {
+	t.log.Infof("No new events, pause for %v seconds", t.config.Timeout)
+
+	// Handle termination
+	select {
+	case <-time.After(t.config.Timeout):
+		return
+	case <-t.context.Done():
+		return
+	}
+}
+
+// getID returns event id or generates artificial id for events with blank id
+func (t *TeleportClient) getID(event events.AuditEvent) (string, error) {
+	id := event.GetID()
+	if id != "" {
+		return id, nil
+	}
+
+	data, err := lib.FastMarshal(event)
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+
+	hash := sha256.Sum256(data)
+	return hex.EncodeToString(hash[:]), nil
+}
+
 // Next returns next event from a batch or requests next batch if it has been ended
-func (t *TeleportClient) Next() (events.AuditEvent, string, error) {
-	// The page is empty, let's re-request it to check if something has appeared
-	if t.pos == -1 {
-		err := t.fetch(t.id)
-		if err != nil {
-			return nil, t.cursor, err
-		}
-	}
+func (t *TeleportClient) Events() (chan *eventWithCursor, chan error) {
+	ch := make(chan *eventWithCursor)
+	e := make(chan error, 1)
 
-	// We processed the last event on a page
-	if t.pos >= len(t.batch) {
-		// If there is the next page
-		if t.flipPage() {
-			// Try to flip the page
-			err := t.fetch(t.id)
-			if err != nil {
-				return nil, t.cursor, nil
-			}
-		} else {
-			// Try to get updates on current page
-			err := t.fetch(t.id)
-			if err != nil {
-				return nil, t.cursor, nil
-			}
-
-			// There are no new records on current page
-			if t.pos >= len(t.batch) {
-				// And there is no next page, return
-				if !t.flipPage() {
-					return nil, t.cursor, nil
-				}
-
-				// Fetch the next page
-				err = t.fetch(t.id)
+	go func() {
+		for {
+			// If there is nothing in the batch, request
+			if len(t.batch) == 0 {
+				err := t.fetch()
 				if err != nil {
-					return nil, t.cursor, nil
+					e <- trace.Wrap(err)
+					break
+				}
+
+				// If there is still nothing, sleep
+				if len(t.batch) == 0 {
+					if t.config.ExitOnLastEvent {
+						log.Info("All events are processed, exiting...")
+						break
+					}
+
+					t.pause()
+					continue
 				}
 			}
+
+			// If we processed the last event on a page
+			if t.pos >= len(t.batch) {
+				// If there is next page, flip page
+				if t.flipPage() {
+					continue
+				}
+
+				// If not, update current page
+				err := t.fetch()
+				if err != nil {
+					e <- trace.Wrap(err)
+					continue
+				}
+
+				// If there is still nothing new on current page, sleep
+				if t.pos >= len(t.batch) {
+					if t.config.ExitOnLastEvent {
+						log.Info("All events are processed, exiting...")
+						break
+					}
+
+					t.pause()
+					continue
+				}
+			}
+
+			event := t.batch[t.pos]
+			t.pos++
+
+			id, err := t.getID(event)
+			if err != nil {
+				e <- trace.Wrap(err)
+				break
+			}
+
+			// Save new known id
+			t.id = id
+
+			ch <- &eventWithCursor{
+				event:  event,
+				id:     id,
+				cursor: t.cursor,
+			}
 		}
-	}
 
-	// After all, there is still nothing to process
-	if t.pos == -1 {
-		return nil, t.cursor, nil
-	}
+		close(ch)
+		close(e)
+	}()
 
-	event := t.batch[t.pos]
-	t.pos++
-	t.id = event.GetID()
-
-	return event, t.cursor, nil
+	return ch, e
 }
 
 // StreamSessionEvents returns session event stream, that's the simple delegate to an API function

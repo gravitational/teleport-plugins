@@ -50,11 +50,12 @@ func (a *App) Err() error {
 	return trace.Wrap(a.mainJob.Err())
 }
 
-// // WaitReady waits for http and watcher service to start up.
-// func (a *App) WaitReady(ctx context.Context) (bool, error) {
-// 	return a.mainJob.WaitReady(ctx)
-// }
+// WaitReady waits for http and watcher service to start up.
+func (a *App) WaitReady(ctx context.Context) (bool, error) {
+	return a.mainJob.WaitReady(ctx)
+}
 
+// run is the main process
 func (a *App) run(ctx context.Context) error {
 	log := logger.Get(ctx)
 
@@ -67,13 +68,34 @@ func (a *App) run(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	// a.mainJob.SetReady(true)
+	t, err := NewTeleportClient(ctx, a.config, time.Date(2020, 1, 1, 0, 0, 0, 0, time.Local), "", "")
+	if err != nil {
+		return trace.Wrap(err)
+	}
 
-	// a.Terminate()
+	a.mainJob.SetReady(true)
 
+	chEvt, chErr := t.Events()
+
+Out:
+	for {
+		select {
+		case err := <-chErr:
+			return trace.Wrap(err)
+
+		case evt := <-chEvt:
+			if evt == nil {
+				break Out
+			}
+			log.WithField("evt", evt).Debug("Event received")
+		}
+	}
+
+	a.Terminate()
 	return nil
 }
 
+// init initializes application state
 func (a *App) init(ctx context.Context) error {
 	a.config.Dump()
 

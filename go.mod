@@ -13,6 +13,7 @@ require (
 	github.com/gravitational/trace v1.1.16-0.20210609220119-4855e69c89fc
 	github.com/hashicorp/go-version v1.2.1
 	github.com/jonboulle/clockwork v0.2.2
+	github.com/json-iterator/go v1.1.10
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/mailgun/holster/v3 v3.15.2
 	github.com/manifoldco/promptui v0.8.0

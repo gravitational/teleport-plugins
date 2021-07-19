@@ -108,9 +108,9 @@ func TestSend(t *testing.T) {
 	ts.StartTLS()
 	defer ts.Close()
 
-	f, err := NewFluentdClient(ts.URL, fluentdConfig)
+	f, err := NewFluentdClient(fluentdConfig)
 	require.NoError(t, err)
 
-	err = f.Send(obj)
+	err = f.Send(ts.URL, obj)
 	require.NoError(t, err)
 }

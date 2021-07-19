@@ -32,13 +32,10 @@ import (
 type FluentdClient struct {
 	// client HTTP client to send requests
 	client *http.Client
-
-	// url is a fluentd url taken from config
-	url string
 }
 
 // NewFluentdClient creates new FluentdClient
-func NewFluentdClient(url string, c *FluentdConfig) (*FluentdClient, error) {
+func NewFluentdClient(c *FluentdConfig) (*FluentdClient, error) {
 	cert, err := tls.LoadX509KeyPair(c.FluentdCert, c.FluentdKey)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -58,7 +55,7 @@ func NewFluentdClient(url string, c *FluentdConfig) (*FluentdClient, error) {
 		},
 	}
 
-	return &FluentdClient{client: client, url: url}, nil
+	return &FluentdClient{client: client}, nil
 }
 
 // getCertPool reads CA certificate and returns CA cert pool if passed
@@ -78,7 +75,7 @@ func getCertPool(c *FluentdConfig) (*x509.CertPool, error) {
 }
 
 // Send sends event to fluentd
-func (f *FluentdClient) Send(obj interface{}) error {
+func (f *FluentdClient) Send(url string, obj interface{}) error {
 	b, err := json.Marshal(obj)
 	if err != nil {
 		return trace.Wrap(err)
@@ -86,7 +83,7 @@ func (f *FluentdClient) Send(obj interface{}) error {
 
 	log.WithField("json", string(b)).Debug("JSON to send")
 
-	r, err := f.client.Post(f.url, "application/json", bytes.NewReader(b))
+	r, err := f.client.Post(url, "application/json", bytes.NewReader(b))
 	if err != nil {
 		return trace.Wrap(err)
 	}
