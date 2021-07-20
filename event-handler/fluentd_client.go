@@ -20,10 +20,10 @@ import (
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 
+	"github.com/gravitational/teleport-plugins/event-handler/lib"
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
 )
@@ -76,7 +76,7 @@ func getCertPool(c *FluentdConfig) (*x509.CertPool, error) {
 
 // Send sends event to fluentd
 func (f *FluentdClient) Send(url string, obj interface{}) error {
-	b, err := json.Marshal(obj)
+	b, err := lib.FastMarshal(obj)
 	if err != nil {
 		return trace.Wrap(err)
 	}

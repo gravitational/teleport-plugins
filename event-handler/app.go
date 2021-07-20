@@ -7,7 +7,22 @@ import (
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
+	"github.com/sirupsen/logrus"
 )
+
+const (
+	// sessionEndType type name for session end event
+	sessionEndType = "session.end"
+)
+
+// session is the utility struct used for session ingestion
+type session struct {
+	// ID current ID
+	ID string
+
+	// Index current event index
+	Index int
+}
 
 // App is the app structure
 type App struct {
@@ -26,6 +41,15 @@ type App struct {
 	// cmd is start command CLI config
 	config *StartCmdConfig
 
+	// semaphore limiter semaphore
+	semaphore chan struct{}
+
+	// sessionIDs id queue
+	sessionIDs chan session
+
+	// sessionJob controls session ingestion
+	sessionJob lib.ServiceJob
+
 	// Process
 	*lib.Process
 }
@@ -34,6 +58,8 @@ type App struct {
 func NewApp(c *StartCmdConfig) (*App, error) {
 	app := &App{config: c}
 	app.mainJob = lib.NewServiceJob(app.run)
+	app.sessionJob = lib.NewServiceJob(app.runSessionIngest)
+	app.semaphore = make(chan struct{}, 5) // TODO: Constant
 	return app, nil
 }
 
@@ -41,6 +67,7 @@ func NewApp(c *StartCmdConfig) (*App, error) {
 func (a *App) Run(ctx context.Context) error {
 	a.Process = lib.NewProcess(ctx)
 	a.SpawnCriticalJob(a.mainJob)
+	a.SpawnCriticalJob(a.sessionJob)
 	<-a.Process.Done()
 	return a.Err()
 }
@@ -55,29 +82,50 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 	return a.mainJob.WaitReady(ctx)
 }
 
+// runSessionIngest runs session ingestion process
+func (a *App) runSessionIngest(ctx context.Context) error {
+	log := logger.Get(ctx)
+
+	select {
+	case s := <-a.sessionIDs:
+		log.Infof("%v", s)
+		//a.semaphore <- struct{}{}
+
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+
+	return nil
+}
+
 // run is the main process
 func (a *App) run(ctx context.Context) error {
 	log := logger.Get(ctx)
 
 	log.WithField("version", Version).WithField("sha", Sha).Printf("Teleport event handler")
 
-	a.config.Dump()
-
 	err := a.init(ctx)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	t, err := NewTeleportClient(ctx, a.config, time.Date(2020, 1, 1, 0, 0, 0, 0, time.Local), "", "")
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
 	a.mainJob.SetReady(true)
 
-	chEvt, chErr := t.Events()
+	err = a.poll(ctx)
+	if err != nil {
+		return trace.Wrap(err)
+	}
 
-Out:
+	a.Terminate()
+	return nil
+}
+
+// poll polls main audit log
+func (a *App) poll(ctx context.Context) error {
+	log := logger.Get(ctx)
+
+	chEvt, chErr := a.teleport.Events()
+
 	for {
 		select {
 		case err := <-chErr:
@@ -85,18 +133,49 @@ Out:
 
 		case evt := <-chEvt:
 			if evt == nil {
-				break Out
+				return nil
 			}
-			log.WithField("evt", evt).Debug("Event received")
+
+			err := a.sendEvent(ctx, a.config.FluentdURL, evt)
+			if err != nil {
+				return trace.Wrap(err)
+			}
+
+			a.state.SetID(evt.ID)
+			a.state.SetCursor(evt.Cursor)
+
+			if e.GetType() == sessionEndType {
+				p.eg.Go(func() error {
+					return p.startPollSessionOnSessionEnd(e)
+				})
+			}
+
+			log.WithFields(logrus.Fields{"id": evt.ID, "type": evt.Event.GetType(), "ts": evt.Event.GetTime()}).Info("Event received")
+		}
+	}
+}
+
+// sendEvent sends an event to fluentd
+func (a *App) sendEvent(ctx context.Context, url string, e *eventWithCursor) error {
+	log := logger.Get(ctx)
+
+	if !a.config.DryRun {
+		err := a.fluentd.Send(url, e)
+		if err != nil {
+			return trace.Wrap(err)
 		}
 	}
 
-	a.Terminate()
+	log.WithFields(logrus.Fields{"id": e.ID, "type": e.Event.GetType(), "ts": e.Event.GetTime(), "index": e.Event.GetIndex()}).Info("Event sent")
+	log.WithField("event", e).Debug("Event dump")
+
 	return nil
 }
 
 // init initializes application state
 func (a *App) init(ctx context.Context) error {
+	log := logger.Get(ctx)
+
 	a.config.Dump()
 
 	s, err := NewState(a.config)
@@ -104,21 +183,52 @@ func (a *App) init(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	a.state = s
-
-	err = a.setStartTime(ctx)
+	err = a.setStartTime(ctx, s)
 	if err != nil {
 		return trace.Wrap(err)
 	}
+
+	f, err := NewFluentdClient(&a.config.FluentdConfig)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	cursor, err := s.GetCursor()
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	id, err := s.GetID()
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	st, err := s.GetStartTime()
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	t, err := NewTeleportClient(ctx, a.config, *st, cursor, id)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	a.state = s
+	a.fluentd = f
+	a.teleport = t
+
+	log.WithField("cursor", cursor).Info("Using initial cursor value")
+	log.WithField("id", id).Info("Using initial ID value")
+	log.WithField("value", st).Info("Using start time from state")
 
 	return nil
 }
 
 // setStartTime sets start time or fails if start time has changed from the last run
-func (a *App) setStartTime(ctx context.Context) error {
+func (a *App) setStartTime(ctx context.Context, s *State) error {
 	log := logger.Get(ctx)
 
-	prevStartTime, err := a.state.GetStartTime()
+	prevStartTime, err := s.GetStartTime()
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -132,7 +242,7 @@ func (a *App) setStartTime(ctx context.Context) error {
 			t = &now
 		}
 
-		return a.state.SetStartTime(t)
+		return s.SetStartTime(t)
 	}
 
 	// If there is a time saved in the state and this time does not equal to the time passed from CLI and a

@@ -70,16 +70,16 @@ type TeleportClient struct {
 	log log.FieldLogger
 }
 
-// eventWithCursor is used in event consumption logic
+// eventWithCursor is the compound structure which represents event
 type eventWithCursor struct {
 	// event is the event
-	event events.AuditEvent
+	Event events.AuditEvent
 
-	// cursor is the event ID (real/artificial when empty)
-	id string
+	// cursor is the event ID (real/generated when empty)
+	ID string
 
 	// cursor is the current cursor value
-	cursor string
+	Cursor string
 }
 
 // NewTeleportClient builds Teleport client instance
@@ -230,6 +230,9 @@ func (t *TeleportClient) Events() (chan *eventWithCursor, chan error) {
 	e := make(chan error, 1)
 
 	go func() {
+		defer close(ch)
+		defer close(e)
+
 		for {
 			// If there is nothing in the batch, request
 			if len(t.batch) == 0 {
@@ -290,14 +293,11 @@ func (t *TeleportClient) Events() (chan *eventWithCursor, chan error) {
 			t.id = id
 
 			ch <- &eventWithCursor{
-				event:  event,
-				id:     id,
-				cursor: t.cursor,
+				Event:  event,
+				ID:     id,
+				Cursor: t.cursor,
 			}
 		}
-
-		close(ch)
-		close(e)
 	}()
 
 	return ch, e
