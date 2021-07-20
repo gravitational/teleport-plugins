@@ -76,7 +76,7 @@ type IngestConfig struct {
 	Types []string `help:"Comma-separated list of event types to forward" env:"FDFWD_TYPES"`
 
 	// SkipSessionTypes are session event types to skip
-	SkipSessionTypesRaw []string `name:"skip-session-types" help:"Comma-separated list of session event types to skip" default:"session.print" env:"FDFWD_SKIP_SESSION_TYPES"`
+	SkipSessionTypesRaw []string `name:"skip-session-types" help:"Comma-separated list of session event types to skip" default:"print" env:"FDFWD_SKIP_SESSION_TYPES"`
 
 	// SkipSessionTypes is a map generated from SkipSessionTypes
 	SkipSessionTypes map[string]struct{} `kong:"-"`

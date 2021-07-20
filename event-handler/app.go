@@ -78,6 +78,83 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 	return a.mainJob.WaitReady(ctx)
 }
 
+// takeSemaphore obtains semaphore
+func (a *App) takeSemaphore(ctx context.Context) error {
+	select {
+	case a.semaphore <- struct{}{}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// releaseSemaphore releases semaphore
+func (a *App) releaseSemaphore(ctx context.Context) error {
+	select {
+	case <-a.semaphore:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// consumeSession ingests session
+func (a *App) consumeSession(ctx context.Context, s session) error {
+	log := logger.Get(ctx)
+
+	log.WithField("id", s.ID).Info("Started session events ingest")
+
+	url := a.config.FluentdSessionURL + "." + s.ID + ".log"
+
+	chEvt, chErr := a.teleport.StreamSessionEvents(ctx, s.ID, int64(s.Index))
+
+Out:
+	for {
+		select {
+		case err := <-chErr:
+			return trace.Wrap(err)
+
+		case evt := <-chEvt:
+			if evt == nil {
+				log.WithField("id", s.ID).Info("Finished session events ingest")
+
+				// Session export has finished, we do not need it's state anymore
+				err := a.state.RemoveSession(s.ID)
+				if err != nil {
+					return trace.Wrap(err)
+				}
+
+				break Out
+			}
+
+			e, err := NewTeleportEvent(evt, "")
+			if err != nil {
+				return trace.Wrap(err)
+			}
+
+			_, ok := a.config.SkipSessionTypes[e.Type]
+			if !ok {
+				err := a.sendEvent(ctx, url, &e)
+				if err != nil {
+					return trace.Wrap(err)
+				}
+			}
+
+			// Set session index
+			err = a.state.SetSessionIndex(s.ID, e.Index)
+			if err != nil {
+				return trace.Wrap(err)
+			}
+		case <-ctx.Done():
+			return nil
+		}
+	}
+
+	a.releaseSemaphore(ctx)
+
+	return nil
+}
+
 // runSessionConsumer runs session consuming process
 func (a *App) runSessionConsumer(ctx context.Context) error {
 	log := logger.Get(ctx)
@@ -89,11 +166,12 @@ func (a *App) runSessionConsumer(ctx context.Context) error {
 		case s := <-a.sessions:
 			log.WithField("id", s.ID).WithField("index", s.Index).Info("Starting session ingest")
 
-			// TODO: LockSemaphore
-			a.semaphore <- struct{}{}
-			go func() {
-				<-a.semaphore
-			}()
+			a.takeSemaphore(ctx)
+			func(s session) {
+				a.SpawnCritical(func(ctx context.Context) error {
+					return a.consumeSession(ctx, s)
+				})
+			}(s)
 
 		case <-ctx.Done():
 			return ctx.Err()
@@ -126,7 +204,10 @@ func (a *App) run(ctx context.Context) error {
 
 // startSessionPoll starts session event ingestion
 func (a *App) startSessionPoll(ctx context.Context, e *TeleportEvent) error {
-	a.state.SetSessionIndex(e.SessionID, 0)
+	err := a.state.SetSessionIndex(e.SessionID, 0)
+	if err != nil {
+		return trace.Wrap(err)
+	}
 
 	s := session{ID: e.SessionID, Index: 0}
 
