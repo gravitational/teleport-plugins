@@ -6,14 +6,8 @@ import (
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
 	"github.com/sirupsen/logrus"
-)
-
-const (
-	// sessionEndType type name for session end event
-	sessionEndType = "session.end"
 )
 
 // session is the utility struct used for session ingestion
@@ -84,20 +78,22 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 	return a.mainJob.WaitReady(ctx)
 }
 
-// runSessionIngest runs session ingestion process
+// runSessionConsumer runs session consuming process
 func (a *App) runSessionConsumer(ctx context.Context) error {
 	log := logger.Get(ctx)
 
 	a.sessionConsumerJob.SetReady(true)
 
-	log.Info("Session consumer started")
-
 	for {
 		select {
 		case s := <-a.sessions:
-			log.Infof("%v", s)
-			log.Info("---------------------------")
-			//a.semaphore <- struct{}{}
+			log.WithField("id", s.ID).WithField("index", s.Index).Info("Starting session ingest")
+
+			// TODO: LockSemaphore
+			a.semaphore <- struct{}{}
+			go func() {
+				<-a.semaphore
+			}()
 
 		case <-ctx.Done():
 			return ctx.Err()
@@ -128,24 +124,22 @@ func (a *App) run(ctx context.Context) error {
 	return nil
 }
 
-func (a *App) startSessionPoll(ctx context.Context, evt *eventWithCursor) {
-	log := logger.Get(ctx)
+// startSessionPoll starts session event ingestion
+func (a *App) startSessionPoll(ctx context.Context, e *TeleportEvent) error {
+	a.state.SetSessionIndex(e.SessionID, 0)
 
-	e := events.MustToOneOf(evt.Event)
-	id := e.GetSessionEnd().SessionID
+	s := session{ID: e.SessionID, Index: 0}
 
-	log.WithField("id", id).Info("Started session events ingest")
-
-	a.sessions <- session{
-		ID:    id,
-		Index: 0,
+	select {
+	case a.sessions <- s:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
 	}
 }
 
 // poll polls main audit log
 func (a *App) poll(ctx context.Context) error {
-	log := logger.Get(ctx)
-
 	chEvt, chErr := a.teleport.Events()
 
 	for {
@@ -166,22 +160,19 @@ func (a *App) poll(ctx context.Context) error {
 			a.state.SetID(evt.ID)
 			a.state.SetCursor(evt.Cursor)
 
-			if evt.Event.GetType() == sessionEndType {
-				func(evt *eventWithCursor) {
+			if evt.IsSessionEnd {
+				func(evt *TeleportEvent) {
 					a.SpawnCritical(func(ctx context.Context) error {
-						a.startSessionPoll(ctx, evt)
-						return nil
+						return a.startSessionPoll(ctx, evt)
 					})
 				}(evt)
 			}
-
-			log.WithFields(logrus.Fields{"id": evt.ID, "type": evt.Event.GetType(), "ts": evt.Event.GetTime()}).Info("Event received")
 		}
 	}
 }
 
 // sendEvent sends an event to fluentd
-func (a *App) sendEvent(ctx context.Context, url string, e *eventWithCursor) error {
+func (a *App) sendEvent(ctx context.Context, url string, e *TeleportEvent) error {
 	log := logger.Get(ctx)
 
 	if !a.config.DryRun {
@@ -191,7 +182,7 @@ func (a *App) sendEvent(ctx context.Context, url string, e *eventWithCursor) err
 		}
 	}
 
-	log.WithFields(logrus.Fields{"id": e.ID, "type": e.Event.GetType(), "ts": e.Event.GetTime(), "index": e.Event.GetIndex()}).Info("Event sent")
+	log.WithFields(logrus.Fields{"id": e.ID, "type": e.Type, "ts": e.Time, "index": e.Index}).Info("Event sent")
 	log.WithField("event", e).Debug("Event dump")
 
 	return nil
@@ -218,22 +209,22 @@ func (a *App) init(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	cursor, err := s.GetCursor()
+	latestCursor, err := s.GetCursor()
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	id, err := s.GetID()
+	latestID, err := s.GetID()
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	st, err := s.GetStartTime()
+	startTime, err := s.GetStartTime()
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	t, err := NewTeleportClient(ctx, a.config, *st, cursor, id)
+	t, err := NewTeleportClient(ctx, a.config, *startTime, latestCursor, latestID)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -242,9 +233,9 @@ func (a *App) init(ctx context.Context) error {
 	a.fluentd = f
 	a.teleport = t
 
-	log.WithField("cursor", cursor).Info("Using initial cursor value")
-	log.WithField("id", id).Info("Using initial ID value")
-	log.WithField("value", st).Info("Using start time from state")
+	log.WithField("cursor", latestCursor).Info("Using initial cursor value")
+	log.WithField("id", latestID).Info("Using initial ID value")
+	log.WithField("value", startTime).Info("Using start time from state")
 
 	return nil
 }

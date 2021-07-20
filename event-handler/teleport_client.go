@@ -58,7 +58,7 @@ type TeleportClient struct {
 	pos int
 
 	// batch current events batch
-	batch []events.AuditEvent
+	batch []TeleportEvent
 
 	// config is teleport config
 	config *StartCmdConfig
@@ -68,18 +68,6 @@ type TeleportClient struct {
 
 	// log is the context-specific logrus instance
 	log log.FieldLogger
-}
-
-// eventWithCursor is the compound structure which represents event
-type eventWithCursor struct {
-	// event is the event
-	Event events.AuditEvent
-
-	// cursor is the event ID (real/generated when empty)
-	ID string
-
-	// cursor is the current cursor value
-	Cursor string
 }
 
 // NewTeleportClient builds Teleport client instance
@@ -131,17 +119,20 @@ func (t *TeleportClient) flipPage() bool {
 
 	t.cursor = t.nextCursor
 	t.pos = -1
-	t.batch = []events.AuditEvent{}
+	t.batch = []TeleportEvent{}
 
 	return true
 }
 
 // fetch fetches the page and sets the position to the event after latest known
 func (t *TeleportClient) fetch() error {
-	batch, nextCursor, err := t.getEvents()
+	b, nextCursor, err := t.getEvents()
 	if err != nil {
 		return trace.Wrap(err)
 	}
+
+	// Zero batch
+	t.batch = make([]TeleportEvent, len(b))
 
 	// Save next cursor
 	t.nextCursor = nextCursor
@@ -149,33 +140,37 @@ func (t *TeleportClient) fetch() error {
 	// Mark position as unresolved (the page is empty)
 	t.pos = -1
 
-	t.log.WithField("cursor", t.cursor).WithField("next", nextCursor).WithField("len", len(batch)).Info("Fetched page")
+	t.log.WithField("cursor", t.cursor).WithField("next", nextCursor).WithField("len", len(b)).Info("Fetched page")
 
 	// Page is empty: do nothing, return
-	if len(batch) == 0 {
+	if len(b) == 0 {
 		return nil
 	}
 
 	pos := 0
 
+	// Convert batch to TeleportEvent
+	for i, e := range b {
+		evt, err := NewTeleportEvent(e, t.cursor)
+		if err != nil {
+			return trace.Wrap(err)
+		}
+
+		t.batch[i] = evt
+	}
+
 	// If last known id is not empty, let's try to find it's pos
 	if t.id != "" {
-		for i, v := range batch {
-			id, err := t.getID(v)
-			if err != nil {
-				return trace.Wrap(err)
-			}
-
-			if id == t.id {
+		for i, e := range t.batch {
+			if e.ID == t.id {
 				pos = i + 1
-				t.id = id
+				t.id = e.ID
 			}
 		}
 	}
 
 	// Set the position of the last known event
 	t.pos = pos
-	t.batch = batch
 
 	t.log.WithField("id", t.id).WithField("new_pos", t.pos).Info("Skipping last known event")
 
@@ -225,8 +220,8 @@ func (t *TeleportClient) getID(event events.AuditEvent) (string, error) {
 }
 
 // Next returns next event from a batch or requests next batch if it has been ended
-func (t *TeleportClient) Events() (chan *eventWithCursor, chan error) {
-	ch := make(chan *eventWithCursor)
+func (t *TeleportClient) Events() (chan *TeleportEvent, chan error) {
+	ch := make(chan *TeleportEvent)
 	e := make(chan error, 1)
 
 	go func() {
@@ -282,21 +277,9 @@ func (t *TeleportClient) Events() (chan *eventWithCursor, chan error) {
 
 			event := t.batch[t.pos]
 			t.pos++
+			t.id = event.ID
 
-			id, err := t.getID(event)
-			if err != nil {
-				e <- trace.Wrap(err)
-				break
-			}
-
-			// Save new known id
-			t.id = id
-
-			ch <- &eventWithCursor{
-				Event:  event,
-				ID:     id,
-				Cursor: t.cursor,
-			}
+			ch <- &event
 		}
 	}()
 
