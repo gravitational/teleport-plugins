@@ -150,6 +150,11 @@ Out:
 		}
 	}
 
+	err := a.state.RemoveSession(s.ID)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
 	a.releaseSemaphore(ctx)
 
 	return nil
@@ -188,6 +193,30 @@ func (a *App) run(ctx context.Context) error {
 	err := a.init(ctx)
 	if err != nil {
 		return trace.Wrap(err)
+	}
+
+	s, err := a.state.GetSessions()
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	if len(s) > 0 {
+		for id, idx := range s {
+			func(id string, idx int) {
+				a.SpawnCritical(func(ctx context.Context) error {
+					log.WithField("id", id).WithField("index", idx).Info("Restarting session ingestion")
+
+					s := session{ID: id, Index: idx}
+
+					select {
+					case a.sessions <- s:
+						return nil
+					case <-ctx.Done():
+						return ctx.Err()
+					}
+				})
+			}(id, int(idx))
+		}
 	}
 
 	a.mainJob.SetReady(true)
