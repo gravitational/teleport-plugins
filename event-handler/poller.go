@@ -46,11 +46,6 @@ type Poller struct {
 	eg *errgroup.Group
 }
 
-const (
-	// sessionEndType type name for session end event
-	sessionEndType = "session.end"
-)
-
 // NewPoller builds new Poller structure
 func NewPoller(ctx context.Context, c *StartCmdConfig) (*Poller, error) {
 	// s, err := NewState(&c.StorageConfig, &c.IngestConfig)

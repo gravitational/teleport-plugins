@@ -6,6 +6,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
 	"github.com/sirupsen/logrus"
 )
@@ -45,10 +46,10 @@ type App struct {
 	semaphore chan struct{}
 
 	// sessionIDs id queue
-	sessionIDs chan session
+	sessions chan session
 
-	// sessionJob controls session ingestion
-	sessionJob lib.ServiceJob
+	// sessionConsumerJob controls session ingestion
+	sessionConsumerJob lib.ServiceJob
 
 	// Process
 	*lib.Process
@@ -58,8 +59,9 @@ type App struct {
 func NewApp(c *StartCmdConfig) (*App, error) {
 	app := &App{config: c}
 	app.mainJob = lib.NewServiceJob(app.run)
-	app.sessionJob = lib.NewServiceJob(app.runSessionIngest)
+	app.sessionConsumerJob = lib.NewServiceJob(app.runSessionConsumer)
 	app.semaphore = make(chan struct{}, 5) // TODO: Constant
+	app.sessions = make(chan session)
 	return app, nil
 }
 
@@ -67,7 +69,7 @@ func NewApp(c *StartCmdConfig) (*App, error) {
 func (a *App) Run(ctx context.Context) error {
 	a.Process = lib.NewProcess(ctx)
 	a.SpawnCriticalJob(a.mainJob)
-	a.SpawnCriticalJob(a.sessionJob)
+	a.SpawnCriticalJob(a.sessionConsumerJob)
 	<-a.Process.Done()
 	return a.Err()
 }
@@ -83,19 +85,24 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 }
 
 // runSessionIngest runs session ingestion process
-func (a *App) runSessionIngest(ctx context.Context) error {
+func (a *App) runSessionConsumer(ctx context.Context) error {
 	log := logger.Get(ctx)
 
-	select {
-	case s := <-a.sessionIDs:
-		log.Infof("%v", s)
-		//a.semaphore <- struct{}{}
+	a.sessionConsumerJob.SetReady(true)
 
-	case <-ctx.Done():
-		return ctx.Err()
+	log.Info("Session consumer started")
+
+	for {
+		select {
+		case s := <-a.sessions:
+			log.Infof("%v", s)
+			log.Info("---------------------------")
+			//a.semaphore <- struct{}{}
+
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}
-
-	return nil
 }
 
 // run is the main process
@@ -117,7 +124,22 @@ func (a *App) run(ctx context.Context) error {
 	}
 
 	a.Terminate()
+
 	return nil
+}
+
+func (a *App) startSessionPoll(ctx context.Context, evt *eventWithCursor) {
+	log := logger.Get(ctx)
+
+	e := events.MustToOneOf(evt.Event)
+	id := e.GetSessionEnd().SessionID
+
+	log.WithField("id", id).Info("Started session events ingest")
+
+	a.sessions <- session{
+		ID:    id,
+		Index: 0,
+	}
 }
 
 // poll polls main audit log
@@ -144,10 +166,13 @@ func (a *App) poll(ctx context.Context) error {
 			a.state.SetID(evt.ID)
 			a.state.SetCursor(evt.Cursor)
 
-			if e.GetType() == sessionEndType {
-				p.eg.Go(func() error {
-					return p.startPollSessionOnSessionEnd(e)
-				})
+			if evt.Event.GetType() == sessionEndType {
+				func(evt *eventWithCursor) {
+					a.SpawnCritical(func(ctx context.Context) error {
+						a.startSessionPoll(ctx, evt)
+						return nil
+					})
+				}(evt)
 			}
 
 			log.WithFields(logrus.Fields{"id": evt.ID, "type": evt.Event.GetType(), "ts": evt.Event.GetTime()}).Info("Event received")
