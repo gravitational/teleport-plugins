@@ -20,43 +20,45 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/events"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 )
 
-// mockTeleportClient is Teleport client mock
-type mockTeleportClient struct {
+// mockTeleportEventWatcher is Teleport client mock
+type mockTeleportEventWatcher struct {
 	// events is the mock list of events
 	events []events.AuditEvent
 }
 
 // SearchEvents is mock SearchEvents method which returns events
-func (c *mockTeleportClient) SearchEvents(ctx context.Context, fromUTC, toUTC time.Time, namespace string, eventTypes []string, limit int, startKey string) ([]events.AuditEvent, string, error) {
+func (c *mockTeleportEventWatcher) SearchEvents(ctx context.Context, fromUTC, toUTC time.Time, namespace string, eventTypes []string, limit int, order types.EventOrder, startKey string) ([]events.AuditEvent, string, error) {
 	e := c.events
 	c.events = make([]events.AuditEvent, 0) // nullify events
 	return e, "test", nil
 }
 
 // StreamSessionEvents returns session events stream
-func (c *mockTeleportClient) StreamSessionEvents(ctx context.Context, sessionID string, startIndex int64) (chan events.AuditEvent, chan error) {
+func (c *mockTeleportEventWatcher) StreamSessionEvents(ctx context.Context, sessionID string, startIndex int64) (chan events.AuditEvent, chan error) {
 	return nil, nil
 }
 
 // Close is mock close method
-func (c *mockTeleportClient) Close() error {
+func (c *mockTeleportEventWatcher) Close() error {
 	return nil
 }
 
-func newTeleportClient(e []events.AuditEvent) *TeleportEventsWatcher {
-	teleportClient := &mockTeleportClient{events: e}
+func newTeleportEventWatcher(e []events.AuditEvent) *TeleportEventsWatcher {
+	teleportEventWatcher := &mockTeleportEventWatcher{events: e}
 
 	client := &TeleportEventsWatcher{
-		client: teleportClient,
+		client: teleportEventWatcher,
 		pos:    -1,
 		config: &StartCmdConfig{
 			IngestConfig: IngestConfig{
-				BatchSize: 5,
+				BatchSize:       5,
+				ExitOnLastEvent: true,
 			},
 		},
 	}
@@ -65,31 +67,39 @@ func newTeleportClient(e []events.AuditEvent) *TeleportEventsWatcher {
 }
 
 func TestNext(t *testing.T) {
-	e := make([]events.AuditEvent, 2)
-	e[0] = &events.UserCreate{
-		Metadata: events.Metadata{
-			ID: "1",
+	e := []events.AuditEvent{
+		&events.UserCreate{
+			Metadata: events.Metadata{
+				ID: "1",
+			},
+		},
+		&events.UserDelete{
+			Metadata: events.Metadata{
+				ID: "",
+			},
 		},
 	}
-	e[1] = &events.UserDelete{
-		Metadata: events.Metadata{
-			ID: "2",
-		},
+
+	client := newTeleportEventWatcher(e)
+	chEvt, chErr := client.Events(context.Background())
+
+	select {
+	case err := <-chErr:
+		require.NoError(t, err)
+	case e := <-chEvt:
+		require.NotNil(t, e.Event)
+		require.Equal(t, e.ID, "1")
+	case <-time.After(time.Second):
+		require.Fail(t, "No events were sent")
 	}
 
-	client := newTeleportClient(e)
-	n1, _, err := client.Next()
-
-	require.NoError(t, err)
-	require.IsType(t, &events.UserCreate{}, n1)
-
-	n2, _, err := client.Next()
-
-	require.NoError(t, err)
-	require.IsType(t, &events.UserDelete{}, n2)
-
-	n3, _, err := client.Next()
-
-	require.NoError(t, err)
-	require.Nil(t, n3)
+	select {
+	case err := <-chErr:
+		require.NoError(t, err)
+	case e := <-chEvt:
+		require.NotNil(t, e.Event)
+		require.Equal(t, e.ID, "081ca05eea09ac0cd06e2d2acd06bec424146b254aa500de37bdc2c2b0a4dd0f")
+	case <-time.After(time.Second):
+		require.Fail(t, "No events were sent")
+	}
 }

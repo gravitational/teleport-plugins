@@ -68,15 +68,16 @@ func TestStatePersist(t *testing.T) {
 	require.NoError(t, errc)
 	require.NoError(t, erri)
 
-	assert.NotNil(t, startTime)
-	assert.Equal(t, currentTime, *startTime)
+	assert.Nil(t, startTime)
 	assert.Equal(t, "", cursor)
 	assert.Equal(t, "", id)
 
 	errc = state.SetCursor("testCursor")
 	erri = state.SetID("testId")
+	errt = state.SetStartTime(&currentTime)
 	require.NoError(t, errc)
 	require.NoError(t, erri)
+	require.NoError(t, errt)
 
 	state, err = NewState(startC)
 	require.NoError(t, err)
