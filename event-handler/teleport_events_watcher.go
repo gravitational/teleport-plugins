@@ -24,6 +24,7 @@ import (
 	"github.com/gravitational/teleport-plugins/event-handler/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport/api/client"
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
@@ -32,7 +33,7 @@ import (
 
 // TeleportSearchEventsClient is an interface for client.Client, required for testing
 type TeleportSearchEventsClient interface {
-	SearchEvents(ctx context.Context, fromUTC, toUTC time.Time, namespace string, eventTypes []string, limit int, startKey string) ([]events.AuditEvent, string, error)
+	SearchEvents(ctx context.Context, fromUTC, toUTC time.Time, namespace string, eventTypes []string, limit int, order types.EventOrder, startKey string) ([]events.AuditEvent, string, error)
 	StreamSessionEvents(ctx context.Context, sessionID string, startIndex int64) (chan events.AuditEvent, chan error)
 	Close() error
 }
@@ -180,6 +181,7 @@ func (t *TeleportEventsWatcher) getEvents(ctx context.Context) ([]events.AuditEv
 		t.config.Namespace,
 		t.config.Types,
 		t.config.BatchSize,
+		types.EventOrderAscending,
 		t.cursor,
 	)
 }

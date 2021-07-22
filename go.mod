@@ -25,7 +25,6 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	golang.org/x/net v0.0.0-20210222171744-9060382bd457
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	google.golang.org/grpc v1.31.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/resty.v1 v1.12.0
@@ -34,8 +33,8 @@ require (
 replace (
 	github.com/coreos/go-oidc => github.com/gravitational/go-oidc v0.0.3
 	github.com/gogo/protobuf => github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf
-	github.com/gravitational/teleport => github.com/gravitational/teleport v1.3.3-0.20210709223327-374c3b2041d5
-	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20210709223327-374c3b2041d5
+	github.com/gravitational/teleport => github.com/gravitational/teleport v1.3.3-0.20210722051648-7105d5db1f3a
+	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20210722051648-7105d5db1f3a
 	github.com/iovisor/gobpf => github.com/gravitational/gobpf v0.0.1
 	github.com/julienschmidt/httprouter => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 	github.com/siddontang/go-mysql v1.1.0 => github.com/gravitational/go-mysql v1.1.1-0.20210212011549-886316308a77
