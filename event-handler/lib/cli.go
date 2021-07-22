@@ -18,8 +18,8 @@ package lib
 
 import "github.com/manifoldco/promptui"
 
-// YesNo displays Y/N prompt
-func YesNo(message string) bool {
+// AskYesNo displays Y/N prompt
+func AskYesNo(message string) bool {
 	prompt := promptui.Prompt{
 		Label:     message,
 		IsConfirm: true,

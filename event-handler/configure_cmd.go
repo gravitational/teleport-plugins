@@ -401,7 +401,7 @@ func (c *ConfigureCmd) writeConf() error {
 func (c *ConfigureCmd) askOverwrite(path string) bool {
 	_, err := os.Stat(path)
 	if !os.IsNotExist(err) {
-		return lib.YesNo(fmt.Sprintf("Do you want to overwrite %s", path))
+		return lib.AskYesNo(fmt.Sprintf("Do you want to overwrite %s", path))
 	}
 
 	return true

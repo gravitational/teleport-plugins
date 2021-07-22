@@ -37,11 +37,8 @@ type TeleportSearchEventsClient interface {
 	Close() error
 }
 
-// TeleportClient represents wrapper around Teleport client to work with events
-type TeleportClient struct {
-	// context is the context for a client
-	context context.Context
-
+// TeleportEventsWatcher represents wrapper around Teleport client to work with events
+type TeleportEventsWatcher struct {
 	// client is an instance of GRPC Teleport client
 	client TeleportSearchEventsClient
 
@@ -65,19 +62,16 @@ type TeleportClient struct {
 
 	// startTime is event time frame start
 	startTime time.Time
-
-	// log is the context-specific logrus instance
-	log log.FieldLogger
 }
 
-// NewTeleportClient builds Teleport client instance
-func NewTeleportClient(
+// NewTeleportEventsWatcher builds Teleport client instance
+func NewTeleportEventsWatcher(
 	ctx context.Context,
 	c *StartCmdConfig,
 	startTime time.Time,
 	cursor string,
 	id string,
-) (*TeleportClient, error) {
+) (*TeleportEventsWatcher, error) {
 	var err error
 
 	config := client.Config{
@@ -93,26 +87,24 @@ func NewTeleportClient(
 		return nil, trace.Wrap(err)
 	}
 
-	tc := TeleportClient{
-		context:   ctx,
+	tc := TeleportEventsWatcher{
 		client:    client,
 		pos:       -1,
 		cursor:    cursor,
 		config:    c,
 		startTime: startTime,
-		log:       logger.Get(ctx),
 	}
 
 	return &tc, nil
 }
 
 // Close closes connection to Teleport
-func (t *TeleportClient) Close() {
+func (t *TeleportEventsWatcher) Close() {
 	t.client.Close()
 }
 
 // flipPage flips the current page
-func (t *TeleportClient) flipPage() bool {
+func (t *TeleportEventsWatcher) flipPage() bool {
 	if t.nextCursor == "" {
 		return false
 	}
@@ -125,8 +117,10 @@ func (t *TeleportClient) flipPage() bool {
 }
 
 // fetch fetches the page and sets the position to the event after latest known
-func (t *TeleportClient) fetch() error {
-	b, nextCursor, err := t.getEvents()
+func (t *TeleportEventsWatcher) fetch(ctx context.Context) error {
+	log := logger.Get(ctx)
+
+	b, nextCursor, err := t.getEvents(ctx)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -140,7 +134,7 @@ func (t *TeleportClient) fetch() error {
 	// Mark position as unresolved (the page is empty)
 	t.pos = -1
 
-	t.log.WithField("cursor", t.cursor).WithField("next", nextCursor).WithField("len", len(b)).Info("Fetched page")
+	log.WithField("cursor", t.cursor).WithField("next", nextCursor).WithField("len", len(b)).Info("Fetched page")
 
 	// Page is empty: do nothing, return
 	if len(b) == 0 {
@@ -172,15 +166,15 @@ func (t *TeleportClient) fetch() error {
 	// Set the position of the last known event
 	t.pos = pos
 
-	t.log.WithField("id", t.id).WithField("new_pos", t.pos).Info("Skipping last known event")
+	log.WithField("id", t.id).WithField("new_pos", t.pos).Info("Skipping last known event")
 
 	return nil
 }
 
 // getEvents calls Teleport client and loads events
-func (t *TeleportClient) getEvents() ([]events.AuditEvent, string, error) {
+func (t *TeleportEventsWatcher) getEvents(ctx context.Context) ([]events.AuditEvent, string, error) {
 	return t.client.SearchEvents(
-		t.context,
+		ctx,
 		t.startTime,
 		time.Now().UTC(),
 		t.config.Namespace,
@@ -191,20 +185,20 @@ func (t *TeleportClient) getEvents() ([]events.AuditEvent, string, error) {
 }
 
 // pause sleeps for timeout seconds
-func (t *TeleportClient) pause() {
-	t.log.Infof("No new events, pause for %v seconds", t.config.Timeout)
+func (t *TeleportEventsWatcher) pause(ctx context.Context) error {
+	log := logger.Get(ctx)
+	log.Infof("No new events, pause for %v seconds", t.config.Timeout)
 
-	// Handle termination
 	select {
+	case <-ctx.Done():
+		return ctx.Err()
 	case <-time.After(t.config.Timeout):
-		return
-	case <-t.context.Done():
-		return
+		return nil
 	}
 }
 
 // getID returns event id or generates artificial id for events with blank id
-func (t *TeleportClient) getID(event events.AuditEvent) (string, error) {
+func (t *TeleportEventsWatcher) getID(event events.AuditEvent) (string, error) {
 	id := event.GetID()
 	if id != "" {
 		return id, nil
@@ -220,7 +214,7 @@ func (t *TeleportClient) getID(event events.AuditEvent) (string, error) {
 }
 
 // Next returns next event from a batch or requests next batch if it has been ended
-func (t *TeleportClient) Events() (chan *TeleportEvent, chan error) {
+func (t *TeleportEventsWatcher) Events(ctx context.Context) (chan *TeleportEvent, chan error) {
 	ch := make(chan *TeleportEvent)
 	e := make(chan error, 1)
 
@@ -231,7 +225,7 @@ func (t *TeleportClient) Events() (chan *TeleportEvent, chan error) {
 		for {
 			// If there is nothing in the batch, request
 			if len(t.batch) == 0 {
-				err := t.fetch()
+				err := t.fetch(ctx)
 				if err != nil {
 					e <- trace.Wrap(err)
 					break
@@ -244,7 +238,12 @@ func (t *TeleportClient) Events() (chan *TeleportEvent, chan error) {
 						break
 					}
 
-					t.pause()
+					err := t.pause(ctx)
+					if err != nil {
+						e <- trace.Wrap(err)
+						break
+					}
+
 					continue
 				}
 			}
@@ -257,7 +256,7 @@ func (t *TeleportClient) Events() (chan *TeleportEvent, chan error) {
 				}
 
 				// If not, update current page
-				err := t.fetch()
+				err := t.fetch(ctx)
 				if err != nil {
 					e <- trace.Wrap(err)
 					continue
@@ -270,7 +269,12 @@ func (t *TeleportClient) Events() (chan *TeleportEvent, chan error) {
 						break
 					}
 
-					t.pause()
+					err := t.pause(ctx)
+					if err != nil {
+						e <- trace.Wrap(err)
+						break
+					}
+
 					continue
 				}
 			}
@@ -279,7 +283,12 @@ func (t *TeleportClient) Events() (chan *TeleportEvent, chan error) {
 			t.pos++
 			t.id = event.ID
 
-			ch <- &event
+			select {
+			case ch <- &event:
+			case <-ctx.Done():
+				e <- ctx.Err()
+				break
+			}
 		}
 	}()
 
@@ -287,6 +296,6 @@ func (t *TeleportClient) Events() (chan *TeleportEvent, chan error) {
 }
 
 // StreamSessionEvents returns session event stream, that's the simple delegate to an API function
-func (t *TeleportClient) StreamSessionEvents(ctx context.Context, id string, index int64) (chan events.AuditEvent, chan error) {
+func (t *TeleportEventsWatcher) StreamSessionEvents(ctx context.Context, id string, index int64) (chan events.AuditEvent, chan error) {
 	return t.client.StreamSessionEvents(ctx, id, index)
 }

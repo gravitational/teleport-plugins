@@ -8,6 +8,7 @@ import (
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 	"github.com/sirupsen/logrus"
+	log "github.com/sirupsen/logrus"
 )
 
 // session is the utility struct used for session ingestion
@@ -16,7 +17,7 @@ type session struct {
 	ID string
 
 	// Index current event index
-	Index int
+	Index int64
 }
 
 // App is the app structure
@@ -28,7 +29,7 @@ type App struct {
 	fluentd *FluentdClient
 
 	// teleport is an instance of Teleport client
-	teleport *TeleportClient
+	teleport *TeleportEventsWatcher
 
 	// state is current persisted state
 	state *State
@@ -54,17 +55,20 @@ func NewApp(c *StartCmdConfig) (*App, error) {
 	app := &App{config: c}
 	app.mainJob = lib.NewServiceJob(app.run)
 	app.sessionConsumerJob = lib.NewServiceJob(app.runSessionConsumer)
-	app.semaphore = make(chan struct{}, 5) // TODO: Constant
+	app.semaphore = make(chan struct{}, c.Concurrency)
 	app.sessions = make(chan session)
+
 	return app, nil
 }
 
 // Run initializes and runs a watcher and a callback server
 func (a *App) Run(ctx context.Context) error {
 	a.Process = lib.NewProcess(ctx)
+
 	a.SpawnCriticalJob(a.mainJob)
 	a.SpawnCriticalJob(a.sessionConsumerJob)
 	<-a.Process.Done()
+
 	return a.Err()
 }
 
@@ -75,7 +79,17 @@ func (a *App) Err() error {
 
 // WaitReady waits for http and watcher service to start up.
 func (a *App) WaitReady(ctx context.Context) (bool, error) {
-	return a.mainJob.WaitReady(ctx)
+	mainReady, err := a.mainJob.WaitReady(ctx)
+	if err != nil {
+		return false, trace.Wrap(err)
+	}
+
+	sessionConsuerReady, err := a.sessionConsumerJob.WaitReady(ctx)
+	if err != nil {
+		return false, trace.Wrap(err)
+	}
+
+	return mainReady && sessionConsuerReady, nil
 }
 
 // takeSemaphore obtains semaphore
@@ -146,7 +160,7 @@ Out:
 				return trace.Wrap(err)
 			}
 		case <-ctx.Done():
-			return nil
+			return ctx.Err()
 		}
 	}
 
@@ -177,7 +191,6 @@ func (a *App) runSessionConsumer(ctx context.Context) error {
 					return a.consumeSession(ctx, s)
 				})
 			}(s)
-
 		case <-ctx.Done():
 			return ctx.Err()
 		}
@@ -195,14 +208,30 @@ func (a *App) run(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	s, err := a.state.GetSessions()
+	a.restartPausedSessions()
+
+	a.mainJob.SetReady(true)
+
+	err = a.poll(ctx)
+	if err != nil && !lib.IsCanceled(err) {
+		return trace.Wrap(err)
+	}
+
+	a.Terminate()
+
+	return nil
+}
+
+// restartPausedSessions restarts sessions saved in state
+func (a *App) restartPausedSessions() error {
+	sessions, err := a.state.GetSessions()
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	if len(s) > 0 {
-		for id, idx := range s {
-			func(id string, idx int) {
+	if len(sessions) > 0 {
+		for id, idx := range sessions {
+			func(id string, idx int64) {
 				a.SpawnCritical(func(ctx context.Context) error {
 					log.WithField("id", id).WithField("index", idx).Info("Restarting session ingestion")
 
@@ -215,18 +244,9 @@ func (a *App) run(ctx context.Context) error {
 						return ctx.Err()
 					}
 				})
-			}(id, int(idx))
+			}(id, idx)
 		}
 	}
-
-	a.mainJob.SetReady(true)
-
-	err = a.poll(ctx)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	a.Terminate()
 
 	return nil
 }
@@ -250,7 +270,10 @@ func (a *App) startSessionPoll(ctx context.Context, e *TeleportEvent) error {
 
 // poll polls main audit log
 func (a *App) poll(ctx context.Context) error {
-	chEvt, chErr := a.teleport.Events()
+	evtCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	chEvt, chErr := a.teleport.Events(evtCtx)
 
 	for {
 		select {
@@ -302,7 +325,7 @@ func (a *App) sendEvent(ctx context.Context, url string, e *TeleportEvent) error
 func (a *App) init(ctx context.Context) error {
 	log := logger.Get(ctx)
 
-	a.config.Dump()
+	a.config.Dump(ctx)
 
 	s, err := NewState(a.config)
 	if err != nil {
@@ -334,7 +357,7 @@ func (a *App) init(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	t, err := NewTeleportClient(ctx, a.config, *startTime, latestCursor, latestID)
+	t, err := NewTeleportEventsWatcher(ctx, a.config, *startTime, latestCursor, latestID)
 	if err != nil {
 		return trace.Wrap(err)
 	}

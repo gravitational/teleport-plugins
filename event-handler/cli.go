@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -92,6 +93,9 @@ type IngestConfig struct {
 
 	// ExitOnLastEvent exit when last event is processed
 	ExitOnLastEvent bool `help:"Exit when last event is processed"`
+
+	// Concurrency sets the number of concurrent sessions to ingest
+	Concurrency int `help:"Number of concurrent sessions" default:"5"`
 }
 
 // StartCmdConfig is start command description
@@ -168,8 +172,8 @@ func (c *StartCmdConfig) Validate() error {
 }
 
 // Dump dumps configuration values to the log
-func (c *StartCmdConfig) Dump() {
-	log := logger.Standard()
+func (c *StartCmdConfig) Dump(ctx context.Context) {
+	log := logger.Get(ctx)
 
 	// Log configuration variables
 	log.WithField("batch", c.BatchSize).Info("Using batch size")

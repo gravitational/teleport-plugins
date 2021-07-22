@@ -39,7 +39,7 @@ const (
 	pluginDescription = "Forwards Teleport AuditLog to external sources"
 
 	// gracefulShutdownTimeout is the graceful shutdown timeout
-	gracefulShutdownTimeout = 15 * time.Second
+	gracefulShutdownTimeout = 5 * time.Second
 )
 
 func main() {
