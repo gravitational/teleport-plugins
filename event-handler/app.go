@@ -213,13 +213,24 @@ func (a *App) run(ctx context.Context) error {
 	a.mainJob.SetReady(true)
 
 	err = a.poll(ctx)
-	if err != nil && !lib.IsCanceled(err) {
-		return trace.Wrap(err)
+
+	for {
+		err := a.poll(ctx)
+		switch {
+		case trace.IsConnectionProblem(err):
+			log.WithError(err).Error("Failed to connect to Teleport Auth server. Reconnecting...")
+		case trace.IsEOF(err):
+			log.WithError(err).Error("Watcher stream closed. Reconnecting...")
+		case lib.IsCanceled(err):
+			log.Debug("Watcher context is cancelled")
+			a.Terminate()
+			return nil
+		default:
+			a.Terminate()
+			log.WithError(err).Error("Watcher event loop failed")
+			return trace.Wrap(err)
+		}
 	}
-
-	a.Terminate()
-
-	return nil
 }
 
 // restartPausedSessions restarts sessions saved in state

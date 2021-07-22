@@ -48,14 +48,16 @@ func (c *mockTeleportClient) Close() error {
 	return nil
 }
 
-func newTeleportClient(e []events.AuditEvent) *TeleportClient {
+func newTeleportClient(e []events.AuditEvent) *TeleportEventsWatcher {
 	teleportClient := &mockTeleportClient{events: e}
 
-	client := &TeleportClient{
+	client := &TeleportEventsWatcher{
 		client: teleportClient,
 		pos:    -1,
-		ingestConfig: &IngestConfig{
-			BatchSize: 5,
+		config: &StartCmdConfig{
+			IngestConfig: IngestConfig{
+				BatchSize: 5,
+			},
 		},
 	}
 
