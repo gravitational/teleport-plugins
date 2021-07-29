@@ -2,7 +2,8 @@
 
 A set of plugins for Teleport's for Access Workflows and example applications for Teleport Application Access.
 
-[![Build Status](https://drone.gravitational.io/api/badges/gravitational/teleport-plugins/status.svg)](https://drone.gravitational.io/gravitational/teleport-plugins)
+[![Build Status](https://drone.teleport.dev/api/badges/gravitational/teleport-plugins/status.svg)](https://drone.teleport.dev/gravitational/teleport-plugins)
+
 
 ## Access API
 
@@ -64,7 +65,13 @@ sendind webhooks when a new request is created, or a request state is changed,
 and it allows optionally listening for the 3rd party app callbacks to facilitate
 the approval workdlow. See more in the [access/webhooks/README.md](/access/webhooks/README.md)
 
+## Terraform Provider
+
+The [Teleport Terraform Provider](./terraform) makes it easy to create resources using 
+Terraform. More info can be found in [terraform/README.md](./terraform/README.md).
+
 ## Notes
 
 Use `scripts/dep` for dependencies management. It is a wrapper over `dep` which
 ignores git submodules.
+
