@@ -105,11 +105,11 @@ func GetProvisionTokenV2(obj *types.ProvisionTokenV2, data *schema.ResourceData)
 func SetProvisionTokenV2(obj *types.ProvisionTokenV2, data *schema.ResourceData) error {
 	return accessors.Set(obj, data, SchemaProvisionTokenV2, SchemaMetaProvisionTokenV2)
 }
-func GetRoleV3(obj *types.RoleV3, data *schema.ResourceData) error {
+func GetRoleV3(obj *types.RoleV4, data *schema.ResourceData) error {
 	return accessors.Get(obj, data, SchemaRoleV3, SchemaMetaRoleV3)
 }
 
-func SetRoleV3(obj *types.RoleV3, data *schema.ResourceData) error {
+func SetRoleV3(obj *types.RoleV4, data *schema.ResourceData) error {
 	return accessors.Set(obj, data, SchemaRoleV3, SchemaMetaRoleV3)
 }
 func GetSAMLConnectorV2(obj *types.SAMLConnectorV2, data *schema.ResourceData) error {

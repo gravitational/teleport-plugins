@@ -48,7 +48,7 @@ func dataSourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface
 		return diagFromErr(describeErr(err, "role"))
 	}
 
-	r3, ok := r.(*types.RoleV3)
+	r3, ok := r.(*types.RoleV4)
 	if !ok {
 		return diagFromErr(trace.Errorf("can not convert %T to *types.RoleV3", r))
 	}

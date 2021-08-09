@@ -68,7 +68,7 @@ func resourceOIDCConnectorCreate(ctx context.Context, d *schema.ResourceData, m 
 		return diagFromErr(describeErr(err, "oidc"))
 	}
 
-	cn := types.NewOIDCConnector(n, types.OIDCConnectorSpecV2{})
+	cn, _ := types.NewOIDCConnector(n, types.OIDCConnectorSpecV2{})
 
 	cnV2, ok := cn.(*types.OIDCConnectorV2)
 	if !ok {

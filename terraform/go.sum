@@ -131,6 +131,7 @@ github.com/google/go-cmp v0.4.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/
 github.com/google/go-cmp v0.4.1/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.0/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.2/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
+github.com/google/go-cmp v0.5.4/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/go-cmp v0.5.5 h1:Khx7svrCpmxxtHBq5j2mp/xVjsi8hQMfNLvJFAlrGgU=
 github.com/google/go-cmp v0.5.5/go.mod h1:v8dTdLbMG2kIc/vJvl+f65V22dbkXbowE6jgT/gNBxE=
 github.com/google/martian v2.1.0+incompatible/go.mod h1:9I4somxYTbIHy5NJKHRl3wXiIaQGbYVAs8BPL6v8lEs=
@@ -151,9 +152,8 @@ github.com/gravitational/logrus v1.4.3 h1:gdyMN/zLd4R/kATybKzG1I6gjrbCqNJOl1Xiix
 github.com/gravitational/logrus v1.4.3/go.mod h1:+F7Ogzej0PZc/94MaYx/nvG9jOFMD2osvC3s+Squfpo=
 github.com/gravitational/protoc-gen-terraform v0.0.0-20210415164617-d46beb1615f0 h1:mUglFblcQ9ABi5MYiSJ2vnHYDXXIa0uCXPLolkd/vw4=
 github.com/gravitational/protoc-gen-terraform v0.0.0-20210415164617-d46beb1615f0/go.mod h1:joQIhLuq9Ofk7i7zLuPfUrPJE0NfsEMrQUEGSmg/HS8=
-github.com/gravitational/teleport/api v0.0.0-20210416222340-e63710a9498b h1:wP8W0hCBYlQX2RCaXzrjhSzs5uvVfBjRFzaldLU2DvA=
-github.com/gravitational/teleport/api v0.0.0-20210416222340-e63710a9498b/go.mod h1:1crgg13s9IrFb38EWxvlQ0hWtggZmS5SHkEer8eTzPA=
-github.com/gravitational/trace v1.1.13/go.mod h1:RvdOUHE4SHqR3oXlFFKnGzms8a5dugHygGw1bqDstYI=
+github.com/gravitational/teleport/api v0.0.0-20210809181104-03241af6b284 h1:6+i47GgQ4slPbe7QKfwUoknNS6J/C92yY7+t274YcHk=
+github.com/gravitational/teleport/api v0.0.0-20210809181104-03241af6b284/go.mod h1:s/ns3z5TYDbuDrVHHW8XD01E+oh9GcT3hP/Fz9LYmWw=
 github.com/gravitational/trace v1.1.14/go.mod h1:RvdOUHE4SHqR3oXlFFKnGzms8a5dugHygGw1bqDstYI=
 github.com/gravitational/trace v1.1.15 h1:dfaFcARt110nCX6RSvrcRUbvRawEYAasXyCqnhXo0Xg=
 github.com/gravitational/trace v1.1.15/go.mod h1:RvdOUHE4SHqR3oXlFFKnGzms8a5dugHygGw1bqDstYI=

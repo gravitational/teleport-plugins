@@ -32,16 +32,22 @@ github.com/google/go-cmp/cmp/internal/value
 # github.com/gravitational/protoc-gen-terraform v0.0.0-20210415164617-d46beb1615f0
 ## explicit
 github.com/gravitational/protoc-gen-terraform/accessors
-# github.com/gravitational/teleport/api v0.0.0-20210416222340-e63710a9498b
+# github.com/gravitational/teleport/api v0.0.0-20210809181104-03241af6b284
 ## explicit
+github.com/gravitational/teleport/api
 github.com/gravitational/teleport/api/client
 github.com/gravitational/teleport/api/client/proto
+github.com/gravitational/teleport/api/client/webclient
 github.com/gravitational/teleport/api/constants
 github.com/gravitational/teleport/api/defaults
+github.com/gravitational/teleport/api/identityfile
+github.com/gravitational/teleport/api/metadata
+github.com/gravitational/teleport/api/profile
 github.com/gravitational/teleport/api/types
 github.com/gravitational/teleport/api/types/events
 github.com/gravitational/teleport/api/types/wrappers
 github.com/gravitational/teleport/api/utils
+github.com/gravitational/teleport/api/utils/keypaths
 github.com/gravitational/teleport/api/utils/sshutils
 github.com/gravitational/teleport/api/utils/tlsutils
 # github.com/gravitational/trace v1.1.15

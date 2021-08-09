@@ -68,7 +68,7 @@ func resourceSAMLConnectorCreate(ctx context.Context, d *schema.ResourceData, m 
 		return diagFromErr(describeErr(err, "saml"))
 	}
 
-	s := types.NewSAMLConnector(n, types.SAMLConnectorSpecV2{})
+	s, _ := types.NewSAMLConnector(n, types.SAMLConnectorSpecV2{})
 
 	s2, ok := s.(*types.SAMLConnectorV2)
 	if !ok {

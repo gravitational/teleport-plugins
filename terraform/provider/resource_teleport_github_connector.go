@@ -68,7 +68,7 @@ func resourceGithubConnectorCreate(ctx context.Context, d *schema.ResourceData, 
 		return diagFromErr(describeErr(err, "role"))
 	}
 
-	cn := types.NewGithubConnector(n, types.GithubConnectorSpecV3{})
+	cn, _ := types.NewGithubConnector(n, types.GithubConnectorSpecV3{})
 
 	cn3, ok := cn.(*types.GithubConnectorV3)
 	if !ok {
