@@ -1,4 +1,4 @@
-VERSION=7.0.0
+VERSION=7.0.2
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-mattermost
