@@ -217,9 +217,16 @@ type autoApproveState int
 const (
 	AUTO_APPROVE autoApproveState = iota
 	POST_SLACK
+	AUTO_DENY
 )
 
 func decideAutoApprove(log logrus.FieldLogger, reqData RequestData) (string, autoApproveState) {
+	if reqData.RequestReason == "" {
+		msg := "Auto denying empty request reason"
+		log.Info(msg)
+		return msg, AUTO_DENY
+	}
+
 	if os.Getenv("ENABLE_AUTO_APPROVE") != "true" {
 		return "auto approve off", POST_SLACK
 	}
@@ -261,6 +268,13 @@ func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) err
 		err = a.apiClient.SetAccessRequestState(ctx, types.AccessRequestUpdate{
 			RequestID: reqID,
 			State:     types.RequestState_APPROVED,
+			Reason:    reason,
+		})
+	case AUTO_DENY:
+		log.Infof("Auto denying, reason='%s'", reason)
+		err = a.apiClient.SetAccessRequestState(ctx, types.AccessRequestUpdate{
+			RequestID: reqID,
+			State:     types.RequestState_DENIED,
 			Reason:    reason,
 		})
 	default:
