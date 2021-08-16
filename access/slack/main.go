@@ -18,9 +18,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib"
@@ -65,7 +67,36 @@ func main() {
 	}
 }
 
+// a very medicore way of handling pre-aproval
+var preapprovedList = []string{}
+
 func run(configPath string, debug bool) error {
+	if os.Getenv("RESTRICTED_ENV") == "" {
+		return errors.New("refusing to run without a restricted environment (RESTRICTED_ENV)")
+	}
+
+	if os.Getenv("PREAPPROVED_LIST") == "" {
+		return errors.New("refusing to run with an empty preapproval list (PREAPPROVED_LIST)")
+	}
+
+	preapprovedList = strings.Split(os.Getenv("PREAPPROVED_LIST"), ",")
+	for _, email := range preapprovedList {
+		if !strings.Contains(email, "@") {
+			return fmt.Errorf("Item in preapprove was not a valid email: '%s'", email)
+		}
+	}
+
+	fmt.Println("Preapproved list:")
+	i := 0
+	for _, email := range preapprovedList {
+		i++
+		if i%4 == 0 {
+			fmt.Println()
+		}
+		fmt.Printf("%-40s ", email)
+	}
+	fmt.Println()
+
 	conf, err := LoadConfig(configPath)
 	if err != nil {
 		return trace.Wrap(err)

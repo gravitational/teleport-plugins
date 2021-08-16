@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib"
@@ -232,7 +234,27 @@ func decideAutoApprove(log logrus.FieldLogger, reqData RequestData) (string, aut
 	}
 
 	log.Info("Auto Approve Enabled, Proceeding")
-	return "auto approved", AUTO_APPROVE
+
+	restrictedEnv := os.Getenv("RESTRICTED_ENV")
+	isRestricted := strings.Contains(strings.Join(reqData.Roles, ","), restrictedEnv)
+
+	if !isRestricted {
+		return "auto approved in unrestricted space", AUTO_APPROVE
+	}
+
+	found := false
+	for _, email := range preapprovedList {
+		if email == reqData.User {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return fmt.Sprintf("%s is not in the preapproved list for %s", reqData.User, restrictedEnv), POST_SLACK
+	}
+
+	return fmt.Sprintf("%s is in the preapproved list for %s", reqData.User, restrictedEnv), AUTO_APPROVE
 }
 
 func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) error {
