@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib"
@@ -11,6 +12,7 @@ import (
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
+	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/backoff"
 
@@ -210,6 +212,22 @@ func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
 	}
 }
 
+type autoApproveState int
+
+const (
+	AUTO_APPROVE autoApproveState = iota
+	POST_SLACK
+)
+
+func decideAutoApprove(log logrus.FieldLogger, reqData RequestData) (string, autoApproveState) {
+	if os.Getenv("ENABLE_AUTO_APPROVE") != "true" {
+		return "auto approve off", POST_SLACK
+	}
+
+	log.Info("Auto Approve Enabled, Proceeding")
+	return "auto approved", AUTO_APPROVE
+}
+
 func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) error {
 	log := logger.Get(ctx)
 
@@ -234,6 +252,26 @@ func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) err
 		} else {
 			log.Warning("No channel to post")
 		}
+	}
+
+	reason, choice := decideAutoApprove(log, reqData)
+	switch choice {
+	case AUTO_APPROVE:
+		log.Infof("Auto approved, reason='%s'", reason)
+		err = a.apiClient.SetAccessRequestState(ctx, types.AccessRequestUpdate{
+			RequestID: reqID,
+			State:     types.RequestState_APPROVED,
+			Reason:    reason,
+		})
+	default:
+		fallthrough
+	case POST_SLACK:
+		log.Debugf("Posting to slack, reason='%s'", reason)
+		break
+	}
+
+	if err != nil {
+		log.Error("Auto action failed, falling back to the UI", err)
 	}
 
 	if reqReviews := req.GetReviews(); len(reqReviews) > 0 {
