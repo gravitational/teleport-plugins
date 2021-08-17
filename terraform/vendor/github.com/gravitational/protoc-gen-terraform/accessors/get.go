@@ -41,24 +41,24 @@ func Get(
 		return trace.Errorf("obj must not be nil")
 	}
 
-	value := reflect.ValueOf(obj)
-	if value.Kind() != reflect.Ptr {
+	v := reflect.ValueOf(obj)
+	if v.Kind() != reflect.Ptr {
 		return trace.Errorf("obj must be a pointer")
 	}
 
-	value = reflect.Indirect(value)
+	v = reflect.Indirect(v)
 
-	return getFragment("", value, meta, sch, data)
+	return getFragment("", v, meta, sch, data)
 }
 
 // GetLen returns TypeSet or TypeList value length
 func GetLen(path string, data *schema.ResourceData) (int, error) {
-	num, ok := data.GetOk(path + ".#") // Terraform stores collection length in "collection_name.#" key
-	if !ok || num == nil {
+	n, ok := data.GetOk(path + ".#") // Terraform stores collection length in "collection_name.#" key
+	if !ok || n == nil {
 		return 0, nil
 	}
 
-	len, ok := num.(int)
+	len, ok := n.(int)
 	if !ok {
 		return 0, trace.Errorf("failed to convert list count to number %s", path)
 	}
@@ -75,21 +75,17 @@ func getFragment(
 	sch map[string]*schema.Schema,
 	data *schema.ResourceData,
 ) error {
-	for key, fieldMeta := range meta {
-		fieldSchema, ok := sch[key]
+	for k, m := range meta {
+		s, ok := sch[k]
 		if !ok {
-			return trace.Errorf("field %v%v not found in corresponding schema", path, key)
+			return trace.Errorf("field %v.%v not found in corresponding schema", path, k)
 		}
 
-		fieldValue := target.FieldByName(fieldMeta.Name)
-		if !fieldValue.IsValid() {
-			return trace.Errorf("field %v%v not found in target struct", path, key)
-		}
+		v := target.FieldByName(m.Name)
+		p := path + k
 
-		fieldPath := path + key
-
-		if fieldMeta.Getter != nil {
-			err := fieldMeta.Getter(fieldPath, fieldValue, fieldMeta, fieldSchema, data)
+		if m.Getter != nil {
+			err := m.Getter(p, v, m, s, data)
 			if err != nil {
 				return trace.Wrap(err)
 			}
@@ -97,32 +93,32 @@ func getFragment(
 			continue
 		}
 
-		switch fieldSchema.Type {
+		switch s.Type {
 		case schema.TypeInt, schema.TypeFloat, schema.TypeBool, schema.TypeString:
-			err := getElementary(fieldPath, fieldValue, fieldMeta, fieldSchema, data)
+			err := getElementary(p, v, m, s, data)
 			if err != nil {
 				return trace.Wrap(err)
 			}
 		case schema.TypeList:
-			err := getList(fieldPath, fieldValue, fieldMeta, fieldSchema, data)
+			err := getList(p, v, m, s, data)
 			if err != nil {
 				return trace.Wrap(err)
 			}
 
 		case schema.TypeMap:
-			err := getMap(fieldPath, fieldValue, fieldMeta, fieldSchema, data)
+			err := getMap(p, v, m, s, data)
 			if err != nil {
 				return trace.Wrap(err)
 			}
 
 		case schema.TypeSet:
-			err := getSet(fieldPath, fieldValue, fieldMeta, fieldSchema, data)
+			err := getSet(p, v, m, s, data)
 			if err != nil {
 				return trace.Wrap(err)
 			}
 
 		default:
-			return trace.Errorf("unknown type %v for %s", fieldSchema.Type.String(), fieldPath)
+			return trace.Errorf("unknown type %v for %s", s.Type.String(), p)
 		}
 	}
 
@@ -160,8 +156,7 @@ func getEnumerableElement(
 
 // getElementary gets elementary value (scalar, string, time, duration)
 func getElementary(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
-	value, ok := data.GetOk(path)
-
+	s, ok := data.GetOk(path)
 	if !ok {
 		AssignZeroValue(target)
 		return nil
@@ -169,17 +164,17 @@ func getElementary(path string, target reflect.Value, meta *SchemaMeta, sch *sch
 
 	switch {
 	case meta.IsTime:
-		err := assignTime(value, target)
+		err := assignTime(s, target)
 		if err != nil {
 			return trace.Wrap(err)
 		}
 	case meta.IsDuration:
-		err := assignDuration(value, target)
+		err := assignDuration(s, target)
 		if err != nil {
 			return trace.Wrap(err)
 		}
 	default:
-		v := reflect.ValueOf(value)
+		v := reflect.ValueOf(s)
 		err := assign(v, target)
 		if err != nil {
 			return trace.Wrap(err)
@@ -191,33 +186,33 @@ func getElementary(path string, target reflect.Value, meta *SchemaMeta, sch *sch
 
 // assignTime parses time value from a string and assigns it to target
 func assignTime(source interface{}, target reflect.Value) error {
-	value, ok := source.(string)
+	s, ok := source.(string)
 	if !ok {
 		return trace.Errorf("can not convert %T to string", source)
 	}
 
-	parsedTime, err := time.Parse(time.RFC3339Nano, value)
+	t, err := time.Parse(time.RFC3339Nano, s)
 	if err != nil {
 		return trace.Errorf("can not parse time: %w", err)
 	}
 
-	v := reflect.ValueOf(parsedTime)
+	v := reflect.ValueOf(t)
 	return assign(v, target)
 }
 
 // assignTime parses duration value from a string and assigns it to target
 func assignDuration(source interface{}, target reflect.Value) error {
-	value, ok := source.(string)
+	s, ok := source.(string)
 	if !ok {
 		return trace.Errorf("can not convert %T to string", source)
 	}
 
-	parsedDuration, err := time.ParseDuration(value)
+	t, err := time.ParseDuration(s)
 	if err != nil {
 		return trace.Errorf("can not parse duration: %w", err)
 	}
 
-	v := reflect.ValueOf(parsedDuration)
+	v := reflect.ValueOf(t)
 	return assign(v, target)
 }
 
@@ -236,19 +231,19 @@ func getList(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Sc
 
 	// Target is a slice of elementary values or objects
 	if target.Type().Kind() == reflect.Slice {
-		slice := reflect.MakeSlice(target.Type(), len, len)
+		r := reflect.MakeSlice(target.Type(), len, len)
 
 		for i := 0; i < len; i++ {
-			value := slice.Index(i)
-			elementPath := fmt.Sprintf("%v.%v", path, i)
+			el := r.Index(i)
+			p := fmt.Sprintf("%v.%v", path, i)
 
-			err := getEnumerableElement(elementPath, value, sch, meta, data)
+			err := getEnumerableElement(p, el, sch, meta, data)
 			if err != nil {
 				return trace.Wrap(err)
 			}
 		}
 
-		return assign(slice, target)
+		return assign(r, target)
 	}
 
 	// Target is an object represented by a single element list
@@ -262,13 +257,13 @@ func getMap(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Sch
 		return nil
 	}
 
-	sourceMap, ok := raw.(map[string]interface{})
+	m, ok := raw.(map[string]interface{})
 	if !ok {
 		return trace.Errorf("failed to convert %T to map[string]interface{}", raw)
 	}
 
 	// If map is empty, set target empty map
-	if len(sourceMap) == 0 {
+	if len(m) == 0 {
 		AssignZeroValue(target)
 		return nil
 	}
@@ -277,21 +272,21 @@ func getMap(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Sch
 		return trace.Errorf("target time is not a map")
 	}
 
-	targetMap := reflect.MakeMap(target.Type())
+	t := reflect.MakeMap(target.Type())
 
 	// Iterate over map keys
-	for key := range sourceMap {
-		value := newEmptyValue(target.Type().Elem())
+	for k := range m {
+		v := newEmptyValue(target.Type().Elem())
 
-		err := getEnumerableElement(path+"."+key, value, sch, meta, data)
+		err := getEnumerableElement(path+"."+k, v, sch, meta, data)
 		if err != nil {
 			return trace.Wrap(err)
 		}
 
-		assignMapIndex(targetMap, reflect.ValueOf(key), value)
+		assignMapIndex(t, reflect.ValueOf(k), v)
 	}
 
-	return assign(targetMap, target)
+	return assign(t, target)
 }
 
 // setSet reads set from resource data
@@ -311,7 +306,7 @@ func getSet(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Sch
 		return trace.Errorf("can not read key " + path)
 	}
 
-	set, ok := raw.(*schema.Set)
+	s, ok := raw.(*schema.Set)
 	if !ok {
 		return trace.Errorf("can not convert %T to *schema.Set", raw)
 	}
@@ -325,36 +320,36 @@ func getSet(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Sch
 		return trace.NotImplemented("set acting as list on target is not implemented yet")
 	case reflect.Map:
 		// This set must be read into a map, so, it contains artificial key and value arguments
-		targetMap := reflect.MakeMap(target.Type())
+		r := reflect.MakeMap(target.Type())
 
-		for _, i := range set.List() {
-			itemMap, ok := i.(map[string]interface{})
+		for _, i := range s.List() {
+			m, ok := i.(map[string]interface{})
 			if !ok {
-				return trace.Errorf("can not convert %T to map[string]interface{}", itemMap)
+				return trace.Errorf("can not convert %T to map[string]interface{}", m)
 			}
 
-			resource, ok := sch.Elem.(*schema.Resource)
+			re, ok := sch.Elem.(*schema.Resource)
 			if !ok {
 				return fmt.Errorf("can not convert %T to *schema.Resource", sch.Elem)
 			}
 
-			itemPath := fmt.Sprintf("%v.%v.value.0", path, set.F(i))
-			itemKey, ok := itemMap["key"]
+			p := fmt.Sprintf("%v.%v.value.0", path, s.F(i))
+			k, ok := m["key"]
 			if !ok {
 				return fmt.Errorf("one of the element keys is empty in %s", path)
 			}
 
-			value := newEmptyValue(target.Type().Elem())
+			v := newEmptyValue(target.Type().Elem())
 
-			err := getEnumerableElement(itemPath, value, resource.Schema["value"], meta, data)
+			err := getEnumerableElement(p, v, re.Schema["value"], meta, data)
 			if err != nil {
 				return trace.Wrap(err)
 			}
 
-			assignMapIndex(targetMap, reflect.ValueOf(itemKey), value)
+			assignMapIndex(r, reflect.ValueOf(k), v)
 		}
 
-		target.Set(targetMap)
+		target.Set(r)
 
 		return nil
 	default:
@@ -370,5 +365,6 @@ func newEmptyValue(source reflect.Type) reflect.Value {
 		t = t.Elem()
 	}
 
-	return reflect.Indirect(reflect.New(t))
+	n := reflect.Indirect(reflect.New(t))
+	return n
 }

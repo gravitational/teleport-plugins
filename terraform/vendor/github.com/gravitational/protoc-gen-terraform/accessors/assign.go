@@ -24,45 +24,45 @@ import (
 
 // assign assigns source value to target with type and pointer conversions
 func assign(source, target reflect.Value) error {
-	targetType := target.Type()
-	sourceValue := source
+	t := target.Type()
+	v := source
 
 	// If target type is at the pointer reference use underlying type
 	if target.Type().Kind() == reflect.Ptr {
-		targetType = targetType.Elem()
+		t = t.Elem()
 	}
 
 	// Convert value to target type
-	if source.Type() != targetType {
-		if !sourceValue.Type().ConvertibleTo(target.Type()) {
-			return trace.Errorf("can not convert %v to %v", sourceValue.Type().Name(), targetType.Name())
+	if source.Type() != t {
+		if !v.Type().ConvertibleTo(target.Type()) {
+			return trace.Errorf("can not convert %v to %v", source.Type().Name(), t.Name())
 		}
 
-		// source.(string)
-		sourceValue = sourceValue.Convert(targetType)
+		// v := source.(string)
+		v = v.Convert(t)
 	}
 
-	if !sourceValue.Type().AssignableTo(targetType) {
-		return trace.Errorf("can not assign %s to %s", sourceValue.Type().Name(), targetType.Name())
+	if !v.Type().AssignableTo(t) {
+		return trace.Errorf("can not assign %s to %s", v.Type().Name(), t.Name())
 	}
 
-	// If original target type is a reference, create new pointer to this reference and assign
+	// If target type is a reference, create new pointer to this reference and assign
 	if target.Type().Kind() == reflect.Ptr {
-		if sourceValue.CanAddr() {
+		if v.CanAddr() {
 			// target := &source
-			target.Set(sourceValue.Addr())
+			target.Set(v.Addr())
 			return nil
 		}
 
 		// a := "5"
 		// target := &a
-		ptr := reflect.New(sourceValue.Type())
-		ptr.Elem().Set(sourceValue)
+		ptr := reflect.New(v.Type())
+		ptr.Elem().Set(v)
 		target.Set(ptr)
 		return nil
 	}
 
-	target.Set(sourceValue)
+	target.Set(v)
 	return nil
 }
 
