@@ -129,6 +129,7 @@ defaults:
     "types.AuthPreferenceV2.SubKind": ""
     "types.AuthPreferenceV2.Spec.SecondFactor": "otp"
     "types.AuthPreferenceV2.Spec.Type": "local"
+    "types.AuthPreferenceV2.Spec.LockingMode": "best_effort"
 
 # These fields will be marked as ConfigMode: schema.SchemaConfigModeAttrs
 config_mode_attr_fields:
@@ -145,3 +146,7 @@ suffixes:
 # These funcs will be used as a state funcs for a fields
 state_func:
     "types.Metadata.Expires": TruncateMs
+
+field_name_replacements:
+    "types.RoleV4.Spec.Allow.AWSRoleARNs": "aws_role_arns"
+    "types.RoleV4.Spec.Deny.AWSRoleARNs": "aws_role_arns"

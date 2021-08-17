@@ -130,6 +130,8 @@ resource "teleport_role" "example" {
          key = "example"
          value = ["yes"]
       }
+
+      aws_role_arns = ["arn:1,2,3"]
     }
 
     deny {

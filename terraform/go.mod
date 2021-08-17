@@ -4,6 +4,8 @@ go 1.15
 
 replace (
 	github.com/coreos/go-oidc => github.com/gravitational/go-oidc v0.0.3
+	github.com/gravitational/protoc-gen-terraform => /Users/gzigzigzeo/go/src/github.com/gzigzigzeo/protoc-gen-terraform
+	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20210817145431-a8c11241284b
 	github.com/iovisor/gobpf => github.com/gravitational/gobpf v0.0.1
 	github.com/sirupsen/logrus => github.com/gravitational/logrus v1.4.3
 )

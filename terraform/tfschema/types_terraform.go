@@ -145,720 +145,6 @@ func SetUserV2(obj *types.UserV2, data *schema.ResourceData) error {
 	return accessors.Set(obj, data, SchemaUserV2, SchemaMetaUserV2)
 }
 
-// SchemaUserV2 returns schema for UserV2
-//
-// UserV2 is version 2 resource spec of the user
-func GenSchemaUserV2() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		// Kind is a resource kind
-		"kind": {
-			Type:        schema.TypeString,
-			Description: "Kind is a resource kind",
-			Optional:    true,
-			Default:     "user",
-		},
-		// SubKind is an optional resource sub kind, used in some resources
-		"sub_kind": {
-			Type:        schema.TypeString,
-			Description: "SubKind is an optional resource sub kind, used in some resources",
-			Optional:    true,
-			Default:     "",
-		},
-		// Version is version
-		"version": {
-			Type:        schema.TypeString,
-			Description: "Version is version",
-			Optional:    true,
-			Default:     "v2",
-		},
-		// Metadata is resource metadata
-		"metadata": {
-			Type:        schema.TypeList,
-			MaxItems:    1,
-			Description: "Metadata is resource metadata",
-
-			Optional: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					// Name is an object name
-					"name": {
-						Type:        schema.TypeString,
-						Description: "Name is an object name",
-						Required:    true,
-						ForceNew:    true,
-					},
-					// Namespace is object namespace. The field should be called "namespace"
-					// when it returns in Teleport 2.4.
-					"namespace": {
-						Type:        schema.TypeString,
-						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
-						Optional:    true,
-						Default:     "default",
-					},
-					// Description is object description
-					"description": {
-						Type:        schema.TypeString,
-						Description: "Description is object description",
-						Optional:    true,
-					},
-					// Labels is a set of labels
-					"labels": {
-
-						Optional:    true,
-						Type:        schema.TypeMap,
-						Description: "Labels is a set of labels",
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					// Expires is a global expiry time header can be set on any resource in the
-					// system.
-					"expires": {
-						Type:         schema.TypeString,
-						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
-						ValidateFunc: validation.IsRFC3339Time,
-						StateFunc:    TruncateMs,
-						Optional:     true,
-					},
-				},
-			},
-		},
-		// Spec is a user specification
-		"spec": {
-			Type:        schema.TypeList,
-			MaxItems:    1,
-			Description: "UserSpecV2 is a specification for V2 user",
-
-			Optional: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					// OIDCIdentities lists associated OpenID Connect identities
-					// that let user log in using externally verified identity
-					"oidc_identities": {
-
-						Optional:    true,
-						Type:        schema.TypeList,
-						Description: "OIDCIdentities lists associated OpenID Connect identities  that let user log in using externally verified identity",
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
-								"connector_id": {
-									Type:        schema.TypeString,
-									Description: "ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'",
-									Optional:    true,
-								},
-								// Username is username supplied by external identity provider
-								"username": {
-									Type:        schema.TypeString,
-									Description: "Username is username supplied by external identity provider",
-									Optional:    true,
-								},
-							},
-						},
-					},
-					// SAMLIdentities lists associated SAML identities
-					// that let user log in using externally verified identity
-					"saml_identities": {
-
-						Optional:    true,
-						Type:        schema.TypeList,
-						Description: "SAMLIdentities lists associated SAML identities  that let user log in using externally verified identity",
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
-								"connector_id": {
-									Type:        schema.TypeString,
-									Description: "ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'",
-									Optional:    true,
-								},
-								// Username is username supplied by external identity provider
-								"username": {
-									Type:        schema.TypeString,
-									Description: "Username is username supplied by external identity provider",
-									Optional:    true,
-								},
-							},
-						},
-					},
-					// GithubIdentities list associated Github OAuth2 identities
-					// that let user log in using externally verified identity
-					"github_identities": {
-
-						Optional:    true,
-						Type:        schema.TypeList,
-						Description: "GithubIdentities list associated Github OAuth2 identities  that let user log in using externally verified identity",
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
-								"connector_id": {
-									Type:        schema.TypeString,
-									Description: "ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'",
-									Optional:    true,
-								},
-								// Username is username supplied by external identity provider
-								"username": {
-									Type:        schema.TypeString,
-									Description: "Username is username supplied by external identity provider",
-									Optional:    true,
-								},
-							},
-						},
-					},
-					// Roles is a list of roles assigned to user
-					"roles": {
-
-						Optional:    true,
-						Type:        schema.TypeList,
-						Description: "Roles is a list of roles assigned to user",
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					// Traits are key/value pairs received from an identity provider (through
-					// OIDC claims or SAML assertions) or from a system administrator for local
-					// accounts. Traits are used to populate role variables.
-					"traits": SchemaTraits(),
-				},
-			},
-		},
-	}
-}
-
-// GenSchemaMetaUserV2 returns schema for UserV2
-//
-// UserV2 is version 2 resource spec of the user
-func GenSchemaMetaUserV2() map[string]*accessors.SchemaMeta {
-	return map[string]*accessors.SchemaMeta{
-		// Kind is a resource kind
-		"kind": {
-			Name:       "Kind",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// SubKind is an optional resource sub kind, used in some resources
-		"sub_kind": {
-			Name:       "SubKind",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// Version is version
-		"version": {
-			Name:       "Version",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// Metadata is resource metadata
-		"metadata": {
-			Name:       "Metadata",
-			IsTime:     false,
-			IsDuration: false,
-			Nested: map[string]*accessors.SchemaMeta{
-				// Name is an object name
-				"name": {
-					Name:       "Name",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Namespace is object namespace. The field should be called "namespace"
-				// when it returns in Teleport 2.4.
-				"namespace": {
-					Name:       "Namespace",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Description is object description
-				"description": {
-					Name:       "Description",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Labels is a set of labels
-				"labels": {
-					Name:       "Labels",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Expires is a global expiry time header can be set on any resource in the
-				// system.
-				"expires": {
-					Name:       "Expires",
-					IsTime:     true,
-					IsDuration: false,
-				},
-			},
-		},
-		// Spec is a user specification
-		"spec": {
-			Name:       "Spec",
-			IsTime:     false,
-			IsDuration: false,
-			Nested: map[string]*accessors.SchemaMeta{
-				// OIDCIdentities lists associated OpenID Connect identities
-				// that let user log in using externally verified identity
-				"oidc_identities": {
-					Name:       "OIDCIdentities",
-					IsTime:     false,
-					IsDuration: false,
-					Nested: map[string]*accessors.SchemaMeta{
-						// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
-						"connector_id": {
-							Name:       "ConnectorID",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// Username is username supplied by external identity provider
-						"username": {
-							Name:       "Username",
-							IsTime:     false,
-							IsDuration: false,
-						},
-					},
-				},
-				// SAMLIdentities lists associated SAML identities
-				// that let user log in using externally verified identity
-				"saml_identities": {
-					Name:       "SAMLIdentities",
-					IsTime:     false,
-					IsDuration: false,
-					Nested: map[string]*accessors.SchemaMeta{
-						// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
-						"connector_id": {
-							Name:       "ConnectorID",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// Username is username supplied by external identity provider
-						"username": {
-							Name:       "Username",
-							IsTime:     false,
-							IsDuration: false,
-						},
-					},
-				},
-				// GithubIdentities list associated Github OAuth2 identities
-				// that let user log in using externally verified identity
-				"github_identities": {
-					Name:       "GithubIdentities",
-					IsTime:     false,
-					IsDuration: false,
-					Nested: map[string]*accessors.SchemaMeta{
-						// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
-						"connector_id": {
-							Name:       "ConnectorID",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// Username is username supplied by external identity provider
-						"username": {
-							Name:       "Username",
-							IsTime:     false,
-							IsDuration: false,
-						},
-					},
-				},
-				// Roles is a list of roles assigned to user
-				"roles": {
-					Name:       "Roles",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Traits are key/value pairs received from an identity provider (through
-				// OIDC claims or SAML assertions) or from a system administrator for local
-				// accounts. Traits are used to populate role variables.
-				"traits": {
-					Name:       "Traits",
-					IsTime:     false,
-					IsDuration: false,
-					Getter:     GetTraits,
-					Setter:     SetTraits,
-				},
-			},
-		},
-	}
-}
-
-// SchemaOIDCConnectorV2 returns schema for OIDCConnectorV2
-//
-// OIDCConnectorV2 represents an OIDC connector.
-func GenSchemaOIDCConnectorV2() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		// Kind is a resource kind.
-		"kind": {
-			Type:        schema.TypeString,
-			Description: "Kind is a resource kind.",
-			Optional:    true,
-			Default:     "oidc",
-		},
-		// SubKind is an optional resource sub kind, used in some resources.
-		"sub_kind": {
-			Type:        schema.TypeString,
-			Description: "SubKind is an optional resource sub kind, used in some resources.",
-			Optional:    true,
-			Default:     "",
-		},
-		// Version is a resource version.
-		"version": {
-			Type:        schema.TypeString,
-			Description: "Version is a resource version.",
-			Optional:    true,
-			Default:     "v2",
-		},
-		// Metadata holds resource metadata.
-		"metadata": {
-			Type:        schema.TypeList,
-			MaxItems:    1,
-			Description: "Metadata is resource metadata",
-
-			Optional: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					// Name is an object name
-					"name": {
-						Type:        schema.TypeString,
-						Description: "Name is an object name",
-						Required:    true,
-						ForceNew:    true,
-					},
-					// Namespace is object namespace. The field should be called "namespace"
-					// when it returns in Teleport 2.4.
-					"namespace": {
-						Type:        schema.TypeString,
-						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
-						Optional:    true,
-						Default:     "default",
-					},
-					// Description is object description
-					"description": {
-						Type:        schema.TypeString,
-						Description: "Description is object description",
-						Optional:    true,
-					},
-					// Labels is a set of labels
-					"labels": {
-
-						Optional:    true,
-						Type:        schema.TypeMap,
-						Description: "Labels is a set of labels",
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					// Expires is a global expiry time header can be set on any resource in the
-					// system.
-					"expires": {
-						Type:         schema.TypeString,
-						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
-						ValidateFunc: validation.IsRFC3339Time,
-						StateFunc:    TruncateMs,
-						Optional:     true,
-					},
-				},
-			},
-		},
-		// Spec is an OIDC connector specification.
-		"spec": {
-			Type:        schema.TypeList,
-			MaxItems:    1,
-			Description: "OIDCConnectorSpecV2 is an OIDC connector specification.   It specifies configuration for Open ID Connect compatible external  identity provider: https://openid.net/specs/openid-connect-core-1_0.html",
-
-			Required: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					// IssuerURL is the endpoint of the provider, e.g. https://accounts.google.com.
-					"issuer_url": {
-						Type:        schema.TypeString,
-						Description: "IssuerURL is the endpoint of the provider, e.g. https://accounts.google.com.",
-						Optional:    true,
-					},
-					// ClientID is the id of the authentication client (Teleport Auth server).
-					"client_id": {
-						Type:        schema.TypeString,
-						Description: "ClientID is the id of the authentication client (Teleport Auth server).",
-						Optional:    true,
-					},
-					// ClientSecret is used to authenticate the client.
-					"client_secret": {
-						Type:        schema.TypeString,
-						Description: "ClientSecret is used to authenticate the client.",
-						Optional:    true,
-					},
-					// RedirectURL is a URL that will redirect the client's browser
-					// back to the identity provider after successful authentication.
-					// This should match the URL on the Provider's side.
-					"redirect_url": {
-						Type:        schema.TypeString,
-						Description: "RedirectURL is a URL that will redirect the client's browser  back to the identity provider after successful authentication.  This should match the URL on the Provider's side.",
-						Optional:    true,
-					},
-					// ACR is an Authentication Context Class Reference value. The meaning of the ACR
-					// value is context-specific and varies for identity providers.
-					"acr": {
-						Type:        schema.TypeString,
-						Description: "ACR is an Authentication Context Class Reference value. The meaning of the ACR  value is context-specific and varies for identity providers.",
-						Optional:    true,
-					},
-					// Provider is the external identity provider.
-					"provider": {
-						Type:        schema.TypeString,
-						Description: "Provider is the external identity provider.",
-						Optional:    true,
-					},
-					// Display is the friendly name for this provider.
-					"display": {
-						Type:        schema.TypeString,
-						Description: "Display is the friendly name for this provider.",
-						Optional:    true,
-					},
-					// Scope specifies additional scopes set by provider.
-					"scope": {
-
-						Optional:    true,
-						Type:        schema.TypeList,
-						Description: "Scope specifies additional scopes set by provider.",
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					// Prompt is an optional OIDC prompt. An empty string omits prompt.
-					// If not specified, it defaults to select_account for backwards compatibility.
-					"prompt": {
-						Type:        schema.TypeString,
-						Description: "Prompt is an optional OIDC prompt. An empty string omits prompt.  If not specified, it defaults to select_account for backwards compatibility.",
-						Optional:    true,
-					},
-					// ClaimsToRoles specifies a dynamic mapping from claims to roles.
-					"claims_to_roles": {
-
-						Optional:    true,
-						Type:        schema.TypeList,
-						Description: "ClaimsToRoles specifies a dynamic mapping from claims to roles.",
-						Elem: &schema.Resource{
-							Schema: map[string]*schema.Schema{
-								// Claim is a claim name.
-								"claim": {
-									Type:        schema.TypeString,
-									Description: "Claim is a claim name.",
-									Optional:    true,
-								},
-								// Value is a claim value to match.
-								"value": {
-									Type:        schema.TypeString,
-									Description: "Value is a claim value to match.",
-									Optional:    true,
-								},
-								// Roles is a list of static teleport roles to match.
-								"roles": {
-
-									Optional:    true,
-									Type:        schema.TypeList,
-									Description: "Roles is a list of static teleport roles to match.",
-									Elem: &schema.Schema{
-										Type: schema.TypeString,
-									},
-								},
-							},
-						},
-					},
-					// GoogleServiceAccountURI is a path to a google service account uri.
-					"google_service_account_uri": {
-						Type:        schema.TypeString,
-						Description: "GoogleServiceAccountURI is a path to a google service account uri.",
-						Optional:    true,
-					},
-					// GoogleServiceAccount is a string containing google service account credentials.
-					"google_service_account": {
-						Type:        schema.TypeString,
-						Description: "GoogleServiceAccount is a string containing google service account credentials.",
-						Optional:    true,
-					},
-					// GoogleAdminEmail is the email of a google admin to impersonate.
-					"google_admin_email": {
-						Type:        schema.TypeString,
-						Description: "GoogleAdminEmail is the email of a google admin to impersonate.",
-						Optional:    true,
-					},
-				},
-			},
-		},
-	}
-}
-
-// GenSchemaMetaOIDCConnectorV2 returns schema for OIDCConnectorV2
-//
-// OIDCConnectorV2 represents an OIDC connector.
-func GenSchemaMetaOIDCConnectorV2() map[string]*accessors.SchemaMeta {
-	return map[string]*accessors.SchemaMeta{
-		// Kind is a resource kind.
-		"kind": {
-			Name:       "Kind",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// SubKind is an optional resource sub kind, used in some resources.
-		"sub_kind": {
-			Name:       "SubKind",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// Version is a resource version.
-		"version": {
-			Name:       "Version",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// Metadata holds resource metadata.
-		"metadata": {
-			Name:       "Metadata",
-			IsTime:     false,
-			IsDuration: false,
-			Nested: map[string]*accessors.SchemaMeta{
-				// Name is an object name
-				"name": {
-					Name:       "Name",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Namespace is object namespace. The field should be called "namespace"
-				// when it returns in Teleport 2.4.
-				"namespace": {
-					Name:       "Namespace",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Description is object description
-				"description": {
-					Name:       "Description",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Labels is a set of labels
-				"labels": {
-					Name:       "Labels",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Expires is a global expiry time header can be set on any resource in the
-				// system.
-				"expires": {
-					Name:       "Expires",
-					IsTime:     true,
-					IsDuration: false,
-				},
-			},
-		},
-		// Spec is an OIDC connector specification.
-		"spec": {
-			Name:       "Spec",
-			IsTime:     false,
-			IsDuration: false,
-			Nested: map[string]*accessors.SchemaMeta{
-				// IssuerURL is the endpoint of the provider, e.g. https://accounts.google.com.
-				"issuer_url": {
-					Name:       "IssuerURL",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// ClientID is the id of the authentication client (Teleport Auth server).
-				"client_id": {
-					Name:       "ClientID",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// ClientSecret is used to authenticate the client.
-				"client_secret": {
-					Name:       "ClientSecret",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// RedirectURL is a URL that will redirect the client's browser
-				// back to the identity provider after successful authentication.
-				// This should match the URL on the Provider's side.
-				"redirect_url": {
-					Name:       "RedirectURL",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// ACR is an Authentication Context Class Reference value. The meaning of the ACR
-				// value is context-specific and varies for identity providers.
-				"acr": {
-					Name:       "ACR",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Provider is the external identity provider.
-				"provider": {
-					Name:       "Provider",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Display is the friendly name for this provider.
-				"display": {
-					Name:       "Display",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Scope specifies additional scopes set by provider.
-				"scope": {
-					Name:       "Scope",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Prompt is an optional OIDC prompt. An empty string omits prompt.
-				// If not specified, it defaults to select_account for backwards compatibility.
-				"prompt": {
-					Name:       "Prompt",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// ClaimsToRoles specifies a dynamic mapping from claims to roles.
-				"claims_to_roles": {
-					Name:       "ClaimsToRoles",
-					IsTime:     false,
-					IsDuration: false,
-					Nested: map[string]*accessors.SchemaMeta{
-						// Claim is a claim name.
-						"claim": {
-							Name:       "Claim",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// Value is a claim value to match.
-						"value": {
-							Name:       "Value",
-							IsTime:     false,
-							IsDuration: false,
-						},
-						// Roles is a list of static teleport roles to match.
-						"roles": {
-							Name:       "Roles",
-							IsTime:     false,
-							IsDuration: false,
-						},
-					},
-				},
-				// GoogleServiceAccountURI is a path to a google service account uri.
-				"google_service_account_uri": {
-					Name:       "GoogleServiceAccountURI",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// GoogleServiceAccount is a string containing google service account credentials.
-				"google_service_account": {
-					Name:       "GoogleServiceAccount",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// GoogleAdminEmail is the email of a google admin to impersonate.
-				"google_admin_email": {
-					Name:       "GoogleAdminEmail",
-					IsTime:     false,
-					IsDuration: false,
-				},
-			},
-		},
-	}
-}
-
 // SchemaSAMLConnectorV2 returns schema for SAMLConnectorV2
 //
 // SAMLConnectorV2 represents a SAML connector.
@@ -2230,6 +1516,19 @@ func GenSchemaAuthPreferenceV2() map[string]*schema.Schema {
 					"disconnect_expired_cert": SchemaBoolOption(),
 					// AllowLocalAuth is true if local authentication is enabled.
 					"allow_local_auth": SchemaBoolOption(),
+
+					"message_of_the_day": {
+						Type:        schema.TypeString,
+						Description: "",
+						Optional:    true,
+					},
+					// LockingMode is the cluster-wide locking mode default.
+					"locking_mode": {
+						Type:        schema.TypeString,
+						Description: "LockingMode is the cluster-wide locking mode default.",
+						Optional:    true,
+						Default:     "best_effort",
+					},
 				},
 			},
 		},
@@ -2368,6 +1667,18 @@ func GenSchemaMetaAuthPreferenceV2() map[string]*accessors.SchemaMeta {
 					IsDuration: false,
 					Getter:     GetBoolOption,
 					Setter:     SetBoolOption,
+				},
+
+				"message_of_the_day": {
+					Name:       "MessageOfTheDay",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// LockingMode is the cluster-wide locking mode default.
+				"locking_mode": {
+					Name:       "LockingMode",
+					IsTime:     false,
+					IsDuration: false,
 				},
 			},
 		},
@@ -2560,6 +1871,13 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 								"require_session_mfa": {
 									Type:        schema.TypeBool,
 									Description: "RequireSessionMFA specifies whether a user is required to do an MFA  check for every session.",
+									Optional:    true,
+								},
+								// Lock specifies the locking mode (strict|best_effort) to be applied with
+								// the role.
+								"lock": {
+									Type:        schema.TypeString,
+									Description: "Lock specifies the locking mode (strict|best_effort) to be applied with  the role.",
 									Optional:    true,
 								},
 							},
@@ -2897,6 +2215,16 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 												Default:     "",
 											},
 										},
+									},
+								},
+								// AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.
+								"aws_role_arns": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
 									},
 								},
 							},
@@ -3237,6 +2565,16 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 										},
 									},
 								},
+								// AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.
+								"aws_role_arns": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
 							},
 						},
 					},
@@ -3408,6 +2746,13 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 						// check for every session.
 						"require_session_mfa": {
 							Name:       "RequireSessionMFA",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Lock specifies the locking mode (strict|best_effort) to be applied with
+						// the role.
+						"lock": {
+							Name:       "Lock",
 							IsTime:     false,
 							IsDuration: false,
 						},
@@ -3695,6 +3040,12 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 								},
 							},
 						},
+						// AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.
+						"aws_role_arns": {
+							Name:       "AWSRoleARNs",
+							IsTime:     false,
+							IsDuration: false,
+						},
 					},
 				},
 				// Deny is the set of conditions evaluated to deny access. Deny takes priority
@@ -3980,7 +3331,727 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 								},
 							},
 						},
+						// AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.
+						"aws_role_arns": {
+							Name:       "AWSRoleARNs",
+							IsTime:     false,
+							IsDuration: false,
+						},
 					},
+				},
+			},
+		},
+	}
+}
+
+// SchemaUserV2 returns schema for UserV2
+//
+// UserV2 is version 2 resource spec of the user
+func GenSchemaUserV2() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		// Kind is a resource kind
+		"kind": {
+			Type:        schema.TypeString,
+			Description: "Kind is a resource kind",
+			Optional:    true,
+			Default:     "user",
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Type:        schema.TypeString,
+			Description: "SubKind is an optional resource sub kind, used in some resources",
+			Optional:    true,
+			Default:     "",
+		},
+		// Version is version
+		"version": {
+			Type:        schema.TypeString,
+			Description: "Version is version",
+			Optional:    true,
+			Default:     "v2",
+		},
+		// Metadata is resource metadata
+		"metadata": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "Metadata is resource metadata",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Name is an object name
+					"name": {
+						Type:        schema.TypeString,
+						Description: "Name is an object name",
+						Required:    true,
+						ForceNew:    true,
+					},
+					// Namespace is object namespace. The field should be called "namespace"
+					// when it returns in Teleport 2.4.
+					"namespace": {
+						Type:        schema.TypeString,
+						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
+						Optional:    true,
+						Default:     "default",
+					},
+					// Description is object description
+					"description": {
+						Type:        schema.TypeString,
+						Description: "Description is object description",
+						Optional:    true,
+					},
+					// Labels is a set of labels
+					"labels": {
+
+						Optional:    true,
+						Type:        schema.TypeMap,
+						Description: "Labels is a set of labels",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Expires is a global expiry time header can be set on any resource in the
+					// system.
+					"expires": {
+						Type:         schema.TypeString,
+						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
+						ValidateFunc: validation.IsRFC3339Time,
+						StateFunc:    TruncateMs,
+						Optional:     true,
+					},
+				},
+			},
+		},
+		// Spec is a user specification
+		"spec": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "UserSpecV2 is a specification for V2 user",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// OIDCIdentities lists associated OpenID Connect identities
+					// that let user log in using externally verified identity
+					"oidc_identities": {
+
+						Optional:    true,
+						Type:        schema.TypeList,
+						Description: "OIDCIdentities lists associated OpenID Connect identities  that let user log in using externally verified identity",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
+								"connector_id": {
+									Type:        schema.TypeString,
+									Description: "ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'",
+									Optional:    true,
+								},
+								// Username is username supplied by external identity provider
+								"username": {
+									Type:        schema.TypeString,
+									Description: "Username is username supplied by external identity provider",
+									Optional:    true,
+								},
+							},
+						},
+					},
+					// SAMLIdentities lists associated SAML identities
+					// that let user log in using externally verified identity
+					"saml_identities": {
+
+						Optional:    true,
+						Type:        schema.TypeList,
+						Description: "SAMLIdentities lists associated SAML identities  that let user log in using externally verified identity",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
+								"connector_id": {
+									Type:        schema.TypeString,
+									Description: "ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'",
+									Optional:    true,
+								},
+								// Username is username supplied by external identity provider
+								"username": {
+									Type:        schema.TypeString,
+									Description: "Username is username supplied by external identity provider",
+									Optional:    true,
+								},
+							},
+						},
+					},
+					// GithubIdentities list associated Github OAuth2 identities
+					// that let user log in using externally verified identity
+					"github_identities": {
+
+						Optional:    true,
+						Type:        schema.TypeList,
+						Description: "GithubIdentities list associated Github OAuth2 identities  that let user log in using externally verified identity",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
+								"connector_id": {
+									Type:        schema.TypeString,
+									Description: "ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'",
+									Optional:    true,
+								},
+								// Username is username supplied by external identity provider
+								"username": {
+									Type:        schema.TypeString,
+									Description: "Username is username supplied by external identity provider",
+									Optional:    true,
+								},
+							},
+						},
+					},
+					// Roles is a list of roles assigned to user
+					"roles": {
+
+						Optional:    true,
+						Type:        schema.TypeList,
+						Description: "Roles is a list of roles assigned to user",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Traits are key/value pairs received from an identity provider (through
+					// OIDC claims or SAML assertions) or from a system administrator for local
+					// accounts. Traits are used to populate role variables.
+					"traits": SchemaTraits(),
+				},
+			},
+		},
+	}
+}
+
+// GenSchemaMetaUserV2 returns schema for UserV2
+//
+// UserV2 is version 2 resource spec of the user
+func GenSchemaMetaUserV2() map[string]*accessors.SchemaMeta {
+	return map[string]*accessors.SchemaMeta{
+		// Kind is a resource kind
+		"kind": {
+			Name:       "Kind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Name:       "SubKind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Version is version
+		"version": {
+			Name:       "Version",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Metadata is resource metadata
+		"metadata": {
+			Name:       "Metadata",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Name is an object name
+				"name": {
+					Name:       "Name",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Namespace is object namespace. The field should be called "namespace"
+				// when it returns in Teleport 2.4.
+				"namespace": {
+					Name:       "Namespace",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Description is object description
+				"description": {
+					Name:       "Description",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Labels is a set of labels
+				"labels": {
+					Name:       "Labels",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Expires is a global expiry time header can be set on any resource in the
+				// system.
+				"expires": {
+					Name:       "Expires",
+					IsTime:     true,
+					IsDuration: false,
+				},
+			},
+		},
+		// Spec is a user specification
+		"spec": {
+			Name:       "Spec",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// OIDCIdentities lists associated OpenID Connect identities
+				// that let user log in using externally verified identity
+				"oidc_identities": {
+					Name:       "OIDCIdentities",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
+						"connector_id": {
+							Name:       "ConnectorID",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Username is username supplied by external identity provider
+						"username": {
+							Name:       "Username",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// SAMLIdentities lists associated SAML identities
+				// that let user log in using externally verified identity
+				"saml_identities": {
+					Name:       "SAMLIdentities",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
+						"connector_id": {
+							Name:       "ConnectorID",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Username is username supplied by external identity provider
+						"username": {
+							Name:       "Username",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// GithubIdentities list associated Github OAuth2 identities
+				// that let user log in using externally verified identity
+				"github_identities": {
+					Name:       "GithubIdentities",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// ConnectorID is id of registered OIDC connector, e.g. 'google-example.com'
+						"connector_id": {
+							Name:       "ConnectorID",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Username is username supplied by external identity provider
+						"username": {
+							Name:       "Username",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// Roles is a list of roles assigned to user
+				"roles": {
+					Name:       "Roles",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Traits are key/value pairs received from an identity provider (through
+				// OIDC claims or SAML assertions) or from a system administrator for local
+				// accounts. Traits are used to populate role variables.
+				"traits": {
+					Name:       "Traits",
+					IsTime:     false,
+					IsDuration: false,
+					Getter:     GetTraits,
+					Setter:     SetTraits,
+				},
+			},
+		},
+	}
+}
+
+// SchemaOIDCConnectorV2 returns schema for OIDCConnectorV2
+//
+// OIDCConnectorV2 represents an OIDC connector.
+func GenSchemaOIDCConnectorV2() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		// Kind is a resource kind.
+		"kind": {
+			Type:        schema.TypeString,
+			Description: "Kind is a resource kind.",
+			Optional:    true,
+			Default:     "oidc",
+		},
+		// SubKind is an optional resource sub kind, used in some resources.
+		"sub_kind": {
+			Type:        schema.TypeString,
+			Description: "SubKind is an optional resource sub kind, used in some resources.",
+			Optional:    true,
+			Default:     "",
+		},
+		// Version is a resource version.
+		"version": {
+			Type:        schema.TypeString,
+			Description: "Version is a resource version.",
+			Optional:    true,
+			Default:     "v2",
+		},
+		// Metadata holds resource metadata.
+		"metadata": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "Metadata is resource metadata",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Name is an object name
+					"name": {
+						Type:        schema.TypeString,
+						Description: "Name is an object name",
+						Required:    true,
+						ForceNew:    true,
+					},
+					// Namespace is object namespace. The field should be called "namespace"
+					// when it returns in Teleport 2.4.
+					"namespace": {
+						Type:        schema.TypeString,
+						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
+						Optional:    true,
+						Default:     "default",
+					},
+					// Description is object description
+					"description": {
+						Type:        schema.TypeString,
+						Description: "Description is object description",
+						Optional:    true,
+					},
+					// Labels is a set of labels
+					"labels": {
+
+						Optional:    true,
+						Type:        schema.TypeMap,
+						Description: "Labels is a set of labels",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Expires is a global expiry time header can be set on any resource in the
+					// system.
+					"expires": {
+						Type:         schema.TypeString,
+						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
+						ValidateFunc: validation.IsRFC3339Time,
+						StateFunc:    TruncateMs,
+						Optional:     true,
+					},
+				},
+			},
+		},
+		// Spec is an OIDC connector specification.
+		"spec": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "OIDCConnectorSpecV2 is an OIDC connector specification.   It specifies configuration for Open ID Connect compatible external  identity provider: https://openid.net/specs/openid-connect-core-1_0.html",
+
+			Required: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// IssuerURL is the endpoint of the provider, e.g. https://accounts.google.com.
+					"issuer_url": {
+						Type:        schema.TypeString,
+						Description: "IssuerURL is the endpoint of the provider, e.g. https://accounts.google.com.",
+						Optional:    true,
+					},
+					// ClientID is the id of the authentication client (Teleport Auth server).
+					"client_id": {
+						Type:        schema.TypeString,
+						Description: "ClientID is the id of the authentication client (Teleport Auth server).",
+						Optional:    true,
+					},
+					// ClientSecret is used to authenticate the client.
+					"client_secret": {
+						Type:        schema.TypeString,
+						Description: "ClientSecret is used to authenticate the client.",
+						Optional:    true,
+					},
+					// RedirectURL is a URL that will redirect the client's browser
+					// back to the identity provider after successful authentication.
+					// This should match the URL on the Provider's side.
+					"redirect_url": {
+						Type:        schema.TypeString,
+						Description: "RedirectURL is a URL that will redirect the client's browser  back to the identity provider after successful authentication.  This should match the URL on the Provider's side.",
+						Optional:    true,
+					},
+					// ACR is an Authentication Context Class Reference value. The meaning of the ACR
+					// value is context-specific and varies for identity providers.
+					"acr": {
+						Type:        schema.TypeString,
+						Description: "ACR is an Authentication Context Class Reference value. The meaning of the ACR  value is context-specific and varies for identity providers.",
+						Optional:    true,
+					},
+					// Provider is the external identity provider.
+					"provider": {
+						Type:        schema.TypeString,
+						Description: "Provider is the external identity provider.",
+						Optional:    true,
+					},
+					// Display is the friendly name for this provider.
+					"display": {
+						Type:        schema.TypeString,
+						Description: "Display is the friendly name for this provider.",
+						Optional:    true,
+					},
+					// Scope specifies additional scopes set by provider.
+					"scope": {
+
+						Optional:    true,
+						Type:        schema.TypeList,
+						Description: "Scope specifies additional scopes set by provider.",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Prompt is an optional OIDC prompt. An empty string omits prompt.
+					// If not specified, it defaults to select_account for backwards compatibility.
+					"prompt": {
+						Type:        schema.TypeString,
+						Description: "Prompt is an optional OIDC prompt. An empty string omits prompt.  If not specified, it defaults to select_account for backwards compatibility.",
+						Optional:    true,
+					},
+					// ClaimsToRoles specifies a dynamic mapping from claims to roles.
+					"claims_to_roles": {
+
+						Optional:    true,
+						Type:        schema.TypeList,
+						Description: "ClaimsToRoles specifies a dynamic mapping from claims to roles.",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// Claim is a claim name.
+								"claim": {
+									Type:        schema.TypeString,
+									Description: "Claim is a claim name.",
+									Optional:    true,
+								},
+								// Value is a claim value to match.
+								"value": {
+									Type:        schema.TypeString,
+									Description: "Value is a claim value to match.",
+									Optional:    true,
+								},
+								// Roles is a list of static teleport roles to match.
+								"roles": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "Roles is a list of static teleport roles to match.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+							},
+						},
+					},
+					// GoogleServiceAccountURI is a path to a google service account uri.
+					"google_service_account_uri": {
+						Type:        schema.TypeString,
+						Description: "GoogleServiceAccountURI is a path to a google service account uri.",
+						Optional:    true,
+					},
+					// GoogleServiceAccount is a string containing google service account credentials.
+					"google_service_account": {
+						Type:        schema.TypeString,
+						Description: "GoogleServiceAccount is a string containing google service account credentials.",
+						Optional:    true,
+					},
+					// GoogleAdminEmail is the email of a google admin to impersonate.
+					"google_admin_email": {
+						Type:        schema.TypeString,
+						Description: "GoogleAdminEmail is the email of a google admin to impersonate.",
+						Optional:    true,
+					},
+				},
+			},
+		},
+	}
+}
+
+// GenSchemaMetaOIDCConnectorV2 returns schema for OIDCConnectorV2
+//
+// OIDCConnectorV2 represents an OIDC connector.
+func GenSchemaMetaOIDCConnectorV2() map[string]*accessors.SchemaMeta {
+	return map[string]*accessors.SchemaMeta{
+		// Kind is a resource kind.
+		"kind": {
+			Name:       "Kind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// SubKind is an optional resource sub kind, used in some resources.
+		"sub_kind": {
+			Name:       "SubKind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Version is a resource version.
+		"version": {
+			Name:       "Version",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Metadata holds resource metadata.
+		"metadata": {
+			Name:       "Metadata",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Name is an object name
+				"name": {
+					Name:       "Name",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Namespace is object namespace. The field should be called "namespace"
+				// when it returns in Teleport 2.4.
+				"namespace": {
+					Name:       "Namespace",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Description is object description
+				"description": {
+					Name:       "Description",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Labels is a set of labels
+				"labels": {
+					Name:       "Labels",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Expires is a global expiry time header can be set on any resource in the
+				// system.
+				"expires": {
+					Name:       "Expires",
+					IsTime:     true,
+					IsDuration: false,
+				},
+			},
+		},
+		// Spec is an OIDC connector specification.
+		"spec": {
+			Name:       "Spec",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// IssuerURL is the endpoint of the provider, e.g. https://accounts.google.com.
+				"issuer_url": {
+					Name:       "IssuerURL",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// ClientID is the id of the authentication client (Teleport Auth server).
+				"client_id": {
+					Name:       "ClientID",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// ClientSecret is used to authenticate the client.
+				"client_secret": {
+					Name:       "ClientSecret",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// RedirectURL is a URL that will redirect the client's browser
+				// back to the identity provider after successful authentication.
+				// This should match the URL on the Provider's side.
+				"redirect_url": {
+					Name:       "RedirectURL",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// ACR is an Authentication Context Class Reference value. The meaning of the ACR
+				// value is context-specific and varies for identity providers.
+				"acr": {
+					Name:       "ACR",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Provider is the external identity provider.
+				"provider": {
+					Name:       "Provider",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Display is the friendly name for this provider.
+				"display": {
+					Name:       "Display",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Scope specifies additional scopes set by provider.
+				"scope": {
+					Name:       "Scope",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Prompt is an optional OIDC prompt. An empty string omits prompt.
+				// If not specified, it defaults to select_account for backwards compatibility.
+				"prompt": {
+					Name:       "Prompt",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// ClaimsToRoles specifies a dynamic mapping from claims to roles.
+				"claims_to_roles": {
+					Name:       "ClaimsToRoles",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// Claim is a claim name.
+						"claim": {
+							Name:       "Claim",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Value is a claim value to match.
+						"value": {
+							Name:       "Value",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Roles is a list of static teleport roles to match.
+						"roles": {
+							Name:       "Roles",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// GoogleServiceAccountURI is a path to a google service account uri.
+				"google_service_account_uri": {
+					Name:       "GoogleServiceAccountURI",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// GoogleServiceAccount is a string containing google service account credentials.
+				"google_service_account": {
+					Name:       "GoogleServiceAccount",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// GoogleAdminEmail is the email of a google admin to impersonate.
+				"google_admin_email": {
+					Name:       "GoogleAdminEmail",
+					IsTime:     false,
+					IsDuration: false,
 				},
 			},
 		},
