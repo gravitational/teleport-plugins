@@ -55,6 +55,7 @@ func NewWebhookServer(conf lib.HTTPConfig, onWebhook WebhookFunc) (*WebhookServe
 		onWebhook: onWebhook,
 	}
 	httpSrv.POST("/", srv.processWebhook)
+	httpSrv.GET("/status", srv.processStatus)
 	return srv, nil
 }
 
@@ -104,4 +105,8 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 	} else {
 		rw.WriteHeader(http.StatusOK)
 	}
+}
+
+func (s *WebhookServer) processStatus(rw http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	rw.WriteHeader(http.StatusOK)
 }
