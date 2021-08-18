@@ -3,7 +3,7 @@ variable "identity_file_path" {}
 terraform {
   required_providers {
     teleport = {
-      version = "6.2.3"
+      version = "7.0.2"
       source  = "gravitational.com/teleport/teleport"
     }
   }
