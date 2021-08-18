@@ -32,6 +32,11 @@ exclude_fields:
 
 # These fields will be marked as Computed: true
 computed_fields:
+    # SAML connector
+    - "types.SAMLConnectorV2.Spec.Audience"
+    - "types.SAMLConnectorV2.Spec.Issuer"
+    - "types.SAMLConnectorV2.Spec.ServiceProviderIssuer"
+    - "types.SAMLConnectorV2.Spec.SSO"
 
 # These fields will be marked as Required: true 
 required_fields:
