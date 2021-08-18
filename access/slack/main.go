@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -85,6 +86,27 @@ func run(configPath string, debug bool) error {
 	if err != nil {
 		return trace.Wrap(err)
 	}
+
+	http.HandleFunc("/healthz", func(rw http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(context.TODO(), time.Second*15)
+		defer cancel()
+		_, ping := app.apiClient.Ping(ctx)
+		check := app.bot.HealthCheck(ctx)
+
+		if ping != nil || check != nil {
+			rw.WriteHeader(http.StatusInternalServerError)
+		} else {
+			rw.WriteHeader(http.StatusOK)
+		}
+		rw.Header().Add("content-type", "text/plain")
+		fmt.Fprintf(rw, "ping err=%s; ", ping)
+		fmt.Fprintf(rw, "check err=%s; ", check)
+	})
+	diagAddr := os.Getenv("DIAG_ADDR")
+	if diagAddr == "" {
+		diagAddr = "localhost:9000"
+	}
+	go http.ListenAndServe(diagAddr, nil)
 
 	go lib.ServeSignals(app, 15*time.Second)
 
