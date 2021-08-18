@@ -68,24 +68,24 @@ func resourceGithubConnectorCreate(ctx context.Context, d *schema.ResourceData, 
 		return diagFromErr(describeErr(err, "role"))
 	}
 
-	cn := types.NewGithubConnector(n, types.GithubConnectorSpecV3{})
+	cn := types.GithubConnectorV3{}
 
-	cn3, ok := cn.(*types.GithubConnectorV3)
-	if !ok {
-		return diagFromErr(fmt.Errorf("failed to convert created role to types.GithubConnectorV3 from %T", cn))
-	}
-
-	err = tfschema.GetGithubConnectorV3(cn3, d)
+	err = tfschema.GetGithubConnectorV3(&cn, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	err = c.UpsertGithubConnector(ctx, cn3)
+	err = cn.CheckAndSetDefaults()
+	if err != nil {
+		return diagFromErr(err)
+	}
+
+	err = c.UpsertGithubConnector(ctx, &cn)
 	if err != nil {
 		return diagFromErr(describeErr(err, "github"))
 	}
 
-	d.SetId(cn3.GetName())
+	d.SetId(cn.GetName())
 
 	return resourceGithubConnectorRead(ctx, d, m)
 }

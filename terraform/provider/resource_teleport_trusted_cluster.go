@@ -69,27 +69,24 @@ func resourceTrustedClusterCreate(ctx context.Context, d *schema.ResourceData, m
 		return diagFromErr(describeErr(err, "trusted_cluster"))
 	}
 
-	t, err := types.NewTrustedCluster(n, types.TrustedClusterSpecV2{})
+	t := types.TrustedClusterV2{}
+
+	err = tfschema.GetTrustedClusterV2(&t, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	t2, ok := t.(*types.TrustedClusterV2)
-	if !ok {
-		return diagFromErr(fmt.Errorf("failed to convert created trusted cluster to types.TrustedClusterV2 from %T", t))
-	}
-
-	err = tfschema.GetTrustedClusterV2(t2, d)
+	err = t.CheckAndSetDefaults()
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	_, err = c.UpsertTrustedCluster(ctx, t2)
+	_, err = c.UpsertTrustedCluster(ctx, &t)
 	if err != nil {
 		return diagFromErr(describeErr(err, "trusted_cluster"))
 	}
 
-	d.SetId(t2.GetName())
+	d.SetId(t.GetName())
 
 	return resourceTrustedClusterRead(ctx, d, m)
 }

@@ -63,7 +63,6 @@ required_fields:
     - "types.SAMLConnectorV2.Spec"
     - "types.SAMLConnectorV2.Spec.AssertionConsumerService"
     - "types.SAMLConnectorV2.Spec.EntityDescriptor"
-    - "types.SAMLConnectorV2.Spec.EntityDescriptorURL"
 
     # OIDC connector
     - "types.OIDCConnectorV2.Spec"

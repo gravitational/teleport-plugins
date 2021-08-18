@@ -68,24 +68,24 @@ func resourceOIDCConnectorCreate(ctx context.Context, d *schema.ResourceData, m 
 		return diagFromErr(describeErr(err, "oidc"))
 	}
 
-	cn := types.NewOIDCConnector(n, types.OIDCConnectorSpecV2{})
+	cn := types.OIDCConnectorV2{}
 
-	cnV2, ok := cn.(*types.OIDCConnectorV2)
-	if !ok {
-		return diagFromErr(fmt.Errorf("failed to convert created oidc connector to types.OIDCConnectorV2 from %T", cn))
-	}
-
-	err = tfschema.GetOIDCConnectorV2(cnV2, d)
+	err = tfschema.GetOIDCConnectorV2(&cn, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	err = c.UpsertOIDCConnector(ctx, cnV2)
+	err = cn.CheckAndSetDefaults()
+	if err != nil {
+		return diagFromErr(err)
+	}
+
+	err = c.UpsertOIDCConnector(ctx, &cn)
 	if err != nil {
 		return diagFromErr(describeErr(err, "oidc"))
 	}
 
-	d.SetId(cnV2.GetName())
+	d.SetId(cn.GetName())
 
 	return resourceOIDCConnectorRead(ctx, d, m)
 }
