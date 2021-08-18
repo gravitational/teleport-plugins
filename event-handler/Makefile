@@ -1,4 +1,4 @@
-VERSION=0.0.1
+VERSION=7.0.2
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
@@ -18,39 +18,19 @@ PASS ?= 1234
 CLOUD_ADDR=evilmartians.teleport.sh:443
 IDENTITY_FILE=example/keys/identity
 
-RELEASE = terraform-event-handler-v$(VERSION)-$(OS)-$(ARCH)-bin
-
-.PHONY: gen-example-mtls
-gen-example-mtls:
-	mkdir -p example/keys
-	rm -f example/keys/*
-
-	openssl genrsa -out example/keys/ca.key 4096
-	chmod 444 example/keys/ca.key
-	openssl req -config example/ssl.conf -key example/keys/ca.key -new -x509 -days 7300 -sha256 -extensions v3_ca -subj "/CN=ca" -out example/keys/ca.crt
-
-	openssl genrsa -aes256 -passout pass:$(PASS) -out example/keys/server.key 4096
-	chmod 444 example/keys/server.key
-	openssl req -passin pass:$(PASS) -config example/ssl.conf -subj "/CN=server" -key example/keys/server.key -new -out example/keys/server.csr
-	openssl x509 -req -in example/keys/server.csr -CA example/keys/ca.crt -CAkey example/keys/ca.key -CAcreateserial -days 365 -out example/keys/server.crt -extfile example/ssl.conf -extensions server_cert
-
-	openssl genrsa -out example/keys/server_nopass.key 4096
-	chmod 444 example/keys/server_nopass.key
-	openssl req -config example/ssl.conf -subj "/CN=server-nopass" -key example/keys/server_nopass.key -new -out example/keys/server_nopass.csr
-	openssl x509 -req -in example/keys/server_nopass.csr -CA example/keys/ca.crt -CAkey example/keys/ca.key -CAcreateserial -days 365 -out example/keys/server_nopass.crt -extfile example/ssl.conf -extensions server_cert
-
-	openssl genrsa -out example/keys/client.key 4096
-	chmod 444 example/keys/client.key
-	openssl req -config example/ssl.conf -subj "/CN=client" -key example/keys/client.key -new -out example/keys/client.csr
-	openssl x509 -req -in example/keys/client.csr -CA example/keys/ca.crt -CAkey example/keys/ca.key -CAcreateserial -days 365 -out example/keys/client.crt -extfile example/ssl.conf -extensions client_cert
-
-.PHONY: clean
-clean:
-	go clean
+RELEASE = teleport-event-handler-v$(VERSION)-$(OS)-$(ARCH)-bin
 
 .PHONY: build
 build: clean
 	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/teleport-event-handler $(BUILDFLAGS)
+
+.PHONY: release
+release: build
+	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
+
+.PHONY: clean
+clean:
+	go clean
 
 .PHONY: install
 install: build
@@ -76,6 +56,28 @@ fluentd:
 example: build
 	./build/teleport-event-handler start --config tmp/teleport-event-handler.toml --start-time 2020-01-01T00:00:00Z
 
-.PHONY: release
-release: build
-	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
+.PHONY: gen-example-mtls
+gen-example-mtls:
+	mkdir -p example/keys
+	rm -f example/keys/*
+
+	openssl genrsa -out example/keys/ca.key 4096
+	chmod 444 example/keys/ca.key
+	openssl req -config example/ssl.conf -key example/keys/ca.key -new -x509 -days 7300 -sha256 -extensions v3_ca -subj "/CN=ca" -out example/keys/ca.crt
+
+	openssl genrsa -aes256 -passout pass:$(PASS) -out example/keys/server.key 4096
+	chmod 444 example/keys/server.key
+	openssl req -passin pass:$(PASS) -config example/ssl.conf -subj "/CN=server" -key example/keys/server.key -new -out example/keys/server.csr
+	openssl x509 -req -in example/keys/server.csr -CA example/keys/ca.crt -CAkey example/keys/ca.key -CAcreateserial -days 365 -out example/keys/server.crt -extfile example/ssl.conf -extensions server_cert
+
+	openssl genrsa -out example/keys/server_nopass.key 4096
+	chmod 444 example/keys/server_nopass.key
+	openssl req -config example/ssl.conf -subj "/CN=server-nopass" -key example/keys/server_nopass.key -new -out example/keys/server_nopass.csr
+	openssl x509 -req -in example/keys/server_nopass.csr -CA example/keys/ca.crt -CAkey example/keys/ca.key -CAcreateserial -days 365 -out example/keys/server_nopass.crt -extfile example/ssl.conf -extensions server_cert
+
+	openssl genrsa -out example/keys/client.key 4096
+	chmod 444 example/keys/client.key
+	openssl req -config example/ssl.conf -subj "/CN=client" -key example/keys/client.key -new -out example/keys/client.csr
+	openssl x509 -req -in example/keys/client.csr -CA example/keys/ca.crt -CAkey example/keys/ca.key -CAcreateserial -days 365 -out example/keys/client.crt -extfile example/ssl.conf -extensions client_cert
+
+
