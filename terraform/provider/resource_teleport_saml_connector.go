@@ -68,7 +68,7 @@ func resourceSAMLConnectorCreate(ctx context.Context, d *schema.ResourceData, m 
 		return diagFromErr(describeErr(err, "saml"))
 	}
 
-	s := types.SAMLConnectorV2{}
+	s := types.SAMLConnectorV2{Spec: types.SAMLConnectorSpecV2{AttributesToRoles: make([]types.AttributeMapping, 2)}}
 	err = tfschema.GetSAMLConnectorV2(&s, d)
 	if err != nil {
 		return diagFromErr(err)

@@ -134,193 +134,6 @@ func SetUserV2(obj *types.UserV2, data *schema.ResourceData) error {
 	return accessors.Set(obj, data, SchemaUserV2, SchemaMetaUserV2)
 }
 
-// SchemaProvisionTokenV2 returns schema for ProvisionTokenV2
-//
-// ProvisionTokenV2 specifies provisioning token
-func GenSchemaProvisionTokenV2() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		// Kind is a resource kind
-		"kind": {
-			Type:        schema.TypeString,
-			Description: "Kind is a resource kind",
-			Optional:    true,
-			Default:     "token",
-		},
-		// SubKind is an optional resource sub kind, used in some resources
-		"sub_kind": {
-			Type:        schema.TypeString,
-			Description: "SubKind is an optional resource sub kind, used in some resources",
-			Optional:    true,
-			Default:     "",
-		},
-		// Version is version
-		"version": {
-			Type:        schema.TypeString,
-			Description: "Version is version",
-			Optional:    true,
-			Default:     "v2",
-		},
-		// Metadata is User metadata
-		"metadata": {
-			Type:        schema.TypeList,
-			MaxItems:    1,
-			Description: "Metadata is resource metadata",
-
-			Optional: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					// Name is an object name
-					"name": {
-						Type:        schema.TypeString,
-						Description: "Name is an object name",
-						Required:    true,
-						ForceNew:    true,
-					},
-					// Namespace is object namespace. The field should be called "namespace"
-					// when it returns in Teleport 2.4.
-					"namespace": {
-						Type:        schema.TypeString,
-						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
-						Optional:    true,
-						Default:     "default",
-					},
-					// Description is object description
-					"description": {
-						Type:        schema.TypeString,
-						Description: "Description is object description",
-						Optional:    true,
-					},
-					// Labels is a set of labels
-					"labels": {
-
-						Optional:    true,
-						Type:        schema.TypeMap,
-						Description: "Labels is a set of labels",
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					// Expires is a global expiry time header can be set on any resource in the
-					// system.
-					"expires": {
-						Type:         schema.TypeString,
-						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
-						ValidateFunc: validation.IsRFC3339Time,
-						StateFunc:    TruncateMs,
-						Required:     true,
-					},
-				},
-			},
-		},
-		// Spec is a provisioning token V2 spec
-		"spec": {
-			Type:        schema.TypeList,
-			MaxItems:    1,
-			Description: "ProvisionTokenSpecV2 is a specification for V2 token",
-
-			Required: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					// Roles is a list of roles associated with the token,
-					// that will be converted to metadata in the SSH and X509
-					// certificates issued to the user of the token
-					"roles": {
-
-						Required:    true,
-						Type:        schema.TypeList,
-						Description: "Roles is a list of roles associated with the token,  that will be converted to metadata in the SSH and X509  certificates issued to the user of the token",
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-// GenSchemaMetaProvisionTokenV2 returns schema for ProvisionTokenV2
-//
-// ProvisionTokenV2 specifies provisioning token
-func GenSchemaMetaProvisionTokenV2() map[string]*accessors.SchemaMeta {
-	return map[string]*accessors.SchemaMeta{
-		// Kind is a resource kind
-		"kind": {
-			Name:       "Kind",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// SubKind is an optional resource sub kind, used in some resources
-		"sub_kind": {
-			Name:       "SubKind",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// Version is version
-		"version": {
-			Name:       "Version",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// Metadata is User metadata
-		"metadata": {
-			Name:       "Metadata",
-			IsTime:     false,
-			IsDuration: false,
-			Nested: map[string]*accessors.SchemaMeta{
-				// Name is an object name
-				"name": {
-					Name:       "Name",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Namespace is object namespace. The field should be called "namespace"
-				// when it returns in Teleport 2.4.
-				"namespace": {
-					Name:       "Namespace",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Description is object description
-				"description": {
-					Name:       "Description",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Labels is a set of labels
-				"labels": {
-					Name:       "Labels",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Expires is a global expiry time header can be set on any resource in the
-				// system.
-				"expires": {
-					Name:       "Expires",
-					IsTime:     true,
-					IsDuration: false,
-				},
-			},
-		},
-		// Spec is a provisioning token V2 spec
-		"spec": {
-			Name:       "Spec",
-			IsTime:     false,
-			IsDuration: false,
-			Nested: map[string]*accessors.SchemaMeta{
-				// Roles is a list of roles associated with the token,
-				// that will be converted to metadata in the SSH and X509
-				// certificates issued to the user of the token
-				"roles": {
-					Name:       "Roles",
-					IsTime:     false,
-					IsDuration: false,
-				},
-			},
-		},
-	}
-}
-
 // SchemaRoleV3 returns schema for RoleV3
 //
 // RoleV3 represents role resource specification
@@ -2799,7 +2612,7 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 					// AttributesToRoles is a list of mappings of attribute statements to roles.
 					"attributes_to_roles": {
 
-						Optional:    true,
+						Required:    true,
 						Type:        schema.TypeList,
 						Description: "AttributesToRoles is a list of mappings of attribute statements to roles.",
 						Elem: &schema.Resource{
@@ -2836,6 +2649,7 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 						Description: "AsymmetricKeyPair is a combination of a public certificate and  private key that can be used for encryption and signing.",
 
 						Optional: true,
+						Computed: true,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								// PrivateKey is a PEM encoded x509 private key.
@@ -3678,6 +3492,193 @@ func GenSchemaMetaTrustedClusterV2() map[string]*accessors.SchemaMeta {
 							IsDuration: false,
 						},
 					},
+				},
+			},
+		},
+	}
+}
+
+// SchemaProvisionTokenV2 returns schema for ProvisionTokenV2
+//
+// ProvisionTokenV2 specifies provisioning token
+func GenSchemaProvisionTokenV2() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		// Kind is a resource kind
+		"kind": {
+			Type:        schema.TypeString,
+			Description: "Kind is a resource kind",
+			Optional:    true,
+			Default:     "token",
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Type:        schema.TypeString,
+			Description: "SubKind is an optional resource sub kind, used in some resources",
+			Optional:    true,
+			Default:     "",
+		},
+		// Version is version
+		"version": {
+			Type:        schema.TypeString,
+			Description: "Version is version",
+			Optional:    true,
+			Default:     "v2",
+		},
+		// Metadata is User metadata
+		"metadata": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "Metadata is resource metadata",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Name is an object name
+					"name": {
+						Type:        schema.TypeString,
+						Description: "Name is an object name",
+						Required:    true,
+						ForceNew:    true,
+					},
+					// Namespace is object namespace. The field should be called "namespace"
+					// when it returns in Teleport 2.4.
+					"namespace": {
+						Type:        schema.TypeString,
+						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
+						Optional:    true,
+						Default:     "default",
+					},
+					// Description is object description
+					"description": {
+						Type:        schema.TypeString,
+						Description: "Description is object description",
+						Optional:    true,
+					},
+					// Labels is a set of labels
+					"labels": {
+
+						Optional:    true,
+						Type:        schema.TypeMap,
+						Description: "Labels is a set of labels",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Expires is a global expiry time header can be set on any resource in the
+					// system.
+					"expires": {
+						Type:         schema.TypeString,
+						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
+						ValidateFunc: validation.IsRFC3339Time,
+						StateFunc:    TruncateMs,
+						Required:     true,
+					},
+				},
+			},
+		},
+		// Spec is a provisioning token V2 spec
+		"spec": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "ProvisionTokenSpecV2 is a specification for V2 token",
+
+			Required: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Roles is a list of roles associated with the token,
+					// that will be converted to metadata in the SSH and X509
+					// certificates issued to the user of the token
+					"roles": {
+
+						Required:    true,
+						Type:        schema.TypeList,
+						Description: "Roles is a list of roles associated with the token,  that will be converted to metadata in the SSH and X509  certificates issued to the user of the token",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// GenSchemaMetaProvisionTokenV2 returns schema for ProvisionTokenV2
+//
+// ProvisionTokenV2 specifies provisioning token
+func GenSchemaMetaProvisionTokenV2() map[string]*accessors.SchemaMeta {
+	return map[string]*accessors.SchemaMeta{
+		// Kind is a resource kind
+		"kind": {
+			Name:       "Kind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Name:       "SubKind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Version is version
+		"version": {
+			Name:       "Version",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Metadata is User metadata
+		"metadata": {
+			Name:       "Metadata",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Name is an object name
+				"name": {
+					Name:       "Name",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Namespace is object namespace. The field should be called "namespace"
+				// when it returns in Teleport 2.4.
+				"namespace": {
+					Name:       "Namespace",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Description is object description
+				"description": {
+					Name:       "Description",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Labels is a set of labels
+				"labels": {
+					Name:       "Labels",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Expires is a global expiry time header can be set on any resource in the
+				// system.
+				"expires": {
+					Name:       "Expires",
+					IsTime:     true,
+					IsDuration: false,
+				},
+			},
+		},
+		// Spec is a provisioning token V2 spec
+		"spec": {
+			Name:       "Spec",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Roles is a list of roles associated with the token,
+				// that will be converted to metadata in the SSH and X509
+				// certificates issued to the user of the token
+				"roles": {
+					Name:       "Roles",
+					IsTime:     false,
+					IsDuration: false,
 				},
 			},
 		},

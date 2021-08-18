@@ -3,7 +3,7 @@ variable "identity_file_path" {}
 terraform {
   required_providers {
     teleport = {
-      version = "0.0.1"
+      version = "7.0.2"
       source  = "gravitational.com/teleport/teleport"
     }
   }
@@ -12,9 +12,9 @@ terraform {
 provider "teleport" {
   identity_file_path = var.identity_file_path
 
-  addr = "localhost:3025"
+  # addr = "localhost:3025"
   # Update addr to point to Teleport Auth/Proxy
-  # addr = "evilmartians.teleport.sh:443"
+  addr = "evilmartians.teleport.sh:443"
 }
 
 resource "teleport_provision_token" "example" {
@@ -122,6 +122,47 @@ resource "teleport_role" "example" {
     deny {
       logins = ["anonymous"]
     }
+  }
+}
+
+resource "teleport_saml_connector" "gzigzigzeo-saml" {
+  metadata {
+    name = "gzigzigzeo-saml"
+  }
+
+  spec {
+    attributes_to_roles {
+      name = "groups"
+      roles = ["example"]
+      value = "okta-admin"
+    }
+
+    attributes_to_roles {
+      name = "groups"
+      roles = ["example"]
+      value = "okta-dev"
+    }
+
+    assertion_consumer_service = "https://evilmartians.teleport.sh:443/v1/webapi/saml/acs"
+    entity_descriptor =<<EOT
+<?xml version="1.0" encoding="UTF-8"?><md:EntityDescriptor entityID="http://www.okta.com/exk1hqp7cwfwMSmWU5d7" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"><md:IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"><md:KeyDescriptor use="signing"><ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>MIIDqDCCApCgAwIBAgIGAXtYUnZGMA0GCSqGSIb3DQEBCwUAMIGUMQswCQYDVQQGEwJVUzETMBEG
+A1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5jaXNjbzENMAsGA1UECgwET2t0YTEU
+MBIGA1UECwwLU1NPUHJvdmlkZXIxFTATBgNVBAMMDGRldi04MjQxODc4MTEcMBoGCSqGSIb3DQEJ
+ARYNaW5mb0Bva3RhLmNvbTAeFw0yMTA4MTgwODEyMjRaFw0zMTA4MTgwODEzMjRaMIGUMQswCQYD
+VQQGEwJVUzETMBEGA1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5jaXNjbzENMAsG
+A1UECgwET2t0YTEUMBIGA1UECwwLU1NPUHJvdmlkZXIxFTATBgNVBAMMDGRldi04MjQxODc4MTEc
+MBoGCSqGSIb3DQEJARYNaW5mb0Bva3RhLmNvbTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoC
+ggEBAI3X6s4VdDNJErk3hZ3hen9SWTSlonUMvSDhjz0RIAefxLiG7lmWpMO4VF6OKGg3jEZG/aLF
+hNPSptrde77yWihQklnm0qViA2KcMRs1RSSMVbmALNjFzTCzPr8/XViMHOiy9FzXfCa2RK7Ru+Wn
+/vjoPeo9NVdaltR5IGz+kFGHE6tv2j2NfId94jsaTFkPTtWlgbYoNCXJvvWn5Wryq7+zMiXkaHEv
+uSp88J0CASdApljuMPwx1e8PhELzyyYyxJAHEhI6obk0qi+tbQe5Z/DFnbXqs10sPT3vOyiYLMc0
+fcuf4/vc0qMeXrTgnwj/uYPANYAz5QcVOm3o8Y2B7qcCAwEAATANBgkqhkiG9w0BAQsFAAOCAQEA
+MVlOVB0Z3qkJyB5TegnZW/3BgZih50lKAfFj8gR/5xTIiRmxJonneUqoJS4N5zSarwUalueVuY0A
+hG/j9SYHKit+tIwRHdYverSsc5r12qMZgoXeF9pyynywwR2MCNSw2r+t0/AU7DCY9Fs+z2V9ttQ7
+XFj62BoPXYppGBQnmhwkrEz9Q0zKHZPywecMUZE1T2om2id7+8OopIM7RLM/GZoWHHbkXbaT51AR
+gRnfynK+bHvgCzvUvPaNLxggV+2gaFtQKkvChiM8GmT0NRtq61ZUbeEnQkR117nVHuZYydkk8xFH
+4bjHHVGvDncPNCaM55PEEGSQEe5MpT+Um5GovA==</ds:X509Certificate></ds:X509Data></ds:KeyInfo></md:KeyDescriptor><md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://dev-82418781.okta.com/app/dev-82418781_evilmartiansteleportsh_1/exk1hqp7cwfwMSmWU5d7/sso/saml"/><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://dev-82418781.okta.com/app/dev-82418781_evilmartiansteleportsh_1/exk1hqp7cwfwMSmWU5d7/sso/saml"/></md:IDPSSODescriptor></md:EntityDescriptor>
+EOT    
   }
 }
 
