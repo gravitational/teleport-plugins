@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/alecthomas/kong"
@@ -61,16 +62,17 @@ func main() {
 		}
 	}
 
-	switch ctx.Command() {
-	case "version":
+	fmt.Println(ctx.Command())
+	switch {
+	case ctx.Command() == "version":
 		lib.PrintVersion(pluginName, Version, Sha)
-	case "configure <out>":
+	case strings.HasPrefix(ctx.Command(), "configure"):
 		err := RunConfigureCmd(&cli.Configure)
 		if err != nil {
 			fmt.Println(trace.DebugReport(err))
 			os.Exit(-1)
 		}
-	case "start":
+	case ctx.Command() == "start":
 		err := start()
 
 		if err != nil {
