@@ -212,8 +212,6 @@ func (a *App) run(ctx context.Context) error {
 
 	a.mainJob.SetReady(true)
 
-	err = a.poll(ctx)
-
 	for {
 		err := a.poll(ctx)
 		switch {
