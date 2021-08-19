@@ -238,23 +238,25 @@ func (a *App) restartPausedSessions() error {
 		return trace.Wrap(err)
 	}
 
-	if len(sessions) > 0 {
-		for id, idx := range sessions {
-			func(id string, idx int64) {
-				a.SpawnCritical(func(ctx context.Context) error {
-					log.WithField("id", id).WithField("index", idx).Info("Restarting session ingestion")
+	if len(sessions) == 0 {
+		return nil
+	}
 
-					s := session{ID: id, Index: idx}
+	for id, idx := range sessions {
+		func(id string, idx int64) {
+			a.SpawnCritical(func(ctx context.Context) error {
+				log.WithField("id", id).WithField("index", idx).Info("Restarting session ingestion")
 
-					select {
-					case a.sessions <- s:
-						return nil
-					case <-ctx.Done():
-						return ctx.Err()
-					}
-				})
-			}(id, idx)
-		}
+				s := session{ID: id, Index: idx}
+
+				select {
+				case a.sessions <- s:
+					return nil
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			})
+		}(id, idx)
 	}
 
 	return nil
