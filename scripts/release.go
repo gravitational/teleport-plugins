@@ -22,21 +22,28 @@ import (
 	"github.com/gravitational/trace"
 )
 
-func readFlags() (string, string, string, error) {
+func readFlags() (string, string, string, string, error) {
 	tag := flag.String("tag", "", "tag of Teleport and Teleport Plugins to release")
 	teleportCommit := flag.String("teleport-commit", "", "Teleport commit to tag and release")
+	teleportChangelog := flag.String("teleport-changelog", "", "Path to Teleport changelog file")
 	pluginsCommit := flag.String("plugins-commit", "", "Teleport Plugins commit to tag and release")
 
 	flag.Parse()
 
 	if *tag == "" || *teleportCommit == "" || *pluginsCommit == "" {
-		return "", "", "", fmt.Errorf("usage: release -tag v1.2.3 --teleport-commit 419119f8 --plugins-commit a59afea8")
+		return "", "", "", "", fmt.Errorf("usage: release -tag v1.2.3 --teleport-commit 419119f8 --plugins-commit a59afea8")
 	}
 	if semver.Canonical(*tag) == "" {
-		return "", "", "", fmt.Errorf("invalid tag %v", *tag)
+		return "", "", "", "", fmt.Errorf("invalid tag %v", *tag)
 	}
 
-	return *tag, *teleportCommit, *pluginsCommit, nil
+	changelog := *teleportChangelog
+	//changelog, err := ioutil.ReadFile(*teleportChangelog)
+	//if err != nil {
+	//	return "", "", "", "", trace.Wrap(err)
+	//}
+
+	return *tag, *teleportCommit, string(changelog), *pluginsCommit, nil
 }
 
 func buildClients() (drone.Client, *github.Client, error) {
@@ -101,7 +108,7 @@ for your account.
 	return droneClient, ghClient, nil
 }
 
-func releaseTeleport(ctx context.Context, droneClient drone.Client, ghClient *github.Client, tag string, commit string) error {
+func releaseTeleport(ctx context.Context, droneClient drone.Client, ghClient *github.Client, tag string, commit string, changelog string) error {
 	//// Create the tags needed for the release.
 	//if err := createTags(ghClient, []string{tag}, commit); err != nil {
 	//	return trace.Wrap(err)
@@ -134,19 +141,19 @@ func releaseTeleportPlugins(ctx context.Context, droneClient drone.Client, ghCli
 	tags := preparePluginsTags(tag)
 
 	// Create the tags needed for the release.
-	if err := createTags(ctx, ghClient, "gh-actions-poc", tags, commit); err != nil {
+	if err := createTags(ctx, ghClient, "teleport-plugins", append(tags, tag), commit); err != nil {
 		return trace.Wrap(err)
 	}
 
 	// Monitor the builds, once complete, promote.
-	if err := build(droneClient, tags); err != nil {
+	if err := build(droneClient, "teleport-plugins", tags); err != nil {
 		return trace.Wrap(err)
 	}
 
-	//// Create the GitHub release.
-	//if err := createRelease(ctx, ghClient, tag); err != nil {
-	//	return trace.Wrap(err)
-	//}
+	// Create the GitHub release.
+	if err := createRelease(ctx, ghClient, "teleport-plugins", tag, ""); err != nil {
+		return trace.Wrap(err)
+	}
 
 	fmt.Printf("Teleport Plugins successfully released.\n")
 	return nil
@@ -161,7 +168,7 @@ func preparePluginsTags(tag string) []string {
 }
 
 func createTags(ctx context.Context, client *github.Client, repoName string, tags []string, commit string) error {
-	for _, tag := range tags {
+	for i, tag := range tags {
 		_, _, err := client.Git.CreateRef(ctx, "gravitational", repoName, &github.Reference{
 			Ref: github.String(fmt.Sprintf("refs/tags/%v", tag)),
 			Object: &github.GitObject{
@@ -171,139 +178,151 @@ func createTags(ctx context.Context, client *github.Client, repoName string, tag
 		if err != nil {
 			return trace.Wrap(err)
 		}
+		fmt.Printf("Created tag %v/%v %v.\n", i+1, len(tags), tag)
 	}
 	return nil
 }
 
-func build(client drone.Client, tags []string) error {
-	//// Wait for Drone to finish building artifacts for the tag.
-	//if err := waitForTags(client, tags, ""); err != nil {
-	//	return trace.Wrap(err)
-	//}
+func build(client drone.Client, repoName string, tags []string) error {
+	// Wait for Drone to finish building artifacts for the tag.
+	if err := waitForTags(client, repoName, tags, ""); err != nil {
+		return trace.Wrap(err)
+	}
 
-	//// Promote artifacts to "production".
-	//if err := promote(client, tags); err != nil {
-	//	return trace.Wrap(err)
-	//}
+	// Promote artifacts to "production".
+	if err := promote(client, repoName, tags); err != nil {
+		return trace.Wrap(err)
+	}
 
-	//// Wait for Drone to finish promoting all artifacts to "production".
-	//if err := waitForTags(client, tags, "production"); err != nil {
-	//	return trace.Wrap(err)
-	//}
+	// Wait for Drone to finish promoting all artifacts to "production".
+	if err := waitForTags(client, repoName, tags, "production"); err != nil {
+		return trace.Wrap(err)
+	}
 
 	return nil
 }
 
-func waitForTag(client drone.Client, version string, deploy string) error {
-	ticker := time.NewTicker(10 * time.Second)
-	timer := time.NewTimer(5 * time.Minute)
-	for {
+func waitForTags(client drone.Client, repoName string, tags []string, deploy string) error {
+	desc := "build"
+	if deploy == "production" {
+		desc = "deployment build"
+	}
+
+	ticker := time.NewTicker(2 * time.Second)
+	timer := time.NewTimer(30 * time.Minute)
+
+	var i int
+	for i < len(tags) {
 		select {
 		case <-ticker.C:
-			log.Printf("Checking deploy=%q builds.", deploy)
-
 			// Get list of active builds.
-			builds, err := client.BuildList("gravitational", "teleport-plugins", drone.ListOptions{
+			builds, err := client.BuildList("gravitational", repoName, drone.ListOptions{
 				Page: 0,
-				Size: 20,
+				Size: 40,
 			})
 			if err != nil {
-				log.Printf("Failed to get list of builds: %v.", err)
+				fmt.Printf("Failed to find %v list: %v, continuing.\n", desc, err)
 				continue
 			}
 
 			// Check to see if all the required builds have completed.
-			if err := checkBuilds(builds, version, deploy); err != nil {
+			b, err := matchBuild(builds, tags[i], deploy)
+			if err != nil {
+				fmt.Printf("Failed to find %v for %v, continuing.\n", desc, tags[i])
 				continue
 			}
 
-			log.Printf("All deploy=%q builds ready.", deploy)
-			return nil
+			fmt.Printf("Found %v #%v %v/%v %v.\n", desc, b.Number, i+1, len(tags), tags[i])
+			i += 1
 		case <-timer.C:
-			return fmt.Errorf("timed out waiting for builds")
+			return fmt.Errorf("timed out waiting tag %v", tags[i])
 		}
 	}
-}
-
-func promote(client drone.Client, version string) error {
-	//// Get list of active builds.
-	//builds, err := client.BuildList("gravitational", "teleport-plugins", drone.ListOptions{
-	//	Page: 0,
-	//	Size: 40,
-	//})
-	//if err != nil {
-	//	return err
-	//}
-
-	//for _, release := range releaseList {
-	//	// Find matching tag that has finished building.
-	//	build, err := matchBuild(fmt.Sprintf("%v-v%v", release, version), "", builds)
-	//	if err != nil {
-	//		return err
-	//	}
-
-	//	// Promote tag to "production".
-	//	_, err = client.Promote("gravitational", "teleport-plugins", int(build.Number), "production", nil)
-	//	if err != nil {
-	//		return err
-	//	}
-	//}
 
 	return nil
 }
 
-func checkBuilds(builds []*drone.Build, version string, deploy string) error {
-	//for _, release := range releaseList {
-	//	if _, err := matchBuild(fmt.Sprintf("%v-v%v", release, version), deploy, builds); err != nil {
-	//		return err
-	//	}
-	//}
+func promote(client drone.Client, repoName string, tags []string) error {
+	// Get list of active builds.
+	builds, err := client.BuildList("gravitational", repoName, drone.ListOptions{
+		Page: 0,
+		Size: 40,
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, tag := range tags {
+		// Find matching tag that has finished building.
+		b, err := matchBuild(builds, tag, "")
+		if err != nil {
+			return trace.Wrap(err)
+		}
+
+		// Promote tag to "production".
+		_, err = client.Promote("gravitational", repoName, int(b.Number), "production", nil)
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
-func matchBuild(name string, deploy string, builds []*drone.Build) (*drone.Build, error) {
-	//for _, build := range builds {
-	//	if strings.HasSuffix(build.Ref, name) &&
-	//		build.Deploy == deploy &&
-	//		build.Status == "success" {
-	//		//log.Printf("Build %v ready: deploy=%q ref=%q.", build.Number, build.Deploy, build.Ref)
-	//		return build, nil
-	//	}
-	//}
-	return nil, fmt.Errorf("failed to find build(name=%v, deploy=%v).", name)
+func matchBuild(builds []*drone.Build, tag string, deploy string) (*drone.Build, error) {
+	for _, build := range builds {
+		if strings.HasSuffix(build.Ref, tag) &&
+			build.Deploy == deploy &&
+			build.Status == "success" {
+			return build, nil
+		}
+	}
+	return nil, trace.NotFound("not found")
 }
 
 type release struct {
-	Version string
+	Version   string
+	Changelog string
 }
 
-func createRelease(ctx context.Context, client *github.Client, tag string) error {
-	// Check the tag to figure out if this is a prerelease or a production release.
+func createRelease(ctx context.Context, client *github.Client, repoName string, tag string, changelog string) error {
+	// Build release notes. Note that prerelease notes are the same for Teleport
+	// and Teleport Plugins.
+	var err error
 	var prerelease bool
-	releaseNotes := pluginsReleaseNotes
-	if semver.Prerelease(tag) != "" {
+	var releaseNotes string
+	switch {
+	case semver.Prerelease(tag) != "":
 		prerelease = true
 		releaseNotes = prereleaseNotes
+	case repoName == "teleport":
+		releaseNotes, err = teleportNotes(changelog)
+		if err != nil {
+			return trace.Wrap(err)
+		}
+	case repoName == "teleport-plugins":
+		releaseNotes, err = teleportPluginsNotes(tag)
+		if err != nil {
+			return trace.Wrap(err)
+		}
+	case repoName == "gh-actions-poc":
+		releaseNotes, err = teleportPluginsNotes(tag)
+		if err != nil {
+			return trace.Wrap(err)
+		}
 	}
 
-	// Build out the release notes and inject the version wherever appropriate.
-	var buffer bytes.Buffer
-	t, err := template.New("releaseNotes").Parse(releaseNotes)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-	err = t.Execute(&buffer, &release{
-		Version: tag,
-	})
-	if err != nil {
-		return trace.Wrap(err)
+	// Build release name.
+	releaseName := fmt.Sprintf("Teleport Plugins %v", strings.TrimPrefix(tag, "v"))
+	if repoName == "teleport-plugins" {
+		releaseName = fmt.Sprintf("Teleport %v", strings.TrimPrefix(tag, "v"))
 	}
 
 	// Create the tag on the remote repo.
-	_, _, err = client.Repositories.CreateRelease(ctx, "gravitational", "gh-actions-poc", &github.RepositoryRelease{
+	_, _, err = client.Repositories.CreateRelease(ctx, "gravitational", repoName, &github.RepositoryRelease{
 		TagName:    github.String(tag),
-		Name:       github.String(fmt.Sprintf("Teleport Plugins %v", strings.TrimPrefix(tag, "v"))),
-		Body:       github.String(strings.TrimSpace(buffer.String())),
+		Name:       github.String(releaseName),
+		Body:       github.String(releaseNotes),
 		Prerelease: github.Bool(prerelease),
 	})
 	if err != nil {
@@ -313,9 +332,41 @@ func createRelease(ctx context.Context, client *github.Client, tag string) error
 	return nil
 }
 
+func teleportNotes(changelog string) (string, error) {
+	var buffer bytes.Buffer
+	t, err := template.New("releaseNotes").Parse(teleportReleaseNotes)
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+	err = t.Execute(&buffer, &release{
+		Changelog: changelog,
+	})
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+
+	return buffer.String(), nil
+}
+
+func teleportPluginsNotes(tag string) (string, error) {
+	var buffer bytes.Buffer
+	t, err := template.New("releaseNotes").Parse(teleportPluginsReleaseNotes)
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+	err = t.Execute(&buffer, &release{
+		Version: tag,
+	})
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+
+	return buffer.String(), nil
+}
+
 func main() {
 	// Read in and parse all command line flags.
-	tag, teleportCommit, pluginsCommit, err := readFlags()
+	tag, teleportCommit, teleportChangelog, pluginsCommit, err := readFlags()
 	if err != nil {
 		log.Fatalf("Failed to parse flags: %v.", err)
 	}
@@ -327,7 +378,7 @@ func main() {
 		log.Fatalf("Failed to read in credentials: %v.", err)
 	}
 
-	if err := releaseTeleport(context.Background(), droneClient, ghClient, tag, teleportCommit); err != nil {
+	if err := releaseTeleport(context.Background(), droneClient, ghClient, tag, teleportCommit, teleportChangelog); err != nil {
 		log.Fatalf("Failed to release Teleport: %v.", err)
 	}
 
@@ -335,7 +386,7 @@ func main() {
 		log.Fatalf("Failed to release Teleport Plugins: %v.", err)
 	}
 
-	fmt.Printf("\nRelease %v successful.", tag)
+	fmt.Printf("\nRelease %v successful.\n", tag)
 }
 
 var pluginsTagPrefixes = []string{
@@ -368,9 +419,20 @@ Pre-releases are not production ready, use at your own risk!
 
 Download the current and previous releases of Teleport at https://gravitational.com/teleport/download.`
 
-	// pluginsReleaseNotes are generic release notes that are attached to all
+	// teleportReleaseNotes is the generic framing of all release notes attached to Teleport releases.
+	teleportReleaseNotes = `
+## Description
+
+{{.Changelog}}
+
+## Download
+
+Download the current and previous releases of Teleport at https://gravitational.com/teleport/download.
+`
+
+	// teleportPluginsReleaseNotes are generic release notes that are attached to all
 	// Teleport Plugins releases.
-	pluginsReleaseNotes = `
+	teleportPluginsReleaseNotes = `
 ## Description
 
 A set of plugins for Teleport's for Access Workflows.
