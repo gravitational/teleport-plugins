@@ -69,17 +69,8 @@ func LoadConfig(filepath string) (*Config, error) {
 }
 
 func (c *Config) CheckAndSetDefaults() error {
-	if c.Teleport.AuthServer == "" {
-		c.Teleport.AuthServer = "localhost:3025"
-	}
-	if c.Teleport.ClientKey == "" {
-		c.Teleport.ClientKey = "client.key"
-	}
-	if c.Teleport.ClientCrt == "" {
-		c.Teleport.ClientCrt = "client.pem"
-	}
-	if c.Teleport.RootCAs == "" {
-		c.Teleport.RootCAs = "cas.pem"
+	if err := c.Teleport.CheckAndSetDefaults(); err != nil {
+		return trace.Wrap(err)
 	}
 	if c.JIRA.URL == "" {
 		return trace.BadParameter("missing required value jira.url")

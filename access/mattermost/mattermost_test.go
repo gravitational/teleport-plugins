@@ -11,25 +11,19 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/google/uuid"
 
-	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	. "github.com/gravitational/teleport-plugins/lib/testing"
+	"github.com/gravitational/teleport-plugins/lib/testing/integration"
+	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/teleport/lib/auth/testauthority"
-	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/trace"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-)
-
-const (
-	Host   = "localhost"
-	HostID = "00000000-0000-0000-0000-000000000000"
-	Site   = "local-site"
 )
 
 var msgFieldRegexp = regexp.MustCompile(`(?im)^\*\*([a-zA-Z ]+)\*\*:\ +(.+)$`)
@@ -41,56 +35,81 @@ type MattermostSuite struct {
 		requestor string
 		reviewer1 string
 		reviewer2 string
+		plugin    string
 	}
 	raceNumber     int
 	fakeMattermost *FakeMattermost
 	mmUser         User
-	teleport       *integration.TeleInstance
+
+	teleport         *integration.API
+	teleportFeatures *proto.Features
+	teleportConfig   lib.TeleportConfig
 }
 
 func TestMattermost(t *testing.T) { suite.Run(t, &MattermostSuite{}) }
 
 func (s *MattermostSuite) SetupSuite() {
-	t := s.T()
-
 	var err error
-	log.SetLevel(log.DebugLevel)
-	priv, pub, err := testauthority.New().GenerateKeyPair("")
-	require.NoError(t, err)
-	teleport := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Priv: priv, Pub: pub})
+	t := s.T()
+	ctx := s.Context()
 
+	logger.Init()
+	logger.Setup(logger.Config{Severity: "debug"})
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
-	role, err := types.NewRole("foo", types.RoleSpecV3{
-		Allow: types.RoleConditions{
-			Logins: []string{"guest"}, // cannot be empty
-			Request: &types.AccessRequestConditions{
-				Roles: []string{"admin"},
-				Thresholds: []types.AccessReviewThreshold{
-					types.AccessReviewThreshold{Approve: 2, Deny: 2},
-				},
-			},
-		},
-	})
-	require.NoError(t, err)
-	s.userNames.requestor = teleport.AddUserWithRole(me.Username+"@example.com", role).Username
 
-	role, err = types.NewRole("foo-reviewer", types.RoleSpecV3{
-		Allow: types.RoleConditions{
-			Logins: []string{"guest"}, // cannot be empty
-			ReviewRequests: &types.AccessReviewConditions{
-				Roles: []string{"admin"},
-			},
-		},
-	})
+	teleport, err := integration.NewFromEnv(ctx)
 	require.NoError(t, err)
-	s.userNames.reviewer1 = teleport.AddUserWithRole(me.Username+"-reviewer1@example.com", role).Username
-	s.userNames.reviewer2 = teleport.AddUserWithRole(me.Username+"-reviewer2@example.com", role).Username
+	t.Cleanup(teleport.Close)
 
-	role, err = types.NewRole("access-plugin", types.RoleSpecV3{
+	auth, err := teleport.NewAuthServer()
+	require.NoError(t, err)
+	s.StartApp(auth)
+
+	api, err := teleport.NewAPI(ctx, auth)
+	require.NoError(t, err)
+
+	pong, err := api.Ping(ctx)
+	require.NoError(t, err)
+	teleportFeatures := pong.GetServerFeatures()
+
+	var bootstrap integration.Bootstrap
+
+	// Set up user who can request the access to role "admin".
+
+	conditions := types.RoleConditions{Request: &types.AccessRequestConditions{Roles: []string{"admin"}}}
+	if teleportFeatures.AdvancedAccessWorkflows {
+		conditions.Request.Thresholds = []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}}
+	}
+	role, err := bootstrap.AddRole("foo", types.RoleSpecV4{Allow: conditions})
+	require.NoError(t, err)
+
+	user, err := bootstrap.AddUserWithRoles(me.Username+"@example.com", role.GetName())
+	require.NoError(t, err)
+	s.userNames.requestor = user.GetName()
+
+	// Set up TWO users who can review access requests to role "admin".
+
+	conditions = types.RoleConditions{}
+	if teleportFeatures.AdvancedAccessWorkflows {
+		conditions.ReviewRequests = &types.AccessReviewConditions{Roles: []string{"admin"}}
+	}
+	role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV4{Allow: conditions})
+	require.NoError(t, err)
+
+	user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer1@example.com", role.GetName())
+	require.NoError(t, err)
+	s.userNames.reviewer1 = user.GetName()
+
+	user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer2@example.com", role.GetName())
+	require.NoError(t, err)
+	s.userNames.reviewer2 = user.GetName()
+
+	// Set up plugin user.
+
+	role, err = bootstrap.AddRole("access-mattermost", types.RoleSpecV4{
 		Allow: types.RoleConditions{
-			Logins: []string{"access-plugin"}, // cannot be empty
 			Rules: []types.Rule{
 				types.NewRule("access_request", []string{"list", "read"}),
 				types.NewRule("access_plugin_data", []string{"update"}),
@@ -98,18 +117,29 @@ func (s *MattermostSuite) SetupSuite() {
 		},
 	})
 	require.NoError(t, err)
-	teleport.AddUserWithRole("plugin", role)
 
-	err = teleport.Create(nil, nil)
+	user, err = bootstrap.AddUserWithRoles("access-mattermost", role.GetName())
 	require.NoError(t, err)
-	if err := teleport.Start(); err != nil {
-		t.Fatalf("Unexpected response from Start: %v", err)
-	}
-	s.teleport = teleport
+	s.userNames.plugin = user.GetName()
+
+	// Bake all the resources.
+
+	err = teleport.Bootstrap(ctx, auth, bootstrap.Resources())
+	require.NoError(t, err)
+
+	identityPath, err := teleport.Sign(ctx, auth, s.userNames.plugin)
+	require.NoError(t, err)
+
+	s.teleport = api
+	s.teleportConfig.Addr = auth.PublicAddr()
+	s.teleportConfig.Identity = identityPath
+	s.teleportFeatures = teleportFeatures
 }
 
 func (s *MattermostSuite) SetupTest() {
 	t := s.T()
+
+	logger.Setup(logger.Config{Severity: "debug"})
 
 	s.fakeMattermost = NewFakeMattermost(User{Username: "bot", Email: "bot@example.com"}, s.raceNumber)
 	t.Cleanup(s.fakeMattermost.Close)
@@ -121,41 +151,14 @@ func (s *MattermostSuite) SetupTest() {
 		Email:     s.userNames.requestor,
 	})
 
-	auth := s.teleport.Process.GetAuthServer()
-	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
-	require.NoError(t, err)
-	pluginKey := s.teleport.Secrets.Users["plugin"].Key
-
-	keyFile := s.NewTmpFile("auth.*.key")
-	_, err = keyFile.Write(pluginKey.Priv)
-	require.NoError(t, err)
-	require.NoError(t, keyFile.Close())
-
-	certFile := s.NewTmpFile("auth.*.crt")
-	_, err = certFile.Write(pluginKey.TLSCert)
-	require.NoError(t, err)
-	require.NoError(t, certFile.Close())
-
-	casFile := s.NewTmpFile("auth.*.cas")
-	for _, ca := range certAuthorities {
-		for _, keyPair := range ca.GetTLSKeyPairs() {
-			_, err = casFile.Write(keyPair.Cert)
-			require.NoError(t, err)
-		}
-	}
-	require.NoError(t, casFile.Close())
-
-	authAddr, err := s.teleport.Process.AuthSSHAddr()
-	require.NoError(t, err)
-
 	var conf Config
-	conf.Teleport.Addr = authAddr.Addr
-	conf.Teleport.ClientCrt = certFile.Name()
-	conf.Teleport.ClientKey = keyFile.Name()
-	conf.Teleport.RootCAs = casFile.Name()
+	conf.Teleport = s.teleportConfig
+	conf.Mattermost.Token = "000000"
 	conf.Mattermost.URL = s.fakeMattermost.URL()
 
 	s.appConfig = conf
+
+	s.SetContextTimeout(5 * time.Second)
 }
 
 func (s *MattermostSuite) startApp() {
@@ -172,7 +175,7 @@ func (s *MattermostSuite) newAccessRequest(reviewers []User) types.AccessRequest
 	t := s.T()
 	t.Helper()
 
-	req, err := services.NewAccessRequest(s.userNames.requestor, "admin")
+	req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 	require.NoError(t, err)
 	req.SetRequestReason("because of")
 	var suggestedReviewers []string
@@ -188,18 +191,8 @@ func (s *MattermostSuite) createAccessRequest(reviewers []User) types.AccessRequ
 	t.Helper()
 
 	req := s.newAccessRequest(reviewers)
-	err := s.teleport.CreateAccessRequest(s.Ctx(), req)
+	err := s.teleport.CreateAccessRequest(s.Context(), req)
 	require.NoError(s.T(), err)
-	return req
-}
-
-func (s *MattermostSuite) createExpiredAccessRequest(reviewers []User) types.AccessRequest {
-	t := s.T()
-	t.Helper()
-
-	req := s.newAccessRequest(reviewers)
-	err := s.teleport.CreateExpiredAccessRequest(s.Ctx(), req)
-	require.NoError(t, err)
 	return req
 }
 
@@ -208,7 +201,7 @@ func (s *MattermostSuite) checkPluginData(reqID string, cond func(PluginData) bo
 	t.Helper()
 
 	for {
-		rawData, err := s.teleport.PollAccessRequestPluginData(s.Ctx(), "mattermost", reqID)
+		rawData, err := s.teleport.PollAccessRequestPluginData(s.Context(), "mattermost", reqID)
 		require.NoError(t, err)
 		if data := DecodePluginData(rawData); cond(data) {
 			return data
@@ -235,7 +228,7 @@ func (s *MattermostSuite) TestMattermostMessagePosting() {
 	var posts []Post
 	postSet := make(MattermostDataPostSet)
 	for i := 0; i < 2; i++ {
-		post, err := s.fakeMattermost.CheckNewPost(s.Ctx())
+		post, err := s.fakeMattermost.CheckNewPost(s.Context())
 		require.NoError(t, err, "no new messages posted")
 		postSet.Add(MattermostDataPost{ChannelID: post.ChannelID, PostID: post.ID})
 		posts = append(posts, post)
@@ -268,8 +261,62 @@ func (s *MattermostSuite) TestMattermostMessagePosting() {
 	assert.Equal(t, "⏳ PENDING", statusLine)
 }
 
+func (s *MattermostSuite) TestApproval() {
+	t := s.T()
+
+	reviewer := s.fakeMattermost.StoreUser(User{Email: s.userNames.reviewer1})
+
+	s.startApp()
+
+	req := s.createAccessRequest([]User{reviewer})
+	post, err := s.fakeMattermost.CheckNewPost(s.Context())
+	require.NoError(t, err, "no new messages posted")
+	directChannelID := s.fakeMattermost.GetDirectChannelFor(s.fakeMattermost.GetBotUser(), reviewer).ID
+	assert.Equal(t, directChannelID, post.ChannelID)
+
+	s.teleport.ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+
+	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.Context())
+	require.NoError(t, err, "no messages updated")
+	assert.Equal(t, post.ID, postUpdate.ID)
+	assert.Equal(t, post.ChannelID, postUpdate.ChannelID)
+
+	statusLine, err := parsePostField(postUpdate, "Status")
+	require.NoError(t, err)
+	assert.Equal(t, "✅ APPROVED (okay)", statusLine)
+}
+
+func (s *MattermostSuite) TestDenial() {
+	t := s.T()
+
+	reviewer := s.fakeMattermost.StoreUser(User{Email: s.userNames.reviewer1})
+
+	s.startApp()
+
+	req := s.createAccessRequest([]User{reviewer})
+	post, err := s.fakeMattermost.CheckNewPost(s.Context())
+	require.NoError(t, err, "no new messages posted")
+	directChannelID := s.fakeMattermost.GetDirectChannelFor(s.fakeMattermost.GetBotUser(), reviewer).ID
+	assert.Equal(t, directChannelID, post.ChannelID)
+
+	s.teleport.DenyAccessRequest(s.Context(), req.GetName(), "not okay")
+
+	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.Context())
+	require.NoError(t, err, "no messages updated")
+	assert.Equal(t, post.ID, postUpdate.ID)
+	assert.Equal(t, post.ChannelID, postUpdate.ChannelID)
+
+	statusLine, err := parsePostField(postUpdate, "Status")
+	require.NoError(t, err)
+	assert.Equal(t, "❌ DENIED (not okay)", statusLine)
+}
+
 func (s *MattermostSuite) TestReviewComments() {
 	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
 
 	reviewer := s.fakeMattermost.StoreUser(User{Email: s.userNames.reviewer1})
 	directChannelID := s.fakeMattermost.GetDirectChannelFor(s.fakeMattermost.GetBotUser(), reviewer).ID
@@ -281,11 +328,11 @@ func (s *MattermostSuite) TestReviewComments() {
 		return len(data.MattermostData) > 0
 	})
 
-	post, err := s.fakeMattermost.CheckNewPost(s.Ctx())
+	post, err := s.fakeMattermost.CheckNewPost(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, directChannelID, post.ChannelID)
 
-	s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
@@ -293,7 +340,7 @@ func (s *MattermostSuite) TestReviewComments() {
 	})
 	require.NoError(t, err)
 
-	comment, err := s.fakeMattermost.CheckNewPost(s.Ctx())
+	comment, err := s.fakeMattermost.CheckNewPost(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, post.ChannelID, comment.ChannelID)
 	assert.Equal(t, post.ID, comment.RootID)
@@ -301,7 +348,7 @@ func (s *MattermostSuite) TestReviewComments() {
 	assert.Contains(t, comment.Message, "Resolution: ✅ APPROVED", "comment must contain a proposed state")
 	assert.Contains(t, comment.Message, "Reason: okay", "comment must contain a reason")
 
-	s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -309,7 +356,7 @@ func (s *MattermostSuite) TestReviewComments() {
 	})
 	require.NoError(t, err)
 
-	comment, err = s.fakeMattermost.CheckNewPost(s.Ctx())
+	comment, err = s.fakeMattermost.CheckNewPost(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, post.ChannelID, comment.ChannelID)
 	assert.Equal(t, post.ID, comment.RootID)
@@ -318,20 +365,24 @@ func (s *MattermostSuite) TestReviewComments() {
 	assert.Contains(t, comment.Message, "Reason: not okay", "comment must contain a reason")
 }
 
-func (s *MattermostSuite) TestApproval() {
+func (s *MattermostSuite) TestApprovalByReview() {
 	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
 
 	reviewer := s.fakeMattermost.StoreUser(User{Email: s.userNames.reviewer1})
 
 	s.startApp()
 
 	req := s.createAccessRequest([]User{reviewer})
-	post, err := s.fakeMattermost.CheckNewPost(s.Ctx())
+	post, err := s.fakeMattermost.CheckNewPost(s.Context())
 	require.NoError(t, err, "no new messages posted")
 	directChannelID := s.fakeMattermost.GetDirectChannelFor(s.fakeMattermost.GetBotUser(), reviewer).ID
 	assert.Equal(t, directChannelID, post.ChannelID)
 
-	s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
@@ -339,13 +390,13 @@ func (s *MattermostSuite) TestApproval() {
 	})
 	require.NoError(t, err)
 
-	comment, err := s.fakeMattermost.CheckNewPost(s.Ctx())
+	comment, err := s.fakeMattermost.CheckNewPost(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, post.ChannelID, comment.ChannelID)
 	assert.Equal(t, post.ID, comment.RootID)
 	assert.Contains(t, comment.Message, s.userNames.reviewer1+" reviewed the request", "comment must contain a review author")
 
-	s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
@@ -353,13 +404,13 @@ func (s *MattermostSuite) TestApproval() {
 	})
 	require.NoError(t, err)
 
-	comment, err = s.fakeMattermost.CheckNewPost(s.Ctx())
+	comment, err = s.fakeMattermost.CheckNewPost(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, post.ChannelID, comment.ChannelID)
 	assert.Equal(t, post.ID, comment.RootID)
 	assert.Contains(t, comment.Message, s.userNames.reviewer2+" reviewed the request", "comment must contain a review author")
 
-	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.Ctx())
+	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.Context())
 	require.NoError(t, err, "no messages updated")
 	assert.Equal(t, post.ID, postUpdate.ID)
 	assert.Equal(t, post.ChannelID, postUpdate.ChannelID)
@@ -369,20 +420,24 @@ func (s *MattermostSuite) TestApproval() {
 	assert.Equal(t, "✅ APPROVED (finally okay)", statusLine)
 }
 
-func (s *MattermostSuite) TestDenial() {
+func (s *MattermostSuite) TestDenialByReview() {
 	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
 
 	reviewer := s.fakeMattermost.StoreUser(User{Email: s.userNames.reviewer1})
 
 	s.startApp()
 
 	req := s.createAccessRequest([]User{reviewer})
-	post, err := s.fakeMattermost.CheckNewPost(s.Ctx())
+	post, err := s.fakeMattermost.CheckNewPost(s.Context())
 	require.NoError(t, err, "no new messages posted")
 	directChannelID := s.fakeMattermost.GetDirectChannelFor(s.fakeMattermost.GetBotUser(), reviewer).ID
 	assert.Equal(t, directChannelID, post.ChannelID)
 
-	s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -390,13 +445,13 @@ func (s *MattermostSuite) TestDenial() {
 	})
 	require.NoError(t, err)
 
-	comment, err := s.fakeMattermost.CheckNewPost(s.Ctx())
+	comment, err := s.fakeMattermost.CheckNewPost(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, post.ChannelID, comment.ChannelID)
 	assert.Equal(t, post.ID, comment.RootID)
 	assert.Contains(t, comment.Message, s.userNames.reviewer1+" reviewed the request", "comment must contain a review author")
 
-	s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -404,13 +459,13 @@ func (s *MattermostSuite) TestDenial() {
 	})
 	require.NoError(t, err)
 
-	comment, err = s.fakeMattermost.CheckNewPost(s.Ctx())
+	comment, err = s.fakeMattermost.CheckNewPost(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, post.ChannelID, comment.ChannelID)
 	assert.Equal(t, post.ID, comment.RootID)
 	assert.Contains(t, comment.Message, s.userNames.reviewer2+" reviewed the request", "comment must contain a review author")
 
-	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.Ctx())
+	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.Context())
 	require.NoError(t, err, "no messages updated")
 	assert.Equal(t, post.ID, postUpdate.ID)
 	assert.Equal(t, post.ChannelID, postUpdate.ChannelID)
@@ -426,14 +481,21 @@ func (s *MattermostSuite) TestExpiration() {
 	reviewer := s.fakeMattermost.StoreUser(User{Email: "user@example.com"})
 
 	s.startApp()
-	s.createExpiredAccessRequest([]User{reviewer})
 
-	post, err := s.fakeMattermost.CheckNewPost(s.Ctx())
+	request := s.createAccessRequest([]User{reviewer})
+	post, err := s.fakeMattermost.CheckNewPost(s.Context())
 	require.NoError(t, err, "no new messages posted")
 	directChannelID := s.fakeMattermost.GetDirectChannelFor(s.fakeMattermost.GetBotUser(), reviewer).ID
 	assert.Equal(t, directChannelID, post.ChannelID)
 
-	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.Ctx())
+	s.checkPluginData(request.GetName(), func(data PluginData) bool {
+		return len(data.MattermostData) > 0
+	})
+
+	err = s.teleport.DeleteAccessRequest(s.Context(), request.GetName()) // simulate expiration
+	require.NoError(t, err)
+
+	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.Context())
 	require.NoError(t, err, "no new messages updated")
 	assert.Equal(t, post.ID, postUpdate.ID)
 	assert.Equal(t, post.ChannelID, postUpdate.ChannelID)
@@ -446,15 +508,17 @@ func (s *MattermostSuite) TestExpiration() {
 func (s *MattermostSuite) TestRace() {
 	t := s.T()
 
-	prevLogLevel := log.GetLevel()
-	log.SetLevel(log.InfoLevel) // Turn off noisy debug logging
-	defer log.SetLevel(prevLogLevel)
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
+	logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
 
 	reviewer1 := s.fakeMattermost.StoreUser(User{Email: s.userNames.reviewer1})
 	reviewer2 := s.fakeMattermost.StoreUser(User{Email: s.userNames.reviewer2})
 	botUser := s.fakeMattermost.GetBotUser()
 
-	s.SetContext(20 * time.Second)
+	s.SetContextTimeout(20 * time.Second)
 	s.startApp()
 
 	var (
@@ -472,10 +536,10 @@ func (s *MattermostSuite) TestRace() {
 		return err
 	}
 
-	process := lib.NewProcess(s.Ctx())
+	process := lib.NewProcess(s.Context())
 	for i := 0; i < s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			req, err := services.NewAccessRequest(s.userNames.requestor, "admin")
+			req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}

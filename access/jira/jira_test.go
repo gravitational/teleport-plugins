@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/user"
@@ -15,23 +14,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/testing/integration"
 	"github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/teleport/lib/auth/testauthority"
-	"github.com/gravitational/teleport/lib/backend"
-	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/trace"
 
 	. "gopkg.in/check.v1"
-)
-
-const (
-	Host   = "localhost"
-	HostID = "00000000-0000-0000-0000-000000000000"
-	Site   = "local-site"
 )
 
 type JiraSuite struct {
@@ -44,8 +35,11 @@ type JiraSuite struct {
 	authorUser UserDetails
 	otherUser  UserDetails
 	fakeJira   *FakeJIRA
-	teleport   *integration.TeleInstance
 	tmpFiles   []*os.File
+
+	teleportI      *integration.Integration
+	teleport       *integration.API
+	teleportConfig lib.TeleportConfig
 }
 
 var _ = Suite(&JiraSuite{})
@@ -54,11 +48,10 @@ func TestJirabot(t *testing.T) { TestingT(t) }
 
 func (s *JiraSuite) SetUpSuite(c *C) {
 	var err error
-	log.SetLevel(log.DebugLevel)
-	priv, pub, err := testauthority.New().GenerateKeyPair("")
-	c.Assert(err, IsNil)
-	t := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Priv: priv, Pub: pub})
 
+	ctx := context.Background()
+
+	log.SetLevel(log.DebugLevel)
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	s.me, err = user.Current()
 	c.Assert(err, IsNil)
@@ -66,16 +59,36 @@ func (s *JiraSuite) SetUpSuite(c *C) {
 	s.authorUser = UserDetails{AccountID: "USER-1", DisplayName: s.me.Username, EmailAddress: s.me.Username + "@example.com"}
 	s.otherUser = UserDetails{AccountID: "USER-2", DisplayName: s.me.Username + " evil twin", EmailAddress: s.me.Username + ".evil@example.com"}
 
-	userRole, err := types.NewRole("foo", types.RoleSpecV3{
+	teleport, err := integration.NewFromEnv(ctx)
+	c.Assert(err, IsNil)
+
+	auth, err := teleport.NewAuthServer()
+	c.Assert(err, IsNil)
+	go func() {
+		if err := auth.Run(ctx); err != nil {
+			panic(err)
+		}
+	}()
+	ok, err := auth.WaitReady(ctx)
+	c.Assert(err, IsNil)
+	c.Assert(ok, Equals, true)
+
+	api, err := teleport.NewAPI(ctx, auth)
+	c.Assert(err, IsNil)
+
+	var bootstrap integration.Bootstrap
+
+	userRole, err := bootstrap.AddRole("foo", types.RoleSpecV4{
 		Allow: types.RoleConditions{
 			Logins:  []string{s.me.Username}, // cannot be empty
-			Request: &services.AccessRequestConditions{Roles: []string{"admin"}},
+			Request: &types.AccessRequestConditions{Roles: []string{"admin"}},
 		},
 	})
 	c.Assert(err, IsNil)
-	t.AddUserWithRole(s.me.Username, userRole)
+	_, err = bootstrap.AddUserWithRoles(s.me.Username, userRole.GetName())
+	c.Assert(err, IsNil)
 
-	accessPluginRole, err := types.NewRole("access-plugin", types.RoleSpecV3{
+	accessPluginRole, err := bootstrap.AddRole("access-plugin", types.RoleSpecV4{
 		Allow: types.RoleConditions{
 			Logins: []string{"access-plugin"}, // cannot be empty
 			Rules: []types.Rule{
@@ -84,14 +97,19 @@ func (s *JiraSuite) SetUpSuite(c *C) {
 		},
 	})
 	c.Assert(err, IsNil)
-	t.AddUserWithRole("plugin", accessPluginRole)
-
-	err = t.Create(nil, nil)
+	accessPluginUser, err := bootstrap.AddUserWithRoles("plugin", accessPluginRole.GetName())
 	c.Assert(err, IsNil)
-	if err := t.Start(); err != nil {
-		c.Fatalf("Unexpected response from Start: %v", err)
-	}
-	s.teleport = t
+
+	err = teleport.Bootstrap(ctx, auth, bootstrap.Resources())
+	c.Assert(err, IsNil)
+
+	identityPath, err := teleport.Sign(ctx, auth, accessPluginUser.GetName())
+	c.Assert(err, IsNil)
+
+	s.teleportI = teleport
+	s.teleport = api
+	s.teleportConfig.Addr = auth.PublicAddr()
+	s.teleportConfig.Identity = identityPath
 }
 
 func (s *JiraSuite) SetUpTest(c *C) {
@@ -111,46 +129,15 @@ func (s *JiraSuite) TearDownTest(c *C) {
 	s.tmpFiles = []*os.File{}
 }
 
-func (s *JiraSuite) newTmpFile(c *C, pattern string) (file *os.File) {
-	file, err := ioutil.TempFile("", pattern)
-	c.Assert(err, IsNil)
-	s.tmpFiles = append(s.tmpFiles, file)
-	return
+func (s *JiraSuite) TearDownSuite(c *C) {
+	if s.teleportI != nil {
+		s.teleportI.Close()
+	}
 }
 
 func (s *JiraSuite) startApp(c *C) {
-	auth := s.teleport.Process.GetAuthServer()
-	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
-	c.Assert(err, IsNil)
-	pluginKey := s.teleport.Secrets.Users["plugin"].Key
-
-	keyFile := s.newTmpFile(c, "auth.*.key")
-	_, err = keyFile.Write(pluginKey.Priv)
-	c.Assert(err, IsNil)
-	keyFile.Close()
-
-	certFile := s.newTmpFile(c, "auth.*.crt")
-	_, err = certFile.Write(pluginKey.TLSCert)
-	c.Assert(err, IsNil)
-	certFile.Close()
-
-	casFile := s.newTmpFile(c, "auth.*.cas")
-	for _, ca := range certAuthorities {
-		for _, keyPair := range ca.GetTLSKeyPairs() {
-			_, err = casFile.Write(keyPair.Cert)
-			c.Assert(err, IsNil)
-		}
-	}
-	casFile.Close()
-
-	authAddr, err := s.teleport.Process.AuthSSHAddr()
-	c.Assert(err, IsNil)
-
 	var conf Config
-	conf.Teleport.AuthServer = authAddr.Addr
-	conf.Teleport.ClientCrt = certFile.Name()
-	conf.Teleport.ClientKey = keyFile.Name()
-	conf.Teleport.RootCAs = casFile.Name()
+	conf.Teleport = s.teleportConfig
 	conf.JIRA.URL = s.fakeJira.URL()
 	conf.JIRA.Username = "bot@example.com"
 	conf.JIRA.APIToken = "xyz"
@@ -161,44 +148,40 @@ func (s *JiraSuite) startApp(c *C) {
 	}
 	conf.HTTP.Insecure = true
 
-	s.app, err = NewApp(conf)
+	app, err := NewApp(conf)
 	c.Assert(err, IsNil)
-
 	go func() {
-		if err := s.app.Run(s.ctx); err != nil {
+		if err := app.Run(s.ctx); err != nil {
 			panic(err)
 		}
 	}()
-	ok, err := s.app.WaitReady(s.ctx)
+	ok, err := app.WaitReady(s.ctx)
 	c.Assert(err, IsNil)
 	c.Assert(ok, Equals, true)
 	if s.publicURL == "" {
-		s.publicURL = s.app.PublicURL().String()
+		s.publicURL = app.PublicURL().String()
 	}
+	s.app = app
 }
 
 func (s *JiraSuite) shutdownApp(c *C) {
+	if s.app == nil {
+		return
+	}
 	err := s.app.Shutdown(s.ctx)
 	c.Assert(err, IsNil)
 	c.Assert(s.app.Err(), IsNil)
 }
 
-func (s *JiraSuite) newAccessRequest(c *C) services.AccessRequest {
-	req, err := services.NewAccessRequest(s.me.Username, "admin")
+func (s *JiraSuite) newAccessRequest(c *C) types.AccessRequest {
+	req, err := types.NewAccessRequest(uuid.New().String(), s.me.Username, "admin")
 	c.Assert(err, IsNil)
 	return req
 }
 
-func (s *JiraSuite) createAccessRequest(c *C) services.AccessRequest {
+func (s *JiraSuite) createAccessRequest(c *C) types.AccessRequest {
 	req := s.newAccessRequest(c)
 	err := s.teleport.CreateAccessRequest(s.ctx, req)
-	c.Assert(err, IsNil)
-	return req
-}
-
-func (s *JiraSuite) createExpiredAccessRequest(c *C) services.AccessRequest {
-	req := s.newAccessRequest(c)
-	err := s.teleport.CreateExpiredAccessRequest(s.ctx, req)
 	c.Assert(err, IsNil)
 	return req
 }
@@ -280,7 +263,7 @@ func (s *JiraSuite) TestApproval(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, types.RequestState_APPROVED)
 
-	events, err := s.teleport.SearchAccessRequestEvents(request.GetName())
+	events, err := s.teleport.SearchAccessRequestEvents(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
 	c.Assert(events, HasLen, 1)
 	c.Assert(events[0].RequestState, Equals, "APPROVED")
@@ -301,7 +284,7 @@ func (s *JiraSuite) TestDenial(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(request.GetState(), Equals, types.RequestState_DENIED)
 
-	events, err := s.teleport.SearchAccessRequestEvents(request.GetName())
+	events, err := s.teleport.SearchAccessRequestEvents(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
 	c.Assert(events, HasLen, 1)
 	c.Assert(events[0].RequestState, Equals, "DENIED")
@@ -326,10 +309,10 @@ func (s *JiraSuite) TestApprovalWithReason(c *C) {
 
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
-	c.Assert(request.GetState(), Equals, services.RequestState_APPROVED)
+	c.Assert(request.GetState(), Equals, types.RequestState_APPROVED)
 	c.Assert(request.GetResolveReason(), Equals, "foo\nbar\nbaz")
 
-	events, err := s.teleport.SearchAccessRequestEvents(request.GetName())
+	events, err := s.teleport.SearchAccessRequestEvents(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
 	c.Assert(events, HasLen, 1)
 	c.Assert(events[0].RequestState, Equals, "APPROVED")
@@ -366,10 +349,10 @@ func (s *JiraSuite) TestDenialWithReason(c *C) {
 
 	request, err = s.teleport.GetAccessRequest(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
-	c.Assert(request.GetState(), Equals, services.RequestState_DENIED)
+	c.Assert(request.GetState(), Equals, types.RequestState_DENIED)
 	c.Assert(request.GetResolveReason(), Equals, "foo bar baz")
 
-	events, err := s.teleport.SearchAccessRequestEvents(request.GetName())
+	events, err := s.teleport.SearchAccessRequestEvents(s.ctx, request.GetName())
 	c.Assert(err, IsNil)
 	c.Assert(events, HasLen, 1)
 	c.Assert(events[0].RequestState, Equals, "DENIED")
@@ -378,11 +361,16 @@ func (s *JiraSuite) TestDenialWithReason(c *C) {
 
 func (s *JiraSuite) TestExpiration(c *C) {
 	s.startApp(c)
-	s.createExpiredAccessRequest(c)
+	req := s.createAccessRequest(c)
 
 	issue, err := s.fakeJira.CheckNewIssue(s.ctx)
 	c.Assert(err, IsNil, Commentf("no new issue stored"))
 	issueID := issue.ID
+	s.checkPluginData(c, req.GetName())
+
+	err = s.teleport.DeleteAccessRequest(s.ctx, req.GetName())
+	c.Assert(err, IsNil)
+
 	issue, err = s.fakeJira.CheckIssueTransition(s.ctx)
 	c.Assert(err, IsNil, Commentf("no issue transition detected"))
 	c.Assert(issue.ID, Equals, issueID)
@@ -410,8 +398,8 @@ func (s *JiraSuite) TestRace(c *C) {
 		return err
 	}
 
-	watcher, err := s.teleport.Process.GetAuthServer().NewWatcher(s.ctx, services.Watch{
-		Kinds: []services.WatchKind{
+	watcher, err := s.teleport.NewWatcher(s.ctx, types.Watch{
+		Kinds: []types.WatchKind{
 			{
 				Kind: types.KindAccessRequest,
 			},
@@ -419,12 +407,12 @@ func (s *JiraSuite) TestRace(c *C) {
 	})
 	c.Assert(err, IsNil)
 	defer watcher.Close()
-	c.Assert((<-watcher.Events()).Type, Equals, backend.OpInit)
+	c.Assert((<-watcher.Events()).Type, Equals, types.OpInit)
 
 	process := lib.NewProcess(s.ctx)
 	for i := 0; i < s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			req, err := services.NewAccessRequest(s.me.Username, "admin")
+			req, err := types.NewAccessRequest(uuid.New().String(), s.me.Username, "admin")
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
@@ -478,16 +466,16 @@ func (s *JiraSuite) TestRace(c *C) {
 	}
 	for i := 0; i < 2*s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			var event services.Event
+			var event types.Event
 			select {
 			case event = <-watcher.Events():
 			case <-ctx.Done():
 				return setRaceErr(trace.Wrap(ctx.Err()))
 			}
-			if obtained, expected := event.Type, backend.OpPut; obtained != expected {
+			if obtained, expected := event.Type, types.OpPut; obtained != expected {
 				return setRaceErr(trace.Errorf("wrong event type. expected %v, obtained %v", expected, obtained))
 			}
-			req := event.Resource.(services.AccessRequest)
+			req := event.Resource.(types.AccessRequest)
 			var newCounter int64
 			val, _ := requests.LoadOrStore(req.GetName(), &newCounter)
 			switch state := req.GetState(); state {

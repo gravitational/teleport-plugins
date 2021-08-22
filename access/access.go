@@ -26,8 +26,8 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/go-version"
-	"github.com/pborman/uuid"
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport/api/client/proto"
@@ -224,7 +224,7 @@ func (c *clt) CreateRequest(ctx context.Context, user string, roles ...string) (
 		Kind:    types.KindAccessRequest,
 		Version: types.V3,
 		Metadata: types.Metadata{
-			Name: uuid.New(),
+			Name: uuid.New().String(),
 		},
 		Spec: types.AccessRequestSpecV3{
 			User:  user,

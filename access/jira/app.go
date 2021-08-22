@@ -78,15 +78,9 @@ func (a *App) run(ctx context.Context) (err error) {
 
 	a.bot = NewBot(a.conf.JIRA)
 
-	tlsConf, err := access.LoadTLSConfig(
-		a.conf.Teleport.ClientCrt,
-		a.conf.Teleport.ClientKey,
-		a.conf.Teleport.RootCAs,
-	)
-	if trace.Unwrap(err) == access.ErrInvalidCertificate {
-		log.WithError(err).Warning("Auth client TLS configuration error")
-	} else if err != nil {
-		return err
+	tlsConf, err := access.LoadTLSConfig(a.conf.Teleport)
+	if err != nil {
+		return trace.Wrap(err)
 	}
 
 	bk := backoff.DefaultConfig
@@ -94,7 +88,7 @@ func (a *App) run(ctx context.Context) (err error) {
 	a.accessClient, err = access.NewClient(
 		ctx,
 		"jira",
-		a.conf.Teleport.AuthServer,
+		a.conf.Teleport.GetAddrs()[0], // It is safe to assume that there're more than one addr if foregoing checks are ok.
 		tlsConf,
 		grpc.WithConnectParams(grpc.ConnectParams{
 			Backoff: bk,

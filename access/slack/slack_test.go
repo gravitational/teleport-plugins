@@ -11,25 +11,19 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/google/uuid"
 
-	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	. "github.com/gravitational/teleport-plugins/lib/testing"
+	"github.com/gravitational/teleport-plugins/lib/testing/integration"
+	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/teleport/lib/auth/testauthority"
-	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/trace"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-)
-
-const (
-	Host   = "localhost"
-	HostID = "00000000-0000-0000-0000-000000000000"
-	Site   = "local-site"
 )
 
 var msgFieldRegexp = regexp.MustCompile(`(?im)^\*([a-zA-Z ]+)\*: (.+)$`)
@@ -41,10 +35,14 @@ type SlackSuite struct {
 		requestor string
 		reviewer1 string
 		reviewer2 string
+		plugin    string
 	}
 	raceNumber int
 	fakeSlack  *FakeSlack
-	teleport   *integration.TeleInstance
+
+	teleport         *integration.API
+	teleportFeatures *proto.Features
+	teleportConfig   lib.TeleportConfig
 }
 
 func TestSlackbot(t *testing.T) { suite.Run(t, &SlackSuite{}) }
@@ -52,44 +50,65 @@ func TestSlackbot(t *testing.T) { suite.Run(t, &SlackSuite{}) }
 func (s *SlackSuite) SetupSuite() {
 	var err error
 	t := s.T()
-	log.SetLevel(log.DebugLevel)
-	priv, pub, err := testauthority.New().GenerateKeyPair("")
-	require.NoError(t, err)
-	teleport := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Priv: priv, Pub: pub})
+	ctx := s.Context()
 
+	logger.Init()
+	logger.Setup(logger.Config{Severity: "debug"})
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
 
-	role, err := types.NewRole("foo", types.RoleSpecV3{
-		Allow: types.RoleConditions{
-			Logins: []string{"guest"}, // cannot be empty
-			Request: &services.AccessRequestConditions{
-				Roles: []string{"admin"},
-				Thresholds: []types.AccessReviewThreshold{
-					types.AccessReviewThreshold{Approve: 2, Deny: 2},
-				},
-			},
-		},
-	})
+	teleport, err := integration.NewFromEnv(ctx)
 	require.NoError(t, err)
-	s.userNames.requestor = teleport.AddUserWithRole(me.Username+"@example.com", role).Username
+	t.Cleanup(teleport.Close)
 
-	role, err = types.NewRole("foo-reviewer", types.RoleSpecV3{
-		Allow: types.RoleConditions{
-			Logins: []string{"guest"}, // cannot be empty
-			ReviewRequests: &types.AccessReviewConditions{
-				Roles: []string{"admin"},
-			},
-		},
-	})
+	auth, err := teleport.NewAuthServer()
 	require.NoError(t, err)
-	s.userNames.reviewer1 = teleport.AddUserWithRole(me.Username+"-reviewer1@example.com", role).Username
-	s.userNames.reviewer2 = teleport.AddUserWithRole(me.Username+"-reviewer2@example.com", role).Username
+	s.StartApp(auth)
 
-	role, err = types.NewRole("access-plugin", types.RoleSpecV3{
+	api, err := teleport.NewAPI(ctx, auth)
+	require.NoError(t, err)
+
+	pong, err := api.Ping(ctx)
+	require.NoError(t, err)
+	teleportFeatures := pong.GetServerFeatures()
+
+	var bootstrap integration.Bootstrap
+
+	// Set up user who can request the access to role "admin".
+
+	conditions := types.RoleConditions{Request: &types.AccessRequestConditions{Roles: []string{"admin"}}}
+	if teleportFeatures.AdvancedAccessWorkflows {
+		conditions.Request.Thresholds = []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}}
+	}
+	role, err := bootstrap.AddRole("foo", types.RoleSpecV4{Allow: conditions})
+	require.NoError(t, err)
+
+	user, err := bootstrap.AddUserWithRoles(me.Username+"@example.com", role.GetName())
+	require.NoError(t, err)
+	s.userNames.requestor = user.GetName()
+
+	// Set up TWO users who can review access requests to role "admin".
+
+	conditions = types.RoleConditions{}
+	if teleportFeatures.AdvancedAccessWorkflows {
+		conditions.ReviewRequests = &types.AccessReviewConditions{Roles: []string{"admin"}}
+	}
+	role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV4{Allow: conditions})
+	require.NoError(t, err)
+
+	user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer1@example.com", role.GetName())
+	require.NoError(t, err)
+	s.userNames.reviewer1 = user.GetName()
+
+	user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer2@example.com", role.GetName())
+	require.NoError(t, err)
+	s.userNames.reviewer2 = user.GetName()
+
+	// Set up plugin user.
+
+	role, err = bootstrap.AddRole("access-slack", types.RoleSpecV4{
 		Allow: types.RoleConditions{
-			Logins: []string{"access-plugin"}, // cannot be empty
 			Rules: []types.Rule{
 				types.NewRule("access_request", []string{"list", "read"}),
 				types.NewRule("access_plugin_data", []string{"update"}),
@@ -97,59 +116,43 @@ func (s *SlackSuite) SetupSuite() {
 		},
 	})
 	require.NoError(t, err)
-	teleport.AddUserWithRole("plugin", role)
 
-	err = teleport.Create(nil, nil)
+	user, err = bootstrap.AddUserWithRoles("access-slack", role.GetName())
 	require.NoError(t, err)
-	if err := teleport.Start(); err != nil {
-		t.Fatalf("Unexpected response from Start: %v", err)
-	}
-	s.teleport = teleport
+	s.userNames.plugin = user.GetName()
+
+	// Bake all the resources.
+
+	err = teleport.Bootstrap(ctx, auth, bootstrap.Resources())
+	require.NoError(t, err)
+
+	identityPath, err := teleport.Sign(ctx, auth, s.userNames.plugin)
+	require.NoError(t, err)
+
+	s.teleport = api
+	s.teleportConfig.Addr = auth.PublicAddr()
+	s.teleportConfig.Identity = identityPath
+	s.teleportFeatures = teleportFeatures
 }
 
 func (s *SlackSuite) SetupTest() {
 	t := s.T()
 
+	logger.Setup(logger.Config{Severity: "debug"})
+
 	s.fakeSlack = NewFakeSlack(User{Name: "slackbot"}, s.raceNumber)
 	t.Cleanup(s.fakeSlack.Close)
+
 	s.fakeSlack.StoreUser(User{Name: "Vladimir", Profile: UserProfile{Email: s.userNames.requestor}})
 
-	auth := s.teleport.Process.GetAuthServer()
-	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
-	require.NoError(t, err)
-	pluginKey := s.teleport.Secrets.Users["plugin"].Key
-
-	keyFile := s.NewTmpFile("auth.*.key")
-	_, err = keyFile.Write(pluginKey.Priv)
-	require.NoError(t, err)
-	keyFile.Close()
-
-	certFile := s.NewTmpFile("auth.*.crt")
-	_, err = certFile.Write(pluginKey.TLSCert)
-	require.NoError(t, err)
-	certFile.Close()
-
-	casFile := s.NewTmpFile("auth.*.cas")
-	for _, ca := range certAuthorities {
-		for _, keyPair := range ca.GetTLSKeyPairs() {
-			_, err = casFile.Write(keyPair.Cert)
-			require.NoError(t, err)
-		}
-	}
-	casFile.Close()
-
-	authAddr, err := s.teleport.Process.AuthSSHAddr()
-	require.NoError(t, err)
-
 	var conf Config
-	conf.Teleport.Addr = authAddr.Addr
-	conf.Teleport.ClientCrt = certFile.Name()
-	conf.Teleport.ClientKey = keyFile.Name()
-	conf.Teleport.RootCAs = casFile.Name()
+	conf.Teleport = s.teleportConfig
 	conf.Slack.Token = "000000"
 	conf.Slack.APIURL = s.fakeSlack.URL() + "/"
 
 	s.appConfig = conf
+
+	s.SetContextTimeout(5 * time.Second)
 }
 
 func (s *SlackSuite) startApp() {
@@ -162,11 +165,11 @@ func (s *SlackSuite) startApp() {
 	s.StartApp(app)
 }
 
-func (s *SlackSuite) newAccessRequest(reviewers []User) services.AccessRequest {
+func (s *SlackSuite) newAccessRequest(reviewers []User) types.AccessRequest {
 	t := s.T()
 	t.Helper()
 
-	req, err := services.NewAccessRequest(s.userNames.requestor, "admin")
+	req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 	require.NoError(t, err)
 	req.SetRequestReason("because of")
 	var suggestedReviewers []string
@@ -177,22 +180,12 @@ func (s *SlackSuite) newAccessRequest(reviewers []User) services.AccessRequest {
 	return req
 }
 
-func (s *SlackSuite) createAccessRequest(reviewers []User) services.AccessRequest {
+func (s *SlackSuite) createAccessRequest(reviewers []User) types.AccessRequest {
 	t := s.T()
 	t.Helper()
 
 	req := s.newAccessRequest(reviewers)
-	err := s.teleport.CreateAccessRequest(s.Ctx(), req)
-	require.NoError(t, err)
-	return req
-}
-
-func (s *SlackSuite) createExpiredAccessRequest(reviewers []User) services.AccessRequest {
-	t := s.T()
-	t.Helper()
-
-	req := s.newAccessRequest(reviewers)
-	err := s.teleport.CreateExpiredAccessRequest(s.Ctx(), req)
+	err := s.teleport.CreateAccessRequest(s.Context(), req)
 	require.NoError(t, err)
 	return req
 }
@@ -202,7 +195,7 @@ func (s *SlackSuite) checkPluginData(reqID string, cond func(PluginData) bool) P
 	t.Helper()
 
 	for {
-		rawData, err := s.teleport.PollAccessRequestPluginData(s.Ctx(), "slack", reqID)
+		rawData, err := s.teleport.PollAccessRequestPluginData(s.Context(), "slack", reqID)
 		require.NoError(t, err)
 		if data := DecodePluginData(rawData); cond(data) {
 			return data
@@ -227,7 +220,7 @@ func (s *SlackSuite) TestMessagePosting() {
 	var messages []Msg
 	messageSet := make(SlackDataMessageSet)
 	for i := 0; i < 2; i++ {
-		msg, err := s.fakeSlack.CheckNewMessage(s.Ctx())
+		msg, err := s.fakeSlack.CheckNewMessage(s.Context())
 		require.NoError(t, err)
 		messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, Timestamp: msg.Timestamp})
 		messages = append(messages, msg)
@@ -255,55 +248,6 @@ func (s *SlackSuite) TestMessagePosting() {
 	assert.Equal(t, "*Status:* ⏳ PENDING", statusLine)
 }
 
-func (s *SlackSuite) TestReviewReplies() {
-	t := s.T()
-
-	reviewer := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
-
-	s.startApp()
-
-	req := s.createAccessRequest([]User{reviewer})
-	s.checkPluginData(req.GetName(), func(data PluginData) bool {
-		return len(data.SlackData) > 0
-	})
-
-	msg, err := s.fakeSlack.CheckNewMessage(s.Ctx())
-	require.NoError(t, err)
-	assert.Equal(t, reviewer.ID, msg.Channel)
-
-	s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
-		Author:        s.userNames.reviewer1,
-		ProposedState: types.RequestState_APPROVED,
-		Created:       time.Now(),
-		Reason:        "okay",
-	})
-	require.NoError(t, err)
-
-	reply, err := s.fakeSlack.CheckNewMessage(s.Ctx())
-	require.NoError(t, err)
-	assert.Equal(t, msg.Channel, reply.Channel)
-	assert.Equal(t, msg.Timestamp, reply.ThreadTs)
-	assert.Contains(t, reply.Text, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
-	assert.Contains(t, reply.Text, "Resolution: ✅ APPROVED", "reply must contain a proposed state")
-	assert.Contains(t, reply.Text, "Reason: okay", "reply must contain a reason")
-
-	s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
-		Author:        s.userNames.reviewer2,
-		ProposedState: types.RequestState_DENIED,
-		Created:       time.Now(),
-		Reason:        "not okay",
-	})
-	require.NoError(t, err)
-
-	reply, err = s.fakeSlack.CheckNewMessage(s.Ctx())
-	require.NoError(t, err)
-	assert.Equal(t, msg.Channel, reply.Channel)
-	assert.Equal(t, msg.Timestamp, reply.ThreadTs)
-	assert.Contains(t, reply.Text, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
-	assert.Contains(t, reply.Text, "Resolution: ❌ DENIED", "reply must contain a proposed state")
-	assert.Contains(t, reply.Text, "Reason: not okay", "reply must contain a reason")
-}
-
 func (s *SlackSuite) TestRecipientsConfig() {
 	t := s.T()
 
@@ -326,12 +270,12 @@ func (s *SlackSuite) TestRecipientsConfig() {
 
 	messageSet := make(SlackDataMessageSet)
 
-	msg, err := s.fakeSlack.CheckNewMessage(s.Ctx())
+	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
 	messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, Timestamp: msg.Timestamp})
 	messages = append(messages, msg)
 
-	msg, err = s.fakeSlack.CheckNewMessage(s.Ctx())
+	msg, err = s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
 	messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, Timestamp: msg.Timestamp})
 	messages = append(messages, msg)
@@ -354,46 +298,20 @@ func (s *SlackSuite) TestApproval() {
 	s.startApp()
 
 	req := s.createAccessRequest([]User{reviewer})
-	msg, err := s.fakeSlack.CheckNewMessage(s.Ctx())
+	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msg.Channel)
 
-	s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
-		Author:        s.userNames.reviewer1,
-		ProposedState: types.RequestState_APPROVED,
-		Created:       time.Now(),
-		Reason:        "okay",
-	})
-	require.NoError(t, err)
+	s.teleport.ApproveAccessRequest(s.Context(), req.GetName(), "okay")
 
-	reply, err := s.fakeSlack.CheckNewMessage(s.Ctx())
-	require.NoError(t, err)
-	assert.Equal(t, msg.Channel, reply.Channel)
-	assert.Equal(t, msg.Timestamp, reply.ThreadTs)
-	assert.Contains(t, reply.Text, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
-
-	s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
-		Author:        s.userNames.reviewer2,
-		ProposedState: types.RequestState_APPROVED,
-		Created:       time.Now(),
-		Reason:        "finally okay",
-	})
-	require.NoError(t, err)
-
-	reply, err = s.fakeSlack.CheckNewMessage(s.Ctx())
-	require.NoError(t, err)
-	assert.Equal(t, msg.Channel, reply.Channel)
-	assert.Equal(t, msg.Timestamp, reply.ThreadTs)
-	assert.Contains(t, reply.Text, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
-
-	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Ctx())
+	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msgUpdate.Channel)
 	assert.Equal(t, msg.Timestamp, msgUpdate.Timestamp)
 
 	statusLine, err := getStatusLine(msgUpdate)
 	require.NoError(t, err)
-	assert.Equal(t, "*Status:* ✅ APPROVED (finally okay)", statusLine)
+	assert.Equal(t, "*Status:* ✅ APPROVED (okay)", statusLine)
 }
 
 func (s *SlackSuite) TestDenial() {
@@ -404,11 +322,146 @@ func (s *SlackSuite) TestDenial() {
 	s.startApp()
 
 	req := s.createAccessRequest([]User{reviewer})
-	msg, err := s.fakeSlack.CheckNewMessage(s.Ctx())
+	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msg.Channel)
 
-	s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	s.teleport.DenyAccessRequest(s.Context(), req.GetName(), "not okay")
+
+	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Context())
+	require.NoError(t, err)
+	assert.Equal(t, reviewer.ID, msgUpdate.Channel)
+	assert.Equal(t, msg.Timestamp, msgUpdate.Timestamp)
+
+	statusLine, err := getStatusLine(msgUpdate)
+	require.NoError(t, err)
+	assert.Equal(t, "*Status:* ❌ DENIED (not okay)", statusLine)
+}
+
+func (s *SlackSuite) TestReviewReplies() {
+	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
+	reviewer := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
+
+	s.startApp()
+
+	req := s.createAccessRequest([]User{reviewer})
+	s.checkPluginData(req.GetName(), func(data PluginData) bool {
+		return len(data.SlackData) > 0
+	})
+
+	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
+	require.NoError(t, err)
+	assert.Equal(t, reviewer.ID, msg.Channel)
+
+	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
+		Author:        s.userNames.reviewer1,
+		ProposedState: types.RequestState_APPROVED,
+		Created:       time.Now(),
+		Reason:        "okay",
+	})
+	require.NoError(t, err)
+
+	reply, err := s.fakeSlack.CheckNewMessage(s.Context())
+	require.NoError(t, err)
+	assert.Equal(t, msg.Channel, reply.Channel)
+	assert.Equal(t, msg.Timestamp, reply.ThreadTs)
+	assert.Contains(t, reply.Text, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
+	assert.Contains(t, reply.Text, "Resolution: ✅ APPROVED", "reply must contain a proposed state")
+	assert.Contains(t, reply.Text, "Reason: okay", "reply must contain a reason")
+
+	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
+		Author:        s.userNames.reviewer2,
+		ProposedState: types.RequestState_DENIED,
+		Created:       time.Now(),
+		Reason:        "not okay",
+	})
+	require.NoError(t, err)
+
+	reply, err = s.fakeSlack.CheckNewMessage(s.Context())
+	require.NoError(t, err)
+	assert.Equal(t, msg.Channel, reply.Channel)
+	assert.Equal(t, msg.Timestamp, reply.ThreadTs)
+	assert.Contains(t, reply.Text, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
+	assert.Contains(t, reply.Text, "Resolution: ❌ DENIED", "reply must contain a proposed state")
+	assert.Contains(t, reply.Text, "Reason: not okay", "reply must contain a reason")
+}
+
+func (s *SlackSuite) TestApprovalByReview() {
+	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
+	reviewer := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
+
+	s.startApp()
+
+	req := s.createAccessRequest([]User{reviewer})
+	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
+	require.NoError(t, err)
+	assert.Equal(t, reviewer.ID, msg.Channel)
+
+	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
+		Author:        s.userNames.reviewer1,
+		ProposedState: types.RequestState_APPROVED,
+		Created:       time.Now(),
+		Reason:        "okay",
+	})
+	require.NoError(t, err)
+
+	reply, err := s.fakeSlack.CheckNewMessage(s.Context())
+	require.NoError(t, err)
+	assert.Equal(t, msg.Channel, reply.Channel)
+	assert.Equal(t, msg.Timestamp, reply.ThreadTs)
+	assert.Contains(t, reply.Text, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
+
+	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
+		Author:        s.userNames.reviewer2,
+		ProposedState: types.RequestState_APPROVED,
+		Created:       time.Now(),
+		Reason:        "finally okay",
+	})
+	require.NoError(t, err)
+
+	reply, err = s.fakeSlack.CheckNewMessage(s.Context())
+	require.NoError(t, err)
+	assert.Equal(t, msg.Channel, reply.Channel)
+	assert.Equal(t, msg.Timestamp, reply.ThreadTs)
+	assert.Contains(t, reply.Text, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
+
+	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Context())
+	require.NoError(t, err)
+	assert.Equal(t, reviewer.ID, msgUpdate.Channel)
+	assert.Equal(t, msg.Timestamp, msgUpdate.Timestamp)
+
+	statusLine, err := getStatusLine(msgUpdate)
+	require.NoError(t, err)
+	assert.Equal(t, "*Status:* ✅ APPROVED (finally okay)", statusLine)
+}
+
+func (s *SlackSuite) TestDenialByReview() {
+	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
+	reviewer := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
+
+	s.startApp()
+
+	req := s.createAccessRequest([]User{reviewer})
+	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
+	require.NoError(t, err)
+	assert.Equal(t, reviewer.ID, msg.Channel)
+
+	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -416,13 +469,13 @@ func (s *SlackSuite) TestDenial() {
 	})
 	require.NoError(t, err)
 
-	reply, err := s.fakeSlack.CheckNewMessage(s.Ctx())
+	reply, err := s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, msg.Channel, reply.Channel)
 	assert.Equal(t, msg.Timestamp, reply.ThreadTs)
 	assert.Contains(t, reply.Text, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
 
-	s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -430,13 +483,13 @@ func (s *SlackSuite) TestDenial() {
 	})
 	require.NoError(t, err)
 
-	reply, err = s.fakeSlack.CheckNewMessage(s.Ctx())
+	reply, err = s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, msg.Channel, reply.Channel)
 	assert.Equal(t, msg.Timestamp, reply.ThreadTs)
 	assert.Contains(t, reply.Text, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
 
-	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Ctx())
+	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msgUpdate.Channel)
 	assert.Equal(t, msg.Timestamp, msgUpdate.Timestamp)
@@ -453,12 +506,19 @@ func (s *SlackSuite) TestExpiration() {
 
 	s.startApp()
 
-	s.createExpiredAccessRequest([]User{reviewer})
-	msg, err := s.fakeSlack.CheckNewMessage(s.Ctx())
+	request := s.createAccessRequest([]User{reviewer})
+	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msg.Channel)
 
-	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Ctx())
+	s.checkPluginData(request.GetName(), func(data PluginData) bool {
+		return len(data.SlackData) > 0
+	})
+
+	err = s.teleport.DeleteAccessRequest(s.Context(), request.GetName()) // simulate expiration
+	require.NoError(t, err)
+
+	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msgUpdate.Channel)
 	assert.Equal(t, msg.Timestamp, msgUpdate.Timestamp)
@@ -471,14 +531,16 @@ func (s *SlackSuite) TestExpiration() {
 func (s *SlackSuite) TestRace() {
 	t := s.T()
 
-	prevLogLevel := log.GetLevel()
-	log.SetLevel(log.InfoLevel) // Turn off noisy debug logging
-	defer log.SetLevel(prevLogLevel)
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
+	logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
 
 	reviewer1 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
 	reviewer2 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer2}})
 
-	s.SetContext(20 * time.Second)
+	s.SetContextTimeout(20 * time.Second)
 	s.startApp()
 
 	var (
@@ -496,10 +558,10 @@ func (s *SlackSuite) TestRace() {
 		return err
 	}
 
-	process := lib.NewProcess(s.Ctx())
+	process := lib.NewProcess(s.Context())
 	for i := 0; i < s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			req, err := services.NewAccessRequest(s.userNames.requestor, "admin")
+			req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}

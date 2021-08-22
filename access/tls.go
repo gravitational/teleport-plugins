@@ -6,34 +6,19 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"time"
 
+	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/trace"
 )
 
 var ErrInvalidCertificate = errors.New("invalid certificate")
 
-func LoadTLSConfig(certPath, keyPath, rootCAsPath string) (conf *tls.Config, err error) {
-	clientCert, err := LoadX509Cert(certPath, keyPath)
-	if err != nil {
-		return
+func LoadTLSConfig(conf lib.TeleportConfig) (*tls.Config, error) {
+	creds := conf.Credentials()
+	if len(creds) == 0 {
+		return nil, trace.Errorf("no credentials found in the config")
 	}
-	caPool, err := LoadX509CertPool(rootCAsPath)
-	if err != nil {
-		return
-	}
-	now := time.Now()
-	if now.After(clientCert.Leaf.NotAfter) {
-		err = trace.Wrap(ErrInvalidCertificate, "certificate seems to be expired, you should renew it.")
-	}
-	if now.Before(clientCert.Leaf.NotBefore) {
-		err = trace.Wrap(ErrInvalidCertificate, "certificate seems to be invalid, check its notBefore date.")
-	}
-	conf = &tls.Config{
-		Certificates: []tls.Certificate{clientCert},
-		RootCAs:      caPool,
-	}
-	return
+	return creds[0].TLSConfig()
 }
 
 // LoadTLSCert loads a X.509 keypair from file paths and
