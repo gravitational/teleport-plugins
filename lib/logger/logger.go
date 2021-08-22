@@ -34,7 +34,7 @@ func Setup(conf Config) error {
 	switch conf.Output {
 	case "stderr", "error", "2":
 		log.SetOutput(os.Stderr)
-	case "stdout", "out", "1":
+	case "", "stdout", "out", "1":
 		log.SetOutput(os.Stdout)
 	default:
 		// assume it's a file path:

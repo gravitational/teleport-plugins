@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Gravitational, Inc.
+Copyright 2019-2021 Gravitational, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,29 +17,22 @@ limitations under the License.
 package main
 
 import (
-	"crypto/tls"
-	"crypto/x509"
-	"io/ioutil"
-	"os"
-
 	"github.com/pelletier/go-toml"
 
+	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/trace"
 )
 
 type Config struct {
-	AuthServer string   `toml:"auth_server"`
-	ClientKey  string   `toml:"client_key"`
-	ClientCrt  string   `toml:"client_crt"`
-	RootCAs    string   `toml:"root_cas"`
-	Whitelist  []string `toml:"whitelist"`
+	lib.TeleportConfig
+	Whitelist []string `toml:"whitelist"`
 }
 
 const exampleConfig = `# example configuration file
-auth_server = "example.com:3025"  # Auth GRPC API address
-client_key = "path/to/client.key" # GRPC client secret key
-client_crt = "path/to/client.crt" # GRPC client certificate
-root_cas = "path/to/root.cas"     # cluster CA certs
+# Teleport Auth/Proxy Server address.
+addr = "localhost:3025"
+# Identity file exported with tctl auth sign --format=file
+identity = "/var/lib/teleport/plugins/gitlab/auth_id"
 # whitelist determines which users' requests will
 # be approved.
 whitelist = [
@@ -57,46 +50,8 @@ func LoadConfig(filepath string) (*Config, error) {
 	if err := t.Unmarshal(conf); err != nil {
 		return nil, trace.Wrap(err)
 	}
-	conf.SetDefaults()
+	if err := conf.CheckAndSetDefaults(); err != nil {
+		return nil, trace.Wrap(err)
+	}
 	return conf, nil
-}
-
-func (c *Config) SetDefaults() {
-	if c.AuthServer == "" {
-		c.AuthServer = "localhost:3025"
-	}
-	if c.ClientKey == "" {
-		c.ClientKey = "example.key"
-	}
-	if c.ClientCrt == "" {
-		c.ClientCrt = "example.crt"
-	}
-	if c.RootCAs == "" {
-		c.RootCAs = "example.cas"
-	}
-}
-
-// LoadTLSConfig loads client crt/key files and root authorities, and
-// generates a tls.Config suitable for use with a GRPC client.
-func (c *Config) LoadTLSConfig() (*tls.Config, error) {
-	var tc tls.Config
-	clientCert, err := tls.LoadX509KeyPair(c.ClientCrt, c.ClientKey)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	tc.Certificates = append(tc.Certificates, clientCert)
-	caFile, err := os.Open(c.RootCAs)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	caCerts, err := ioutil.ReadAll(caFile)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	pool := x509.NewCertPool()
-	if ok := pool.AppendCertsFromPEM(caCerts); !ok {
-		return nil, trace.BadParameter("invalid CA cert PEM")
-	}
-	tc.RootCAs = pool
-	return &tc, nil
 }
