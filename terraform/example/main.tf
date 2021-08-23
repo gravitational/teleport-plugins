@@ -3,7 +3,7 @@ variable "identity_file_path" {}
 terraform {
   required_providers {
     teleport = {
-      version = "0.0.1"
+      version = "6.2.3"
       source  = "gravitational.com/teleport/teleport"
     }
   }
@@ -15,6 +15,19 @@ provider "teleport" {
   addr = "localhost:3025"
   # Update addr to point to Teleport Auth/Proxy
   # addr = "evilmartians.teleport.sh:443"
+}
+
+resource "teleport_auth_preference" "example" {
+  metadata {
+    description = "Auth preference, singleton"
+    labels = {
+      "example" = "yes"
+    }
+  }
+
+  spec {
+    disconnect_expired_cert = true
+  }
 }
 
 resource "teleport_provision_token" "example" {
@@ -117,6 +130,8 @@ resource "teleport_role" "example" {
          key = "example"
          value = ["yes"]
       }
+
+      aws_role_arns = ["arn:1,2,3"]
     }
 
     deny {

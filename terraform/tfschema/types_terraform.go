@@ -40,6 +40,10 @@ var _ = math.Inf
 var _ = time.Kitchen
 
 var (
+	// SchemaAuthPreferenceV2 is schema for AuthPreferenceV2 implements the AuthPreference interface.
+	SchemaAuthPreferenceV2 = GenSchemaAuthPreferenceV2()
+	// SchemaMetaAuthPreferenceV2 is schema metadata for AuthPreferenceV2 implements the AuthPreference interface.
+	SchemaMetaAuthPreferenceV2 = GenSchemaMetaAuthPreferenceV2()
 	// SchemaGithubConnectorV3 is schema for GithubConnectorV3 represents a Github connector.
 	SchemaGithubConnectorV3 = GenSchemaGithubConnectorV3()
 	// SchemaMetaGithubConnectorV3 is schema metadata for GithubConnectorV3 represents a Github connector.
@@ -52,10 +56,10 @@ var (
 	SchemaProvisionTokenV2 = GenSchemaProvisionTokenV2()
 	// SchemaMetaProvisionTokenV2 is schema metadata for ProvisionTokenV2 specifies provisioning token
 	SchemaMetaProvisionTokenV2 = GenSchemaMetaProvisionTokenV2()
-	// SchemaRoleV3 is schema for RoleV3 represents role resource specification
-	SchemaRoleV3 = GenSchemaRoleV3()
-	// SchemaMetaRoleV3 is schema metadata for RoleV3 represents role resource specification
-	SchemaMetaRoleV3 = GenSchemaMetaRoleV3()
+	// SchemaRoleV4 is schema for RoleV4 represents role resource specification
+	SchemaRoleV4 = GenSchemaRoleV4()
+	// SchemaMetaRoleV4 is schema metadata for RoleV4 represents role resource specification
+	SchemaMetaRoleV4 = GenSchemaMetaRoleV4()
 	// SchemaSAMLConnectorV2 is schema for SAMLConnectorV2 represents a SAML connector.
 	SchemaSAMLConnectorV2 = GenSchemaSAMLConnectorV2()
 	// SchemaMetaSAMLConnectorV2 is schema metadata for SAMLConnectorV2 represents a SAML connector.
@@ -84,6 +88,13 @@ func SuppressDurationChange(k string, old string, new string, d *schema.Resource
 
 	return o == n
 }
+func GetAuthPreferenceV2(obj *types.AuthPreferenceV2, data *schema.ResourceData) error {
+	return accessors.Get(obj, data, SchemaAuthPreferenceV2, SchemaMetaAuthPreferenceV2)
+}
+
+func SetAuthPreferenceV2(obj *types.AuthPreferenceV2, data *schema.ResourceData) error {
+	return accessors.Set(obj, data, SchemaAuthPreferenceV2, SchemaMetaAuthPreferenceV2)
+}
 func GetGithubConnectorV3(obj *types.GithubConnectorV3, data *schema.ResourceData) error {
 	return accessors.Get(obj, data, SchemaGithubConnectorV3, SchemaMetaGithubConnectorV3)
 }
@@ -105,12 +116,12 @@ func GetProvisionTokenV2(obj *types.ProvisionTokenV2, data *schema.ResourceData)
 func SetProvisionTokenV2(obj *types.ProvisionTokenV2, data *schema.ResourceData) error {
 	return accessors.Set(obj, data, SchemaProvisionTokenV2, SchemaMetaProvisionTokenV2)
 }
-func GetRoleV3(obj *types.RoleV3, data *schema.ResourceData) error {
-	return accessors.Get(obj, data, SchemaRoleV3, SchemaMetaRoleV3)
+func GetRoleV4(obj *types.RoleV4, data *schema.ResourceData) error {
+	return accessors.Get(obj, data, SchemaRoleV4, SchemaMetaRoleV4)
 }
 
-func SetRoleV3(obj *types.RoleV3, data *schema.ResourceData) error {
-	return accessors.Set(obj, data, SchemaRoleV3, SchemaMetaRoleV3)
+func SetRoleV4(obj *types.RoleV4, data *schema.ResourceData) error {
+	return accessors.Set(obj, data, SchemaRoleV4, SchemaMetaRoleV4)
 }
 func GetSAMLConnectorV2(obj *types.SAMLConnectorV2, data *schema.ResourceData) error {
 	return accessors.Get(obj, data, SchemaSAMLConnectorV2, SchemaMetaSAMLConnectorV2)
@@ -1192,7 +1203,7 @@ func GenSchemaProvisionTokenV2() map[string]*schema.Schema {
 			Optional:    true,
 			Default:     "v2",
 		},
-		// Metadata is User metadata
+		// Metadata is resource metadata
 		"metadata": {
 			Type:        schema.TypeList,
 			MaxItems:    1,
@@ -1294,7 +1305,7 @@ func GenSchemaMetaProvisionTokenV2() map[string]*accessors.SchemaMeta {
 			IsTime:     false,
 			IsDuration: false,
 		},
-		// Metadata is User metadata
+		// Metadata is resource metadata
 		"metadata": {
 			Name:       "Metadata",
 			IsTime:     false,
@@ -1353,10 +1364,331 @@ func GenSchemaMetaProvisionTokenV2() map[string]*accessors.SchemaMeta {
 	}
 }
 
-// SchemaRoleV3 returns schema for RoleV3
+// SchemaAuthPreferenceV2 returns schema for AuthPreferenceV2
 //
-// RoleV3 represents role resource specification
-func GenSchemaRoleV3() map[string]*schema.Schema {
+// AuthPreferenceV2 implements the AuthPreference interface.
+func GenSchemaAuthPreferenceV2() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		// Kind is a resource kind
+		"kind": {
+			Type:        schema.TypeString,
+			Description: "Kind is a resource kind",
+			Optional:    true,
+			Default:     "cluster_auth_preference",
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Type:        schema.TypeString,
+			Description: "SubKind is an optional resource sub kind, used in some resources",
+			Optional:    true,
+			Default:     "",
+		},
+		// Version is a resource version
+		"version": {
+			Type:        schema.TypeString,
+			Description: "Version is a resource version",
+			Optional:    true,
+			Default:     "v2",
+		},
+		// Metadata is resource metadata
+		"metadata": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "Metadata is resource metadata",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Namespace is object namespace. The field should be called "namespace"
+					// when it returns in Teleport 2.4.
+					"namespace": {
+						Type:        schema.TypeString,
+						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
+						Optional:    true,
+						Default:     "default",
+					},
+					// Description is object description
+					"description": {
+						Type:        schema.TypeString,
+						Description: "Description is object description",
+						Optional:    true,
+					},
+					// Labels is a set of labels
+					"labels": {
+
+						Optional:    true,
+						Type:        schema.TypeMap,
+						Description: "Labels is a set of labels",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Expires is a global expiry time header can be set on any resource in the
+					// system.
+					"expires": {
+						Type:         schema.TypeString,
+						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
+						ValidateFunc: validation.IsRFC3339Time,
+						StateFunc:    TruncateMs,
+						Optional:     true,
+					},
+				},
+			},
+		},
+		// Spec is an AuthPreference specification
+		"spec": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "AuthPreferenceSpecV2 is the actual data we care about for AuthPreference.",
+
+			Required: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Type is the type of authentication.
+					"type": {
+						Type:        schema.TypeString,
+						Description: "Type is the type of authentication.",
+						Optional:    true,
+						Default:     "local",
+					},
+					// SecondFactor is the type of second factor.
+					"second_factor": {
+						Type:        schema.TypeString,
+						Description: "SecondFactor is the type of second factor.",
+						Optional:    true,
+						Default:     "otp",
+					},
+					// ConnectorName is the name of the OIDC or SAML connector. If this value is
+					// not set the first connector in the backend will be used.
+					"connector_name": {
+						Type:        schema.TypeString,
+						Description: "ConnectorName is the name of the OIDC or SAML connector. If this value is  not set the first connector in the backend will be used.",
+						Optional:    true,
+					},
+					// U2F are the settings for the U2F device.
+					"u2f": {
+						Type:        schema.TypeList,
+						MaxItems:    1,
+						Description: "U2F defines settings for U2F device.",
+
+						Optional: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// AppID returns the application ID for universal second factor.
+								"app_id": {
+									Type:        schema.TypeString,
+									Description: "AppID returns the application ID for universal second factor.",
+									Optional:    true,
+								},
+								// Facets returns the facets for universal second factor.
+								"facets": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "Facets returns the facets for universal second factor.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// DeviceAttestationCAs contains the trusted attestation CAs for U2F
+								// devices.
+								"device_attestation_c_as": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "DeviceAttestationCAs contains the trusted attestation CAs for U2F  devices.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+							},
+						},
+					},
+					// RequireSessionMFA causes all sessions in this cluster to require MFA
+					// checks.
+					"require_session_mfa": {
+						Type:        schema.TypeBool,
+						Description: "RequireSessionMFA causes all sessions in this cluster to require MFA  checks.",
+						Optional:    true,
+					},
+					// DisconnectExpiredCert provides disconnect expired certificate setting -
+					// if true, connections with expired client certificates will get disconnected
+					"disconnect_expired_cert": SchemaBoolOption(),
+					// AllowLocalAuth is true if local authentication is enabled.
+					"allow_local_auth": SchemaBoolOption(),
+
+					"message_of_the_day": {
+						Type:        schema.TypeString,
+						Description: "",
+						Optional:    true,
+					},
+					// LockingMode is the cluster-wide locking mode default.
+					"locking_mode": {
+						Type:        schema.TypeString,
+						Description: "LockingMode is the cluster-wide locking mode default.",
+						Optional:    true,
+						Default:     "best_effort",
+					},
+				},
+			},
+		},
+	}
+}
+
+// GenSchemaMetaAuthPreferenceV2 returns schema for AuthPreferenceV2
+//
+// AuthPreferenceV2 implements the AuthPreference interface.
+func GenSchemaMetaAuthPreferenceV2() map[string]*accessors.SchemaMeta {
+	return map[string]*accessors.SchemaMeta{
+		// Kind is a resource kind
+		"kind": {
+			Name:       "Kind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Name:       "SubKind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Version is a resource version
+		"version": {
+			Name:       "Version",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Metadata is resource metadata
+		"metadata": {
+			Name:       "Metadata",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Namespace is object namespace. The field should be called "namespace"
+				// when it returns in Teleport 2.4.
+				"namespace": {
+					Name:       "Namespace",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Description is object description
+				"description": {
+					Name:       "Description",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Labels is a set of labels
+				"labels": {
+					Name:       "Labels",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Expires is a global expiry time header can be set on any resource in the
+				// system.
+				"expires": {
+					Name:       "Expires",
+					IsTime:     true,
+					IsDuration: false,
+				},
+			},
+		},
+		// Spec is an AuthPreference specification
+		"spec": {
+			Name:       "Spec",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Type is the type of authentication.
+				"type": {
+					Name:       "Type",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// SecondFactor is the type of second factor.
+				"second_factor": {
+					Name:       "SecondFactor",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// ConnectorName is the name of the OIDC or SAML connector. If this value is
+				// not set the first connector in the backend will be used.
+				"connector_name": {
+					Name:       "ConnectorName",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// U2F are the settings for the U2F device.
+				"u2f": {
+					Name:       "U2F",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// AppID returns the application ID for universal second factor.
+						"app_id": {
+							Name:       "AppID",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Facets returns the facets for universal second factor.
+						"facets": {
+							Name:       "Facets",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// DeviceAttestationCAs contains the trusted attestation CAs for U2F
+						// devices.
+						"device_attestation_c_as": {
+							Name:       "DeviceAttestationCAs",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// RequireSessionMFA causes all sessions in this cluster to require MFA
+				// checks.
+				"require_session_mfa": {
+					Name:       "RequireSessionMFA",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// DisconnectExpiredCert provides disconnect expired certificate setting -
+				// if true, connections with expired client certificates will get disconnected
+				"disconnect_expired_cert": {
+					Name:       "DisconnectExpiredCert",
+					IsTime:     false,
+					IsDuration: false,
+					Getter:     GetBoolOption,
+					Setter:     SetBoolOption,
+				},
+				// AllowLocalAuth is true if local authentication is enabled.
+				"allow_local_auth": {
+					Name:       "AllowLocalAuth",
+					IsTime:     false,
+					IsDuration: false,
+					Getter:     GetBoolOption,
+					Setter:     SetBoolOption,
+				},
+
+				"message_of_the_day": {
+					Name:       "MessageOfTheDay",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// LockingMode is the cluster-wide locking mode default.
+				"locking_mode": {
+					Name:       "LockingMode",
+					IsTime:     false,
+					IsDuration: false,
+				},
+			},
+		},
+	}
+}
+
+// SchemaRoleV4 returns schema for RoleV4
+//
+// RoleV4 represents role resource specification
+func GenSchemaRoleV4() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		// Kind is a resource kind
 		"kind": {
@@ -1377,9 +1709,9 @@ func GenSchemaRoleV3() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Version is version",
 			Optional:    true,
-			Default:     "v3",
+			Default:     "v4",
 		},
-		// Metadata is User metadata
+		// Metadata is resource metadata
 		"metadata": {
 			Type:        schema.TypeList,
 			MaxItems:    1,
@@ -1435,7 +1767,7 @@ func GenSchemaRoleV3() map[string]*schema.Schema {
 		"spec": {
 			Type:        schema.TypeList,
 			MaxItems:    1,
-			Description: "RoleSpecV3 is role specification for RoleV3.",
+			Description: "RoleSpecV4 is role specification for RoleV4.",
 
 			Required: true,
 			Elem: &schema.Resource{
@@ -1539,6 +1871,13 @@ func GenSchemaRoleV3() map[string]*schema.Schema {
 								"require_session_mfa": {
 									Type:        schema.TypeBool,
 									Description: "RequireSessionMFA specifies whether a user is required to do an MFA  check for every session.",
+									Optional:    true,
+								},
+								// Lock specifies the locking mode (strict|best_effort) to be applied with
+								// the role.
+								"lock": {
+									Type:        schema.TypeString,
+									Description: "Lock specifies the locking mode (strict|best_effort) to be applied with  the role.",
 									Optional:    true,
 								},
 							},
@@ -1876,6 +2215,16 @@ func GenSchemaRoleV3() map[string]*schema.Schema {
 												Default:     "",
 											},
 										},
+									},
+								},
+								// AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.
+								"aws_role_arns": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
 									},
 								},
 							},
@@ -2216,6 +2565,16 @@ func GenSchemaRoleV3() map[string]*schema.Schema {
 										},
 									},
 								},
+								// AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.
+								"aws_role_arns": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
 							},
 						},
 					},
@@ -2225,10 +2584,10 @@ func GenSchemaRoleV3() map[string]*schema.Schema {
 	}
 }
 
-// GenSchemaMetaRoleV3 returns schema for RoleV3
+// GenSchemaMetaRoleV4 returns schema for RoleV4
 //
-// RoleV3 represents role resource specification
-func GenSchemaMetaRoleV3() map[string]*accessors.SchemaMeta {
+// RoleV4 represents role resource specification
+func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 	return map[string]*accessors.SchemaMeta{
 		// Kind is a resource kind
 		"kind": {
@@ -2248,7 +2607,7 @@ func GenSchemaMetaRoleV3() map[string]*accessors.SchemaMeta {
 			IsTime:     false,
 			IsDuration: false,
 		},
-		// Metadata is User metadata
+		// Metadata is resource metadata
 		"metadata": {
 			Name:       "Metadata",
 			IsTime:     false,
@@ -2387,6 +2746,13 @@ func GenSchemaMetaRoleV3() map[string]*accessors.SchemaMeta {
 						// check for every session.
 						"require_session_mfa": {
 							Name:       "RequireSessionMFA",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Lock specifies the locking mode (strict|best_effort) to be applied with
+						// the role.
+						"lock": {
+							Name:       "Lock",
 							IsTime:     false,
 							IsDuration: false,
 						},
@@ -2674,6 +3040,12 @@ func GenSchemaMetaRoleV3() map[string]*accessors.SchemaMeta {
 								},
 							},
 						},
+						// AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.
+						"aws_role_arns": {
+							Name:       "AWSRoleARNs",
+							IsTime:     false,
+							IsDuration: false,
+						},
 					},
 				},
 				// Deny is the set of conditions evaluated to deny access. Deny takes priority
@@ -2959,6 +3331,12 @@ func GenSchemaMetaRoleV3() map[string]*accessors.SchemaMeta {
 								},
 							},
 						},
+						// AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.
+						"aws_role_arns": {
+							Name:       "AWSRoleARNs",
+							IsTime:     false,
+							IsDuration: false,
+						},
 					},
 				},
 			},
@@ -2992,7 +3370,7 @@ func GenSchemaUserV2() map[string]*schema.Schema {
 			Optional:    true,
 			Default:     "v2",
 		},
-		// Metadata is User metadata
+		// Metadata is resource metadata
 		"metadata": {
 			Type:        schema.TypeList,
 			MaxItems:    1,
@@ -3168,7 +3546,7 @@ func GenSchemaMetaUserV2() map[string]*accessors.SchemaMeta {
 			IsTime:     false,
 			IsDuration: false,
 		},
-		// Metadata is User metadata
+		// Metadata is resource metadata
 		"metadata": {
 			Name:       "Metadata",
 			IsTime:     false,
