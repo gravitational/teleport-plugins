@@ -14,7 +14,7 @@ require (
 	github.com/google/go-querystring v1.0.0
 	github.com/google/uuid v1.2.0
 	github.com/gravitational/kingpin v2.1.11-0.20190130013101-742f2714c145+incompatible
-	github.com/gravitational/teleport/api v0.0.0
+	github.com/gravitational/teleport/api v0.0.0-20210915192615-a8ca2d3f910e
 	github.com/gravitational/trace v1.1.16-0.20210609220119-4855e69c89fc
 	github.com/hashicorp/go-version v1.2.1
 	github.com/jonboulle/clockwork v0.2.2
@@ -40,7 +40,6 @@ require (
 
 replace (
 	github.com/gogo/protobuf => github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf
-	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20210817214700-5c4552420e62
 	github.com/julienschmidt/httprouter => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 	google.golang.org/grpc => google.golang.org/grpc v1.29.1
 )
