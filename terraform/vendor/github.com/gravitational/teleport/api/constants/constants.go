@@ -83,6 +83,10 @@ const (
 	// KeepAliveDatabase is the keep alive type for database server.
 	KeepAliveDatabase = "db"
 
+	// KeepAliveWindowsDesktopService is the keep alive type for a Windows
+	// desktop service.
+	KeepAliveWindowsDesktopService = "windows_desktop_service"
+
 	// WindowsOS is the GOOS constant used for Microsoft Windows.
 	WindowsOS = "windows"
 
@@ -97,6 +101,11 @@ const (
 	//
 	// TODO(r0mant): See if we can use net.ErrClosed and errors.Is() instead.
 	UseOfClosedNetworkConnection = "use of closed network connection"
+
+	// AWSConsoleURL is the URL of AWS management console.
+	AWSConsoleURL = "https://console.aws.amazon.com"
+	// AWSAccountIDLabel is the key of the label containing AWS account ID.
+	AWSAccountIDLabel = "aws_account_id"
 )
 
 // SecondFactorType is the type of 2FA authentication.
@@ -117,6 +126,20 @@ const (
 	// SecondFactorOptional means that all 2FA protocols are supported and 2FA
 	// is required only for users that have MFA devices registered.
 	SecondFactorOptional = SecondFactorType("optional")
+)
+
+// LockingMode determines how a (possibly stale) set of locks should be applied
+// to an interaction.
+type LockingMode string
+
+const (
+	// LockingModeStrict causes all interactions to be terminated when the
+	// available lock view becomes unreliable.
+	LockingModeStrict = LockingMode("strict")
+
+	// LockingModeBestEffort applies the most recently known locks under all
+	// circumstances.
+	LockingModeBestEffort = LockingMode("best_effort")
 )
 
 const (

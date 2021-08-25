@@ -152,11 +152,11 @@ github.com/gravitational/logrus v1.4.3 h1:gdyMN/zLd4R/kATybKzG1I6gjrbCqNJOl1Xiix
 github.com/gravitational/logrus v1.4.3/go.mod h1:+F7Ogzej0PZc/94MaYx/nvG9jOFMD2osvC3s+Squfpo=
 github.com/gravitational/protoc-gen-terraform v0.0.0-20210415164617-d46beb1615f0 h1:mUglFblcQ9ABi5MYiSJ2vnHYDXXIa0uCXPLolkd/vw4=
 github.com/gravitational/protoc-gen-terraform v0.0.0-20210415164617-d46beb1615f0/go.mod h1:joQIhLuq9Ofk7i7zLuPfUrPJE0NfsEMrQUEGSmg/HS8=
-github.com/gravitational/teleport/api v0.0.0-20210625041250-ca1e47bef0d4 h1:YpRVZQoCfL8lON+QyDZRexbV/rrAExdoVtGi33d03SU=
-github.com/gravitational/teleport/api v0.0.0-20210625041250-ca1e47bef0d4/go.mod h1:s/ns3z5TYDbuDrVHHW8XD01E+oh9GcT3hP/Fz9LYmWw=
 github.com/gravitational/trace v1.1.14/go.mod h1:RvdOUHE4SHqR3oXlFFKnGzms8a5dugHygGw1bqDstYI=
 github.com/gravitational/trace v1.1.15 h1:dfaFcARt110nCX6RSvrcRUbvRawEYAasXyCqnhXo0Xg=
 github.com/gravitational/trace v1.1.15/go.mod h1:RvdOUHE4SHqR3oXlFFKnGzms8a5dugHygGw1bqDstYI=
+github.com/gzigzigzeo/teleport/api v0.0.0-20210825203708-9d4f10b22d6c h1:xjtyRybkD0NB2GbH8VYHMTwigcIdV23GAviQd7hffYw=
+github.com/gzigzigzeo/teleport/api v0.0.0-20210825203708-9d4f10b22d6c/go.mod h1:s/ns3z5TYDbuDrVHHW8XD01E+oh9GcT3hP/Fz9LYmWw=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/errwrap v1.1.0 h1:OxrOeh75EUXMY8TBjag2fzXGZ40LB6IKw45YeGUDY2I=
 github.com/hashicorp/errwrap v1.1.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=

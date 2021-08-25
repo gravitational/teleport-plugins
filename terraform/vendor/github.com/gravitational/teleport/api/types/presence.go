@@ -25,12 +25,6 @@ import (
 	"github.com/gravitational/trace"
 )
 
-// ProxyGetter is a service that gets proxies
-type ProxyGetter interface {
-	// GetProxies returns a list of registered proxies
-	GetProxies() ([]Server, error)
-}
-
 // Site represents a cluster of teleport nodes who collectively trust the same
 // certificate authority (CA) and have a common name.
 //
@@ -57,6 +51,8 @@ func (s *KeepAlive) GetType() string {
 		return constants.KeepAliveApp
 	case KeepAlive_DATABASE:
 		return constants.KeepAliveDatabase
+	case KeepAlive_WINDOWS_DESKTOP:
+		return constants.KeepAliveWindowsDesktopService
 	default:
 		return constants.KeepAliveNode
 	}

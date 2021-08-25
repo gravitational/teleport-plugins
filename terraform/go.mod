@@ -4,6 +4,8 @@ go 1.15
 
 replace (
 	github.com/coreos/go-oidc => github.com/gravitational/go-oidc v0.0.3
+	// temporary: points to the PR in Teleport
+	github.com/gravitational/teleport/api => github.com/gzigzigzeo/teleport/api v0.0.0-20210825203708-9d4f10b22d6c
 	github.com/iovisor/gobpf => github.com/gravitational/gobpf v0.0.1
 	github.com/sirupsen/logrus => github.com/gravitational/logrus v1.4.3
 )
@@ -13,7 +15,7 @@ require (
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/gogo/protobuf v1.3.2
 	github.com/gravitational/protoc-gen-terraform v0.0.0-20210415164617-d46beb1615f0
-	github.com/gravitational/teleport/api v0.0.0-20210625041250-ca1e47bef0d4
+	github.com/gravitational/teleport/api v0.0.0-20210416222340-e63710a9498b
 	github.com/gravitational/trace v1.1.15
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-hclog v0.16.0 // indirect
