@@ -26,34 +26,32 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// dataSourceTeleportRole returns Teleport role data source definition
-func dataSourceTeleportRole() *schema.Resource {
+// dataSourceAuthPreference returns Teleport cluster auth preference
+func dataSourceAuthPreference() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceRoleRead,
-		Schema:      tfschema.SchemaRoleV4,
+		ReadContext: dataSourceAuthPreferenceRead,
+		Schema:      tfschema.SchemaAuthPreferenceV2,
 	}
 }
 
-// dataSourceRoleRead reads Teleport role
-func dataSourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+// dataSourceAuthPreferenceRead reads Teleport cluster auth preference
+func dataSourceAuthPreferenceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c, err := getClient(m)
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	id := d.Id()
-
-	r, err := c.GetRole(ctx, id)
+	g, err := c.GetAuthPreference(ctx)
 	if err != nil {
-		return diagFromErr(describeErr(err, "role"))
+		return diagFromErr(describeErr(err, "cluster_auth_preference"))
 	}
 
-	r4, ok := r.(*types.RoleV4)
+	g3, ok := g.(*types.AuthPreferenceV2)
 	if !ok {
-		return diagFromErr(trace.Errorf("can not convert %T to *types.RoleV3", r))
+		return diagFromErr(trace.Errorf("can not convert %T to *types.AuthPreferenceV2", g))
 	}
 
-	err = tfschema.SetRoleV4(r4, d)
+	err = tfschema.SetAuthPreferenceV2(g3, d)
 	if err != nil {
 		return diagFromErr(err)
 	}

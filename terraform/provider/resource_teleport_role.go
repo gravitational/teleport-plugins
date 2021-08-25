@@ -43,8 +43,8 @@ func resourceTeleportRole() *schema.Resource {
 		UpdateContext: resourceRoleUpdate,
 		DeleteContext: resourceRoleDelete,
 
-		Schema:        tfschema.SchemaRoleV3,
-		SchemaVersion: 3,
+		Schema:        tfschema.SchemaRoleV4,
+		SchemaVersion: 4,
 
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
@@ -76,14 +76,14 @@ func resourceRoleCreate(ctx context.Context, d *schema.ResourceData, m interface
 		return diagFromErr(describeErr(err, "role"))
 	}
 
-	r, err := types.NewRole(n, types.RoleSpecV3{})
+	r, err := types.NewRole(n, types.RoleSpecV4{})
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	r3, ok := r.(*types.RoleV3)
+	r3, ok := r.(*types.RoleV4)
 	if !ok {
-		return diagFromErr(fmt.Errorf("failed to convert created role to types.RoleV3 from %T", r))
+		return diagFromErr(fmt.Errorf("failed to convert created role to types.RoleV4 from %T", r))
 	}
 
 	removeMapAndListDefaults(r3)
@@ -92,7 +92,7 @@ func resourceRoleCreate(ctx context.Context, d *schema.ResourceData, m interface
 		return diagFromErr(err)
 	}
 
-	err = tfschema.GetRoleV3(r3, d)
+	err = tfschema.GetRoleV4(r3, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -123,7 +123,7 @@ func resourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}
 		return diag.Diagnostics{}
 	}
 
-	err = tfschema.SetRoleV3(r, d)
+	err = tfschema.SetRoleV4(r, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -148,7 +148,7 @@ func resourceRoleUpdate(ctx context.Context, d *schema.ResourceData, m interface
 
 	removeMapAndListDefaults(r)
 
-	err = tfschema.GetRoleV3(r, d)
+	err = tfschema.GetRoleV4(r, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -178,7 +178,7 @@ func resourceRoleDelete(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 // getRole gets role with graceful destroy handling
-func getRole(ctx context.Context, d *schema.ResourceData, c *client.Client) (*types.RoleV3, error) {
+func getRole(ctx context.Context, d *schema.ResourceData, c *client.Client) (*types.RoleV4, error) {
 	id := d.Id()
 
 	r, err := c.GetRole(ctx, id)
@@ -191,9 +191,9 @@ func getRole(ctx context.Context, d *schema.ResourceData, c *client.Client) (*ty
 		return nil, trace.Wrap(err)
 	}
 
-	r3, ok := r.(*types.RoleV3)
+	r3, ok := r.(*types.RoleV4)
 	if !ok {
-		return nil, fmt.Errorf("failed to convert created user to types.RoleV3 from %T", r)
+		return nil, fmt.Errorf("failed to convert created user to types.RoleV4 from %T", r)
 	}
 
 	removeMapAndListDefaults(r3)
@@ -202,7 +202,7 @@ func getRole(ctx context.Context, d *schema.ResourceData, c *client.Client) (*ty
 }
 
 // removeMapAndListDefaults removes invalid default items
-func removeMapAndListDefaults(r *types.RoleV3) {
+func removeMapAndListDefaults(r *types.RoleV4) {
 	removeDefaultLabel(r.Spec.Allow.AppLabels)
 	removeDefaultLabel(r.Spec.Allow.DatabaseLabels)
 	removeDefaultLabel(r.Spec.Allow.NodeLabels)
