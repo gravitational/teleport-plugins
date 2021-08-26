@@ -57,7 +57,7 @@ func resourceGithubConnectorCreate(ctx context.Context, d *schema.ResourceData, 
 		return diagFromErr(err)
 	}
 
-	_, err = c.GetGithubConnector(ctx, n, false)
+	_, err = c.GetGithubConnector(ctx, n, true)
 	if err == nil {
 		existErr := "GitHub connector " + n + " exists in Teleport. Either remove it (tctl rm github/" + n + ")" +
 			" or import it to the existing state (terraform import teleport_github_connector." + n + " " + n + ")"
@@ -68,27 +68,24 @@ func resourceGithubConnectorCreate(ctx context.Context, d *schema.ResourceData, 
 		return diagFromErr(describeErr(err, "github"))
 	}
 
-	cn, err := types.NewGithubConnector(n, types.GithubConnectorSpecV3{})
-	if err != nil {
-		return diagFromErr(describeErr(err, "github"))
-	}
+	cn := types.GithubConnectorV3{}
 
-	cn3, ok := cn.(*types.GithubConnectorV3)
-	if !ok {
-		return diagFromErr(fmt.Errorf("failed to convert created role to types.GithubConnectorV3 from %T", cn))
-	}
-
-	err = tfschema.GetGithubConnectorV3(cn3, d)
+	err = tfschema.GetGithubConnectorV3(&cn, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	err = c.UpsertGithubConnector(ctx, cn3)
+	err = cn.CheckAndSetDefaults()
+	if err != nil {
+		return diagFromErr(err)
+	}
+
+	err = c.UpsertGithubConnector(ctx, &cn)
 	if err != nil {
 		return diagFromErr(describeErr(err, "github"))
 	}
 
-	d.SetId(cn3.GetName())
+	d.SetId(cn.GetName())
 
 	return resourceGithubConnectorRead(ctx, d, m)
 }
@@ -108,7 +105,6 @@ func resourceGithubConnectorRead(ctx context.Context, d *schema.ResourceData, m 
 		d.SetId("")
 		return diag.Diagnostics{}
 	}
-
 	if err != nil {
 		return diagFromErr(describeErr(err, "github"))
 	}
@@ -137,7 +133,7 @@ func resourceGithubConnectorUpdate(ctx context.Context, d *schema.ResourceData, 
 
 	// This is the existence check. Since, there is no separate CreateGithubConnector method, we need to
 	// check that connector we are updating exists to avoid it's creation via UpsertGithubConnector.
-	cn, err := c.GetGithubConnector(ctx, id, false)
+	cn, err := c.GetGithubConnector(ctx, id, true)
 	if err != nil {
 		return diagFromErr(err)
 	}
