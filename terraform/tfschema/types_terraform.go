@@ -44,6 +44,18 @@ var (
 	SchemaProvisionTokenV2 = GenSchemaProvisionTokenV2()
 	// SchemaMetaProvisionTokenV2 is schema metadata for ProvisionTokenV2 specifies provisioning token
 	SchemaMetaProvisionTokenV2 = GenSchemaMetaProvisionTokenV2()
+	// SchemaClusterAuditConfigV2 is schema for ClusterAuditConfigV2 represents audit log settings in the cluster.
+	SchemaClusterAuditConfigV2 = GenSchemaClusterAuditConfigV2()
+	// SchemaMetaClusterAuditConfigV2 is schema metadata for ClusterAuditConfigV2 represents audit log settings in the cluster.
+	SchemaMetaClusterAuditConfigV2 = GenSchemaMetaClusterAuditConfigV2()
+	// SchemaClusterNetworkingConfigV2 is schema for ClusterNetworkingConfigV2 contains cluster-wide networking configuration.
+	SchemaClusterNetworkingConfigV2 = GenSchemaClusterNetworkingConfigV2()
+	// SchemaMetaClusterNetworkingConfigV2 is schema metadata for ClusterNetworkingConfigV2 contains cluster-wide networking configuration.
+	SchemaMetaClusterNetworkingConfigV2 = GenSchemaMetaClusterNetworkingConfigV2()
+	// SchemaSessionRecordingConfigV2 is schema for SessionRecordingConfigV2 contains session recording configuration.
+	SchemaSessionRecordingConfigV2 = GenSchemaSessionRecordingConfigV2()
+	// SchemaMetaSessionRecordingConfigV2 is schema metadata for SessionRecordingConfigV2 contains session recording configuration.
+	SchemaMetaSessionRecordingConfigV2 = GenSchemaMetaSessionRecordingConfigV2()
 	// SchemaAuthPreferenceV2 is schema for AuthPreferenceV2 implements the AuthPreference interface.
 	SchemaAuthPreferenceV2 = GenSchemaAuthPreferenceV2()
 	// SchemaMetaAuthPreferenceV2 is schema metadata for AuthPreferenceV2 implements the AuthPreference interface.
@@ -94,6 +106,27 @@ func GetProvisionTokenV2(obj *types.ProvisionTokenV2, data *schema.ResourceData)
 
 func SetProvisionTokenV2(obj *types.ProvisionTokenV2, data *schema.ResourceData) error {
 	return accessors.Set(obj, data, SchemaProvisionTokenV2, SchemaMetaProvisionTokenV2)
+}
+func GetClusterAuditConfigV2(obj *types.ClusterAuditConfigV2, data *schema.ResourceData) error {
+	return accessors.Get(obj, data, SchemaClusterAuditConfigV2, SchemaMetaClusterAuditConfigV2)
+}
+
+func SetClusterAuditConfigV2(obj *types.ClusterAuditConfigV2, data *schema.ResourceData) error {
+	return accessors.Set(obj, data, SchemaClusterAuditConfigV2, SchemaMetaClusterAuditConfigV2)
+}
+func GetClusterNetworkingConfigV2(obj *types.ClusterNetworkingConfigV2, data *schema.ResourceData) error {
+	return accessors.Get(obj, data, SchemaClusterNetworkingConfigV2, SchemaMetaClusterNetworkingConfigV2)
+}
+
+func SetClusterNetworkingConfigV2(obj *types.ClusterNetworkingConfigV2, data *schema.ResourceData) error {
+	return accessors.Set(obj, data, SchemaClusterNetworkingConfigV2, SchemaMetaClusterNetworkingConfigV2)
+}
+func GetSessionRecordingConfigV2(obj *types.SessionRecordingConfigV2, data *schema.ResourceData) error {
+	return accessors.Get(obj, data, SchemaSessionRecordingConfigV2, SchemaMetaSessionRecordingConfigV2)
+}
+
+func SetSessionRecordingConfigV2(obj *types.SessionRecordingConfigV2, data *schema.ResourceData) error {
+	return accessors.Set(obj, data, SchemaSessionRecordingConfigV2, SchemaMetaSessionRecordingConfigV2)
 }
 func GetAuthPreferenceV2(obj *types.AuthPreferenceV2, data *schema.ResourceData) error {
 	return accessors.Get(obj, data, SchemaAuthPreferenceV2, SchemaMetaAuthPreferenceV2)
@@ -326,6 +359,712 @@ func GenSchemaMetaProvisionTokenV2() map[string]*accessors.SchemaMeta {
 					Name:       "Roles",
 					IsTime:     false,
 					IsDuration: false,
+				},
+			},
+		},
+	}
+}
+
+// SchemaClusterAuditConfigV2 returns schema for ClusterAuditConfigV2
+//
+// ClusterAuditConfigV2 represents audit log settings in the cluster.
+func GenSchemaClusterAuditConfigV2() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		// Kind is a resource kind
+		"kind": {
+			Type:        schema.TypeString,
+			Description: "Kind is a resource kind",
+			Optional:    true,
+			Default:     "cluster_audit_config",
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Type:        schema.TypeString,
+			Description: "SubKind is an optional resource sub kind, used in some resources",
+			Optional:    true,
+			Default:     "",
+		},
+		// Version is a resource version
+		"version": {
+			Type:        schema.TypeString,
+			Description: "Version is a resource version",
+			Optional:    true,
+			Default:     "v2",
+		},
+		// Metadata is resource metadata
+		"metadata": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "Metadata is resource metadata",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Namespace is object namespace. The field should be called "namespace"
+					// when it returns in Teleport 2.4.
+					"namespace": {
+						Type:        schema.TypeString,
+						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
+						Optional:    true,
+						Default:     "default",
+					},
+					// Description is object description
+					"description": {
+						Type:        schema.TypeString,
+						Description: "Description is object description",
+						Optional:    true,
+					},
+					// Labels is a set of labels
+					"labels": {
+
+						Optional:    true,
+						Type:        schema.TypeMap,
+						Description: "Labels is a set of labels",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Expires is a global expiry time header can be set on any resource in the
+					// system.
+					"expires": {
+						Type:         schema.TypeString,
+						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
+						ValidateFunc: validation.IsRFC3339Time,
+						StateFunc:    TruncateMs,
+						Optional:     true,
+					},
+				},
+			},
+		},
+		// Spec is a ClusterAuditConfig specification
+		"spec": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "ClusterAuditConfigSpecV2 is the actual data we care about  for ClusterAuditConfig.",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Type is audit backend type
+					"type": {
+						Type:        schema.TypeString,
+						Description: "Type is audit backend type",
+						Optional:    true,
+					},
+					// Region is a region setting for audit sessions used by cloud providers
+					"region": {
+						Type:        schema.TypeString,
+						Description: "Region is a region setting for audit sessions used by cloud providers",
+						Optional:    true,
+					},
+					// AuditSessionsURI is a parameter where to upload sessions
+					"audit_sessions_uri": {
+						Type:        schema.TypeString,
+						Description: "AuditSessionsURI is a parameter where to upload sessions",
+						Optional:    true,
+					},
+					// AuditEventsURI is a parameter with all supported outputs
+					// for audit events
+					"audit_events_uri": SchemaStrings(),
+					// EnableContinuousBackups is used to enable (or disable) PITR (Point-In-Time Recovery).
+					"enable_continuous_backups": {
+						Type:        schema.TypeBool,
+						Description: "EnableContinuousBackups is used to enable (or disable) PITR (Point-In-Time Recovery).",
+						Optional:    true,
+					},
+					// EnableAutoScaling is used to enable (or disable) auto scaling policy.
+					"enable_auto_scaling": {
+						Type:        schema.TypeBool,
+						Description: "EnableAutoScaling is used to enable (or disable) auto scaling policy.",
+						Optional:    true,
+					},
+					// ReadMaxCapacity is the maximum provisioned read capacity.
+					"read_max_capacity": {
+						Type:        schema.TypeInt,
+						Description: "ReadMaxCapacity is the maximum provisioned read capacity.",
+						Optional:    true,
+					},
+					// ReadMinCapacity is the minimum provisioned read capacity.
+					"read_min_capacity": {
+						Type:        schema.TypeInt,
+						Description: "ReadMinCapacity is the minimum provisioned read capacity.",
+						Optional:    true,
+					},
+					// ReadTargetValue is the ratio of consumed read to provisioned capacity.
+					"read_target_value": {
+						Type:        schema.TypeFloat,
+						Description: "ReadTargetValue is the ratio of consumed read to provisioned capacity.",
+						Optional:    true,
+					},
+					// WriteMaxCapacity is the maximum provisioned write capacity.
+					"write_max_capacity": {
+						Type:        schema.TypeInt,
+						Description: "WriteMaxCapacity is the maximum provisioned write capacity.",
+						Optional:    true,
+					},
+					// WriteMinCapacity is the minimum provisioned write capacity.
+					"write_min_capacity": {
+						Type:        schema.TypeInt,
+						Description: "WriteMinCapacity is the minimum provisioned write capacity.",
+						Optional:    true,
+					},
+					// WriteTargetValue is the ratio of consumed write to provisioned capacity.
+					"write_target_value": {
+						Type:        schema.TypeFloat,
+						Description: "WriteTargetValue is the ratio of consumed write to provisioned capacity.",
+						Optional:    true,
+					},
+				},
+			},
+		},
+	}
+}
+
+// GenSchemaMetaClusterAuditConfigV2 returns schema for ClusterAuditConfigV2
+//
+// ClusterAuditConfigV2 represents audit log settings in the cluster.
+func GenSchemaMetaClusterAuditConfigV2() map[string]*accessors.SchemaMeta {
+	return map[string]*accessors.SchemaMeta{
+		// Kind is a resource kind
+		"kind": {
+			Name:       "Kind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Name:       "SubKind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Version is a resource version
+		"version": {
+			Name:       "Version",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Metadata is resource metadata
+		"metadata": {
+			Name:       "Metadata",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Namespace is object namespace. The field should be called "namespace"
+				// when it returns in Teleport 2.4.
+				"namespace": {
+					Name:       "Namespace",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Description is object description
+				"description": {
+					Name:       "Description",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Labels is a set of labels
+				"labels": {
+					Name:       "Labels",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Expires is a global expiry time header can be set on any resource in the
+				// system.
+				"expires": {
+					Name:       "Expires",
+					IsTime:     true,
+					IsDuration: false,
+				},
+			},
+		},
+		// Spec is a ClusterAuditConfig specification
+		"spec": {
+			Name:       "Spec",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Type is audit backend type
+				"type": {
+					Name:       "Type",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Region is a region setting for audit sessions used by cloud providers
+				"region": {
+					Name:       "Region",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// AuditSessionsURI is a parameter where to upload sessions
+				"audit_sessions_uri": {
+					Name:       "AuditSessionsURI",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// AuditEventsURI is a parameter with all supported outputs
+				// for audit events
+				"audit_events_uri": {
+					Name:       "AuditEventsURI",
+					IsTime:     false,
+					IsDuration: false,
+					Getter:     GetStrings,
+					Setter:     SetStrings,
+				},
+				// EnableContinuousBackups is used to enable (or disable) PITR (Point-In-Time Recovery).
+				"enable_continuous_backups": {
+					Name:       "EnableContinuousBackups",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// EnableAutoScaling is used to enable (or disable) auto scaling policy.
+				"enable_auto_scaling": {
+					Name:       "EnableAutoScaling",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// ReadMaxCapacity is the maximum provisioned read capacity.
+				"read_max_capacity": {
+					Name:       "ReadMaxCapacity",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// ReadMinCapacity is the minimum provisioned read capacity.
+				"read_min_capacity": {
+					Name:       "ReadMinCapacity",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// ReadTargetValue is the ratio of consumed read to provisioned capacity.
+				"read_target_value": {
+					Name:       "ReadTargetValue",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// WriteMaxCapacity is the maximum provisioned write capacity.
+				"write_max_capacity": {
+					Name:       "WriteMaxCapacity",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// WriteMinCapacity is the minimum provisioned write capacity.
+				"write_min_capacity": {
+					Name:       "WriteMinCapacity",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// WriteTargetValue is the ratio of consumed write to provisioned capacity.
+				"write_target_value": {
+					Name:       "WriteTargetValue",
+					IsTime:     false,
+					IsDuration: false,
+				},
+			},
+		},
+	}
+}
+
+// SchemaClusterNetworkingConfigV2 returns schema for ClusterNetworkingConfigV2
+//
+// ClusterNetworkingConfigV2 contains cluster-wide networking configuration.
+func GenSchemaClusterNetworkingConfigV2() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		// Kind is a resource kind
+		"kind": {
+			Type:        schema.TypeString,
+			Description: "Kind is a resource kind",
+			Optional:    true,
+			Default:     "cluster_networking_config",
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Type:        schema.TypeString,
+			Description: "SubKind is an optional resource sub kind, used in some resources",
+			Optional:    true,
+			Default:     "",
+		},
+		// Version is a resource version
+		"version": {
+			Type:        schema.TypeString,
+			Description: "Version is a resource version",
+			Optional:    true,
+			Default:     "v2",
+		},
+		// Metadata is resource metadata
+		"metadata": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "Metadata is resource metadata",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Namespace is object namespace. The field should be called "namespace"
+					// when it returns in Teleport 2.4.
+					"namespace": {
+						Type:        schema.TypeString,
+						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
+						Optional:    true,
+						Default:     "default",
+					},
+					// Description is object description
+					"description": {
+						Type:        schema.TypeString,
+						Description: "Description is object description",
+						Optional:    true,
+					},
+					// Labels is a set of labels
+					"labels": {
+
+						Optional:    true,
+						Type:        schema.TypeMap,
+						Description: "Labels is a set of labels",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Expires is a global expiry time header can be set on any resource in the
+					// system.
+					"expires": {
+						Type:         schema.TypeString,
+						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
+						ValidateFunc: validation.IsRFC3339Time,
+						StateFunc:    TruncateMs,
+						Optional:     true,
+					},
+				},
+			},
+		},
+		// Spec is a ClusterNetworkingConfig specification
+		"spec": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "ClusterNetworkingConfigSpecV2 is the actual data we care about  for ClusterNetworkingConfig.",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// ClientIdleTimeout sets global cluster default setting for client idle
+					// timeouts.
+					"client_idle_timeout": {
+						Type:             schema.TypeString,
+						Description:      "ClientIdleTimeout sets global cluster default setting for client idle  timeouts.",
+						DiffSuppressFunc: SuppressDurationChange,
+						Optional:         true,
+					},
+					// KeepAliveInterval is the interval at which the server sends keep-alive messsages
+					// to the client.
+					"keep_alive_interval": {
+						Type:             schema.TypeString,
+						Description:      "KeepAliveInterval is the interval at which the server sends keep-alive messsages  to the client.",
+						DiffSuppressFunc: SuppressDurationChange,
+						Optional:         true,
+						Default:          "5m0s",
+					},
+					// KeepAliveCountMax is the number of keep-alive messages that can be
+					// missed before the server disconnects the connection to the client.
+					"keep_alive_count_max": {
+						Type:        schema.TypeInt,
+						Description: "KeepAliveCountMax is the number of keep-alive messages that can be  missed before the server disconnects the connection to the client.",
+						Optional:    true,
+						Default:     3,
+					},
+					// SessionControlTimeout is the session control lease expiry and defines
+					// the upper limit of how long a node may be out of contact with the auth
+					// server before it begins terminating controlled sessions.
+					"session_control_timeout": {
+						Type:             schema.TypeString,
+						Description:      "SessionControlTimeout is the session control lease expiry and defines  the upper limit of how long a node may be out of contact with the auth  server before it begins terminating controlled sessions.",
+						DiffSuppressFunc: SuppressDurationChange,
+						Optional:         true,
+					},
+					// ClientIdleTimeoutMessage is the message sent to the user when a connection times out.
+					"client_idle_timeout_message": {
+						Type:        schema.TypeString,
+						Description: "ClientIdleTimeoutMessage is the message sent to the user when a connection times out.",
+						Optional:    true,
+					},
+				},
+			},
+		},
+	}
+}
+
+// GenSchemaMetaClusterNetworkingConfigV2 returns schema for ClusterNetworkingConfigV2
+//
+// ClusterNetworkingConfigV2 contains cluster-wide networking configuration.
+func GenSchemaMetaClusterNetworkingConfigV2() map[string]*accessors.SchemaMeta {
+	return map[string]*accessors.SchemaMeta{
+		// Kind is a resource kind
+		"kind": {
+			Name:       "Kind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Name:       "SubKind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Version is a resource version
+		"version": {
+			Name:       "Version",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Metadata is resource metadata
+		"metadata": {
+			Name:       "Metadata",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Namespace is object namespace. The field should be called "namespace"
+				// when it returns in Teleport 2.4.
+				"namespace": {
+					Name:       "Namespace",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Description is object description
+				"description": {
+					Name:       "Description",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Labels is a set of labels
+				"labels": {
+					Name:       "Labels",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Expires is a global expiry time header can be set on any resource in the
+				// system.
+				"expires": {
+					Name:       "Expires",
+					IsTime:     true,
+					IsDuration: false,
+				},
+			},
+		},
+		// Spec is a ClusterNetworkingConfig specification
+		"spec": {
+			Name:       "Spec",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// ClientIdleTimeout sets global cluster default setting for client idle
+				// timeouts.
+				"client_idle_timeout": {
+					Name:       "ClientIdleTimeout",
+					IsTime:     false,
+					IsDuration: true,
+				},
+				// KeepAliveInterval is the interval at which the server sends keep-alive messsages
+				// to the client.
+				"keep_alive_interval": {
+					Name:       "KeepAliveInterval",
+					IsTime:     false,
+					IsDuration: true,
+				},
+				// KeepAliveCountMax is the number of keep-alive messages that can be
+				// missed before the server disconnects the connection to the client.
+				"keep_alive_count_max": {
+					Name:       "KeepAliveCountMax",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// SessionControlTimeout is the session control lease expiry and defines
+				// the upper limit of how long a node may be out of contact with the auth
+				// server before it begins terminating controlled sessions.
+				"session_control_timeout": {
+					Name:       "SessionControlTimeout",
+					IsTime:     false,
+					IsDuration: true,
+				},
+				// ClientIdleTimeoutMessage is the message sent to the user when a connection times out.
+				"client_idle_timeout_message": {
+					Name:       "ClientIdleTimeoutMessage",
+					IsTime:     false,
+					IsDuration: false,
+				},
+			},
+		},
+	}
+}
+
+// SchemaSessionRecordingConfigV2 returns schema for SessionRecordingConfigV2
+//
+// SessionRecordingConfigV2 contains session recording configuration.
+func GenSchemaSessionRecordingConfigV2() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		// Kind is a resource kind
+		"kind": {
+			Type:        schema.TypeString,
+			Description: "Kind is a resource kind",
+			Optional:    true,
+			Default:     "session_recording_config",
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Type:        schema.TypeString,
+			Description: "SubKind is an optional resource sub kind, used in some resources",
+			Optional:    true,
+			Default:     "",
+		},
+		// Version is a resource version
+		"version": {
+			Type:        schema.TypeString,
+			Description: "Version is a resource version",
+			Optional:    true,
+			Default:     "v2",
+		},
+		// Metadata is resource metadata
+		"metadata": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "Metadata is resource metadata",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Namespace is object namespace. The field should be called "namespace"
+					// when it returns in Teleport 2.4.
+					"namespace": {
+						Type:        schema.TypeString,
+						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
+						Optional:    true,
+						Default:     "default",
+					},
+					// Description is object description
+					"description": {
+						Type:        schema.TypeString,
+						Description: "Description is object description",
+						Optional:    true,
+					},
+					// Labels is a set of labels
+					"labels": {
+
+						Optional:    true,
+						Type:        schema.TypeMap,
+						Description: "Labels is a set of labels",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Expires is a global expiry time header can be set on any resource in the
+					// system.
+					"expires": {
+						Type:         schema.TypeString,
+						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
+						ValidateFunc: validation.IsRFC3339Time,
+						StateFunc:    TruncateMs,
+						Optional:     true,
+					},
+				},
+			},
+		},
+		// Spec is a SessionRecordingConfig specification
+		"spec": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "SessionRecordingConfigSpecV2 is the actual data we care about  for SessionRecordingConfig.",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Mode controls where (or if) the session is recorded.
+					"mode": {
+						Type:        schema.TypeString,
+						Description: "Mode controls where (or if) the session is recorded.",
+						Optional:    true,
+						Default:     "node",
+					},
+					// ProxyChecksHostKeys is used to control if the proxy will check host keys
+					// when in recording mode.
+					"proxy_checks_host_keys": SchemaBoolOption(),
+				},
+			},
+		},
+	}
+}
+
+// GenSchemaMetaSessionRecordingConfigV2 returns schema for SessionRecordingConfigV2
+//
+// SessionRecordingConfigV2 contains session recording configuration.
+func GenSchemaMetaSessionRecordingConfigV2() map[string]*accessors.SchemaMeta {
+	return map[string]*accessors.SchemaMeta{
+		// Kind is a resource kind
+		"kind": {
+			Name:       "Kind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// SubKind is an optional resource sub kind, used in some resources
+		"sub_kind": {
+			Name:       "SubKind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Version is a resource version
+		"version": {
+			Name:       "Version",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Metadata is resource metadata
+		"metadata": {
+			Name:       "Metadata",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Namespace is object namespace. The field should be called "namespace"
+				// when it returns in Teleport 2.4.
+				"namespace": {
+					Name:       "Namespace",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Description is object description
+				"description": {
+					Name:       "Description",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Labels is a set of labels
+				"labels": {
+					Name:       "Labels",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Expires is a global expiry time header can be set on any resource in the
+				// system.
+				"expires": {
+					Name:       "Expires",
+					IsTime:     true,
+					IsDuration: false,
+				},
+			},
+		},
+		// Spec is a SessionRecordingConfig specification
+		"spec": {
+			Name:       "Spec",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Mode controls where (or if) the session is recorded.
+				"mode": {
+					Name:       "Mode",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// ProxyChecksHostKeys is used to control if the proxy will check host keys
+				// when in recording mode.
+				"proxy_checks_host_keys": {
+					Name:       "ProxyChecksHostKeys",
+					IsTime:     false,
+					IsDuration: false,
+					Getter:     GetBoolOption,
+					Setter:     SetBoolOption,
 				},
 			},
 		},
@@ -768,6 +1507,7 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 								},
 								// BPF defines what events to record for the BPF-based session recorder.
 								"bpf": {
+
 									Optional:    true,
 									Type:        schema.TypeList,
 									Description: "BPF defines what events to record for the BPF-based session recorder.",

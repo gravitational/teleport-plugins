@@ -26,32 +26,32 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// dataSourceTeleportAuthPreference returns Teleport cluster auth preference
-func dataSourceTeleportAuthPreference() *schema.Resource {
+// dataSourceTeleportClusterAuditConfig returns Teleport cluster audit config
+func dataSourceTeleportClusterAuditConfig() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceTeleportAuthPreferenceRead,
-		Schema:      tfschema.SchemaAuthPreferenceV2,
+		ReadContext: dataSourceTeleportClusterAuditConfigRead,
+		Schema:      tfschema.SchemaClusterAuditConfigV2,
 	}
 }
 
-// dataSourceTeleportAuthPreferenceRead reads Teleport cluster auth preference
-func dataSourceTeleportAuthPreferenceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+// dataSourceTeleportClusterAuditConfigRead reads Teleport cluster auth preference
+func dataSourceTeleportClusterAuditConfigRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c, err := getClient(m)
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	g, err := c.GetAuthPreference(ctx)
+	i, err := c.GetClusterAuditConfig(ctx)
 	if err != nil {
-		return diagFromErr(describeErr(err, "cluster_auth_preference"))
+		return diagFromErr(describeErr(err, types.KindClusterAuditConfig))
 	}
 
-	g3, ok := g.(*types.AuthPreferenceV2)
+	cfg, ok := i.(*types.ClusterAuditConfigV2)
 	if !ok {
-		return diagFromErr(trace.Errorf("can not convert %T to *types.AuthPreferenceV2", g))
+		return diagFromErr(trace.Errorf("can not convert %T to *types.ClusterAuditConfigV2", cfg))
 	}
 
-	err = tfschema.SetAuthPreferenceV2(g3, d)
+	err = tfschema.SetClusterAuditConfigV2(cfg, d)
 	if err != nil {
 		return diagFromErr(err)
 	}

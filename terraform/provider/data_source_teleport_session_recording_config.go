@@ -26,32 +26,32 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// dataSourceTeleportAuthPreference returns Teleport cluster auth preference
-func dataSourceTeleportAuthPreference() *schema.Resource {
+// dataSourceTeleportSessionRecordingConfig returns Teleport cluster networking config
+func dataSourceTeleportSessionRecordingConfig() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceTeleportAuthPreferenceRead,
-		Schema:      tfschema.SchemaAuthPreferenceV2,
+		ReadContext: dataSourceTeleportSessionRecordingConfigRead,
+		Schema:      tfschema.SchemaSessionRecordingConfigV2,
 	}
 }
 
-// dataSourceTeleportAuthPreferenceRead reads Teleport cluster auth preference
-func dataSourceTeleportAuthPreferenceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+// dataSourceTeleportSessionRecordingConfigRead reads Teleport cluster auth preference
+func dataSourceTeleportSessionRecordingConfigRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c, err := getClient(m)
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	g, err := c.GetAuthPreference(ctx)
+	i, err := c.GetSessionRecordingConfig(ctx)
 	if err != nil {
-		return diagFromErr(describeErr(err, "cluster_auth_preference"))
+		return diagFromErr(describeErr(err, types.KindSessionRecordingConfig))
 	}
 
-	g3, ok := g.(*types.AuthPreferenceV2)
+	cfg, ok := i.(*types.SessionRecordingConfigV2)
 	if !ok {
-		return diagFromErr(trace.Errorf("can not convert %T to *types.AuthPreferenceV2", g))
+		return diagFromErr(trace.Errorf("can not convert %T to *types.SessionRecordingConfigV2", cfg))
 	}
 
-	err = tfschema.SetAuthPreferenceV2(g3, d)
+	err = tfschema.SetSessionRecordingConfigV2(cfg, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
