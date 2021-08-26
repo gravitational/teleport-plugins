@@ -36,6 +36,12 @@ exclude_fields:
 
 # These fields will be marked as Computed: true
 computed_fields:
+    # SAML connector
+    - "types.SAMLConnectorV2.Spec.Audience"
+    - "types.SAMLConnectorV2.Spec.Issuer"
+    - "types.SAMLConnectorV2.Spec.ServiceProviderIssuer"
+    - "types.SAMLConnectorV2.Spec.SSO"
+    - "types.SAMLConnectorV2.Spec.SigningKeyPair" # Questionable: this is the list. No other way to avoid useless state triggers.
 
 # These fields will be marked as Required: true 
 required_fields:
@@ -67,7 +73,7 @@ required_fields:
     - "types.SAMLConnectorV2.Spec"
     - "types.SAMLConnectorV2.Spec.AssertionConsumerService"
     - "types.SAMLConnectorV2.Spec.EntityDescriptor"
-    - "types.SAMLConnectorV2.Spec.EntityDescriptorURL"
+    - "types.SAMLConnectorV2.Spec.AttributesToRoles"
 
     # OIDC connector
     - "types.OIDCConnectorV2.Spec"
@@ -97,6 +103,8 @@ defaults:
     "types.RoleV4.Spec.Options.CertificateFormat": "standard"
     "types.RoleV4.Spec.Allow.ReviewRequests.Where": ""
     "types.RoleV4.Spec.Deny.ReviewRequests.Where": ""
+    "types.RoleV4.Spec.Allow.Rules.Where": ""
+    "types.RoleV4.Spec.Deny.Rules.Where": ""
 
     # Provision token
     "types.ProvisionTokenV2.Version": "v2"
