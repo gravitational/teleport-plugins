@@ -8,12 +8,13 @@ custom_imports:
 # Top-level type names to export
 types:
     - "types.UserV2"
-    - "types.RoleV3"
+    - "types.RoleV4"
     - "types.ProvisionTokenV2"    
     - "types.GithubConnectorV3"
     - "types.SAMLConnectorV2"
     - "types.OIDCConnectorV2"
     - "types.TrustedClusterV2"
+    - "types.AuthPreferenceV2"
 
 # These fields will be excluded
 exclude_fields:
@@ -27,8 +28,11 @@ exclude_fields:
     - "types.UserSpecV2.Status"
 
     # Role
-    - "types.RoleV3.Spec.Allow.Namespaces" # These fields are not settable via API
-    - "types.RoleV3.Spec.Deny.Namespaces"
+    - "types.RoleV4.Spec.Allow.Namespaces" # These fields are not settable via API
+    - "types.RoleV4.Spec.Deny.Namespaces"
+
+    # AuthPreference
+    - "types.AuthPreferenceV2.Metadata.Name" # It's a signleton resource
 
 # These fields will be marked as Computed: true
 computed_fields:
@@ -39,13 +43,13 @@ required_fields:
     - "types.Metadata.Name"
 
     # Role
-    - "types.RoleV3.Spec"
+    - "types.RoleV4.Spec"
     
     # Provision token
     - "types.ProvisionTokenV2.Spec"
     # This field is required because it is non-empty by default. It can't be Computed because in this case
     # user would not be able to reset all nested fields to default values. If user sets an empty Computed field
-    # to empty, it keeps it's last value in the state and never gets reset to default value or deleted. 
+    # to nil value, it keeps it's last value in the state and never gets reset to default value or deleted. 
     # So, it's a workaround.
     - "types.ProvisionTokenV2.Spec.Options"
     - "types.ProvisionTokenV2.Spec.Roles"
@@ -68,6 +72,9 @@ required_fields:
     # OIDC connector
     - "types.OIDCConnectorV2.Spec"
 
+    # Auth preference
+    - "types.AuthPreferenceV2.Spec"
+
 # These fields will be marked as ForceNew: true
 force_new_fields:
     - "types.Metadata.Name" # We need to recreate object if it's name is changed
@@ -83,13 +90,13 @@ defaults:
     "types.UserV2.SubKind": ""
 
     # Role
-    "types.RoleV3.Version": "v3"
-    "types.RoleV3.Kind": "role"
-    "types.RoleV3.SubKind": ""
-    "types.RoleV3.Spec.Options.MaxSessionTTL": "30h"
-    "types.RoleV3.Spec.Options.CertificateFormat": "standard"
-    "types.RoleV3.Spec.Allow.ReviewRequests.Where": ""
-    "types.RoleV3.Spec.Deny.ReviewRequests.Where": ""
+    "types.RoleV4.Version": "v4"
+    "types.RoleV4.Kind": "role"
+    "types.RoleV4.SubKind": ""
+    "types.RoleV4.Spec.Options.MaxSessionTTL": "30h"
+    "types.RoleV4.Spec.Options.CertificateFormat": "standard"
+    "types.RoleV4.Spec.Allow.ReviewRequests.Where": ""
+    "types.RoleV4.Spec.Deny.ReviewRequests.Where": ""
 
     # Provision token
     "types.ProvisionTokenV2.Version": "v2"
@@ -115,6 +122,13 @@ defaults:
     "types.TrustedClusterV2.Version": "v2"
     "types.TrustedClusterV2.Kind": "trusted_cluster"
     "types.TrustedClusterV2.SubKind": ""
+
+    # Auth preference
+    "types.AuthPreferenceV2.Version": "v2"
+    "types.AuthPreferenceV2.Kind": "cluster_auth_preference"
+    "types.AuthPreferenceV2.SubKind": ""
+    "types.AuthPreferenceV2.Spec.SecondFactor": "otp"
+    "types.AuthPreferenceV2.Spec.Type": "local"
 
 # These fields will be marked as ConfigMode: schema.SchemaConfigModeAttrs
 config_mode_attr_fields:
