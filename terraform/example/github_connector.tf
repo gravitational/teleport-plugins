@@ -19,8 +19,8 @@ resource "teleport_github_connector" "github" {
        logins = ["example"]
 
        # Please, provide this values explicitly, event if empty 
-       kube_groups = []
-       kube_users = []
+       kubernetes_groups = []
+       kubernetes_users = []
     }
   }
 }
