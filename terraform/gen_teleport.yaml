@@ -150,6 +150,7 @@ defaults:
     "types.AuthPreferenceV2.SubKind": ""
     "types.AuthPreferenceV2.Spec.SecondFactor": "otp"
     "types.AuthPreferenceV2.Spec.Type": "local"
+    "types.AuthPreferenceV2.Spec.LockingMode": "best_effort"
 
     # Cluster networking config
     "types.ClusterNetworkingConfigV2.Version": "v2"
