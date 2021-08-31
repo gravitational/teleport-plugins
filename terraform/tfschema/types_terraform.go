@@ -467,13 +467,13 @@ func GenSchemaClusterAuditConfigV2() map[string]*schema.Schema {
 					// for audit events
 					"audit_events_uri": SchemaStrings(),
 					// EnableContinuousBackups is used to enable (or disable) PITR (Point-In-Time Recovery).
-					"enable_continuous_backups": {
+					"continuous_backups": {
 						Type:        schema.TypeBool,
 						Description: "EnableContinuousBackups is used to enable (or disable) PITR (Point-In-Time Recovery).",
 						Optional:    true,
 					},
 					// EnableAutoScaling is used to enable (or disable) auto scaling policy.
-					"enable_auto_scaling": {
+					"auto_scaling": {
 						Type:        schema.TypeBool,
 						Description: "EnableAutoScaling is used to enable (or disable) auto scaling policy.",
 						Optional:    true,
@@ -611,13 +611,13 @@ func GenSchemaMetaClusterAuditConfigV2() map[string]*accessors.SchemaMeta {
 					Setter:     SetStrings,
 				},
 				// EnableContinuousBackups is used to enable (or disable) PITR (Point-In-Time Recovery).
-				"enable_continuous_backups": {
+				"continuous_backups": {
 					Name:       "EnableContinuousBackups",
 					IsTime:     false,
 					IsDuration: false,
 				},
 				// EnableAutoScaling is used to enable (or disable) auto scaling policy.
-				"enable_auto_scaling": {
+				"auto_scaling": {
 					Name:       "EnableAutoScaling",
 					IsTime:     false,
 					IsDuration: false,
@@ -778,7 +778,7 @@ func GenSchemaClusterNetworkingConfigV2() map[string]*schema.Schema {
 						Optional:         true,
 					},
 					// ClientIdleTimeoutMessage is the message sent to the user when a connection times out.
-					"client_idle_timeout_message": {
+					"idle_timeout_message": {
 						Type:        schema.TypeString,
 						Description: "ClientIdleTimeoutMessage is the message sent to the user when a connection times out.",
 						Optional:    true,
@@ -882,7 +882,7 @@ func GenSchemaMetaClusterNetworkingConfigV2() map[string]*accessors.SchemaMeta {
 					IsDuration: true,
 				},
 				// ClientIdleTimeoutMessage is the message sent to the user when a connection times out.
-				"client_idle_timeout_message": {
+				"idle_timeout_message": {
 					Name:       "ClientIdleTimeoutMessage",
 					IsTime:     false,
 					IsDuration: false,
@@ -1199,7 +1199,7 @@ func GenSchemaAuthPreferenceV2() map[string]*schema.Schema {
 								},
 								// DeviceAttestationCAs contains the trusted attestation CAs for U2F
 								// devices.
-								"device_attestation_c_as": {
+								"device_attestation_cas": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
@@ -1331,7 +1331,7 @@ func GenSchemaMetaAuthPreferenceV2() map[string]*accessors.SchemaMeta {
 						},
 						// DeviceAttestationCAs contains the trusted attestation CAs for U2F
 						// devices.
-						"device_attestation_c_as": {
+						"device_attestation_cas": {
 							Name:       "DeviceAttestationCAs",
 							IsTime:     false,
 							IsDuration: false,
@@ -1484,7 +1484,7 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 								"port_forwarding": SchemaBoolOption(),
 								// CertificateFormat defines the format of the user certificate to allow
 								// compatibility with older versions of OpenSSH.
-								"certificate_format": {
+								"cert_format": {
 									Type:        schema.TypeString,
 									Description: "CertificateFormat defines the format of the user certificate to allow  compatibility with older versions of OpenSSH.",
 									Optional:    true,
@@ -1506,7 +1506,7 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 									Optional:    true,
 								},
 								// BPF defines what events to record for the BPF-based session recorder.
-								"bpf": {
+								"enhanced_recording": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
@@ -1516,7 +1516,7 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 									},
 								},
 								// PermitX11Forwarding authorizes use of X11 forwarding.
-								"permit_x11forwarding": {
+								"permit_x11_forwarding": {
 									Type:        schema.TypeBool,
 									Description: "PermitX11Forwarding authorizes use of X11 forwarding.",
 									Optional:    true,
@@ -1630,7 +1630,7 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 									},
 								},
 								// KubeGroups is a list of kubernetes groups
-								"kube_groups": {
+								"kubernetes_groups": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
@@ -1752,7 +1752,7 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 									},
 								},
 								// KubeUsers is an optional kubernetes users to impersonate
-								"kube_users": {
+								"kubernetes_users": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
@@ -1769,9 +1769,9 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 								// KubernetesLabels is a map of kubernetes cluster labels used for RBAC.
 								"kubernetes_labels": SchemaLabels(),
 								// DatabaseLabels are used in RBAC system to allow/deny access to databases.
-								"database_labels": SchemaLabels(),
+								"db_labels": SchemaLabels(),
 								// DatabaseNames is a list of database names this role is allowed to connect to.
-								"database_names": {
+								"db_names": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
@@ -1781,7 +1781,7 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 									},
 								},
 								// DatabaseUsers is a list of databaes users this role is allowed to connect as.
-								"database_users": {
+								"db_users": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
@@ -1969,7 +1969,7 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 									},
 								},
 								// KubeGroups is a list of kubernetes groups
-								"kube_groups": {
+								"kubernetes_groups": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
@@ -2091,7 +2091,7 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 									},
 								},
 								// KubeUsers is an optional kubernetes users to impersonate
-								"kube_users": {
+								"kubernetes_users": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
@@ -2108,9 +2108,9 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 								// KubernetesLabels is a map of kubernetes cluster labels used for RBAC.
 								"kubernetes_labels": SchemaLabels(),
 								// DatabaseLabels are used in RBAC system to allow/deny access to databases.
-								"database_labels": SchemaLabels(),
+								"db_labels": SchemaLabels(),
 								// DatabaseNames is a list of database names this role is allowed to connect to.
-								"database_names": {
+								"db_names": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
@@ -2120,7 +2120,7 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 									},
 								},
 								// DatabaseUsers is a list of databaes users this role is allowed to connect as.
-								"database_users": {
+								"db_users": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
@@ -2341,7 +2341,7 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 						},
 						// CertificateFormat defines the format of the user certificate to allow
 						// compatibility with older versions of OpenSSH.
-						"certificate_format": {
+						"cert_format": {
 							Name:       "CertificateFormat",
 							IsTime:     false,
 							IsDuration: false,
@@ -2361,13 +2361,13 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 							IsDuration: false,
 						},
 						// BPF defines what events to record for the BPF-based session recorder.
-						"bpf": {
+						"enhanced_recording": {
 							Name:       "BPF",
 							IsTime:     false,
 							IsDuration: false,
 						},
 						// PermitX11Forwarding authorizes use of X11 forwarding.
-						"permit_x11forwarding": {
+						"permit_x11_forwarding": {
 							Name:       "PermitX11Forwarding",
 							IsTime:     false,
 							IsDuration: false,
@@ -2463,7 +2463,7 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 							},
 						},
 						// KubeGroups is a list of kubernetes groups
-						"kube_groups": {
+						"kubernetes_groups": {
 							Name:       "KubeGroups",
 							IsTime:     false,
 							IsDuration: false,
@@ -2565,7 +2565,7 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 							},
 						},
 						// KubeUsers is an optional kubernetes users to impersonate
-						"kube_users": {
+						"kubernetes_users": {
 							Name:       "KubeUsers",
 							IsTime:     false,
 							IsDuration: false,
@@ -2596,7 +2596,7 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 							Setter:     SetLabels,
 						},
 						// DatabaseLabels are used in RBAC system to allow/deny access to databases.
-						"database_labels": {
+						"db_labels": {
 							Name:       "DatabaseLabels",
 							IsTime:     false,
 							IsDuration: false,
@@ -2604,13 +2604,13 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 							Setter:     SetLabels,
 						},
 						// DatabaseNames is a list of database names this role is allowed to connect to.
-						"database_names": {
+						"db_names": {
 							Name:       "DatabaseNames",
 							IsTime:     false,
 							IsDuration: false,
 						},
 						// DatabaseUsers is a list of databaes users this role is allowed to connect as.
-						"database_users": {
+						"db_users": {
 							Name:       "DatabaseUsers",
 							IsTime:     false,
 							IsDuration: false,
@@ -2748,7 +2748,7 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 							},
 						},
 						// KubeGroups is a list of kubernetes groups
-						"kube_groups": {
+						"kubernetes_groups": {
 							Name:       "KubeGroups",
 							IsTime:     false,
 							IsDuration: false,
@@ -2850,7 +2850,7 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 							},
 						},
 						// KubeUsers is an optional kubernetes users to impersonate
-						"kube_users": {
+						"kubernetes_users": {
 							Name:       "KubeUsers",
 							IsTime:     false,
 							IsDuration: false,
@@ -2881,7 +2881,7 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 							Setter:     SetLabels,
 						},
 						// DatabaseLabels are used in RBAC system to allow/deny access to databases.
-						"database_labels": {
+						"db_labels": {
 							Name:       "DatabaseLabels",
 							IsTime:     false,
 							IsDuration: false,
@@ -2889,13 +2889,13 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 							Setter:     SetLabels,
 						},
 						// DatabaseNames is a list of database names this role is allowed to connect to.
-						"database_names": {
+						"db_names": {
 							Name:       "DatabaseNames",
 							IsTime:     false,
 							IsDuration: false,
 						},
 						// DatabaseUsers is a list of databaes users this role is allowed to connect as.
-						"database_users": {
+						"db_users": {
 							Name:       "DatabaseUsers",
 							IsTime:     false,
 							IsDuration: false,
@@ -3429,7 +3429,7 @@ func GenSchemaOIDCConnectorV2() map[string]*schema.Schema {
 					},
 					// ACR is an Authentication Context Class Reference value. The meaning of the ACR
 					// value is context-specific and varies for identity providers.
-					"acr": {
+					"acr_values": {
 						Type:        schema.TypeString,
 						Description: "ACR is an Authentication Context Class Reference value. The meaning of the ACR  value is context-specific and varies for identity providers.",
 						Optional:    true,
@@ -3617,7 +3617,7 @@ func GenSchemaMetaOIDCConnectorV2() map[string]*accessors.SchemaMeta {
 				},
 				// ACR is an Authentication Context Class Reference value. The meaning of the ACR
 				// value is context-specific and varies for identity providers.
-				"acr": {
+				"acr_values": {
 					Name:       "ACR",
 					IsTime:     false,
 					IsDuration: false,
@@ -3812,7 +3812,7 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 					},
 					// AssertionConsumerService is a URL for assertion consumer service
 					// on the service provider (Teleport's side).
-					"assertion_consumer_service": {
+					"acs": {
 						Type:        schema.TypeString,
 						Description: "AssertionConsumerService is a URL for assertion consumer service  on the service provider (Teleport's side).",
 						Required:    true,
@@ -3909,7 +3909,7 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 						Optional:    true,
 					},
 					// EncryptionKeyPair is a key pair used for decrypting SAML assertions.
-					"encryption_key_pair": {
+					"assertion_key_pair": {
 						Type:        schema.TypeList,
 						MaxItems:    1,
 						Description: "AsymmetricKeyPair is a combination of a public certificate and  private key that can be used for encryption and signing.",
@@ -4034,7 +4034,7 @@ func GenSchemaMetaSAMLConnectorV2() map[string]*accessors.SchemaMeta {
 				},
 				// AssertionConsumerService is a URL for assertion consumer service
 				// on the service provider (Teleport's side).
-				"assertion_consumer_service": {
+				"acs": {
 					Name:       "AssertionConsumerService",
 					IsTime:     false,
 					IsDuration: false,
@@ -4117,7 +4117,7 @@ func GenSchemaMetaSAMLConnectorV2() map[string]*accessors.SchemaMeta {
 					IsDuration: false,
 				},
 				// EncryptionKeyPair is a key pair used for decrypting SAML assertions.
-				"encryption_key_pair": {
+				"assertion_key_pair": {
 					Name:       "EncryptionKeyPair",
 					IsTime:     false,
 					IsDuration: false,
@@ -4277,7 +4277,7 @@ func GenSchemaGithubConnectorV3() map[string]*schema.Schema {
 									},
 								},
 								// KubeGroups is a list of allowed kubernetes groups for this org/team.
-								"kube_groups": {
+								"kubernetes_groups": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
@@ -4287,7 +4287,7 @@ func GenSchemaGithubConnectorV3() map[string]*schema.Schema {
 									},
 								},
 								// KubeUsers is a list of allowed kubernetes users to impersonate for this org/team.
-								"kube_users": {
+								"kubernetes_users": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
@@ -4423,13 +4423,13 @@ func GenSchemaMetaGithubConnectorV3() map[string]*accessors.SchemaMeta {
 							IsDuration: false,
 						},
 						// KubeGroups is a list of allowed kubernetes groups for this org/team.
-						"kube_groups": {
+						"kubernetes_groups": {
 							Name:       "KubeGroups",
 							IsTime:     false,
 							IsDuration: false,
 						},
 						// KubeUsers is a list of allowed kubernetes users to impersonate for this org/team.
-						"kube_users": {
+						"kubernetes_users": {
 							Name:       "KubeUsers",
 							IsTime:     false,
 							IsDuration: false,
@@ -4560,14 +4560,14 @@ func GenSchemaTrustedClusterV2() map[string]*schema.Schema {
 					},
 					// ProxyAddress is the address of the web proxy server of the cluster to join. If not set,
 					// it is derived from <metadata.name>:<default web proxy server port>.
-					"proxy_address": {
+					"web_proxy_addr": {
 						Type:        schema.TypeString,
 						Description: "ProxyAddress is the address of the web proxy server of the cluster to join. If not set,  it is derived from <metadata.name>:<default web proxy server port>.",
 						Optional:    true,
 					},
 					// ReverseTunnelAddress is the address of the SSH proxy server of the cluster to join. If
 					// not set, it is derived from <metadata.name>:<default reverse tunnel port>.
-					"reverse_tunnel_address": {
+					"tunnel_addr": {
 						Type:        schema.TypeString,
 						Description: "ReverseTunnelAddress is the address of the SSH proxy server of the cluster to join. If  not set, it is derived from <metadata.name>:<default reverse tunnel port>.",
 						Optional:    true,
@@ -4696,14 +4696,14 @@ func GenSchemaMetaTrustedClusterV2() map[string]*accessors.SchemaMeta {
 				},
 				// ProxyAddress is the address of the web proxy server of the cluster to join. If not set,
 				// it is derived from <metadata.name>:<default web proxy server port>.
-				"proxy_address": {
+				"web_proxy_addr": {
 					Name:       "ProxyAddress",
 					IsTime:     false,
 					IsDuration: false,
 				},
 				// ReverseTunnelAddress is the address of the SSH proxy server of the cluster to join. If
 				// not set, it is derived from <metadata.name>:<default reverse tunnel port>.
-				"reverse_tunnel_address": {
+				"tunnel_addr": {
 					Name:       "ReverseTunnelAddress",
 					IsTime:     false,
 					IsDuration: false,

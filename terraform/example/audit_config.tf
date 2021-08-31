@@ -9,7 +9,6 @@ resource "teleport_cluster_audit_config" "example" {
   }
 
   spec {
-    enable_continuous_backups = true
     audit_events_uri = ["http://example.com"]
   }
 }
