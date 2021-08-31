@@ -28,11 +28,6 @@ import (
 	"github.com/gravitational/teleport/api/types"
 )
 
-const (
-	// AuthPreference resource is singular, it does not need dynamic resource
-	clusterAuthPreferenceID = "cluster_auth_preference"
-)
-
 // resourceTeleportAuthPreference returns Teleport auth_preference resource definition
 func resourceTeleportAuthPreference() *schema.Resource {
 	return &schema.Resource{
@@ -59,7 +54,7 @@ func resourceAuthPreferenceCreate(ctx context.Context, d *schema.ResourceData, m
 
 	cn, err := types.NewAuthPreference(types.AuthPreferenceSpecV2{})
 	if err != nil {
-		return diagFromErr(describeErr(err, "cluster_auth_preference"))
+		return diagFromErr(describeErr(err, types.KindClusterAuthPreference))
 	}
 
 	cn3, ok := cn.(*types.AuthPreferenceV2)
@@ -74,10 +69,10 @@ func resourceAuthPreferenceCreate(ctx context.Context, d *schema.ResourceData, m
 
 	err = c.SetAuthPreference(ctx, cn3)
 	if err != nil {
-		return diagFromErr(describeErr(err, "cluster_auth_preference"))
+		return diagFromErr(describeErr(err, types.KindClusterAuthPreference))
 	}
 
-	d.SetId(clusterAuthPreferenceID)
+	d.SetId(types.KindClusterAuthPreference)
 
 	return resourceAuthPreferenceRead(ctx, d, m)
 }
@@ -97,7 +92,7 @@ func resourceAuthPreferenceRead(ctx context.Context, d *schema.ResourceData, m i
 	}
 
 	if err != nil {
-		return diagFromErr(describeErr(err, "cluster_auth_preference"))
+		return diagFromErr(describeErr(err, types.KindClusterAuthPreference))
 	}
 
 	cn3, ok := cn.(*types.AuthPreferenceV2)
@@ -105,14 +100,14 @@ func resourceAuthPreferenceRead(ctx context.Context, d *schema.ResourceData, m i
 		return diagFromErr(fmt.Errorf("failed to convert created cluster_auth_preference to types.AuthPreferenceV3 from %T", cn))
 	}
 
-	removeOriginLabel(cn3)
+	removeOriginLabel(cn3.Metadata.Labels)
 
 	err = tfschema.SetAuthPreferenceV2(cn3, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	d.SetId(clusterAuthPreferenceID)
+	d.SetId(types.KindClusterAuthPreference)
 
 	return diag.Diagnostics{}
 }
@@ -142,7 +137,7 @@ func resourceAuthPreferenceUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	err = c.SetAuthPreference(ctx, cn3)
 	if err != nil {
-		return diagFromErr(describeErr(err, "cluster_auth_preference"))
+		return diagFromErr(describeErr(err, types.KindClusterAuthPreference))
 	}
 
 	return resourceAuthPreferenceRead(ctx, d, m)
@@ -161,10 +156,4 @@ func resourceAuthPreferenceDelete(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	return diag.Diagnostics{}
-}
-
-func removeOriginLabel(r *types.AuthPreferenceV2) {
-	if r.Metadata.Labels["teleport.dev/origin"] == "dynamic" {
-		delete(r.Metadata.Labels, "teleport.dev/origin")
-	}
 }

@@ -4,7 +4,17 @@ metadata:
 spec:
   allow:
     rules:
-      - resources: ['user', 'role', 'token', 'trusted_cluster', 'github', 'oidc', 'saml', 'cluster_auth_preference']
+      - resources:
+        - user
+        - role
+        - token
+        - trusted_cluster
+        - github
+        - oidc
+        - saml
+        - cluster_auth_preference
+        - cluster_networking_config
+        - session_recording_config
         verbs: ['list','create','read','update','delete']
 version: v4
 ---

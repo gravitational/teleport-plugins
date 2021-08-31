@@ -15,6 +15,9 @@ types:
     - "types.OIDCConnectorV2"
     - "types.TrustedClusterV2"
     - "types.AuthPreferenceV2"
+    - "types.ClusterNetworkingConfigV2"
+    - "types.SessionRecordingConfigV2"
+    - "types.ClusterAuditConfigV2"
 
 # These fields will be excluded
 exclude_fields:
@@ -33,6 +36,15 @@ exclude_fields:
 
     # AuthPreference
     - "types.AuthPreferenceV2.Metadata.Name" # It's a signleton resource
+
+    # NetworkingConfig
+    - "types.ClusterNetworkingConfigV2.Metadata.Name" # It's a signleton resource
+
+    # SessionRecordingConfig
+    - "types.SessionRecordingConfigV2.Metadata.Name" # It's a signleton resource
+
+    # ClusterAuditConfig
+    - "types.ClusterAuditConfigV2.Metadata.Name" # It's a signleton resource
 
 # These fields will be marked as Computed: true
 computed_fields:
@@ -138,6 +150,24 @@ defaults:
     "types.AuthPreferenceV2.Spec.SecondFactor": "otp"
     "types.AuthPreferenceV2.Spec.Type": "local"
 
+    # Cluster networking config
+    "types.ClusterNetworkingConfigV2.Version": "v2"
+    "types.ClusterNetworkingConfigV2.Kind": "cluster_networking_config"
+    "types.ClusterNetworkingConfigV2.SubKind": ""
+    "types.ClusterNetworkingConfigV2.Spec.KeepAliveCountMax": 3
+    "types.ClusterNetworkingConfigV2.Spec.KeepAliveInterval": "5m0s"
+
+    # Session recording config
+    "types.SessionRecordingConfigV2.Version": "v2"
+    "types.SessionRecordingConfigV2.Kind": "session_recording_config"
+    "types.SessionRecordingConfigV2.SubKind": ""
+    "types.SessionRecordingConfigV2.Spec.Mode": "node"
+
+    # Cluster audit config
+    "types.ClusterAuditConfigV2.Version": "v2"
+    "types.ClusterAuditConfigV2.Kind": "cluster_audit_config"
+    "types.ClusterAuditConfigV2.SubKind": ""
+
 # These fields will be marked as ConfigMode: schema.SchemaConfigModeAttrs
 config_mode_attr_fields:
 
@@ -149,6 +179,7 @@ suffixes:
     "BoolOption": "BoolOption" # This is listed here for convenience. Just to have all custom method names in a single place.
     "Labels": "Labels"
     "github.com/gravitational/teleport/api/types/wrappers.Traits": "Traits"
+    "github.com/gravitational/teleport/api/types/wrappers.Strings": "Strings"
 
 # These funcs will be used as a state funcs for a fields
 state_func:
