@@ -4,6 +4,7 @@ default_package_name: "types"
 duration_custom_type: "Duration"
 custom_imports:
     - "github.com/gravitational/teleport/api/types"
+use_json_tag: true
 
 # Top-level type names to export
 types:
