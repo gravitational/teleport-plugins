@@ -195,6 +195,8 @@ github.com/googleapis/gax-go/v2
 github.com/googleapis/gnostic/compiler
 github.com/googleapis/gnostic/extensions
 github.com/googleapis/gnostic/openapiv2
+# github.com/gorilla/mux v1.8.0
+github.com/gorilla/mux
 # github.com/gravitational/configure v0.0.0-20180808141939-c3428bd84c23
 github.com/gravitational/configure/cstrings
 github.com/gravitational/configure/jsonschema
@@ -362,6 +364,10 @@ github.com/mailgun/holster/v3/syncutil
 # github.com/mailgun/lemma v0.0.0-20170619173223-4214099fb348
 github.com/mailgun/lemma/random
 github.com/mailgun/lemma/secret
+# github.com/mailgun/mailgun-go/v4 v4.5.3
+## explicit
+github.com/mailgun/mailgun-go/v4
+github.com/mailgun/mailgun-go/v4/events
 # github.com/mailgun/metrics v0.0.0-20150124003306-2b3c4565aafd
 github.com/mailgun/metrics
 # github.com/mailgun/minheap v0.0.0-20170619185613-3dbe6c6bf55f
@@ -755,11 +761,17 @@ google.golang.org/protobuf/types/known/structpb
 google.golang.org/protobuf/types/known/timestamppb
 google.golang.org/protobuf/types/known/wrapperspb
 google.golang.org/protobuf/types/pluginpb
+# gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc
+## explicit
+gopkg.in/alexcesaro/quotedprintable.v3
 # gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 ## explicit
 gopkg.in/check.v1
 # gopkg.in/inf.v0 v0.9.1
 gopkg.in/inf.v0
+# gopkg.in/mail.v2 v2.3.1
+## explicit
+gopkg.in/mail.v2
 # gopkg.in/mgo.v2 v2.0.0-20190816093944-a6b53ec6cb22
 gopkg.in/mgo.v2/bson
 gopkg.in/mgo.v2/internal/json

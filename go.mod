@@ -14,6 +14,7 @@ require (
 	github.com/jonboulle/clockwork v0.2.2
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/mailgun/holster/v3 v3.15.2
+	github.com/mailgun/mailgun-go/v4 v4.5.3
 	github.com/pborman/uuid v1.2.1
 	github.com/pelletier/go-toml v1.8.0
 	github.com/sirupsen/logrus v1.8.1-0.20210219125412-f104497f2b21
@@ -22,7 +23,9 @@ require (
 	go.etcd.io/bbolt v1.3.5
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83
 	google.golang.org/grpc v1.31.0
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
+	gopkg.in/mail.v2 v2.3.1
 	gopkg.in/resty.v1 v1.12.0
 )
 
