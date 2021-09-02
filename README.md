@@ -67,11 +67,5 @@ the approval workdlow. See more in the [access/webhooks/README.md](/access/webho
 
 ## Terraform Provider
 
-The [Teleport Terraform Provider](./terraform) makes it easy to create resources using 
+The [Teleport Terraform Provider](./terraform) makes it easy to create resources using
 Terraform. More info can be found in [terraform/README.md](./terraform/README.md).
-
-## Notes
-
-Use `scripts/dep` for dependencies management. It is a wrapper over `dep` which
-ignores git submodules.
-
