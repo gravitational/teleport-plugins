@@ -49,6 +49,8 @@ github.com/google/go-querystring/query
 # github.com/google/uuid v1.2.0
 ## explicit
 github.com/google/uuid
+# github.com/gorilla/mux v1.8.0
+github.com/gorilla/mux
 # github.com/gravitational/kingpin v2.1.11-0.20190130013101-742f2714c145+incompatible
 ## explicit
 github.com/gravitational/kingpin
@@ -81,6 +83,8 @@ github.com/hashicorp/go-version
 # github.com/jonboulle/clockwork v0.2.2
 ## explicit
 github.com/jonboulle/clockwork
+# github.com/json-iterator/go v1.1.10
+github.com/json-iterator/go
 # github.com/julienschmidt/httprouter v1.3.0 => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 ## explicit
 github.com/julienschmidt/httprouter
@@ -91,6 +95,14 @@ github.com/julienschmidt/httprouter
 github.com/mailgun/holster/v3/clock
 github.com/mailgun/holster/v3/collections
 github.com/mailgun/holster/v3/syncutil
+# github.com/mailgun/mailgun-go/v4 v4.5.3
+## explicit
+github.com/mailgun/mailgun-go/v4
+github.com/mailgun/mailgun-go/v4/events
+# github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd
+github.com/modern-go/concurrent
+# github.com/modern-go/reflect2 v1.0.1
+github.com/modern-go/reflect2
 # github.com/pelletier/go-toml v1.8.0
 ## explicit
 github.com/pelletier/go-toml
@@ -229,6 +241,12 @@ google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/emptypb
 google.golang.org/protobuf/types/known/structpb
 google.golang.org/protobuf/types/known/timestamppb
+# gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc
+## explicit
+gopkg.in/alexcesaro/quotedprintable.v3
+# gopkg.in/mail.v2 v2.3.1
+## explicit
+gopkg.in/mail.v2
 # gopkg.in/resty.v1 v1.12.0
 ## explicit
 gopkg.in/resty.v1
