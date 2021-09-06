@@ -191,7 +191,7 @@ Afger generating the config, edit it as follows:
 ```TOML
 # example teleport-pagerduty configuration TOML file
 [teleport]
-auth_server = "example.com:3025"                            # Teleport Auth Server GRPC API address
+addr = "example.com:3025"                                   # Teleport Auth Server GRPC API address
 client_key = "/var/lib/teleport/plugins/pagerduty/auth.key" # Teleport GRPC client secret key
 client_crt = "/var/lib/teleport/plugins/pagerduty/auth.crt" # Teleport GRPC client certificate
 root_cas = "/var/lib/teleport/plugins/pagerduty/auth.cas"   # Teleport cluster CA certs

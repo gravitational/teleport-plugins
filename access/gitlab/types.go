@@ -1,17 +1,29 @@
+/*
+Copyright 2020-2021 Gravitational, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
 	"context"
 	"encoding/binary"
-	"fmt"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 	"unicode"
-
-	"github.com/gravitational/teleport-plugins/access"
 )
 
 const (
@@ -19,23 +31,6 @@ const (
 	ApproveAction
 	DenyAction
 )
-
-type RequestData struct {
-	User    string
-	Roles   []string
-	Created time.Time
-}
-
-type GitlabData struct {
-	ID        IntID
-	IID       IntID
-	ProjectID IntID
-}
-
-type PluginData struct {
-	RequestData
-	GitlabData
-}
 
 type ActionID int
 
@@ -74,30 +69,36 @@ type HookParams struct {
 }
 
 type ProjectHook struct {
-	ID  IntID  `json:"id"`
-	URL string `json:"url,omitempty"`
+	ID        IntID  `json:"id"`
+	ProjectID IntID  `json:"project_id"`
+	URL       string `json:"url,omitempty"`
 }
 
 type IssueParams struct {
-	Title       string `json:"title,omitempty"`
-	Description string `json:"description,omitempty"`
-	Labels      string `json:"labels,omitempty"`
-	StateEvent  string `json:"state_event,omitempty"`
+	Title        string `json:"title,omitempty"`
+	Description  string `json:"description,omitempty"`
+	Labels       string `json:"labels,omitempty"`
+	StateEvent   string `json:"state_event,omitempty"`
+	RemoveLabels string `json:"remove_labels,omitempty"`
+	AddLabels    string `json:"add_labels,omitempty"`
 }
 
 type Issue struct {
-	ID          IntID   `json:"id,omitempty"`
-	IID         IntID   `json:"iid,omitempty"`
-	ProjectID   IntID   `json:"project_id,omitempty"`
-	Title       string  `json:"title,omitempty"`
-	Description string  `json:"description,omitempty"`
-	State       string  `json:"state,omitempty"`
-	Labels      []Label `json:"labels,omitempty"`
+	ID          IntID    `json:"id,omitempty"`
+	IID         IntID    `json:"iid,omitempty"`
+	ProjectID   IntID    `json:"project_id,omitempty"`
+	Title       string   `json:"title,omitempty"`
+	Description string   `json:"description,omitempty"`
+	State       string   `json:"state,omitempty"`
+	Labels      []string `json:"labels,omitempty"`
 }
 
 type IssueObjectAttributes struct {
-	Action string `json:"action,omitempty"`
-	Issue
+	Action      string `json:"action,omitempty"`
+	ID          IntID  `json:"id,omitempty"`
+	IID         IntID  `json:"iid,omitempty"`
+	ProjectID   IntID  `json:"project_id,omitempty"`
+	Description string `json:"description,omitempty"`
 }
 
 type IssueChanges struct {
@@ -108,6 +109,19 @@ type User struct {
 	Name     string `json:"name,omitempty"`
 	Username string `json:"username,omitempty"`
 	Email    string `json:"email,omitempty"`
+}
+
+type Note struct {
+	ID           IntID  `json:"id"`
+	NoteableType string `json:"noteable_type"` //nolint:misspell
+	NoteableID   IntID  `json:"noteable_id"`   //nolint:misspell
+	Body         string `json:"body"`
+	Confidential bool   `json:"confidential"`
+}
+
+type NoteParams struct {
+	Body         string `json:"body"`
+	Confidential bool   `json:"confidential,omitempty"`
 }
 
 type IssueEvent struct {
@@ -128,30 +142,7 @@ type ErrorResult struct {
 	Message interface{} `json:"message,omitempty"`
 }
 
-var issueDescriptionRegex = regexp.MustCompile(`(?i)request\s+id\s+is\s+([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})`)
-
-func DecodePluginData(dataMap access.PluginDataMap) (data PluginData) {
-	var created int64
-	data.User = dataMap["user"]
-	data.Roles = strings.Split(dataMap["roles"], ",")
-	fmt.Sscanf(dataMap["created"], "%d", &created)
-	data.Created = time.Unix(created, 0)
-	fmt.Sscanf(dataMap["issue_id"], "%d", &data.ID)
-	fmt.Sscanf(dataMap["issue_iid"], "%d", &data.IID)
-	fmt.Sscanf(dataMap["project_id"], "%d", &data.ProjectID)
-	return
-}
-
-func EncodePluginData(data PluginData) access.PluginDataMap {
-	return access.PluginDataMap{
-		"issue_id":   fmt.Sprintf("%d", data.ID),
-		"issue_iid":  fmt.Sprintf("%d", data.IID),
-		"project_id": fmt.Sprintf("%d", data.ProjectID),
-		"user":       data.User,
-		"roles":      strings.Join(data.Roles, ","),
-		"created":    fmt.Sprintf("%d", data.Created.Unix()),
-	}
-}
+var issueDescriptionRegex = regexp.MustCompile(`(?i)request\s+id\s+is.+([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})`)
 
 func (id IntID) String() string {
 	return strconv.FormatUint(uint64(id), 10)
@@ -237,7 +228,7 @@ func (labels *LabelsChange) Diff() []Label {
 
 // ParseDescriptionRequestID is a fallback for searching request id in the issue description
 // if it's missing in the database.
-func (issue *Issue) ParseDescriptionRequestID() string {
+func (issue IssueObjectAttributes) ParseDescriptionRequestID() string {
 	submatches := issueDescriptionRegex.FindStringSubmatch(issue.Description)
 	if len(submatches) > 1 {
 		return submatches[1]

@@ -24,15 +24,21 @@ type SlackConfig struct {
 const exampleConfig = `# Example slack plugin configuration TOML file
 
 [teleport]
-auth_server = "0.0.0.0:3025"                              # Teleport Auth Server GRPC API address
+# Teleport Auth/Proxy Server address.
+#
+# Should be port 3025 for Auth Server and 3080 or 443 for Proxy.
+# For Teleport Cloud, should be in the form "your-account.teleport.sh:443".
+addr = "example.com:3025"
 
-# tctl auth sign --format=file --auth-server=auth.example.com:3025 --user=access-plugin --out=auth --ttl=1h
-identity = "/var/lib/teleport/plugins/slack/auth"         # Teleport certificate ("file" format)
-
-# tctl auth sign --format=tls --auth-server=auth.example.com:3025 --user=access-plugin --out=auth --ttl=1h
-# client_key = "/var/lib/teleport/plugins/slack/auth.key" # Teleport GRPC client secret key ("tls" format")
-# client_crt = "/var/lib/teleport/plugins/slack/auth.crt" # Teleport GRPC client certificate ("tls" format")
-# root_cas = "/var/lib/teleport/plugins/slack/auth.cas"   # Teleport cluster CA certs ("tls" format")
+# Credentials.
+#
+# When using --format=file:
+# identity = "/var/lib/teleport/plugins/slack/auth_id"    # Identity file
+#
+# When using --format=tls:
+# client_key = "/var/lib/teleport/plugins/slack/auth.key" # Teleport TLS secret key
+# client_crt = "/var/lib/teleport/plugins/slack/auth.crt" # Teleport TLS certificate
+# root_cas = "/var/lib/teleport/plugins/slack/auth.cas"   # Teleport CA certs
 
 [slack]
 token = "xoxb-11xx"                                 # Slack Bot OAuth token
@@ -65,6 +71,9 @@ func LoadConfig(filepath string) (*Config, error) {
 // if some values are missing.
 // If critical values are missing and we can't set defaults for them — this will return an error.
 func (c *Config) CheckAndSetDefaults() error {
+	if err := c.Teleport.CheckAndSetDefaults(); err != nil {
+		return trace.Wrap(err)
+	}
 	if c.Slack.Token == "" {
 		return trace.BadParameter("missing required value slack.token")
 	}

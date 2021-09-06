@@ -142,7 +142,7 @@ func (s *SlackSuite) SetupTest() {
 	require.NoError(t, err)
 
 	var conf Config
-	conf.Teleport.AuthServer = authAddr.Addr
+	conf.Teleport.Addr = authAddr.Addr
 	conf.Teleport.ClientCrt = certFile.Name()
 	conf.Teleport.ClientKey = keyFile.Name()
 	conf.Teleport.RootCAs = casFile.Name()

@@ -18,7 +18,7 @@ configuration file that looks something like this:
 # Example slack plugin configuration TOML file
 
 [teleport]
-auth_server = "0.0.0.0:3025"                              # Teleport Auth Server GRPC API address
+addr = "0.0.0.0:3025"                                     # Teleport Auth Server GRPC API address
 
 # tctl auth sign --format=file --auth-server=auth.example.com:3025 --user=access-plugin --out=auth --ttl=1h
 identity = "/var/lib/teleport/plugins/slack/auth"         # Teleport certificate ("file" format)
@@ -46,7 +46,7 @@ instructions.
 This configuration section ensures that the bot can talk to your teleport auth
 server. Use `tctl auth sign --format=tls` to generate the required PEM files,
 and make sure that the Auth Server's GRPC API is accessible at the address
-indicated by `auth_server`.
+indicated by `addr`.
 
 _NOTE_: The slack plugin must be given a teleport user identity with appropriate
 permissions. See the [acccess package README](../README.md#authentication) for

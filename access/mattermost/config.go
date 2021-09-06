@@ -21,10 +21,21 @@ type MattermostConfig struct {
 
 const exampleConfig = `# example mattermost configuration TOML file
 [teleport]
-auth_server = "example.com:3025"                             # Teleport Auth Server GRPC API address
-client_key = "/var/lib/teleport/plugins/mattermost/auth.key" # Teleport GRPC client secret key
-client_crt = "/var/lib/teleport/plugins/mattermost/auth.crt" # Teleport GRPC client certificate
-root_cas = "/var/lib/teleport/plugins/mattermost/auth.cas"   # Teleport cluster CA certs
+# Teleport Auth/Proxy Server address.
+#
+# Should be port 3025 for Auth Server and 3080 or 443 for Proxy.
+# For Teleport Cloud, should be in the form "your-account.teleport.sh:443".
+addr = "example.com:3025"
+
+# Credentials.
+#
+# When using --format=file:
+# identity = "/var/lib/teleport/plugins/mattermost/auth_id"    # Identity file
+#
+# When using --format=tls:
+# client_key = "/var/lib/teleport/plugins/mattermost/auth.key" # Teleport TLS secret key
+# client_crt = "/var/lib/teleport/plugins/mattermost/auth.crt" # Teleport TLS certificate
+# root_cas = "/var/lib/teleport/plugins/mattermost/auth.cas"   # Teleport CA certs
 
 [mattermost]
 url = "https://mattermost.example.com" # Mattermost Server URL
@@ -51,6 +62,9 @@ func LoadConfig(filepath string) (*Config, error) {
 }
 
 func (c *Config) CheckAndSetDefaults() error {
+	if err := c.Teleport.CheckAndSetDefaults(); err != nil {
+		return trace.Wrap(err)
+	}
 	if c.Mattermost.Token == "" {
 		return trace.BadParameter("missing required value mattermost.token")
 	}
