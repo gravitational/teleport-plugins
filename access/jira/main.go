@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Gravitational, Inc.
+Copyright 2020-2021 Gravitational, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,12 +35,12 @@ const (
 
 func main() {
 	logger.Init()
-	app := kingpin.New("teleport-jira", "Teleport plugin for access requests approval via JIRA.")
+	app := kingpin.New("teleport-jira", "Teleport plugin for access requests approval via Jira.")
 
 	app.Command("configure", "Prints an example .TOML configuration file.")
 	app.Command("version", "Prints teleport-jira version and exits.")
 
-	startCmd := app.Command("start", "Starts a Teleport JIRA plugin.")
+	startCmd := app.Command("start", "Starts a Teleport Jira Plugin.")
 	path := startCmd.Flag("config", "TOML config file path").
 		Short('c').
 		Default("/etc/teleport-jira.toml").

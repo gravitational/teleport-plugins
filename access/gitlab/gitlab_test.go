@@ -786,7 +786,7 @@ func (s *GitlabSuite) TestRace() {
 	log.SetLevel(log.InfoLevel) // Turn off noisy debug logging
 	defer log.SetLevel(prevLogLevel)
 
-	s.SetContext(20 * time.Second)
+	s.SetContext(30 * time.Second)
 	s.startApp()
 
 	labels := s.assertNewLabels(4)

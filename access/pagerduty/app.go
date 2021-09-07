@@ -22,6 +22,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jonboulle/clockwork"
+	"google.golang.org/grpc"
+	grpcbackoff "google.golang.org/grpc/backoff"
+
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/lib/logger"
@@ -29,9 +33,6 @@ import (
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
-	"google.golang.org/grpc"
-	grpcbackoff "google.golang.org/grpc/backoff"
-
 	"github.com/gravitational/trace"
 )
 
@@ -589,7 +590,7 @@ func (a *App) resolveIncident(ctx context.Context, reqID string, resolution Reso
 // it doesn't perform any sort of I/O operations so even things like Go channels must be avoided.
 // Indeed, this limitation is not that ultimate at least if you know what you're doing.
 func (a *App) modifyPluginData(ctx context.Context, reqID string, fn func(data *PluginData) (PluginData, bool)) (bool, error) {
-	backoff := backoff.Decorr(modifyPluginDataBackoffBase, modifyPluginDataBackoffMax)
+	backoff := backoff.NewDecorr(modifyPluginDataBackoffBase, modifyPluginDataBackoffMax, clockwork.NewRealClock())
 	for {
 		oldData, err := a.getPluginData(ctx, reqID)
 		if err != nil && !trace.IsNotFound(err) {

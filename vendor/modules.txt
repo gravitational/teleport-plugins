@@ -756,7 +756,6 @@ google.golang.org/protobuf/types/known/timestamppb
 google.golang.org/protobuf/types/known/wrapperspb
 google.golang.org/protobuf/types/pluginpb
 # gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
-## explicit
 gopkg.in/check.v1
 # gopkg.in/inf.v0 v0.9.1
 gopkg.in/inf.v0
