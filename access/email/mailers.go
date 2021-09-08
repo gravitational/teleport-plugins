@@ -61,7 +61,9 @@ func NewSMTPMailer(c SMTPConfig, sender, clusterName string) Mailer {
 // NewMailgunMailer inits new Mailgun mailer
 func NewMailgunMailer(c MailgunConfig, sender, clusterName string) Mailer {
 	m := mailgun.NewMailgun(c.Domain, c.PrivateKey)
-
+	if c.APIBase != "" {
+		m.SetAPIBase(c.APIBase)
+	}
 	return &MailgunMailer{m, sender, clusterName}
 }
 
