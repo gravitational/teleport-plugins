@@ -36,6 +36,7 @@ type MailgunConfig struct {
 	Domain         string
 	PrivateKey     string `toml:"private_key"`
 	PrivateKeyFile string `toml:"private_key_file"`
+	APIBase        string `toml:"-"`
 }
 
 // SMTPConfig is SMTP-specific configuration options

@@ -98,7 +98,7 @@ func (a *App) run(ctx context.Context) error {
 	watcherJob := watcherjob.NewJob(
 		a.apiClient,
 		watcherjob.Config{
-			Watch:            types.Watch{Kinds: []types.WatchKind{types.WatchKind{Kind: types.KindAccessRequest}}},
+			Watch:            types.Watch{Kinds: []types.WatchKind{{Kind: types.KindAccessRequest}}},
 			EventFuncTimeout: handlerTimeout,
 		},
 		a.onWatcherEvent,
@@ -504,7 +504,7 @@ func (a *App) updatePluginData(ctx context.Context, reqID string, data PluginDat
 	})
 }
 
-// logSentThreads logs successfuly sent emails
+// logSentThreads logs successfully sent emails
 func logSentThreads(ctx context.Context, threads []EmailThread, kind string) {
 	for _, thread := range threads {
 		logger.Get(ctx).WithFields(logger.Fields{
