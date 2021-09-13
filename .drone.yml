@@ -26,7 +26,13 @@ steps:
 
   - name: Run tests
     image: golang:1.16.2
+    environment:
+      TELEPORT_ENTERPRISE_LICENSE:
+        from_secret: TELEPORT_ENTERPRISE_LICENSE
+      TELEPORT_GET_VERSION:
+        from_secret: TELEPORT_GET_VERSION
     commands:
+      - echo Testing plugins against Teleport $TELEPORT_GET_VERSION
       - make test
 
 ---
@@ -67,6 +73,10 @@ steps:
 
   - name: Run tests
     environment:
+      TELEPORT_ENTERPRISE_LICENSE:
+        from_secret: TELEPORT_ENTERPRISE_LICENSE
+      TELEPORT_GET_VERSION:
+        from_secret: TELEPORT_GET_VERSION
       GOPATH: /tmp/teleport-plugins/test-darwin/go
       GOCACHE: /tmp/teleport-plugins/test-darwin/go/cache
     commands:
