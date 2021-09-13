@@ -145,14 +145,6 @@ func (s *GitlabSuite) SetupSuite() {
 		s.userNames.reviewer2 = user.GetName()
 	}
 
-	user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer1@example.com", role.GetName())
-	require.NoError(t, err)
-	s.userNames.reviewer1 = user.GetName()
-
-	user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer2@example.com", role.GetName())
-	require.NoError(t, err)
-	s.userNames.reviewer2 = user.GetName()
-
 	// Set up plugin user.
 
 	role, err = bootstrap.AddRole("access-gitlab", types.RoleSpecV4{
