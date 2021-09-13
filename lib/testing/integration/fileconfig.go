@@ -35,7 +35,6 @@ auth_service:
   public_addr: localhost
   authentication:
     type: local
-    second_factor: off
 
 proxy_service:
   enabled: false
