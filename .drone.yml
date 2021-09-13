@@ -29,8 +29,7 @@ steps:
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION:
-        from_secret: TELEPORT_GET_VERSION
+      TELEPORT_GET_VERSION: v7.1.1
     commands:
       - echo Testing plugins against Teleport $TELEPORT_GET_VERSION
       - make test
@@ -75,8 +74,7 @@ steps:
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION:
-        from_secret: TELEPORT_GET_VERSION
+      TELEPORT_GET_VERSION: v7.1.1
       GOPATH: /tmp/teleport-plugins/test-darwin/go
       GOCACHE: /tmp/teleport-plugins/test-darwin/go/cache
     commands:
