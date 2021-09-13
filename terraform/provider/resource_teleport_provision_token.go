@@ -53,13 +53,13 @@ func GenSchemaProvisionTokenV2() map[string]*schema.Schema {
 		},
 		"index": {
 			Type:        schema.TypeString,
-			Description: "TODO",
+			Description: "Non-sensitive Token prefix",
 			Required:    true,
 			ForceNew:    true,
 		},
 		"name": {
 			Type:        schema.TypeString,
-			Description: "TODO",
+			Description: "Sensitive Token suffix",
 			Required:    true,
 			ForceNew:    true,
 			Sensitive:   true,
@@ -75,7 +75,7 @@ func GenSchemaProvisionTokenV2() map[string]*schema.Schema {
 					// Name is an object name
 					"name": {
 						Type:        schema.TypeString,
-						Description: "Name is an object name",
+						Description: "Computed from prefix & suffix",
 						Sensitive:   true,
 						Computed:    true,
 					},
