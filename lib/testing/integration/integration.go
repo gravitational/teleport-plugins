@@ -149,11 +149,9 @@ func NewFromEnv(ctx context.Context) (*Integration, error) {
 	var paths BinPaths
 
 	if os.Getenv("CI") != "" {
-		os.Setenv("TELEPORT_GET_VERSION", "v7.1.0") // TODO: remove when CI is fixed.
-		// TODO: uncomment when CI is fixed
-		// if licenseStr == "" {
-		// 	return nil, trace.AccessDenied("tests on CI should run with enterprise license")
-		// }
+		if licenseStr == "" {
+			return nil, trace.AccessDenied("tests on CI should run with enterprise license")
+		}
 	}
 
 	if version := os.Getenv("TELEPORT_GET_VERSION"); version == "" {
