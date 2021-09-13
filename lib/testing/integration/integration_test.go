@@ -52,7 +52,10 @@ func (s *IntegrationSuite) SetupTest() {
 	t := s.T()
 	var err error
 
-	integration, err := NewFromEnv(s.Context())
+	// We set such a big timeout because integration.NewFromEnv could start
+	// downloading a Teleport *-bin.tar.gz file which can take a long time.
+	ctx := s.SetContextTimeout(2 * time.Minute)
+	integration, err := NewFromEnv(ctx)
 	require.NoError(t, err)
 	t.Cleanup(integration.Close)
 	s.integration = integration

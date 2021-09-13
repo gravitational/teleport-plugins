@@ -78,6 +78,7 @@ const serviceShutdownTimeout = 10 * time.Second
 // New initializes a Teleport installation.
 func New(ctx context.Context, paths BinPaths, licenseStr string) (*Integration, error) {
 	var err error
+	log := logger.Get(ctx)
 
 	var integration Integration
 	integration.paths.BinPaths = paths
@@ -111,6 +112,7 @@ func New(ctx context.Context, paths BinPaths, licenseStr string) (*Integration, 
 		}
 		if strings.HasPrefix(licenseStr, "-----BEGIN CERTIFICATE-----") || strings.Contains(licenseStr, "\n") {
 			// If it looks like a license file content lets write it to temporary file.
+			log.Debug("License is given as a string, writing it to a file")
 			licenseFile, err := integration.tempFile("license-*.pem")
 			if err != nil {
 				return nil, trace.Wrap(err, "failed to write license file")

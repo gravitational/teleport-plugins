@@ -78,7 +78,7 @@ var downloadVersions = map[downloadVersionKey]downloadVersion{
 
 // GetEnterprise downloads a Teleport Enterprise distribution.
 func GetEnterprise(ctx context.Context, ver, outDir string) (BinPaths, error) {
-	logger.Get(ctx).Debugf("Getting Teleport Enterprise distribution %s", ver)
+	logger.Get(ctx).Debugf("Looking up Teleport Enterprise distribution %s", ver)
 	key := downloadVersionKey{
 		ver:        ver,
 		os:         runtime.GOOS,
@@ -87,7 +87,7 @@ func GetEnterprise(ctx context.Context, ver, outDir string) (BinPaths, error) {
 	}
 	version, ok := downloadVersions[key]
 	if !ok {
-		return BinPaths{}, trace.Errorf("enterprise teleport version %s-%s-%s is not found", key.ver, key.os, key.arch)
+		return BinPaths{}, trace.NotFound("teleport enterprise version %s-%s-%s is unknown", key.ver, key.os, key.arch)
 	}
 	distStr := fmt.Sprintf("teleport-ent-%s-%s-%s", key.ver, key.os, key.arch)
 	return getBinaries(ctx, distStr, outDir, version.sha256)
@@ -95,7 +95,7 @@ func GetEnterprise(ctx context.Context, ver, outDir string) (BinPaths, error) {
 
 // GetEnterprise downloads a Teleport OSS distribution.
 func GetOSS(ctx context.Context, ver, outDir string) (BinPaths, error) {
-	logger.Get(ctx).Debugf("Getting Teleport OSS distribution %s", ver)
+	logger.Get(ctx).Debugf("Looking up Teleport OSS distribution %s", ver)
 	key := downloadVersionKey{
 		ver:  ver,
 		os:   runtime.GOOS,
@@ -103,7 +103,7 @@ func GetOSS(ctx context.Context, ver, outDir string) (BinPaths, error) {
 	}
 	version, ok := downloadVersions[key]
 	if !ok {
-		return BinPaths{}, trace.Errorf("oss teleport version %s-%s-%s is not found", key.ver, key.os, key.arch)
+		return BinPaths{}, trace.NotFound("teleport oss version %s-%s-%s is unknown", key.ver, key.os, key.arch)
 	}
 	distStr := fmt.Sprintf("teleport-%s-%s-%s", key.ver, key.os, key.arch)
 	return getBinaries(ctx, distStr, outDir, version.sha256)
@@ -200,6 +200,14 @@ func getBinaries(ctx context.Context, distStr, outDir string, checksum lib.SHA25
 	if _, err = tarFile.Seek(0, 0); err != nil {
 		return BinPaths{}, trace.NewAggregate(err, tarFile.Close())
 	}
+
+	// Downloading file could take a long time, lets check if can proceed further.
+	select {
+	case <-ctx.Done():
+		return BinPaths{}, trace.NewAggregate(ctx.Err(), tarFile.Close())
+	default:
+	}
+
 	tarOptions := tar.ExtractOptions{
 		Compression:     tar.GzipCompression,
 		OutDir:          outExtractDir,
@@ -213,6 +221,7 @@ func getBinaries(ctx context.Context, distStr, outDir string, checksum lib.SHA25
 	}
 
 	log.Debugf("Extracting Teleport binaries into %s", outExtractDir)
+
 	if err := os.MkdirAll(outExtractDir, 0755); err != nil {
 		return BinPaths{}, trace.NewAggregate(err, tarFile.Close())
 	}

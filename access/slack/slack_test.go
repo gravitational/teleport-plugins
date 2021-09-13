@@ -51,13 +51,16 @@ func TestSlackbot(t *testing.T) { suite.Run(t, &SlackSuite{}) }
 func (s *SlackSuite) SetupSuite() {
 	var err error
 	t := s.T()
-	ctx := s.Context()
 
 	logger.Init()
 	logger.Setup(logger.Config{Severity: "debug"})
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
+
+	// We set such a big timeout because integration.NewFromEnv could start
+	// downloading a Teleport *-bin.tar.gz file which can take a long time.
+	ctx := s.SetContextTimeout(2 * time.Minute)
 
 	teleport, err := integration.NewFromEnv(ctx)
 	require.NoError(t, err)

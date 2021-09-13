@@ -75,7 +75,6 @@ func TestGitlab(t *testing.T) { suite.Run(t, &GitlabSuite{}) }
 func (s *GitlabSuite) SetupSuite() {
 	var err error
 	t := s.T()
-	ctx := s.Context()
 
 	logger.Init()
 	logger.Setup(logger.Config{Severity: "debug"})
@@ -84,6 +83,10 @@ func (s *GitlabSuite) SetupSuite() {
 	require.NoError(t, err)
 
 	s.approverEmail = me.Username + "-approver@example.com"
+
+	// We set such a big timeout because integration.NewFromEnv could start
+	// downloading a Teleport *-bin.tar.gz file which can take a long time.
+	ctx := s.SetContextTimeout(2 * time.Minute)
 
 	teleport, err := integration.NewFromEnv(ctx)
 	require.NoError(t, err)

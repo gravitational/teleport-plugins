@@ -39,22 +39,25 @@ type AuthServer struct {
 	teleportPath string
 	configPath   string
 	authAddr     string
+	isReady      bool
 	readyCh      chan struct{}
 	doneCh       chan struct{}
 	terminate    context.CancelFunc
 	setErr       func(error)
+	setReady     func(bool)
 	error        error
 	stdout       strings.Builder
 	stderr       bytes.Buffer
 }
 
 func newAuthServer(teleportPath, configPath string) *AuthServer {
-	var setErrOnce sync.Once
 	var auth AuthServer
+	var setErrOnce, setReadyOnce sync.Once
+	readyCh := make(chan struct{})
 	auth = AuthServer{
 		teleportPath: teleportPath,
 		configPath:   configPath,
-		readyCh:      make(chan struct{}),
+		readyCh:      readyCh,
 		doneCh:       make(chan struct{}),
 		terminate:    func() {}, // dummy noop that will be overridden by Run(),
 		setErr: func(err error) {
@@ -62,6 +65,14 @@ func newAuthServer(teleportPath, configPath string) *AuthServer {
 				auth.mu.Lock()
 				defer auth.mu.Unlock()
 				auth.error = err
+			})
+		},
+		setReady: func(isReady bool) {
+			setReadyOnce.Do(func() {
+				auth.mu.Lock()
+				auth.isReady = isReady
+				auth.mu.Unlock()
+				close(readyCh)
 			})
 		},
 	}
@@ -129,18 +140,16 @@ func (auth *AuthServer) Run(ctx context.Context) error {
 	go func() {
 		defer ioWork.Done()
 
-		var initialized bool
 		stdout := bufio.NewReader(stdoutPipe)
 		for {
 			line, err := stdout.ReadString('\n')
 			if line != "" {
 				auth.saveStdout(line)
 				auth.parseLine(ctx, line)
-				if !initialized {
+				if !auth.IsReady() {
 					if addr := auth.PublicAddr(); addr != "" {
 						log.Debugf("Found listen addr of Auth Server process: %v", addr)
-						initialized = true
-						close(auth.readyCh)
+						auth.setReady(true)
 					}
 				}
 			}
@@ -182,6 +191,21 @@ func (auth *AuthServer) Run(ctx context.Context) error {
 	}()
 
 	<-auth.doneCh
+
+	if !auth.IsReady() {
+		log.Error("Auth server is failed to initialize")
+		stdoutLines := strings.Split(auth.Stdout(), "\n")
+		for _, line := range stdoutLines[len(stdoutLines)-10:] {
+			log.Debug("AuthServer log: ", line)
+		}
+		log.Debugf("AuthServer stderr: %q", auth.Stderr())
+
+		// If it's still not ready lets signal that it's finally not ready.
+		auth.setReady(false)
+		// Set an err just in case if it's not set before.
+		auth.setErr(trace.Errorf("failed to initialize"))
+	}
+
 	return trace.Wrap(auth.Err())
 }
 
@@ -231,10 +255,17 @@ func (auth *AuthServer) Stderr() string {
 func (auth *AuthServer) WaitReady(ctx context.Context) (bool, error) {
 	select {
 	case <-auth.readyCh:
-		return true, nil
+		return auth.IsReady(), nil
 	case <-ctx.Done():
 		return false, trace.Wrap(ctx.Err(), "auth server is not ready")
 	}
+}
+
+// IsReady indicates if auth server is initialized properly.
+func (auth *AuthServer) IsReady() bool {
+	auth.mu.Lock()
+	defer auth.mu.Unlock()
+	return auth.isReady
 }
 
 func (auth *AuthServer) doTerminate() {

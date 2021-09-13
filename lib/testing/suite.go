@@ -102,7 +102,7 @@ func (s *Suite) initContexts(oldT *testing.T, newT *testing.T) {
 }
 
 // SetContextTimeout limits the lifetime of test and app contexts.
-func (s *Suite) SetContextTimeout(timeout time.Duration) (context.Context, context.Context) {
+func (s *Suite) SetContextTimeout(timeout time.Duration) context.Context {
 	t := s.T()
 	t.Helper()
 
@@ -119,7 +119,7 @@ func (s *Suite) SetContextTimeout(timeout time.Duration) (context.Context, conte
 
 	s.contexts[t] = contexts
 
-	return contexts.appCtx, contexts.testCtx
+	return contexts.testCtx
 }
 
 // Context returns a current test context.
