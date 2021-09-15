@@ -26,26 +26,23 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/access/integration"
+	"github.com/google/uuid"
+
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	. "github.com/gravitational/teleport-plugins/lib/testing"
+	"github.com/gravitational/teleport-plugins/lib/testing/integration"
+	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/wrappers"
-	"github.com/gravitational/teleport/lib/auth/testauthority"
-	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/trace"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
 const (
-	Host   = "localhost"
-	HostID = "00000000-0000-0000-0000-000000000000"
-	Site   = "local-site"
-
 	EscalationPolicyID1 = "escalation_policy-1"
 	EscalationPolicyID2 = "escalation_policy-2"
 	NotifyServiceName   = "Teleport Notifications"
@@ -56,25 +53,28 @@ const (
 
 type PagerdutySuite struct {
 	Suite
-	appConfig Config
-	userName  string
-	userNames struct {
-		plugin    string
+	appConfig        Config
+	currentRequestor string
+	userNames        struct {
+		ruler     string
 		reviewer1 string
 		reviewer2 string
 		requestor string
 		approver  string
 		racer1    string
 		racer2    string
+		plugin    string
 	}
 	raceNumber      int
-	me              *user.User
 	fakePagerduty   *FakePagerduty
 	pdNotifyService Service
 	pdService1      Service
 	pdService2      Service
 	pdService3      Service
-	teleport        *integration.TeleInstance
+
+	clients          map[string]*integration.Client
+	teleportFeatures *proto.Features
+	teleportConfig   lib.TeleportConfig
 }
 
 func TestPagerdutySuite(t *testing.T) { suite.Run(t, &PagerdutySuite{}) }
@@ -82,96 +82,188 @@ func TestPagerdutySuite(t *testing.T) { suite.Run(t, &PagerdutySuite{}) }
 func (s *PagerdutySuite) SetupSuite() {
 	var err error
 	t := s.T()
-	log.SetLevel(log.DebugLevel)
-	priv, pub, err := testauthority.New().GenerateKeyPair("")
-	require.NoError(t, err)
-	teleport := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Priv: priv, Pub: pub})
 
+	logger.Init()
+	logger.Setup(logger.Config{Severity: "debug"})
 	s.raceNumber = 2 * runtime.GOMAXPROCS(0)
-	s.me, err = user.Current()
+	me, err := user.Current()
 	require.NoError(t, err)
-	role, err := types.NewRole("foo", types.RoleSpecV3{
-		Allow: types.RoleConditions{
-			Request: &types.AccessRequestConditions{
-				Roles: []string{"admin"},
-				Annotations: wrappers.Traits{
-					NotifyServiceDefaultAnnotation: []string{NotifyServiceName},
-				},
-				Thresholds: []types.AccessReviewThreshold{
-					types.AccessReviewThreshold{Approve: 2, Deny: 2},
-				},
+
+	// We set such a big timeout because integration.NewFromEnv could start
+	// downloading a Teleport *-bin.tar.gz file which can take a long time.
+	ctx := s.SetContextTimeout(2 * time.Minute)
+
+	teleport, err := integration.NewFromEnv(ctx)
+	require.NoError(t, err)
+	t.Cleanup(teleport.Close)
+
+	auth, err := teleport.NewAuthServer()
+	require.NoError(t, err)
+	s.StartApp(auth)
+
+	s.clients = make(map[string]*integration.Client)
+
+	// Set up the user who has an access to all kinds of resources.
+
+	s.userNames.ruler = me.Username + "-ruler@example.com"
+	client, err := teleport.MakeAdmin(ctx, auth, s.userNames.ruler)
+	require.NoError(t, err)
+	s.clients[s.userNames.ruler] = client
+
+	// Get the server features.
+
+	pong, err := client.Ping(ctx)
+	require.NoError(t, err)
+	teleportFeatures := pong.GetServerFeatures()
+
+	var bootstrap integration.Bootstrap
+
+	// Set up user who can request the access to role "admin".
+
+	conditions := types.RoleConditions{
+		Request: &types.AccessRequestConditions{
+			Roles: []string{"admin"},
+			Annotations: wrappers.Traits{
+				NotifyServiceDefaultAnnotation: []string{NotifyServiceName},
 			},
 		},
-	})
-	require.NoError(t, err)
-	s.userNames.requestor = teleport.AddUserWithRole(s.me.Username+"@example.com", role).Username
-
-	role, err = types.NewRole("bar", types.RoleSpecV3{
-		Allow: types.RoleConditions{
-			Request: &types.AccessRequestConditions{
-				Roles: []string{"admin"},
-				Annotations: wrappers.Traits{
-					ServicesDefaultAnnotation: []string{ServiceName1, ServiceName2, ServiceName3},
-				},
-			},
-		},
-	})
-	require.NoError(t, err)
-	s.userNames.approver = teleport.AddUserWithRole(s.me.Username+"-approver@example.com", role).Username // For testing auto-approve
-
-	role, err = types.NewRole("foo-reviewer", types.RoleSpecV3{
-		Allow: types.RoleConditions{
-			ReviewRequests: &types.AccessReviewConditions{
-				Roles: []string{"admin"},
-			},
-		},
-	})
-	require.NoError(t, err)
-	s.userNames.reviewer1 = teleport.AddUserWithRole(s.me.Username+"-reviewer1@example.com", role).Username
-	s.userNames.reviewer2 = teleport.AddUserWithRole(s.me.Username+"-reviewer2@example.com", role).Username
-
-	role, err = types.NewRole("foo-bar", types.RoleSpecV3{
-		Allow: types.RoleConditions{
-			Request: &types.AccessRequestConditions{
-				Roles: []string{"admin"},
-				Annotations: wrappers.Traits{
-					NotifyServiceDefaultAnnotation: []string{NotifyServiceName},
-					ServicesDefaultAnnotation:      []string{ServiceName1, ServiceName2, ServiceName3},
-				},
-				Thresholds: []types.AccessReviewThreshold{
-					types.AccessReviewThreshold{Approve: 2, Deny: 2},
-				},
-			},
-		},
-	})
-	require.NoError(t, err)
-	s.userNames.racer1 = teleport.AddUserWithRole(s.me.Username+"-racer1@example.com", role).Username
-	s.userNames.racer2 = teleport.AddUserWithRole(s.me.Username+"-racer2@example.com", role).Username
-
-	role, err = types.NewRole("access-plugin", types.RoleSpecV3{
-		Allow: types.RoleConditions{
-			Rules: []types.Rule{
-				types.NewRule("access_request", []string{"list", "read"}),
-				types.NewRule("access_plugin_data", []string{"update"}),
-			},
-			ReviewRequests: &types.AccessReviewConditions{
-				Roles: []string{"admin"},
-			},
-		},
-	})
-	require.NoError(t, err)
-	s.userNames.plugin = teleport.AddUserWithRole("plugin", role).Username
-
-	err = teleport.Create(nil, nil)
-	require.NoError(t, err)
-	if err := teleport.Start(); err != nil {
-		t.Fatalf("Unexpected response from Start: %v", err)
 	}
-	s.teleport = teleport
+	if teleportFeatures.AdvancedAccessWorkflows {
+		conditions.Request.Thresholds = []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}}
+	}
+	// This is the role for testing notification incident creation.
+	role, err := bootstrap.AddRole("foo", types.RoleSpecV4{Allow: conditions})
+	require.NoError(t, err)
+
+	user, err := bootstrap.AddUserWithRoles(me.Username+"@example.com", role.GetName())
+	require.NoError(t, err)
+	s.userNames.requestor = user.GetName()
+
+	if teleportFeatures.AdvancedAccessWorkflows {
+		// Set up TWO users who can review access requests to role "admin".
+
+		role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV4{
+			Allow: types.RoleConditions{
+				ReviewRequests: &types.AccessReviewConditions{Roles: []string{"admin"}},
+			},
+		})
+		require.NoError(t, err)
+
+		user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer1@example.com", role.GetName())
+		require.NoError(t, err)
+		s.userNames.reviewer1 = user.GetName()
+
+		user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer2@example.com", role.GetName())
+		require.NoError(t, err)
+		s.userNames.reviewer2 = user.GetName()
+
+		// This is the role that needs exactly one approval review for an access request to be approved.
+		// It's handy to test auto-approval scenarios so we also put "pagerduty_services" annotation.
+		role, err = bootstrap.AddRole("bar", types.RoleSpecV4{
+			Allow: types.RoleConditions{
+				Request: &types.AccessRequestConditions{
+					Roles: []string{"admin"},
+					Annotations: wrappers.Traits{
+						ServicesDefaultAnnotation: []string{ServiceName1, ServiceName2, ServiceName3},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		user, err = bootstrap.AddUserWithRoles(me.Username+"-approver@example.com", role.GetName())
+		require.NoError(t, err)
+		s.userNames.approver = user.GetName()
+
+		// This is the role with a maximum possible setup: both "pagerduty_notify_service" and
+		// "pagerduty_services" annotations and threshold.
+		role, err = bootstrap.AddRole("foo-bar", types.RoleSpecV4{
+			Allow: types.RoleConditions{
+				Request: &types.AccessRequestConditions{
+					Roles: []string{"admin"},
+					Annotations: wrappers.Traits{
+						NotifyServiceDefaultAnnotation: []string{NotifyServiceName},
+						ServicesDefaultAnnotation:      []string{ServiceName1, ServiceName2, ServiceName3},
+					},
+					Thresholds: []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}},
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		user, err = bootstrap.AddUserWithRoles(me.Username+"-racer1@example.com", role.GetName())
+		require.NoError(t, err)
+		s.userNames.racer1 = user.GetName()
+
+		user, err = bootstrap.AddUserWithRoles(me.Username+"-racer2@example.com", role.GetName())
+		require.NoError(t, err)
+		s.userNames.racer2 = user.GetName()
+	}
+
+	conditions = types.RoleConditions{
+		Rules: []types.Rule{
+			types.NewRule("access_request", []string{"list", "read"}),
+			types.NewRule("access_plugin_data", []string{"update"}),
+		},
+	}
+	if teleportFeatures.AdvancedAccessWorkflows {
+		conditions.ReviewRequests = &types.AccessReviewConditions{Roles: []string{"admin"}}
+	}
+
+	// Set up plugin user.
+
+	role, err = bootstrap.AddRole("access-pagerduty", types.RoleSpecV4{Allow: conditions})
+	require.NoError(t, err)
+
+	user, err = bootstrap.AddUserWithRoles("access-pagerduty", role.GetName())
+	require.NoError(t, err)
+	s.userNames.plugin = user.GetName()
+
+	// Bake all the resources.
+
+	err = teleport.Bootstrap(ctx, auth, bootstrap.Resources())
+	require.NoError(t, err)
+
+	// Initialize the clients.
+
+	client, err = teleport.NewClient(ctx, auth, s.userNames.requestor)
+	require.NoError(t, err)
+	s.clients[s.userNames.requestor] = client
+
+	if teleportFeatures.AdvancedAccessWorkflows {
+		client, err = teleport.NewClient(ctx, auth, s.userNames.approver)
+		require.NoError(t, err)
+		s.clients[s.userNames.approver] = client
+
+		client, err = teleport.NewClient(ctx, auth, s.userNames.reviewer1)
+		require.NoError(t, err)
+		s.clients[s.userNames.reviewer1] = client
+
+		client, err = teleport.NewClient(ctx, auth, s.userNames.reviewer2)
+		require.NoError(t, err)
+		s.clients[s.userNames.reviewer2] = client
+
+		client, err = teleport.NewClient(ctx, auth, s.userNames.racer1)
+		require.NoError(t, err)
+		s.clients[s.userNames.racer1] = client
+
+		client, err = teleport.NewClient(ctx, auth, s.userNames.racer2)
+		require.NoError(t, err)
+		s.clients[s.userNames.racer2] = client
+	}
+
+	identityPath, err := teleport.Sign(ctx, auth, s.userNames.plugin)
+	require.NoError(t, err)
+
+	s.teleportConfig.Addr = auth.PublicAddr()
+	s.teleportConfig.Identity = identityPath
+	s.teleportFeatures = teleportFeatures
 }
 
 func (s *PagerdutySuite) SetupTest() {
 	t := s.T()
+
+	logger.Setup(logger.Config{Severity: "debug"})
 
 	fakePagerduty := NewFakePagerduty(s.raceNumber)
 	t.Cleanup(fakePagerduty.Close)
@@ -194,45 +286,16 @@ func (s *PagerdutySuite) SetupTest() {
 		EscalationPolicy: Reference{Type: "escalation_policy_reference", ID: EscalationPolicyID2},
 	})
 
-	auth := s.teleport.Process.GetAuthServer()
-	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
-	require.NoError(t, err)
-	pluginKey := s.teleport.Secrets.Users["plugin"].Key
-
-	keyFile := s.NewTmpFile("auth.*.key")
-	_, err = keyFile.Write(pluginKey.Priv)
-	require.NoError(t, err)
-	keyFile.Close()
-
-	certFile := s.NewTmpFile("auth.*.crt")
-	_, err = certFile.Write(pluginKey.TLSCert)
-	require.NoError(t, err)
-	certFile.Close()
-
-	casFile := s.NewTmpFile("auth.*.cas")
-	for _, ca := range certAuthorities {
-		for _, keyPair := range ca.GetTLSKeyPairs() {
-			_, err = casFile.Write(keyPair.Cert)
-			require.NoError(t, err)
-		}
-	}
-	casFile.Close()
-
-	authAddr, err := s.teleport.Process.AuthSSHAddr()
-	require.NoError(t, err)
-
 	var conf Config
-	conf.Teleport.Addr = authAddr.Addr
-	conf.Teleport.ClientCrt = certFile.Name()
-	conf.Teleport.ClientKey = keyFile.Name()
-	conf.Teleport.RootCAs = casFile.Name()
+	conf.Teleport = s.teleportConfig
 	conf.Pagerduty.APIEndpoint = s.fakePagerduty.URL()
 	conf.Pagerduty.UserEmail = "bot@example.com"
 	conf.Pagerduty.RequestAnnotations.NotifyService = NotifyServiceDefaultAnnotation
 	conf.Pagerduty.RequestAnnotations.Services = ServicesDefaultAnnotation
 
 	s.appConfig = conf
-	s.userName = s.userNames.requestor
+	s.currentRequestor = s.userNames.requestor
+	s.SetContextTimeout(5 * time.Second)
 }
 
 func (s *PagerdutySuite) startApp() {
@@ -245,31 +308,37 @@ func (s *PagerdutySuite) startApp() {
 	s.StartApp(app)
 }
 
-func (s *PagerdutySuite) newAccessRequest() services.AccessRequest {
+func (s *PagerdutySuite) ruler() *integration.Client {
+	return s.clients[s.userNames.ruler]
+}
+
+func (s *PagerdutySuite) requestor() *integration.Client {
+	return s.clients[s.currentRequestor]
+}
+
+func (s *PagerdutySuite) reviewer1() *integration.Client {
+	return s.clients[s.userNames.reviewer1]
+}
+
+func (s *PagerdutySuite) reviewer2() *integration.Client {
+	return s.clients[s.userNames.reviewer2]
+}
+
+func (s *PagerdutySuite) newAccessRequest() types.AccessRequest {
 	t := s.T()
 	t.Helper()
 
-	req, err := services.NewAccessRequest(s.userName, "admin")
+	req, err := types.NewAccessRequest(uuid.New().String(), s.currentRequestor, "admin")
 	require.NoError(s.T(), err)
 	return req
 }
 
-func (s *PagerdutySuite) createAccessRequest() services.AccessRequest {
+func (s *PagerdutySuite) createAccessRequest() types.AccessRequest {
 	t := s.T()
 	t.Helper()
 
 	req := s.newAccessRequest()
-	err := s.teleport.CreateAccessRequest(s.Ctx(), req)
-	require.NoError(t, err)
-	return req
-}
-
-func (s *PagerdutySuite) createExpiredAccessRequest() services.AccessRequest {
-	t := s.T()
-	t.Helper()
-
-	req := s.newAccessRequest()
-	err := s.teleport.CreateExpiredAccessRequest(s.Ctx(), req)
+	err := s.requestor().CreateAccessRequest(s.Context(), req)
 	require.NoError(t, err)
 	return req
 }
@@ -279,7 +348,7 @@ func (s *PagerdutySuite) checkPluginData(reqID string, cond func(PluginData) boo
 	t.Helper()
 
 	for {
-		rawData, err := s.teleport.PollAccessRequestPluginData(s.Ctx(), "pagerduty", reqID)
+		rawData, err := s.ruler().PollAccessRequestPluginData(s.Context(), "pagerduty", reqID)
 		require.NoError(t, err)
 		if data := DecodePluginData(rawData); cond(data) {
 			return data
@@ -297,7 +366,7 @@ func (s *PagerdutySuite) TestIncidentCreation() {
 		return data.IncidentID != ""
 	})
 
-	incident, err := s.fakePagerduty.CheckNewIncident(s.Ctx())
+	incident, err := s.fakePagerduty.CheckNewIncident(s.Context())
 	require.NoError(t, err, "no new incidents stored")
 
 	assert.Equal(t, incident.ID, pluginData.IncidentID)
@@ -307,20 +376,72 @@ func (s *PagerdutySuite) TestIncidentCreation() {
 	assert.Equal(t, "triggered", incident.Status)
 }
 
-func (s *PagerdutySuite) TestReviewNotes() {
+func (s *PagerdutySuite) TestApproval() {
 	t := s.T()
 
 	s.startApp()
+
 	req := s.createAccessRequest()
 
-	req, err := s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	incident, err := s.fakePagerduty.CheckNewIncident(s.Context())
+	require.NoError(t, err, "no new incidents stored")
+
+	s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+
+	note, err := s.fakePagerduty.CheckNewIncidentNote(s.Context())
+	require.NoError(t, err)
+	assert.Equal(t, incident.ID, note.IncidentID)
+	assert.Contains(t, note.Content, "Access request has been approved")
+	assert.Contains(t, note.Content, "Reason: okay")
+
+	incidentUpdate, err := s.fakePagerduty.CheckIncidentUpdate(s.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "resolved", incidentUpdate.Status)
+}
+
+func (s *PagerdutySuite) TestDenial() {
+	t := s.T()
+
+	s.startApp()
+
+	req := s.createAccessRequest()
+
+	incident, err := s.fakePagerduty.CheckNewIncident(s.Context())
+	require.NoError(t, err, "no new incidents stored")
+
+	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay")
+
+	note, err := s.fakePagerduty.CheckNewIncidentNote(s.Context())
+	require.NoError(t, err)
+	assert.Equal(t, incident.ID, note.IncidentID)
+	assert.Contains(t, note.Content, "Access request has been denied")
+	assert.Contains(t, note.Content, "Reason: not okay")
+
+	incidentUpdate, err := s.fakePagerduty.CheckIncidentUpdate(s.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "resolved", incidentUpdate.Status)
+}
+
+func (s *PagerdutySuite) TestReviewNotes() {
+	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
+	s.startApp()
+
+	req := s.createAccessRequest()
+
+	err := s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
 		Reason:        "okay",
 	})
 	require.NoError(t, err)
-	req, err = s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+
+	err = s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -332,14 +453,14 @@ func (s *PagerdutySuite) TestReviewNotes() {
 		return data.IncidentID != "" && data.ReviewsCount == 2
 	})
 
-	note, err := s.fakePagerduty.CheckNewIncidentNote(s.Ctx())
+	note, err := s.fakePagerduty.CheckNewIncidentNote(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, pluginData.IncidentID, note.IncidentID)
 	assert.Contains(t, note.Content, s.userNames.reviewer1+" reviewed the request", "note must contain a review author")
 	assert.Contains(t, note.Content, "Resolution: APPROVED", "note must contain an approval resolution")
 	assert.Contains(t, note.Content, "Reason: okay", "note must contain an approval reason")
 
-	note, err = s.fakePagerduty.CheckNewIncidentNote(s.Ctx())
+	note, err = s.fakePagerduty.CheckNewIncidentNote(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, pluginData.IncidentID, note.IncidentID)
 	assert.Contains(t, note.Content, s.userNames.reviewer2+" reviewed the request", "note must contain a review author")
@@ -347,14 +468,21 @@ func (s *PagerdutySuite) TestReviewNotes() {
 	assert.Contains(t, note.Content, "Reason: not okay", "note must contain a denial reason")
 }
 
-func (s *PagerdutySuite) TestIncidentApprovalResolution() {
+func (s *PagerdutySuite) TestApprovalByReview() {
 	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
 
 	s.startApp()
 
 	req := s.createAccessRequest()
 
-	req, err := s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	incident, err := s.fakePagerduty.CheckNewIncident(s.Context())
+	require.NoError(t, err, "no new incidents stored")
+
+	err = s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
@@ -362,11 +490,12 @@ func (s *PagerdutySuite) TestIncidentApprovalResolution() {
 	})
 	require.NoError(t, err)
 
-	note, err := s.fakePagerduty.CheckNewIncidentNote(s.Ctx())
+	note, err := s.fakePagerduty.CheckNewIncidentNote(s.Context())
 	require.NoError(t, err)
+	assert.Equal(t, incident.ID, note.IncidentID)
 	assert.Contains(t, note.Content, s.userNames.reviewer1+" reviewed the request", "note must contain a review author")
 
-	req, err = s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	err = s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
@@ -374,8 +503,9 @@ func (s *PagerdutySuite) TestIncidentApprovalResolution() {
 	})
 	require.NoError(t, err)
 
-	note, err = s.fakePagerduty.CheckNewIncidentNote(s.Ctx())
+	note, err = s.fakePagerduty.CheckNewIncidentNote(s.Context())
 	require.NoError(t, err)
+	assert.Equal(t, incident.ID, note.IncidentID)
 	assert.Contains(t, note.Content, s.userNames.reviewer2+" reviewed the request", "note must contain a review author")
 
 	data := s.checkPluginData(req.GetName(), func(data PluginData) bool {
@@ -383,23 +513,32 @@ func (s *PagerdutySuite) TestIncidentApprovalResolution() {
 	})
 	assert.Equal(t, Resolution{Tag: ResolvedApproved, Reason: "finally okay"}, data.Resolution)
 
-	note, err = s.fakePagerduty.CheckNewIncidentNote(s.Ctx())
+	note, err = s.fakePagerduty.CheckNewIncidentNote(s.Context())
 	require.NoError(t, err)
+	assert.Equal(t, incident.ID, note.IncidentID)
 	assert.Contains(t, note.Content, "Access request has been approved")
 	assert.Contains(t, note.Content, "Reason: finally okay")
 
-	incidentUpdate, err := s.fakePagerduty.CheckIncidentUpdate(s.Ctx())
+	incidentUpdate, err := s.fakePagerduty.CheckIncidentUpdate(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "resolved", incidentUpdate.Status)
 }
 
-func (s *PagerdutySuite) TestIncidentDenialResolution() {
+func (s *PagerdutySuite) TestDenialByReview() {
 	t := s.T()
 
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
 	s.startApp()
+
 	req := s.createAccessRequest()
 
-	req, err := s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	incident, err := s.fakePagerduty.CheckNewIncident(s.Context())
+	require.NoError(t, err, "no new incidents stored")
+
+	err = s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -407,11 +546,12 @@ func (s *PagerdutySuite) TestIncidentDenialResolution() {
 	})
 	require.NoError(t, err)
 
-	note, err := s.fakePagerduty.CheckNewIncidentNote(s.Ctx())
+	note, err := s.fakePagerduty.CheckNewIncidentNote(s.Context())
 	require.NoError(t, err)
+	assert.Equal(t, incident.ID, note.IncidentID)
 	assert.Contains(t, note.Content, s.userNames.reviewer1+" reviewed the request", "note must contain a review author")
 
-	req, err = s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	err = s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -419,8 +559,9 @@ func (s *PagerdutySuite) TestIncidentDenialResolution() {
 	})
 	require.NoError(t, err)
 
-	note, err = s.fakePagerduty.CheckNewIncidentNote(s.Ctx())
+	note, err = s.fakePagerduty.CheckNewIncidentNote(s.Context())
 	require.NoError(t, err)
+	assert.Equal(t, incident.ID, note.IncidentID)
 	assert.Contains(t, note.Content, s.userNames.reviewer2+" reviewed the request", "note must contain a review author")
 
 	data := s.checkPluginData(req.GetName(), func(data PluginData) bool {
@@ -428,12 +569,13 @@ func (s *PagerdutySuite) TestIncidentDenialResolution() {
 	})
 	assert.Equal(t, Resolution{Tag: ResolvedDenied, Reason: "finally not okay"}, data.Resolution)
 
-	note, err = s.fakePagerduty.CheckNewIncidentNote(s.Ctx())
+	note, err = s.fakePagerduty.CheckNewIncidentNote(s.Context())
 	require.NoError(t, err)
+	assert.Equal(t, incident.ID, note.IncidentID)
 	assert.Contains(t, note.Content, "Access request has been denied")
 	assert.Contains(t, note.Content, "Reason: finally not okay")
 
-	incidentUpdate, err := s.fakePagerduty.CheckIncidentUpdate(s.Ctx())
+	incidentUpdate, err := s.fakePagerduty.CheckIncidentUpdate(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "resolved", incidentUpdate.Status)
 }
@@ -452,8 +594,8 @@ func (s *PagerdutySuite) assertNewEvent(watcher types.Watcher, opType types.OpTy
 		} else {
 			assert.Nil(t, ev.Resource)
 		}
-	case <-s.Ctx().Done():
-		t.Error(t, "No events received", s.Ctx().Err())
+	case <-s.Context().Done():
+		t.Error(t, "No events received", s.Context().Err())
 	}
 	return ev
 }
@@ -466,8 +608,8 @@ func (s *PagerdutySuite) assertNoNewEvents(watcher types.Watcher) {
 	case ev := <-watcher.Events():
 		t.Errorf("Unexpected event %#v", ev)
 	case <-time.After(250 * time.Millisecond):
-	case <-s.Ctx().Done():
-		t.Error(t, s.Ctx().Err())
+	case <-s.Context().Done():
+		t.Error(t, s.Context().Err())
 	}
 }
 
@@ -475,7 +617,7 @@ func (s *PagerdutySuite) assertReviewSubmitted() {
 	t := s.T()
 	t.Helper()
 
-	watcher, err := s.teleport.Process.GetAuthServer().NewWatcher(s.Ctx(), types.Watch{
+	watcher, err := s.ruler().NewWatcher(s.Context(), types.Watch{
 		Kinds: []types.WatchKind{{Kind: types.KindAccessRequest}},
 	})
 	require.NoError(t, err)
@@ -493,19 +635,19 @@ func (s *PagerdutySuite) assertReviewSubmitted() {
 	assert.Equal(t, types.RequestState_PENDING, request.GetState())
 
 	ev = s.assertNewEvent(watcher, types.OpPut, types.KindAccessRequest, reqID)
-	request, ok = ev.Resource.(services.AccessRequest)
+	request, ok = ev.Resource.(types.AccessRequest)
 	require.True(t, ok)
 	assert.Equal(t, types.RequestState_APPROVED, request.GetState())
 	reqReviews := request.GetReviews()
 	assert.Len(t, reqReviews, 1)
-	assert.Equal(t, "plugin", reqReviews[0].Author)
+	assert.Equal(t, s.userNames.plugin, reqReviews[0].Author)
 }
 
 func (s *PagerdutySuite) assertNoReviewSubmitted() {
 	t := s.T()
 	t.Helper()
 
-	watcher, err := s.teleport.Process.GetAuthServer().NewWatcher(s.Ctx(), types.Watch{
+	watcher, err := s.ruler().NewWatcher(s.Context(), types.Watch{
 		Kinds: []types.WatchKind{{Kind: types.KindAccessRequest}},
 	})
 	require.NoError(t, err)
@@ -525,17 +667,23 @@ func (s *PagerdutySuite) assertNoReviewSubmitted() {
 
 	s.assertNoNewEvents(watcher)
 
-	request, err = s.teleport.GetAccessRequest(s.Ctx(), request.GetName())
+	request, err = s.ruler().GetAccessRequest(s.Context(), request.GetName())
 	require.NoError(t, err)
 	assert.Equal(t, types.RequestState_PENDING, request.GetState())
 	assert.Len(t, request.GetReviews(), 0)
 }
 
 func (s *PagerdutySuite) TestAutoApprovalWhenNoActiveIncidents() {
-	s.userName = s.userNames.approver
+	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
+	s.currentRequestor = s.userNames.approver
 	pdUser := s.fakePagerduty.StoreUser(User{
 		Name:  "Test User",
-		Email: s.userName,
+		Email: s.currentRequestor,
 	})
 	s.fakePagerduty.StoreOnCall(OnCall{
 		User:             Reference{Type: "user_reference", ID: pdUser.ID},
@@ -546,10 +694,16 @@ func (s *PagerdutySuite) TestAutoApprovalWhenNoActiveIncidents() {
 }
 
 func (s *PagerdutySuite) TestAutoApprovalWhenActiveIncident() {
-	s.userName = s.userNames.approver
+	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
+	s.currentRequestor = s.userNames.approver
 	pdUser := s.fakePagerduty.StoreUser(User{
 		Name:  "Test User",
-		Email: s.userName,
+		Email: s.currentRequestor,
 	})
 	s.fakePagerduty.StoreOnCall(OnCall{
 		User:             Reference{Type: "user_reference", ID: pdUser.ID},
@@ -568,10 +722,16 @@ func (s *PagerdutySuite) TestAutoApprovalWhenActiveIncident() {
 }
 
 func (s *PagerdutySuite) TestAutoApprovalWhenActiveIncidentInAnotherService() {
-	s.userName = s.userNames.approver
+	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
+	s.currentRequestor = s.userNames.approver
 	pdUser := s.fakePagerduty.StoreUser(User{
 		Name:  "Test User",
-		Email: s.userName,
+		Email: s.currentRequestor,
 	})
 	s.fakePagerduty.StoreOnCall(OnCall{
 		User:             Reference{Type: "user_reference", ID: pdUser.ID},
@@ -590,10 +750,16 @@ func (s *PagerdutySuite) TestAutoApprovalWhenActiveIncidentInAnotherService() {
 }
 
 func (s *PagerdutySuite) TestAutoApprovalWhenActiveIncidentOnAnotherPolicy() {
-	s.userName = s.userNames.approver
+	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
+	s.currentRequestor = s.userNames.approver
 	pdUser := s.fakePagerduty.StoreUser(User{
 		Name:  "Test User",
-		Email: s.userName,
+		Email: s.currentRequestor,
 	})
 	s.fakePagerduty.StoreOnCall(OnCall{
 		User:             Reference{Type: "user_reference", ID: pdUser.ID},
@@ -616,35 +782,41 @@ func (s *PagerdutySuite) TestExpiration() {
 
 	s.startApp()
 
-	req := s.createExpiredAccessRequest()
-	data := s.checkPluginData(req.GetName(), func(data PluginData) bool {
-		return data.Resolution.Tag != Unresolved
-	})
-	assert.Equal(t, Resolution{Tag: ResolvedExpired}, data.Resolution)
+	req := s.createAccessRequest()
 
-	incident, err := s.fakePagerduty.CheckNewIncident(s.Ctx())
+	incident, err := s.fakePagerduty.CheckNewIncident(s.Context())
 	require.NoError(t, err, "no new incidents stored")
 	assert.Equal(t, "triggered", incident.Status)
 	incidentID := incident.ID
 
-	incident, err = s.fakePagerduty.CheckIncidentUpdate(s.Ctx())
+	s.checkPluginData(req.GetName(), func(data PluginData) bool {
+		return data.IncidentID != ""
+	})
+
+	err = s.ruler().DeleteAccessRequest(s.Context(), req.GetName()) // simulate expiration
+	require.NoError(t, err)
+
+	incident, err = s.fakePagerduty.CheckIncidentUpdate(s.Context())
 	require.NoError(t, err, "no new incidents updated")
 	assert.Equal(t, incidentID, incident.ID)
 	assert.Equal(t, "resolved", incident.Status)
 
-	note, err := s.fakePagerduty.CheckNewIncidentNote(s.Ctx())
+	note, err := s.fakePagerduty.CheckNewIncidentNote(s.Context())
 	require.NoError(t, err, "no new notes stored")
+	assert.Equal(t, incidentID, note.IncidentID)
 	assert.Contains(t, note.Content, "Access request has been expired")
 }
 
 func (s *PagerdutySuite) TestRace() {
 	t := s.T()
 
-	prevLogLevel := log.GetLevel()
-	log.SetLevel(log.InfoLevel) // Turn off noisy debug logging
-	defer log.SetLevel(prevLogLevel)
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
 
-	s.SetContext(20 * time.Second)
+	logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+
+	s.SetContextTimeout(20 * time.Second)
 	s.startApp()
 
 	var (
@@ -682,14 +854,14 @@ func (s *PagerdutySuite) TestRace() {
 		},
 	})
 
-	watcher, err := s.teleport.Process.GetAuthServer().NewWatcher(s.Ctx(), services.Watch{
-		Kinds: []services.WatchKind{{Kind: types.KindAccessRequest}},
+	watcher, err := s.ruler().NewWatcher(s.Context(), types.Watch{
+		Kinds: []types.WatchKind{{Kind: types.KindAccessRequest}},
 	})
 	require.NoError(t, err)
 	defer watcher.Close()
 	assert.Equal(t, types.OpInit, (<-watcher.Events()).Type)
 
-	process := lib.NewProcess(s.Ctx())
+	process := lib.NewProcess(s.Context())
 	for i := 0; i < s.raceNumber; i++ {
 		userName := s.userNames.racer1
 		var proposedState types.RequestState
@@ -701,11 +873,11 @@ func (s *PagerdutySuite) TestRace() {
 			proposedState = types.RequestState_DENIED
 		}
 		process.SpawnCritical(func(ctx context.Context) error {
-			req, err := services.NewAccessRequest(userName, "admin")
+			req, err := types.NewAccessRequest(uuid.New().String(), userName, "admin")
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
-			if err := s.teleport.CreateAccessRequest(ctx, req); err != nil {
+			if err := s.clients[userName].CreateAccessRequest(ctx, req); err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
 			pendingRequests.Store(req.GetName(), struct{}{})
@@ -727,7 +899,7 @@ func (s *PagerdutySuite) TestRace() {
 				return setRaceErr(trace.Errorf("incident %q has already been stored", incident.ID))
 			}
 			atomic.AddInt32(&incidentsCount, 1)
-			req, err := s.teleport.GetAccessRequest(ctx, reqID)
+			req, err := s.ruler().GetAccessRequest(ctx, reqID)
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
@@ -749,7 +921,7 @@ func (s *PagerdutySuite) TestRace() {
 					review.Author = s.userNames.reviewer2
 				}
 				review.Created = time.Now()
-				if _, err = s.teleport.SubmitAccessReview(ctx, reqID, review); err != nil {
+				if err = s.clients[review.Author].SubmitAccessRequestReview(ctx, reqID, review); err != nil {
 					return setRaceErr(trace.Wrap(err))
 				}
 			}
@@ -783,7 +955,7 @@ func (s *PagerdutySuite) TestRace() {
 	}
 	process.SpawnCritical(func(ctx context.Context) error {
 		for {
-			var event services.Event
+			var event types.Event
 			select {
 			case event = <-watcher.Events():
 			case <-ctx.Done():
@@ -795,7 +967,7 @@ func (s *PagerdutySuite) TestRace() {
 			if obtained, expected := event.Resource.GetKind(), types.KindAccessRequest; obtained != expected {
 				return setRaceErr(trace.Errorf("wrong resource kind. expected %v, obtained %v", expected, obtained))
 			}
-			req := event.Resource.(services.AccessRequest)
+			req := event.Resource.(types.AccessRequest)
 			if req.GetState() != types.RequestState_APPROVED && req.GetState() != types.RequestState_DENIED {
 				continue
 			}

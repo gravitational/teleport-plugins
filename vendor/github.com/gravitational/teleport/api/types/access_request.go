@@ -26,8 +26,6 @@ import (
 	"github.com/gravitational/teleport/api/utils"
 
 	"github.com/gravitational/trace"
-
-	"github.com/vulcand/predicate"
 )
 
 // AccessRequest is a request for temporarily granted roles
@@ -92,25 +90,17 @@ type AccessRequest interface {
 	GetSuggestedReviewers() []string
 	// SetSuggestedReviewers sets the suggested reviewer list.
 	SetSuggestedReviewers([]string)
-	// CheckAndSetDefaults validates the access request and
-	// supplies default values where appropriate.
-	CheckAndSetDefaults() error
-	// Equals checks equality between access request values.
-	Equals(AccessRequest) bool
 }
 
 // NewAccessRequest assembled an AccessRequest resource.
 func NewAccessRequest(name string, user string, roles ...string) (AccessRequest, error) {
 	req := AccessRequestV3{
-		Kind:    KindAccessRequest,
-		Version: V3,
 		Metadata: Metadata{
 			Name: name,
 		},
 		Spec: AccessRequestSpecV3{
 			User:  user,
 			Roles: roles,
-			State: RequestState_PENDING,
 		},
 	}
 	if err := req.CheckAndSetDefaults(); err != nil {
@@ -229,15 +219,6 @@ func (r *AccessRequestV3) GetOriginalRoles() []string {
 	return roles
 }
 
-// getThreshold is a helper for getting a threshold by its stored index.
-func (r *AccessRequestV3) getThreshold(tid uint32) (AccessReviewThreshold, error) {
-	idx := int(tid)
-	if len(r.Spec.Thresholds) <= idx {
-		return AccessReviewThreshold{}, trace.Errorf("threshold index '%d' out of range (this is a bug)", tid)
-	}
-	return r.Spec.Thresholds[idx], nil
-}
-
 // GetThresholds gets the review thresholds.
 func (r *AccessRequestV3) GetThresholds() []AccessReviewThreshold {
 	return r.Spec.Thresholds
@@ -278,44 +259,23 @@ func (r *AccessRequestV3) SetSuggestedReviewers(reviewers []string) {
 	r.Spec.SuggestedReviewers = reviewers
 }
 
+// setStaticFields sets static resource header and metadata fields.
+func (r *AccessRequestV3) setStaticFields() {
+	r.Kind = KindAccessRequest
+	r.Version = V3
+}
+
 // CheckAndSetDefaults validates set values and sets default values
 func (r *AccessRequestV3) CheckAndSetDefaults() error {
+	r.setStaticFields()
 	if err := r.Metadata.CheckAndSetDefaults(); err != nil {
 		return trace.Wrap(err)
 	}
-	if r.GetState().IsNone() {
-		if err := r.SetState(RequestState_PENDING); err != nil {
-			return trace.Wrap(err)
-		}
+
+	if r.Spec.State.IsNone() {
+		r.Spec.State = RequestState_PENDING
 	}
 
-	// dedupe and sort roles to simplify comparing role lists
-	r.Spec.Roles = utils.Deduplicate(r.Spec.Roles)
-	sort.Strings(r.Spec.Roles)
-
-	if err := r.Check(); err != nil {
-		return trace.Wrap(err)
-	}
-	return nil
-}
-
-// Check validates AccessRequest values
-func (r *AccessRequestV3) Check() error {
-	if r.Kind == "" {
-		return trace.BadParameter("access request kind not set")
-	}
-	if r.Version == "" {
-		return trace.BadParameter("access request version not set")
-	}
-	if r.GetName() == "" {
-		return trace.BadParameter("access request id not set")
-	}
-	if r.GetUser() == "" {
-		return trace.BadParameter("access request user name not set")
-	}
-	if len(r.GetRoles()) < 1 {
-		return trace.BadParameter("access request does not specify any roles")
-	}
 	if r.GetState().IsPending() {
 		if r.GetResolveReason() != "" {
 			return trace.BadParameter("pending requests cannot include resolve reason")
@@ -324,6 +284,18 @@ func (r *AccessRequestV3) Check() error {
 			return trace.BadParameter("pending requests cannot include resolve annotations")
 		}
 	}
+
+	if r.GetUser() == "" {
+		return trace.BadParameter("access request user name not set")
+	}
+	if len(r.GetRoles()) < 1 {
+		return trace.BadParameter("access request does not specify any roles")
+	}
+
+	// dedupe and sort roles to simplify comparing role lists
+	r.Spec.Roles = utils.Deduplicate(r.Spec.Roles)
+	sort.Strings(r.Spec.Roles)
+
 	return nil
 }
 
@@ -367,13 +339,6 @@ func (r *AccessRequestV3) SetExpiry(expiry time.Time) {
 	r.Metadata.SetExpiry(expiry)
 }
 
-// SetTTL sets Expires header using the provided clock.
-// Use SetExpiry instead.
-// DELETE IN 7.0.0
-func (r *AccessRequestV3) SetTTL(clock Clock, ttl time.Duration) {
-	r.Metadata.SetTTL(clock, ttl)
-}
-
 // GetMetadata gets Metadata
 func (r *AccessRequestV3) GetMetadata() Metadata {
 	return r.Metadata
@@ -394,44 +359,7 @@ func (r *AccessRequestV3) String() string {
 	return fmt.Sprintf("AccessRequest(user=%v,roles=%+v)", r.Spec.User, r.Spec.Roles)
 }
 
-// Equals compares two AccessRequests
-func (r *AccessRequestV3) Equals(other AccessRequest) bool {
-	o, ok := other.(*AccessRequestV3)
-	if !ok {
-		return false
-	}
-	if r.GetName() != o.GetName() {
-		return false
-	}
-	return r.Spec.Equals(&o.Spec)
-}
-
-// MatchesFilter returns true if Filter rule matches
-// Empty Filter block always matches
-func (t AccessReviewThreshold) MatchesFilter(parser predicate.Parser) (bool, error) {
-	if t.Filter == "" {
-		return true, nil
-	}
-	ifn, err := parser.Parse(t.Filter)
-	if err != nil {
-		return false, trace.Wrap(err)
-	}
-	fn, ok := ifn.(predicate.BoolPredicate)
-	if !ok {
-		return false, trace.BadParameter("unsupported type: %T", ifn)
-	}
-	return fn(), nil
-}
-
-func (t AccessReviewThreshold) Equals(other AccessReviewThreshold) bool {
-	return reflect.DeepEqual(t, other)
-}
-
 func (c AccessReviewConditions) IsZero() bool {
-	return reflect.ValueOf(c).IsZero()
-}
-
-func (c AccessRequestConditions) IsZero() bool {
 	return reflect.ValueOf(c).IsZero()
 }
 
@@ -572,28 +500,6 @@ func (s RequestState) IsResolved() bool {
 	return s.IsApproved() || s.IsDenied()
 }
 
-// Equals compares two AccessRequestSpecs
-func (s *AccessRequestSpecV3) Equals(other *AccessRequestSpecV3) bool {
-	if s.User != other.User {
-		return false
-	}
-	if len(s.Roles) != len(other.Roles) {
-		return false
-	}
-	for i, role := range s.Roles {
-		if role != other.Roles[i] {
-			return false
-		}
-	}
-	if s.Created != other.Created {
-		return false
-	}
-	if s.Expires != other.Expires {
-		return false
-	}
-	return s.State == other.State
-}
-
 // key values for map encoding of request filter
 const (
 	keyID    = "id"
@@ -647,9 +553,4 @@ func (f *AccessRequestFilter) Match(req AccessRequest) bool {
 		return false
 	}
 	return true
-}
-
-// Equals compares two AccessRequestFilters
-func (f *AccessRequestFilter) Equals(o AccessRequestFilter) bool {
-	return f.ID == o.ID && f.User == o.User && f.State == o.State
 }
