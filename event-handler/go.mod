@@ -7,7 +7,7 @@ require (
 	github.com/google/btree v1.0.0 // indirect
 	github.com/gravitational/teleport/api v0.0.0-20210521213410-c15a980e2fdb
 	github.com/gravitational/trace v1.1.15
-	github.com/manifoldco/promptui v0.8.0 // indirect
+	github.com/manifoldco/promptui v0.8.0
 	github.com/pelletier/go-toml v1.9.3
 	github.com/peterbourgon/diskv v2.0.1+incompatible
 	github.com/sirupsen/logrus v1.6.0
