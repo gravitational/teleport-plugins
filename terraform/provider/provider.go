@@ -52,6 +52,9 @@ const (
 	// identityFilePath is the key of identity file path in Teleport config
 	identityFilePath = "identity_file_path"
 
+	// identityFile is the key of identity file content in Teleport config
+	identityFile = "identity_file"
+
 	// namePath path to resource name in ResourceData
 	namePath = "metadata.0.name"
 )
@@ -120,6 +123,12 @@ func Provider() *schema.Provider {
 				Optional:    true,
 				Description: "Teleport identity file path",
 			},
+			identityFile: {
+				Type:        schema.TypeString,
+				DefaultFunc: schema.EnvDefaultFunc("TF_TELEPORT_IDENTITY_FILE", ""),
+				Optional:    true,
+				Description: "Teleport identity file content",
+			},
 		},
 		ResourcesMap: map[string]*schema.Resource{
 			"teleport_role":             resourceTeleportRole(),
@@ -173,10 +182,11 @@ func getConfig(d *schema.ResourceData) (*client.Config, error) {
 	log.WithFields(log.Fields{"addr": addr}).Debug("Addr provided")
 
 	_, okKey := d.GetOk(keyPathKey)
-	_, okIdentity := d.GetOk(identityFilePath)
+	_, okIdentity := d.GetOk(identityFile)
+	_, okIdentityPath := d.GetOk(identityFilePath)
 
 	if okKey {
-		log.Debug("certificate files provided")
+		log.Debug("Certificate files provided")
 
 		c, err := getConfigFromCerts(d)
 		if err != nil {
@@ -187,7 +197,18 @@ func getConfig(d *schema.ResourceData) (*client.Config, error) {
 	}
 
 	if okIdentity {
-		log.Debug("identity file provided")
+		log.Debug("Identity provided")
+
+		c, err := getConfigFromIdentity(d)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		creds = append(creds, c)
+	}
+
+	if okIdentityPath {
+		log.Debug("Identity file provided")
 
 		c, err := getConfigFromIdentityFile(d)
 		if err != nil {
@@ -197,7 +218,7 @@ func getConfig(d *schema.ResourceData) (*client.Config, error) {
 		creds = append(creds, c)
 	}
 
-	log.Debug("using profile as the default auth method")
+	log.Debug("Using profile as the default auth method")
 
 	c, err := getConfigFromProfile(d)
 	if err != nil {
@@ -218,12 +239,25 @@ func getConfigFromIdentityFile(d *schema.ResourceData) (client.Credentials, erro
 	p := d.Get(identityFilePath)
 	path, ok := p.(string)
 	if !ok {
-		return nil, trace.Errorf("can not convert Teleport config value %s %s to string", identityFilePath, p)
+		return nil, trace.BadParameter("can not convert Teleport config value %s %s to string", identityFilePath, p)
 	}
 
 	log.WithField("path", path).Debug("Identity file is set")
 
 	return client.LoadIdentityFile(path), nil
+}
+
+// getConfigFromIdentity returns client configuration which uses identity file
+func getConfigFromIdentity(d *schema.ResourceData) (client.Credentials, error) {
+	c := d.Get(identityFile)
+	content, ok := c.(string)
+	if !ok {
+		return nil, trace.BadParameter("can not convert Teleport config value %s %s to string", identityFile, c)
+	}
+
+	log.Debug("Identity file is read from a value (env or config)")
+
+	return client.LoadIdentityFileFromString(content), nil
 }
 
 // getConfigFromProfile returns client configuration which uses tsh profile
@@ -235,7 +269,7 @@ func getConfigFromProfile(d *schema.ResourceData) (client.Credentials, error) {
 	if n != nil {
 		name, ok = n.(string)
 		if !ok {
-			return nil, trace.Errorf("can not convert Teleport config value %s %s to string", profileName, n)
+			return nil, trace.BadParameter("can not convert Teleport config value %s %s to string", profileName, n)
 		}
 	}
 
@@ -243,7 +277,7 @@ func getConfigFromProfile(d *schema.ResourceData) (client.Credentials, error) {
 	if v != nil {
 		dir, ok = v.(string)
 		if !ok {
-			return nil, trace.Errorf("can not convert Teleport config value %s %s to string", profileDir, v)
+			return nil, trace.BadParameter("can not convert Teleport config value %s %s to string", profileDir, v)
 		}
 	}
 
