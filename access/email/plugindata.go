@@ -18,6 +18,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/gravitational/teleport/api/types"
@@ -70,7 +71,7 @@ func DecodePluginData(dataMap map[string]string) (data PluginData) {
 	}
 	data.RequestReason = dataMap["request_reason"]
 	if str := dataMap["reviews_count"]; str != "" {
-		fmt.Sscanf(str, "%d", &data.ReviewsCount)
+		data.ReviewsCount, _ = strconv.Atoi(dataMap["reviews_count"])
 	}
 	data.Resolution.Tag = ResolutionTag(dataMap["resolution"])
 	data.Resolution.Reason = dataMap["resolve_reason"]

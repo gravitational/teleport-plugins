@@ -16,7 +16,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	. "github.com/gravitational/teleport-plugins/lib/testing"
+	teleportTesting "github.com/gravitational/teleport-plugins/lib/testing"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
@@ -49,7 +49,7 @@ const (
 )
 
 type EmailSuite struct {
-	Suite
+	teleportTesting.Suite
 	appConfig Config
 	userNames struct {
 		ruler     string
@@ -202,7 +202,7 @@ func (s *EmailSuite) SetupTest() {
 	conf.Delivery.Recipients = []string{allRecipient}
 
 	s.appConfig = conf
-	s.SetContextTimeout(5 * time.Second)
+	s.SetContextTimeout(5 * time.Minute)
 }
 
 func (s *EmailSuite) startApp() {
@@ -276,16 +276,16 @@ func (s *EmailSuite) TestNewThreads() {
 	pluginData := s.checkPluginData(request.GetName(), func(data PluginData) bool {
 		return len(data.EmailThreads) > 0
 	})
-	assert.Len(t, pluginData.EmailThreads, 3) // 2 recipients + all@example.com
+	require.Len(t, pluginData.EmailThreads, 3) // 2 recipients + all@example.com
 
 	var messages = s.getMessages(s.Context(), t, 3)
 
-	assert.Len(t, messages, 3)
+	require.Len(t, messages, 3)
 
 	// Senders
-	assert.Equal(t, sender, messages[0].Sender)
-	assert.Equal(t, sender, messages[1].Sender)
-	assert.Equal(t, sender, messages[2].Sender)
+	require.Equal(t, sender, messages[0].Sender)
+	require.Equal(t, sender, messages[1].Sender)
+	require.Equal(t, sender, messages[2].Sender)
 
 	// Recipients
 	expectedRecipients := []string{allRecipient, s.userNames.reviewer1, s.userNames.reviewer2}
@@ -293,17 +293,17 @@ func (s *EmailSuite) TestNewThreads() {
 	sort.Strings(expectedRecipients)
 	sort.Strings(actualRecipients)
 
-	assert.Equal(t, expectedRecipients, actualRecipients)
+	require.Equal(t, expectedRecipients, actualRecipients)
 
 	// Subjects
-	assert.Contains(t, messages[0].Subject, request.GetName())
-	assert.Contains(t, messages[1].Subject, request.GetName())
-	assert.Contains(t, messages[2].Subject, request.GetName())
+	require.Contains(t, messages[0].Subject, request.GetName())
+	require.Contains(t, messages[1].Subject, request.GetName())
+	require.Contains(t, messages[2].Subject, request.GetName())
 
 	// Body
-	assert.Contains(t, messages[0].Body, fmt.Sprintf("User: %v", s.userNames.requestor))
-	assert.Contains(t, messages[1].Body, "Reason: because of")
-	assert.Contains(t, messages[2].Body, "Status: ⏳ PENDING")
+	require.Contains(t, messages[0].Body, fmt.Sprintf("User: %v", s.userNames.requestor))
+	require.Contains(t, messages[1].Body, "Reason: because of")
+	require.Contains(t, messages[2].Body, "Status: ⏳ PENDING")
 }
 
 func (s *EmailSuite) TestApproval() {
@@ -321,10 +321,10 @@ func (s *EmailSuite) TestApproval() {
 
 	recipients := []string{messages[0].Recipient, messages[1].Recipient}
 
-	assert.Contains(t, recipients, allRecipient)
-	assert.Contains(t, recipients, s.userNames.reviewer1)
+	require.Contains(t, recipients, allRecipient)
+	require.Contains(t, recipients, s.userNames.reviewer1)
 
-	assert.Contains(t, messages[0].Body, "Status: ✅ APPROVED (okay)")
+	require.Contains(t, messages[0].Body, "Status: ✅ APPROVED (okay)")
 }
 
 func (s *EmailSuite) TestDenial() {
@@ -342,10 +342,10 @@ func (s *EmailSuite) TestDenial() {
 
 	recipients := []string{messages[0].Recipient, messages[1].Recipient}
 
-	assert.Contains(t, recipients, allRecipient)
-	assert.Contains(t, recipients, s.userNames.reviewer1)
+	require.Contains(t, recipients, allRecipient)
+	require.Contains(t, recipients, s.userNames.reviewer1)
 
-	assert.Contains(t, messages[0].Body, "Status: ❌ DENIED (not okay)")
+	require.Contains(t, messages[0].Body, "Status: ❌ DENIED (not okay)")
 }
 
 func (s *EmailSuite) TestReviewReplies() {
@@ -375,9 +375,9 @@ func (s *EmailSuite) TestReviewReplies() {
 
 	reply := messages[0].Body
 
-	assert.Contains(t, reply, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
-	assert.Contains(t, reply, "Resolution: ✅ APPROVED", "reply must contain a proposed state")
-	assert.Contains(t, reply, "Reason: okay", "reply must contain a reason")
+	require.Contains(t, reply, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
+	require.Contains(t, reply, "Resolution: ✅ APPROVED", "reply must contain a proposed state")
+	require.Contains(t, reply, "Reason: okay", "reply must contain a reason")
 
 	s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
@@ -390,9 +390,9 @@ func (s *EmailSuite) TestReviewReplies() {
 
 	reply = messages[0].Body
 
-	assert.Contains(t, reply, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
-	assert.Contains(t, reply, "Resolution: ❌ DENIED", "reply must contain a proposed state")
-	assert.Contains(t, reply, "Reason: not okay", "reply must contain a reason")
+	require.Contains(t, reply, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
+	require.Contains(t, reply, "Resolution: ❌ DENIED", "reply must contain a proposed state")
+	require.Contains(t, reply, "Reason: not okay", "reply must contain a reason")
 }
 
 func (s *EmailSuite) TestApprovalByReview() {
@@ -417,7 +417,7 @@ func (s *EmailSuite) TestApprovalByReview() {
 
 	messages := s.getMessages(s.Context(), t, 2)
 
-	assert.Contains(t, messages[0].Body, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
+	require.Contains(t, messages[0].Body, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
 
 	s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
@@ -427,10 +427,10 @@ func (s *EmailSuite) TestApprovalByReview() {
 	})
 
 	messages = s.getMessages(s.Context(), t, 2)
-	assert.Contains(t, messages[0].Body, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
+	require.Contains(t, messages[0].Body, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
 
 	messages = s.getMessages(s.Context(), t, 2)
-	assert.Contains(t, messages[0].Body, "Status: ✅ APPROVED (finally okay)")
+	require.Contains(t, messages[0].Body, "Status: ✅ APPROVED (finally okay)")
 }
 
 func (s *EmailSuite) TestDenialByReview() {
@@ -440,9 +440,9 @@ func (s *EmailSuite) TestDenialByReview() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	req := s.createAccessRequest([]string{s.userNames.requestor})
-
 	s.startApp()
+
+	req := s.createAccessRequest([]string{s.userNames.requestor})
 
 	s.skipMessages(s.Context(), t, 2)
 
@@ -454,7 +454,7 @@ func (s *EmailSuite) TestDenialByReview() {
 	})
 
 	messages := s.getMessages(s.Context(), t, 2)
-	assert.Contains(t, messages[0].Body, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
+	require.Contains(t, messages[0].Body, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
 
 	s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
@@ -464,10 +464,10 @@ func (s *EmailSuite) TestDenialByReview() {
 	})
 
 	messages = s.getMessages(s.Context(), t, 2)
-	assert.Contains(t, messages[0].Body, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
+	require.Contains(t, messages[0].Body, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
 
 	messages = s.getMessages(s.Context(), t, 2)
-	assert.Contains(t, messages[0].Body, "Status: ❌ DENIED (finally not okay)")
+	require.Contains(t, messages[0].Body, "Status: ❌ DENIED (finally not okay)")
 }
 
 func (s *EmailSuite) TestExpiration() {
@@ -486,7 +486,7 @@ func (s *EmailSuite) TestExpiration() {
 	require.NoError(t, err)
 
 	messages := s.getMessages(s.Context(), t, 2)
-	assert.Contains(t, messages[0].Body, "Status: ⌛ EXPIRED")
+	require.Contains(t, messages[0].Body, "Status: ⌛ EXPIRED")
 }
 
 func (s *EmailSuite) TestRace() {
@@ -589,8 +589,8 @@ func (s *EmailSuite) TestRace() {
 		next = next && assert.True(t, loaded)
 
 		c, ok := val.(*int32)
-		assert.True(t, ok)
-		assert.Equal(t, int32(newMessageCount), *c)
+		require.True(t, ok)
+		require.Equal(t, int32(newMessageCount), *c)
 
 		return next
 	})
@@ -602,8 +602,8 @@ func (s *EmailSuite) TestRace() {
 		next = next && assert.True(t, loaded)
 
 		c, ok := val.(*int32)
-		assert.True(t, ok)
-		assert.Equal(t, int32(reviewMessageCount), *c)
+		require.True(t, ok)
+		require.Equal(t, int32(reviewMessageCount), *c)
 
 		return next
 	})
@@ -615,15 +615,15 @@ func (s *EmailSuite) TestRace() {
 		next = next && assert.True(t, loaded)
 
 		c, ok := val.(*int32)
-		assert.True(t, ok)
-		assert.Equal(t, int32(resolveMessageCount), *c)
+		require.True(t, ok)
+		require.Equal(t, int32(resolveMessageCount), *c)
 
 		return next
 	})
 
 	// Total message count:
 	// (3 original threads + 6 review replies + 3 * resolve) * number of processes
-	assert.Equal(t, int32(messageCountPerThread*s.raceNumber), msgCount)
+	require.Equal(t, int32(messageCountPerThread*s.raceNumber), msgCount)
 }
 
 // skipEmails ensures that emails were received, but dumps the contents

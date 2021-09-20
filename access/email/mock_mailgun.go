@@ -51,7 +51,7 @@ type MockMailgunServer struct {
 // Standard server from mailgun-go does not catch message texts.
 func NewMockMailgunServer(concurrency int) *MockMailgunServer {
 	mg := &MockMailgunServer{
-		chMessages: make(chan MockMailgunMessage, concurrency*10),
+		chMessages: make(chan MockMailgunMessage, concurrency*50),
 	}
 
 	s := httptest.NewUnstartedServer(func(mg *MockMailgunServer) http.HandlerFunc {

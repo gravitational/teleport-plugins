@@ -21,20 +21,18 @@ defer teleport.Close()
 auth, err := teleport.NewAuthServer()
 require.NoError(t, err)
 
-// integration.*API instance, see below
-api, err := teleport.NewAPI(ctx, auth)
-require.NoError(t, err)
-
 pong, err := api.Ping(ctx)
 require.NoError(t, err)
 teleportFeatures := pong.GetServerFeatures()
 ```
 
-There are several environment variables defined:
+There are several environment variables available:
 
+* `TELEPORT_GET_VERSION` - Teleport version. Will download Teleport binaries if missing in the host system.
 * `TELEPORT_BINARY` - path to teleport binary (default: `teleport`).
 * `TELEPORT_BINARY_TCTL` - path to tctl binary (default: `tctl`).
-* `TELEPORT_LICENSE` - path to license file (default: `/var/lib/teleport/license.pem`).
+* `TELEPORT_ENTERPRISE_LICENSE` - path to license file (default: `/var/lib/teleport/license.pem`).
+* `CI` - indicates that tests are run on the CI.
 
 Please, beware of `teleportFeatures` variable.
 
@@ -50,66 +48,53 @@ if !teleportFeatures.AdvancedAccessWorkflows {
 
 # Creating default users and roles
 
-Use `integration.Bootstrap` type to create default users and roles.
+Use `integration.Bootstrap` type to create default users and roles. In the following example we create admin and regular user:
 
 ```go
 var bootstrap integration.Bootstrap
 
 conditions = types.RoleConditions{}
 if teleportFeatures.AdvancedAccessWorkflows {
-	// For Teleport Enterprise only
+	// For Teleport Enterprise only. This role holders can review admin access request.
 	conditions.ReviewRequests = &types.AccessReviewConditions{Roles: []string{"admin"}}
 }
-role, err = bootstrap.AddRole("default", types.RoleSpecV4{Allow: conditions})
+role, err = bootstrap.AddRole("admin", types.RoleSpecV4{})
 require.NoError(t, err)
 
-user, err = bootstrap.AddUserWithRoles("default", role.GetName())
+role, err = bootstrap.AddRole("user", types.RoleSpecV4{Allow: conditions})
+require.NoError(t, err)
+
+adminUser, err = bootstrap.AddUserWithRoles("admin", role.GetName())
+require.NoError(t, err)
+
+defaultUser, err = bootstrap.AddUserWithRoles("user", role.GetName())
 require.NoError(t, err)
 
 err = teleport.Bootstrap(ctx, auth, bootstrap.Resources())
 require.NoError(t, err)
 ```
 
-# Export identity file 
+# Saving client instances for a users
+
+```go
+adminClient, err = teleport.NewClient(ctx, auth, "admin")
+require.NoError(t, err)
+
+userClient, err = teleport.NewClient(ctx, auth, "user")
+require.NoError(t, err)
+```
+
+Use this variables to perform requests on behalf of a specific users.
+
+# Exporting identity file 
 
 You can export identity file for a desired user using the following snippet:
 
 ```go
 // auth is obtained on initialization
-identityPath, err := teleport.Sign(ctx, auth, "email-plugin-user")
+identityPath, err := teleport.Sign(ctx, auth, "user")
 require.NoError(t, err)
 ```
-
-# Running API calls with impersonation
-
-`*integration.API` methods facilitate running Teleport API requests on behalf of entity owners. For example, if you want user "requestor" to create a new Access Request, you may do it using the following snippet:
-
-```go
-req, err := types.NewAccessRequest("u-u-id", "requestor", "admin")
-require.NoError(t, err)
-req.SetRequestReason("because of")
-```
-
-Using `*integration.API` it would look like this:
-
-```go
-err := api.CreateAccessRequest(ctx, req)
-require.NoError(t, err)
-```
-
-If "requestor" won't have rights, this method will fail.
-
-This is equivalent to, where client would be normal Teleport `api.Client` instance:
-
-```go
-// auth is obtained on initialization
-client, err := integration.Client(ctx, auth, "requestor")
-require.NoError(t, err)
-
-client.CreateAccessRequest(ctx, req)
-```
-
-Feel free to add missing methods to `*integration.API`.
 
 # Implementing an example test
 
@@ -143,6 +128,6 @@ func (t *testing.T) TestNewThreads() {
 
 ```
 
-Please note that Teleport instance does not get restatrted between tests. Hence, *Teleport state does not get reset*. Otherwise, it will significantly slow tests down. 
+Please note that Teleport instance does not get restarted between tests. Hence, *Teleport state does not get reset*. Otherwise, it will significantly slow tests down. 
 
-So, in this example, if there are more than three messages generated, they will be processed by the other tests in a suite.  This could lead to unobvious random failures. You need to check that messages you have received belong to the test subject you are working with in this specific method.
+So, in this example, if there are more than three messages generated, they will be processed by the other tests in a suite.  This could lead to unobvious random failures. You need to check that messages you have received belong to the test case you are working with in this specific method.

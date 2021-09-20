@@ -61,7 +61,7 @@ By default, configuration file is expected to be at `/etc/teleport-email.toml`.
 ```toml
 # /etc/teleport-email.toml
 [teleport]
-auth_server = "example.com:3025"                               # Teleport Auth Server GRPC API address
+auth_server = "example.com:3025"                               # Teleport Auth/Proxy/Tunnel Server Address
 
 # Identity file exported with tctl auth sign --format file
 identity = "/var/lib/teleport/plugins/email/auth_id"    # Identity file
