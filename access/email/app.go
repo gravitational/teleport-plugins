@@ -135,7 +135,7 @@ func (a *App) init(ctx context.Context) error {
 	bk := grpcbackoff.DefaultConfig
 	bk.MaxDelay = grpcBackoffMaxDelay
 	if a.apiClient, err = client.New(ctx, client.Config{
-		Addrs:       []string{a.conf.Teleport.AuthServer},
+		Addrs:       a.conf.Teleport.GetAddrs(),
 		Credentials: a.conf.Teleport.Credentials(),
 		DialOpts:    []grpc.DialOption{grpc.WithConnectParams(grpc.ConnectParams{Backoff: bk, MinConnectTimeout: initTimeout})},
 	}); err != nil {

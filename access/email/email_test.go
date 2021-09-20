@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	. "github.com/gravitational/teleport-plugins/lib/testing"
@@ -51,15 +52,16 @@ type EmailSuite struct {
 	Suite
 	appConfig Config
 	userNames struct {
+		ruler     string
 		requestor string
 		reviewer1 string
 		reviewer2 string
 		plugin    string
 	}
-	raceNumber int
+	raceNumber  int
+	mockMailgun *MockMailgunServer
 
-	mockMailgun      *MockMailgunServer
-	teleport         *integration.API
+	clients          map[string]*integration.Client
 	teleportFeatures *proto.Features
 	teleportConfig   lib.TeleportConfig
 }
@@ -69,13 +71,16 @@ func TestEmailClient(t *testing.T) { suite.Run(t, &EmailSuite{}) }
 func (s *EmailSuite) SetupSuite() {
 	var err error
 	t := s.T()
-	ctx := s.Context()
 
 	logger.Init()
 	logger.Setup(logger.Config{Severity: "debug"})
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
+
+	// We set such a big timeout because integration.NewFromEnv could start
+	// downloading a Teleport *-bin.tar.gz file which can take a long time.
+	ctx := s.SetContextTimeout(2 * time.Minute)
 
 	teleport, err := integration.NewFromEnv(ctx)
 	require.NoError(t, err)
@@ -85,10 +90,18 @@ func (s *EmailSuite) SetupSuite() {
 	require.NoError(t, err)
 	s.StartApp(auth)
 
-	api, err := teleport.NewAPI(ctx, auth)
-	require.NoError(t, err)
+	s.clients = make(map[string]*integration.Client)
 
-	pong, err := api.Ping(ctx)
+	// Set up the user who has an access to all kinds of resources.
+
+	s.userNames.ruler = me.Username + "-ruler@example.com"
+	client, err := teleport.MakeAdmin(ctx, auth, s.userNames.ruler)
+	require.NoError(t, err)
+	s.clients[s.userNames.ruler] = client
+
+	// Get the server features.
+
+	pong, err := client.Ping(ctx)
 	require.NoError(t, err)
 	teleportFeatures := pong.GetServerFeatures()
 
@@ -145,11 +158,26 @@ func (s *EmailSuite) SetupSuite() {
 	err = teleport.Bootstrap(ctx, auth, bootstrap.Resources())
 	require.NoError(t, err)
 
+	// Initialize the clients.
+
+	client, err = teleport.NewClient(ctx, auth, s.userNames.requestor)
+	require.NoError(t, err)
+	s.clients[s.userNames.requestor] = client
+
+	if teleportFeatures.AdvancedAccessWorkflows {
+		client, err = teleport.NewClient(ctx, auth, s.userNames.reviewer1)
+		require.NoError(t, err)
+		s.clients[s.userNames.reviewer1] = client
+
+		client, err = teleport.NewClient(ctx, auth, s.userNames.reviewer2)
+		require.NoError(t, err)
+		s.clients[s.userNames.reviewer2] = client
+	}
+
 	identityPath, err := teleport.Sign(ctx, auth, s.userNames.plugin)
 	require.NoError(t, err)
 
-	s.teleport = api
-	s.teleportConfig.AuthServer = auth.PublicAddr() // NOTE: This needs to be replaced with addr once we deprecate
+	s.teleportConfig.Addr = auth.PublicAddr()
 	s.teleportConfig.Identity = identityPath
 	s.teleportFeatures = teleportFeatures
 }
@@ -165,12 +193,15 @@ func (s *EmailSuite) SetupTest() {
 
 	var conf Config
 	conf.Teleport = s.teleportConfig
-	conf.Mailgun = &MailgunConfig{PrivateKey: mailgunMockPrivateKey, Domain: mailgunMockDomain, APIBase: s.mockMailgun.GetURL()}
+	conf.Mailgun = &MailgunConfig{
+		PrivateKey: mailgunMockPrivateKey,
+		Domain:     mailgunMockDomain,
+		APIBase:    s.mockMailgun.GetURL(),
+	}
 	conf.Delivery.Sender = sender
 	conf.Delivery.Recipients = []string{allRecipient}
 
 	s.appConfig = conf
-
 	s.SetContextTimeout(5 * time.Second)
 }
 
@@ -182,6 +213,22 @@ func (s *EmailSuite) startApp() {
 	require.NoError(t, err)
 
 	s.StartApp(app)
+}
+
+func (s *EmailSuite) ruler() *integration.Client {
+	return s.clients[s.userNames.ruler]
+}
+
+func (s *EmailSuite) requestor() *integration.Client {
+	return s.clients[s.userNames.requestor]
+}
+
+func (s *EmailSuite) reviewer1() *integration.Client {
+	return s.clients[s.userNames.reviewer1]
+}
+
+func (s *EmailSuite) reviewer2() *integration.Client {
+	return s.clients[s.userNames.reviewer2]
 }
 
 func (s *EmailSuite) newAccessRequest(suggestedReviewers []string) types.AccessRequest {
@@ -201,7 +248,7 @@ func (s *EmailSuite) createAccessRequest(suggestedReviewers []string) types.Acce
 	t.Helper()
 
 	req := s.newAccessRequest(suggestedReviewers)
-	err := s.teleport.CreateAccessRequest(s.Context(), req)
+	err := s.requestor().CreateAccessRequest(s.Context(), req)
 	require.NoError(t, err)
 	return req
 }
@@ -211,7 +258,7 @@ func (s *EmailSuite) checkPluginData(reqID string, cond func(PluginData) bool) P
 	t.Helper()
 
 	for {
-		rawData, err := s.teleport.PollAccessRequestPluginData(s.Context(), "email", reqID)
+		rawData, err := s.ruler().PollAccessRequestPluginData(s.Context(), "email", reqID)
 		require.NoError(t, err)
 		if data := DecodePluginData(rawData); cond(data) {
 			return data
@@ -268,7 +315,7 @@ func (s *EmailSuite) TestApproval() {
 
 	s.skipMessages(s.Context(), t, 2)
 
-	s.teleport.ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
 
 	messages := s.getMessages(s.Context(), t, 2)
 
@@ -289,7 +336,7 @@ func (s *EmailSuite) TestDenial() {
 
 	s.skipMessages(s.Context(), t, 2)
 
-	s.teleport.DenyAccessRequest(s.Context(), req.GetName(), "not okay")
+	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay")
 
 	messages := s.getMessages(s.Context(), t, 2)
 
@@ -317,7 +364,7 @@ func (s *EmailSuite) TestReviewReplies() {
 
 	s.skipMessages(s.Context(), t, 2)
 
-	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
+	s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
@@ -332,7 +379,7 @@ func (s *EmailSuite) TestReviewReplies() {
 	assert.Contains(t, reply, "Resolution: ✅ APPROVED", "reply must contain a proposed state")
 	assert.Contains(t, reply, "Reason: okay", "reply must contain a reason")
 
-	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
+	s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -361,7 +408,7 @@ func (s *EmailSuite) TestApprovalByReview() {
 
 	s.skipMessages(s.Context(), t, 2)
 
-	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
+	s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
@@ -372,7 +419,7 @@ func (s *EmailSuite) TestApprovalByReview() {
 
 	assert.Contains(t, messages[0].Body, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
 
-	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
+	s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
@@ -399,7 +446,7 @@ func (s *EmailSuite) TestDenialByReview() {
 
 	s.skipMessages(s.Context(), t, 2)
 
-	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
+	s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -409,7 +456,7 @@ func (s *EmailSuite) TestDenialByReview() {
 	messages := s.getMessages(s.Context(), t, 2)
 	assert.Contains(t, messages[0].Body, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
 
-	s.teleport.SubmitAccessReview(s.Context(), req.GetName(), types.AccessReview{
+	s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -435,7 +482,7 @@ func (s *EmailSuite) TestExpiration() {
 		return len(data.EmailThreads) > 0
 	})
 
-	err := s.teleport.DeleteAccessRequest(s.Context(), request.GetName()) // simulate expiration
+	err := s.ruler().DeleteAccessRequest(s.Context(), request.GetName()) // simulate expiration
 	require.NoError(t, err)
 
 	messages := s.getMessages(s.Context(), t, 2)
@@ -484,7 +531,7 @@ func (s *EmailSuite) TestRace() {
 				return setRaceErr(trace.Wrap(err))
 			}
 			req.SetSuggestedReviewers([]string{s.userNames.reviewer1, s.userNames.reviewer2})
-			if err := s.teleport.CreateAccessRequest(ctx, req); err != nil {
+			if err := s.requestor().CreateAccessRequest(ctx, req); err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
 			return nil
@@ -512,7 +559,7 @@ func (s *EmailSuite) TestRace() {
 
 				// We must approve message if it's not an all recipient
 				if msg.Recipient != allRecipient {
-					if _, err = s.teleport.SubmitAccessReview(ctx, reqID, types.AccessReview{
+					if err = s.clients[msg.Recipient].SubmitAccessRequestReview(ctx, reqID, types.AccessReview{
 						Author:        msg.Recipient,
 						ProposedState: types.RequestState_APPROVED,
 						Created:       time.Now(),
