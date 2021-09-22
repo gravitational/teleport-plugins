@@ -34,11 +34,11 @@ import (
 
 var regexpAuthStarting = regexp.MustCompile(`Auth service [^ ]+ is starting on [^ ]+:(\d+)`)
 
-type AuthServer struct {
+type AuthService struct {
 	mu           sync.Mutex
 	teleportPath string
 	configPath   string
-	authAddr     string
+	authAddr     Addr
 	isReady      bool
 	readyCh      chan struct{}
 	doneCh       chan struct{}
@@ -50,11 +50,11 @@ type AuthServer struct {
 	stderr       bytes.Buffer
 }
 
-func newAuthServer(teleportPath, configPath string) *AuthServer {
-	var auth AuthServer
+func newAuthService(teleportPath, configPath string) *AuthService {
+	var auth AuthService
 	var setErrOnce, setReadyOnce sync.Once
 	readyCh := make(chan struct{})
-	auth = AuthServer{
+	auth = AuthService{
 		teleportPath: teleportPath,
 		configPath:   configPath,
 		readyCh:      readyCh,
@@ -80,14 +80,14 @@ func newAuthServer(teleportPath, configPath string) *AuthServer {
 }
 
 // Run spawns an auth server instance.
-func (auth *AuthServer) Run(ctx context.Context) error {
+func (auth *AuthService) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	log := logger.Get(ctx)
 
 	cmd := exec.CommandContext(ctx, auth.teleportPath, "start", "--debug", "--config", auth.configPath)
-	log.Debugf("Running Auth Server: %s", cmd)
+	log.Debugf("Running Auth service: %s", cmd)
 
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -110,13 +110,13 @@ func (auth *AuthServer) Run(ctx context.Context) error {
 	}
 
 	ctx, log = logger.WithField(ctx, "pid", cmd.Process.Pid)
-	log.Debug("Auth Server process has been started")
+	log.Debug("Auth service process has been started")
 
 	auth.mu.Lock()
 	var terminateOnce sync.Once
 	auth.terminate = func() {
 		terminateOnce.Do(func() {
-			log.Debug("Terminating Auth Server process")
+			log.Debug("Terminating Auth service process")
 			// Signal the process to gracefully terminate by sending SIGQUIT.
 			cmd.Process.Signal(syscall.SIGQUIT)
 			// If we're not done in 5 minutes, just kill the process by cancelling its context.
@@ -124,7 +124,7 @@ func (auth *AuthServer) Run(ctx context.Context) error {
 				select {
 				case <-auth.doneCh:
 				case <-time.After(serviceShutdownTimeout):
-					log.Debug("Killing Auth Server process")
+					log.Debug("Killing Auth service process")
 				}
 				// cancel() results in sending SIGKILL to a process if it's still alive.
 				cancel()
@@ -147,8 +147,8 @@ func (auth *AuthServer) Run(ctx context.Context) error {
 				auth.saveStdout(line)
 				auth.parseLine(ctx, line)
 				if !auth.IsReady() {
-					if addr := auth.PublicAddr(); addr != "" {
-						log.Debugf("Found listen addr of Auth Server process: %v", addr)
+					if addr := auth.AuthAddr(); !addr.IsEmpty() {
+						log.Debugf("Found addr of Auth service process: %v", addr)
 						auth.setReady(true)
 					}
 				}
@@ -196,9 +196,9 @@ func (auth *AuthServer) Run(ctx context.Context) error {
 		log.Error("Auth server is failed to initialize")
 		stdoutLines := strings.Split(auth.Stdout(), "\n")
 		for _, line := range stdoutLines[len(stdoutLines)-10:] {
-			log.Debug("AuthServer log: ", line)
+			log.Debug("AuthService log: ", line)
 		}
-		log.Debugf("AuthServer stderr: %q", auth.Stderr())
+		log.Debugf("AuthService stderr: %q", auth.Stderr())
 
 		// If it's still not ready lets signal that it's finally not ready.
 		auth.setReady(false)
@@ -209,25 +209,27 @@ func (auth *AuthServer) Run(ctx context.Context) error {
 	return trace.Wrap(auth.Err())
 }
 
-// configPath returns auth server config file path.
-func (auth *AuthServer) ConfigPath() string {
-	return auth.configPath
-}
-
-// PublicAddr returns auth server external address.
-func (auth *AuthServer) PublicAddr() string {
+// AuthAddr returns auth service external address.
+func (auth *AuthService) AuthAddr() Addr {
+	auth.mu.Lock()
+	defer auth.mu.Unlock()
 	return auth.authAddr
 }
 
+// ConfigPath returns auth service config file path.
+func (auth *AuthService) ConfigPath() string {
+	return auth.configPath
+}
+
 // Err returns auth server error. It's nil If process is not done yet.
-func (auth *AuthServer) Err() error {
+func (auth *AuthService) Err() error {
 	auth.mu.Lock()
 	defer auth.mu.Unlock()
 	return auth.error
 }
 
 // Shutdown terminates the auth server process and waits for its completion.
-func (auth *AuthServer) Shutdown(ctx context.Context) error {
+func (auth *AuthService) Shutdown(ctx context.Context) error {
 	auth.doTerminate()
 	select {
 	case <-auth.doneCh:
@@ -238,21 +240,21 @@ func (auth *AuthServer) Shutdown(ctx context.Context) error {
 }
 
 // Stdout returns a collected auth server process stdout.
-func (auth *AuthServer) Stdout() string {
+func (auth *AuthService) Stdout() string {
 	auth.mu.Lock()
 	defer auth.mu.Unlock()
 	return auth.stdout.String()
 }
 
 // Stderr returns a collected auth server process stderr.
-func (auth *AuthServer) Stderr() string {
+func (auth *AuthService) Stderr() string {
 	auth.mu.Lock()
 	defer auth.mu.Unlock()
 	return auth.stderr.String()
 }
 
 // WaitReady waits for auth server initialization.
-func (auth *AuthServer) WaitReady(ctx context.Context) (bool, error) {
+func (auth *AuthService) WaitReady(ctx context.Context) (bool, error) {
 	select {
 	case <-auth.readyCh:
 		return auth.IsReady(), nil
@@ -262,36 +264,36 @@ func (auth *AuthServer) WaitReady(ctx context.Context) (bool, error) {
 }
 
 // IsReady indicates if auth server is initialized properly.
-func (auth *AuthServer) IsReady() bool {
+func (auth *AuthService) IsReady() bool {
 	auth.mu.Lock()
 	defer auth.mu.Unlock()
 	return auth.isReady
 }
 
-func (auth *AuthServer) doTerminate() {
+func (auth *AuthService) doTerminate() {
 	auth.mu.Lock()
 	terminate := auth.terminate
 	auth.mu.Unlock()
 	terminate()
 }
 
-func (auth *AuthServer) parseLine(ctx context.Context, line string) {
+func (auth *AuthService) parseLine(ctx context.Context, line string) {
 	submatch := regexpAuthStarting.FindStringSubmatch(line)
 	if submatch != nil {
 		auth.mu.Lock()
 		defer auth.mu.Unlock()
-		auth.authAddr = "127.0.0.1:" + submatch[1]
+		auth.authAddr = Addr{Host: "127.0.0.1", Port: submatch[1]}
 		return
 	}
 }
 
-func (auth *AuthServer) saveStdout(line string) {
+func (auth *AuthService) saveStdout(line string) {
 	auth.mu.Lock()
 	defer auth.mu.Unlock()
 	auth.stdout.WriteString(line)
 }
 
-func (auth *AuthServer) saveStderr(chunk []byte) {
+func (auth *AuthService) saveStderr(chunk []byte) {
 	auth.mu.Lock()
 	defer auth.mu.Unlock()
 	auth.stderr.Write(chunk)

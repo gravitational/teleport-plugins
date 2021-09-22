@@ -182,9 +182,10 @@ func getBinaries(ctx context.Context, distStr, outDir string, checksum lib.SHA25
 	existingPaths := BinPaths{
 		Teleport: path.Join(outExtractDir, "teleport"),
 		Tctl:     path.Join(outExtractDir, "tctl"),
+		Tsh:      path.Join(outExtractDir, "tsh"),
 	}
 
-	if fileExists(existingPaths.Teleport) && fileExists(existingPaths.Tctl) {
+	if fileExists(existingPaths.Teleport) && fileExists(existingPaths.Tctl) && fileExists(existingPaths.Tsh) {
 		log.Debugf("Teleport binaries are found in %s. No need to download anything", outExtractDir)
 		return existingPaths, trace.Wrap(outFile.Close())
 	}
@@ -215,9 +216,9 @@ func getBinaries(ctx context.Context, distStr, outDir string, checksum lib.SHA25
 		OutFiles:        make(map[string]string),
 	}
 	if strings.HasPrefix(distStr, "teleport-ent") {
-		tarOptions.Files = []string{"teleport-ent/teleport", "teleport-ent/tctl"}
+		tarOptions.Files = []string{"teleport-ent/teleport", "teleport-ent/tctl", "teleport-ent/tsh"}
 	} else {
-		tarOptions.Files = []string{"teleport/teleport", "teleport/tctl"}
+		tarOptions.Files = []string{"teleport/teleport", "teleport/tctl", "teleport/tsh"}
 	}
 
 	log.Debugf("Extracting Teleport binaries into %s", outExtractDir)
@@ -232,6 +233,7 @@ func getBinaries(ctx context.Context, distStr, outDir string, checksum lib.SHA25
 	return BinPaths{
 		Teleport: tarOptions.OutFiles[tarOptions.Files[0]],
 		Tctl:     tarOptions.OutFiles[tarOptions.Files[1]],
+		Tsh:      tarOptions.OutFiles[tarOptions.Files[2]],
 	}, nil
 }
 
