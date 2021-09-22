@@ -67,7 +67,7 @@ func (s *MattermostSuite) SetupSuite() {
 	require.NoError(t, err)
 	t.Cleanup(teleport.Close)
 
-	auth, err := teleport.NewAuthServer()
+	auth, err := teleport.NewAuthService()
 	require.NoError(t, err)
 	s.StartApp(auth)
 
@@ -158,7 +158,7 @@ func (s *MattermostSuite) SetupSuite() {
 	identityPath, err := teleport.Sign(ctx, auth, s.userNames.plugin)
 	require.NoError(t, err)
 
-	s.teleportConfig.Addr = auth.PublicAddr()
+	s.teleportConfig.Addr = auth.AuthAddr().String()
 	s.teleportConfig.Identity = identityPath
 	s.teleportFeatures = teleportFeatures
 }
