@@ -99,7 +99,7 @@ func (s *IntegrationSSHSetup) SetupSuite() {
 	s.IntegrationProxySetup.SetupSuite()
 }
 
-func (s *IntegrationSSHSetup) SetupTest() {
+func (s *IntegrationSSHSetup) Setup() {
 	s.IntegrationProxySetup.Setup()
 	t := s.T()
 	ssh, err := s.Integration.NewSSHService(s.Auth)

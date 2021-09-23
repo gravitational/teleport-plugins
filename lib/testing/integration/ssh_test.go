@@ -33,6 +33,10 @@ type IntegrationSSHSuite struct {
 
 func TestIntegrationSSH(t *testing.T) { suite.Run(t, &IntegrationSSHSuite{}) }
 
+func (s *IntegrationSSHSuite) SetupTest() {
+	s.IntegrationSSHSetup.Setup()
+}
+
 func (s *IntegrationSSHSuite) TestBench() {
 	t := s.T()
 	me, err := user.Current()
