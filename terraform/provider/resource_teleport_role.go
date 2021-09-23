@@ -76,33 +76,30 @@ func resourceRoleCreate(ctx context.Context, d *schema.ResourceData, m interface
 		return diagFromErr(describeErr(err, "role"))
 	}
 
-	r, err := types.NewRole(n, types.RoleSpecV4{})
+	r := types.RoleV4{}
+
+	err = tfschema.GetRoleV4(&r, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	r3, ok := r.(*types.RoleV4)
-	if !ok {
-		return diagFromErr(fmt.Errorf("failed to convert created role to types.RoleV4 from %T", r))
+	err = r.CheckAndSetDefaults()
+	if err != nil {
+		return diagFromErr(err)
 	}
 
-	removeMapAndListDefaults(r3)
+	removeMapAndListDefaults(&r)
 	err = checkOptionsProvided(d)
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	err = tfschema.GetRoleV4(r3, d)
+	err = c.UpsertRole(ctx, &r)
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	err = c.UpsertRole(ctx, r3)
-	if err != nil {
-		return diagFromErr(err)
-	}
-
-	d.SetId(r3.GetName())
+	d.SetId(r.GetName())
 
 	return resourceRoleRead(ctx, d, m)
 }

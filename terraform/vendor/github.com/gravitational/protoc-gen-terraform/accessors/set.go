@@ -25,6 +25,20 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+var (
+	// reflect.Type of float64
+	floatType = reflect.TypeOf((*float64)(nil)).Elem()
+
+	// reflect.Type of int
+	intType = reflect.TypeOf((*int)(nil)).Elem()
+
+	// reflect.Type of bool
+	boolType = reflect.TypeOf((*bool)(nil)).Elem()
+
+	// reflect.Type of string
+	stringType = reflect.TypeOf((*string)(nil)).Elem()
+)
+
 // Set assigns object data from object to schema.ResourceData
 //
 // Example:
@@ -69,66 +83,70 @@ func setFragment(
 		return nil, nil
 	}
 
-	for k, m := range meta {
-		s, ok := sch[k]
+	for key, fieldMeta := range meta {
+		fieldSchema, ok := sch[key]
 		if !ok {
-			return nil, trace.Errorf("field %v not found in corresponding schema", k)
+			return nil, trace.Errorf("field %v not found in corresponding schema", key)
 		}
 
-		v := source.FieldByName(m.Name)
+		fieldValue := source.FieldByName(fieldMeta.Name)
 
-		if m.Setter != nil {
-			r, err := m.Setter(v, m, s)
+		if !fieldValue.IsValid() {
+			return nil, trace.Errorf("field %v not found in source struct", key)
+		}
+
+		if fieldMeta.Setter != nil {
+			r, err := fieldMeta.Setter(fieldValue, fieldMeta, fieldSchema)
 			if err != nil {
 				return nil, trace.Wrap(err)
 			}
 
 			if r != nil {
-				target[k] = r
+				target[key] = r
 			}
 
 			continue
 		}
 
-		switch s.Type {
+		switch fieldSchema.Type {
 		case schema.TypeInt, schema.TypeFloat, schema.TypeBool, schema.TypeString:
-			r, err := setElementary(v, m, s)
+			result, err := setElementary(fieldValue, fieldMeta, fieldSchema)
 			if err != nil {
 				return nil, trace.Wrap(err)
 			}
 
-			if r != nil {
-				err = setConvertedKey(target, k, r, s)
+			if result != nil {
+				err = setConvertedKey(target, key, result, fieldSchema)
 				if err != nil {
 					return nil, trace.Wrap(err)
 				}
 			}
 
 		case schema.TypeList:
-			r, err := setList(v, m, s)
+			result, err := setList(fieldValue, fieldMeta, fieldSchema)
 			if err != nil {
 				return nil, trace.Wrap(err)
 			}
-			if r != nil {
-				target[k] = r
+			if result != nil {
+				target[key] = result
 			}
 
 		case schema.TypeMap:
-			r, err := setMap(v, m, s)
+			result, err := setMap(fieldValue, fieldMeta, fieldSchema)
 			if err != nil {
 				return nil, trace.Wrap(err)
 			}
-			target[k] = r
+			target[key] = result
 
 		case schema.TypeSet:
-			r, err := setSet(v, m, s)
+			result, err := setSet(fieldValue, fieldMeta, fieldSchema)
 			if err != nil {
 				return nil, trace.Wrap(err)
 			}
-			target[k] = r
+			target[key] = result
 
 		default:
-			return nil, trace.Errorf("unknown type %v", s.Type.String())
+			return nil, trace.Errorf("unknown type %v", fieldSchema.Type.String())
 		}
 	}
 
@@ -171,23 +189,23 @@ func setList(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (interf
 			return nil, nil
 		}
 
-		t := make([]interface{}, source.Len())
+		slice := make([]interface{}, source.Len())
 
 		for i := 0; i < source.Len(); i++ {
-			v := source.Index(i)
+			value := source.Index(i)
 
-			el, err := setEnumerableElement(v, meta, sch)
+			el, err := setEnumerableElement(value, meta, sch)
 			if err != nil {
 				return nil, err
 			}
 
-			t[i] = el
+			slice[i] = el
 		}
 
-		return t, nil
+		return slice, nil
 	}
 
-	t := make([]interface{}, 1)
+	slice := make([]interface{}, 1)
 
 	item, err := setEnumerableElement(reflect.Indirect(source), meta, sch)
 	if err != nil {
@@ -195,8 +213,8 @@ func setList(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (interf
 	}
 
 	if item != nil {
-		t[0] = item
-		return t, nil
+		slice[0] = item
+		return slice, nil
 	}
 
 	return nil, nil
@@ -208,20 +226,20 @@ func setMap(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (interfa
 		return nil, nil
 	}
 
-	m := make(map[string]interface{})
+	targetMap := make(map[string]interface{})
 
-	for _, k := range source.MapKeys() {
-		i := source.MapIndex(k)
+	for _, key := range source.MapKeys() {
+		i := source.MapIndex(key)
 
-		v, err := setEnumerableElement(i, meta, sch)
+		value, err := setEnumerableElement(i, meta, sch)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
 
-		reflect.ValueOf(m).SetMapIndex(k, reflect.ValueOf(v))
+		reflect.ValueOf(targetMap).SetMapIndex(key, reflect.ValueOf(value))
 	}
 
-	return m, nil
+	return targetMap, nil
 }
 
 // setSet converts source value to set
@@ -230,7 +248,7 @@ func setSet(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (interfa
 		return nil, nil
 	}
 
-	s, ok := sch.ZeroValue().(*schema.Set)
+	set, ok := sch.ZeroValue().(*schema.Set)
 	if !ok {
 		return nil, trace.Errorf("zero value for schema set element is not *schema.Set")
 	}
@@ -243,25 +261,25 @@ func setSet(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (interfa
 		// It will require adding explicit configuration flag "represent_collection_as_set".
 		return nil, trace.NotImplemented("set acting as list on target is not implemented yet")
 	case reflect.Map:
-		for _, k := range source.MapKeys() {
-			i := source.MapIndex(k)
+		for _, key := range source.MapKeys() {
+			i := source.MapIndex(key)
 
-			vsch := sch.Elem.(*schema.Resource).Schema["value"]
+			valueSchema := sch.Elem.(*schema.Resource).Schema["value"]
 
-			v, err := setEnumerableElement(i, meta, vsch)
+			value, err := setEnumerableElement(i, meta, valueSchema)
 			if err != nil {
 				return nil, trace.Wrap(err)
 			}
 
 			t := map[string]interface{}{
-				"key":   k.Interface(),
-				"value": []interface{}{v},
+				"key":   key.Interface(),
+				"value": []interface{}{value},
 			}
 
-			s.Add(t)
+			set.Add(t)
 		}
 
-		return s, nil
+		return set, nil
 	default:
 		return nil, trace.Errorf("unknown set source type")
 	}
@@ -280,20 +298,20 @@ func setTime(source reflect.Value) (interface{}, error) {
 
 // setDuration returns value as duration
 func setDuration(source reflect.Value) (interface{}, error) {
-	t := reflect.Indirect(source)
-	d := reflect.TypeOf((*time.Duration)(nil)).Elem()
+	sourceValue := reflect.Indirect(source)
+	durationType := reflect.TypeOf((*time.Duration)(nil)).Elem()
 
-	if !t.Type().ConvertibleTo(d) {
-		return nil, trace.Errorf("can not convert %T to time.Duration", t)
+	if !sourceValue.Type().ConvertibleTo(durationType) {
+		return nil, trace.Errorf("can not convert %T to time.Duration", sourceValue)
 	}
 
-	s, ok := t.Convert(d).Interface().(time.Duration)
+	duration, ok := sourceValue.Convert(durationType).Interface().(time.Duration)
 	if !ok {
-		return nil, trace.Errorf("can not convert %T to time.Duration", t)
+		return nil, trace.Errorf("can not convert %T to time.Duration", sourceValue)
 	}
 
-	if s != 0 {
-		return s.String(), nil
+	if duration != 0 {
+		return duration.String(), nil
 	}
 
 	return nil, nil
@@ -301,27 +319,27 @@ func setDuration(source reflect.Value) (interface{}, error) {
 
 // convert converts source value to schema type given in meta
 func convert(source reflect.Value, sch *schema.Schema) (interface{}, error) {
-	t := reflect.Indirect(source)
-	s, err := schemaValueType(sch)
+	sourceValue := reflect.Indirect(source)
+	schemaType, err := schemaValueType(sch)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
-	if !t.Type().ConvertibleTo(s) {
-		return nil, trace.Errorf("can not convert %T to %T", t.Type(), s)
+	if !sourceValue.Type().ConvertibleTo(schemaType) {
+		return nil, trace.Errorf("can not convert %T to %T", sourceValue.Type(), schemaType)
 	}
 
-	return t.Convert(s).Interface(), nil
+	return sourceValue.Convert(schemaType).Interface(), nil
 }
 
 // setConvertedKey converts value to target schema type and sets it to resulting map if not nil
 func setConvertedKey(target map[string]interface{}, key string, source interface{}, sch *schema.Schema) error {
 	if source != nil {
-		f, err := convert(reflect.ValueOf(source), sch)
+		value, err := convert(reflect.ValueOf(source), sch)
 		if err != nil {
 			return trace.Wrap(err)
 		}
-		target[key] = f
+		target[key] = value
 	}
 
 	return nil
@@ -336,29 +354,29 @@ func setEnumerableElement(
 ) (interface{}, error) {
 	switch s := sch.Elem.(type) {
 	case *schema.Schema:
-		a, err := setElementary(source, meta, s)
+		value, err := setElementary(source, meta, s)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
 
-		n, err := convert(reflect.ValueOf(a), s)
+		target, err := convert(reflect.ValueOf(value), s)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
 
-		return n, nil
+		return target, nil
 
 	case *schema.Resource:
-		m, err := setFragment(reflect.Indirect(source), meta.Nested, s.Schema)
+		value, err := setFragment(reflect.Indirect(source), meta.Nested, s.Schema)
 		if err != nil {
 			return nil, err
 		}
 
-		if len(m) == 0 {
+		if len(value) == 0 {
 			return nil, nil
 		}
 
-		return m, nil
+		return value, nil
 	default:
 		return nil, trace.Errorf("unknown Elem type")
 	}
@@ -368,13 +386,13 @@ func setEnumerableElement(
 func schemaValueType(sch *schema.Schema) (reflect.Type, error) {
 	switch sch.Type {
 	case schema.TypeFloat:
-		return reflect.TypeOf((*float64)(nil)).Elem(), nil
+		return floatType, nil
 	case schema.TypeInt:
-		return reflect.TypeOf((*int)(nil)).Elem(), nil
+		return intType, nil
 	case schema.TypeBool:
-		return reflect.TypeOf((*bool)(nil)).Elem(), nil
+		return boolType, nil
 	case schema.TypeString:
-		return reflect.TypeOf((*string)(nil)).Elem(), nil
+		return stringType, nil
 	default:
 		return nil, trace.Errorf("unknown schema type: %v", sch.Type.String())
 	}

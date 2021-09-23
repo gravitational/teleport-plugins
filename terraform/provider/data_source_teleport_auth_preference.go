@@ -26,16 +26,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// dataSourceAuthPreference returns Teleport cluster auth preference
-func dataSourceAuthPreference() *schema.Resource {
+// dataSourceTeleportAuthPreference returns Teleport cluster auth preference
+func dataSourceTeleportAuthPreference() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceAuthPreferenceRead,
+		ReadContext: dataSourceTeleportAuthPreferenceRead,
 		Schema:      tfschema.SchemaAuthPreferenceV2,
 	}
 }
 
-// dataSourceAuthPreferenceRead reads Teleport cluster auth preference
-func dataSourceAuthPreferenceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+// dataSourceTeleportAuthPreferenceRead reads Teleport cluster auth preference
+func dataSourceTeleportAuthPreferenceRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c, err := getClient(m)
 	if err != nil {
 		return diagFromErr(err)
