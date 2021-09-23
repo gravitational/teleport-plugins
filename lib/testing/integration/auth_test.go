@@ -39,7 +39,7 @@ func (s *IntegrationAuthSuite) TestBootstrap() {
 	require.NoError(t, err)
 	_, err = bootstrap.AddUserWithRoles("vladimir", "admin", role.GetName())
 	require.NoError(t, err)
-	err = s.integration.Bootstrap(s.Context(), s.auth, bootstrap.Resources())
+	err = s.Integration.Bootstrap(s.Context(), s.Auth, bootstrap.Resources())
 	require.NoError(t, err)
 }
 
@@ -49,10 +49,10 @@ func (s *IntegrationAuthSuite) TestPing() {
 	var bootstrap Bootstrap
 	user, err := bootstrap.AddUserWithRoles("vladimir", "admin")
 	require.NoError(t, err)
-	err = s.integration.Bootstrap(s.Context(), s.auth, bootstrap.Resources())
+	err = s.Integration.Bootstrap(s.Context(), s.Auth, bootstrap.Resources())
 	require.NoError(t, err)
 
-	client, err := s.integration.NewClient(s.Context(), s.auth, user.GetName())
+	client, err := s.Integration.NewClient(s.Context(), s.Auth, user.GetName())
 	require.NoError(t, err)
 	_, err = client.Ping(s.Context())
 	require.NoError(t, err)

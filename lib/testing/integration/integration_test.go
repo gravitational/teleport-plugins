@@ -40,6 +40,6 @@ func (s *IntegrationSuite) TestVersion() {
 	versionMax, err := version.NewVersion("v8")
 	require.NoError(t, err)
 
-	assert.True(t, s.integration.Version().GreaterThanOrEqual(versionMin))
-	assert.True(t, s.integration.Version().LessThan(versionMax))
+	assert.True(t, s.Integration.Version().GreaterThanOrEqual(versionMin))
+	assert.True(t, s.Integration.Version().LessThan(versionMax))
 }

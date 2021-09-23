@@ -27,22 +27,22 @@ import (
 
 type IntegrationSetup struct {
 	Suite
-	integration *Integration
+	Integration *Integration
 }
 
 type IntegrationAuthSetup struct {
 	IntegrationSetup
-	auth *AuthService
+	Auth *AuthService
 }
 
 type IntegrationProxySetup struct {
 	IntegrationAuthSetup
-	proxy *ProxyService
+	Proxy *ProxyService
 }
 
 type IntegrationSSHSetup struct {
 	IntegrationProxySetup
-	ssh *SSHService
+	SSH *SSHService
 }
 
 func (s *IntegrationSetup) SetupSuite() {
@@ -50,7 +50,7 @@ func (s *IntegrationSetup) SetupSuite() {
 	logger.Setup(logger.Config{Severity: "debug"})
 }
 
-func (s *IntegrationSetup) SetupTest() {
+func (s *IntegrationSetup) Setup() {
 	t := s.T()
 	var err error
 
@@ -60,7 +60,7 @@ func (s *IntegrationSetup) SetupTest() {
 	integration, err := NewFromEnv(ctx)
 	require.NoError(t, err)
 	t.Cleanup(integration.Close)
-	s.integration = integration
+	s.Integration = integration
 
 	s.SetContextTimeout(time.Second * 15)
 }
@@ -69,16 +69,16 @@ func (s *IntegrationAuthSetup) SetupSuite() {
 	s.IntegrationSetup.SetupSuite()
 }
 
-func (s *IntegrationAuthSetup) SetupTest() {
-	s.IntegrationSetup.SetupTest()
+func (s *IntegrationAuthSetup) Setup() {
+	s.IntegrationSetup.Setup()
 	t := s.T()
-	auth, err := s.integration.NewAuthService()
+	auth, err := s.Integration.NewAuthService()
 	require.NoError(t, err)
 	s.StartApp(auth)
-	s.auth = auth
+	s.Auth = auth
 
 	// Set CA Pin so that Proxy and SSH can register to auth securely.
-	err = s.integration.SetCAPin(s.Context(), s.auth)
+	err = s.Integration.SetCAPin(s.Context(), s.Auth)
 	require.NoError(t, err)
 }
 
@@ -86,13 +86,13 @@ func (s *IntegrationProxySetup) SetupSuite() {
 	s.IntegrationAuthSetup.SetupSuite()
 }
 
-func (s *IntegrationProxySetup) SetupTest() {
-	s.IntegrationAuthSetup.SetupTest()
+func (s *IntegrationProxySetup) Setup() {
+	s.IntegrationAuthSetup.Setup()
 	t := s.T()
-	proxy, err := s.integration.NewProxyService(s.auth)
+	proxy, err := s.Integration.NewProxyService(s.Auth)
 	require.NoError(t, err)
 	s.StartApp(proxy)
-	s.proxy = proxy
+	s.Proxy = proxy
 }
 
 func (s *IntegrationSSHSetup) SetupSuite() {
@@ -100,10 +100,10 @@ func (s *IntegrationSSHSetup) SetupSuite() {
 }
 
 func (s *IntegrationSSHSetup) SetupTest() {
-	s.IntegrationProxySetup.SetupTest()
+	s.IntegrationProxySetup.Setup()
 	t := s.T()
-	ssh, err := s.integration.NewSSHService(s.auth)
+	ssh, err := s.Integration.NewSSHService(s.Auth)
 	require.NoError(t, err)
 	s.StartApp(ssh)
-	s.ssh = ssh
+	s.SSH = ssh
 }
