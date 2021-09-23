@@ -35,13 +35,13 @@ func (s *IntegrationProxySuite) TestPing() {
 	var bootstrap Bootstrap
 	user, err := bootstrap.AddUserWithRoles("vladimir", "admin")
 	require.NoError(t, err)
-	err = s.integration.Bootstrap(s.Context(), s.auth, bootstrap.Resources())
+	err = s.Integration.Bootstrap(s.Context(), s.Auth, bootstrap.Resources())
 	require.NoError(t, err)
 
-	identity, err := s.integration.Sign(s.Context(), s.auth, user.GetName())
+	identity, err := s.Integration.Sign(s.Context(), s.Auth, user.GetName())
 	require.NoError(t, err)
 
-	client, err := s.integration.NewSignedClient(s.Context(), s.proxy, identity, user.GetName())
+	client, err := s.Integration.NewSignedClient(s.Context(), s.Proxy, identity, user.GetName())
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = client.Close() })
 	_, err = client.Ping(s.Context())
