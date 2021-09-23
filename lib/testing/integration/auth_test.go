@@ -31,6 +31,10 @@ type IntegrationAuthSuite struct {
 
 func TestIntegrationAuth(t *testing.T) { suite.Run(t, &IntegrationAuthSuite{}) }
 
+func (s *IntegrationAuthSuite) SetupTest() {
+	s.IntegrationAuthSetup.Setup()
+}
+
 func (s *IntegrationAuthSuite) TestBootstrap() {
 	t := s.T()
 

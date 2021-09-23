@@ -32,6 +32,10 @@ type IntegrationSuite struct {
 
 func TestIntegration(t *testing.T) { suite.Run(t, &IntegrationSuite{}) }
 
+func (s *IntegrationSuite) SetupTest() {
+	s.IntegrationSetup.Setup()
+}
+
 func (s *IntegrationSuite) TestVersion() {
 	t := s.T()
 
