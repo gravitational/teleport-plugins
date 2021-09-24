@@ -21,8 +21,10 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
+	"github.com/jonboulle/clockwork"
 	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 )
@@ -66,6 +68,15 @@ type App struct {
 	*lib.Process
 }
 
+const (
+	// sessionBackoffBase is an initial (minimum) backoff value.
+	sessionBackoffBase = 3 * time.Second
+	// sessionBackoffMax is a backoff threshold
+	sessionBackoffMax = 2 * time.Minute
+	// sessionBackoffNumTries is the maximum number of backoff tries
+	sessionBackoffNumTries = 5
+)
+
 // NewApp creates new app instance
 func NewApp(c *StartCmdConfig) (*App, error) {
 	app := &App{config: c}
@@ -108,84 +119,66 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 	return mainReady && sessionConsumerReady, nil
 }
 
-// takeSemaphore obtains semaphore
-func (a *App) takeSemaphore(ctx context.Context) error {
-	select {
-	case a.semaphore <- struct{}{}:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-// releaseSemaphore releases semaphore
-func (a *App) releaseSemaphore(ctx context.Context) error {
-	select {
-	case <-a.semaphore:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
 // consumeSession ingests session
-func (a *App) consumeSession(ctx context.Context, s session) error {
+func (a *App) consumeSession(ctx context.Context, s session) (bool, error) {
 	log := logger.Get(ctx)
 
-	log.WithField("id", s.ID).Info("Started session events ingest")
-
 	url := a.config.FluentdSessionURL + "." + s.ID + ".log"
+	ctx = a.contextWithCancelOnTerminate(ctx)
 
-	chEvt, chErr := a.teleport.StreamSessionEvents(ctx, s.ID, int64(s.Index))
+	log.WithField("id", s.ID).WithField("index", s.Index).Info("Started session events ingest")
+	chEvt, chErr := a.teleport.StreamSessionEvents(ctx, s.ID, s.Index)
 
-Out:
+Loop:
 	for {
 		select {
 		case err := <-chErr:
-			return trace.Wrap(err)
+			return true, trace.Wrap(err)
 
 		case evt := <-chEvt:
 			if evt == nil {
 				log.WithField("id", s.ID).Info("Finished session events ingest")
-
-				// Session export has finished, we do not need it's state anymore
-				err := a.state.RemoveSession(s.ID)
-				if err != nil {
-					return trace.Wrap(err)
-				}
-
-				break Out
+				break Loop // Break the main loop
 			}
 
 			e, err := NewTeleportEvent(evt, "")
 			if err != nil {
-				return trace.Wrap(err)
+				return false, trace.Wrap(err)
 			}
 
 			_, ok := a.config.SkipSessionTypes[e.Type]
 			if !ok {
 				err := a.sendEvent(ctx, url, &e)
+
+				if err != nil && trace.IsConnectionProblem(err) {
+					return true, trace.Wrap(err)
+				}
 				if err != nil {
-					return trace.Wrap(err)
+					return false, trace.Wrap(err)
 				}
 			}
 
 			// Set session index
 			err = a.state.SetSessionIndex(s.ID, e.Index)
 			if err != nil {
-				return trace.Wrap(err)
+				return true, trace.Wrap(err)
 			}
 		case <-ctx.Done():
-			return trace.Wrap(ctx.Err())
+			if lib.IsCanceled(ctx.Err()) {
+				return false, nil
+			}
+
+			return false, trace.Wrap(ctx.Err())
 		}
 	}
 
+	// We finished ingestion and do not need session state anymore
 	err := a.state.RemoveSession(s.ID)
 	if err != nil {
-		return trace.Wrap(err)
+		return false, trace.Wrap(err)
 	}
 
-	return nil
+	return false, nil
 }
 
 // runSessionConsumer runs session consuming process
@@ -194,24 +187,55 @@ func (a *App) runSessionConsumer(ctx context.Context) error {
 
 	a.sessionConsumerJob.SetReady(true)
 
-	// Loop must exit when it is requested by process.Terminate, we produce utility context for this
-	process := lib.MustGetProcess(ctx)
-	ctx, cancel := context.WithCancel(ctx)
-	process.OnTerminate(func(_ context.Context) error {
-		cancel()
-		return nil
-	})
+	ctx = a.contextWithCancelOnTerminate(ctx)
 
 	for {
 		select {
 		case s := <-a.sessions:
+			a.takeSemaphore(ctx)
+
 			log.WithField("id", s.ID).WithField("index", s.Index).Info("Starting session ingest")
 
-			a.takeSemaphore(ctx)
 			func(s session) {
 				a.SpawnCritical(func(ctx context.Context) error {
 					defer a.releaseSemaphore(ctx)
-					return a.consumeSession(ctx, s)
+
+					backoff := backoff.NewDecorr(sessionBackoffBase, sessionBackoffMax, clockwork.NewRealClock())
+					backoffCount := sessionBackoffNumTries
+					log := logger.Get(ctx).WithField("id", s.ID).WithField("index", s.Index)
+
+					for {
+						retry, err := a.consumeSession(ctx, s)
+
+						// If sessions needs to retry
+						if err != nil && retry {
+							log.WithField("err", err).WithField("n", backoffCount).Error("Session ingestion error, retrying")
+
+							// Sleep for required interval
+							err := backoff.Do(ctx)
+							if err != nil {
+								return trace.Wrap(err)
+							}
+
+							// Check if there are number of tries left
+							backoffCount--
+							if backoffCount < 0 {
+								log.WithField("err", err).Error("Session ingestion failed")
+								return nil
+							}
+							continue
+						}
+
+						if err != nil {
+							if !lib.IsCanceled(err) {
+								log.WithField("err", err).Error("Session ingestion failed")
+							}
+							return err
+						}
+
+						// No errors, we've finished with this session
+						return nil
+					}
 				})
 			}(s)
 		case <-ctx.Done():
@@ -238,13 +262,7 @@ func (a *App) run(ctx context.Context) error {
 
 	a.mainJob.SetReady(true)
 
-	// Loop must exit when it is requested by process.Terminate, we produce utility context for this
-	process := lib.MustGetProcess(ctx)
-	ctx, cancel := context.WithCancel(ctx)
-	process.OnTerminate(func(_ context.Context) error {
-		cancel()
-		return nil
-	})
+	ctx = a.contextWithCancelOnTerminate(ctx)
 
 	for {
 		err := a.poll(ctx)
@@ -260,6 +278,9 @@ func (a *App) run(ctx context.Context) error {
 			return nil
 		default:
 			a.Terminate()
+			if err == nil {
+				return nil
+			}
 			log.WithError(err).Error("Watcher event loop failed")
 			return trace.Wrap(err)
 		}
@@ -280,6 +301,8 @@ func (a *App) restartPausedSessions() error {
 	for id, idx := range sessions {
 		func(id string, idx int64) {
 			a.SpawnCritical(func(ctx context.Context) error {
+				ctx = a.contextWithCancelOnTerminate(ctx)
+
 				log.WithField("id", id).WithField("index", idx).Info("Restarting session ingestion")
 
 				s := session{ID: id, Index: idx}
@@ -288,6 +311,10 @@ func (a *App) restartPausedSessions() error {
 				case a.sessions <- s:
 					return nil
 				case <-ctx.Done():
+					if lib.IsCanceled(ctx.Err()) {
+						return nil
+					}
+
 					return ctx.Err()
 				}
 			})
@@ -324,6 +351,7 @@ func (a *App) poll(ctx context.Context) error {
 	for {
 		select {
 		case err := <-chErr:
+			log.WithField("err", err).Error("Error ingesting Audit Log")
 			return trace.Wrap(err)
 
 		case evt := <-chEvt:
@@ -357,13 +385,18 @@ func (a *App) sendEvent(ctx context.Context, url string, e *TeleportEvent) error
 	log := logger.Get(ctx)
 
 	if !a.config.DryRun {
-		err := a.fluentd.Send(ctx, url, e)
+		err := a.fluentd.Send(ctx, url, e.Event)
 		if err != nil {
 			return trace.Wrap(err)
 		}
 	}
 
-	log.WithFields(logrus.Fields{"id": e.ID, "type": e.Type, "ts": e.Time, "index": e.Index}).Info("Event sent")
+	fields := logrus.Fields{"id": e.ID, "type": e.Type, "ts": e.Time, "index": e.Index}
+	if e.SessionID != "" {
+		fields["sid"] = e.SessionID
+	}
+
+	log.WithFields(fields).Info("Event sent")
 	log.WithField("event", e).Debug("Event dump")
 
 	return nil
@@ -449,4 +482,35 @@ func (a *App) setStartTime(ctx context.Context, s *State) error {
 	}
 
 	return nil
+}
+
+// contextWithCancelOnTerminate creates child context which is canceled when app receives onTerminate signal (graceful shutdown)
+func (a *App) contextWithCancelOnTerminate(ctx context.Context) context.Context {
+	process := lib.MustGetProcess(ctx)
+	ctx, cancel := context.WithCancel(ctx)
+	process.OnTerminate(func(_ context.Context) error {
+		cancel()
+		return nil
+	})
+	return ctx
+}
+
+// takeSemaphore obtains semaphore
+func (a *App) takeSemaphore(ctx context.Context) error {
+	select {
+	case a.semaphore <- struct{}{}:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+}
+
+// releaseSemaphore releases semaphore
+func (a *App) releaseSemaphore(ctx context.Context) error {
+	select {
+	case <-a.semaphore:
+		return nil
+	case <-ctx.Done():
+		return ctx.Err()
+	}
 }

@@ -19,21 +19,15 @@ package main
 import (
 	"bytes"
 	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"crypto/x509/pkix"
 	_ "embed"
 	"encoding/hex"
-	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"math/big"
-	"net"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/gravitational/trace"
 
@@ -56,14 +50,23 @@ type ConfigureCmd struct {
 	// step holds step number for cli messages
 	step int
 
-	// caPath is a path to a target fluentd mTLS CA cert and pk
-	caPaths []string
+	// caCertPath is a path to a target fluentd mTLS CA cert file
+	caCertPath string
 
-	// clientPaths is a paths to a target mTLS client cert and pk (used by a plugin)
-	clientPaths []string
+	// caKeyPath is a path to a target fluentd mTLS private key file
+	caKeyPath string
 
-	// serverPaths is a paths to a target mTLS target server cert and pk (used by a fluentd instance)
-	serverPaths []string
+	// serverCertPath is a path to a target mTLS server cert file used by a fluentd instance
+	serverCertPath string
+
+	// serverKeyPath is a path to a target mTLS server private key file used by a fluentd instance
+	serverKeyPath string
+
+	// clientCertPath is a path to a target mTLS client cert file used by a plugin's fluentd client
+	clientCertPath string
+
+	// clientKeyPath is a path to a target mTLS client private key file used by a plugin's fluentd client
+	clientKeyPath string
 
 	// roleDefPath path to target role definition file which contains plugin role and user
 	roleDefPath string
@@ -74,14 +77,8 @@ type ConfigureCmd struct {
 	// confPath path to target plugin configuration file which contains an example plugin configuration
 	confPath string
 
-	// caCert is a fluentd CA certificate struct used to generate mTLS CA certs
-	caCert x509.Certificate
-
-	// clientCert is a fluentd server certificate struct used to generate mTLS fluentd certs
-	serverCert x509.Certificate
-
-	// clientCert is a fluentd client certificate struct used by generator mTLS plugin certs
-	clientCert x509.Certificate
+	// mtls is the struct with generated mTLS certificates
+	mtls *MTLSCerts
 }
 
 var (
@@ -120,70 +117,25 @@ const (
 
 // RunConfigureCmd initializes and runs configure command
 func RunConfigureCmd(cfg *ConfigureCmdConfig) error {
-	notBefore := time.Now()
-	notAfter := notBefore.Add(cfg.TTL)
-
-	entity := pkix.Name{
-		Country:    []string{"US"},
-		CommonName: cfg.CN,
-	}
-
 	c := ConfigureCmd{
 		ConfigureCmdConfig: cfg,
-		caPaths:            []string{path.Join(cfg.Out, cfg.CAName) + ".crt", path.Join(cfg.Out, cfg.CAName) + ".key"},
-		clientPaths:        []string{path.Join(cfg.Out, cfg.ClientName) + ".crt", path.Join(cfg.Out, cfg.ClientName) + ".key"},
-		serverPaths:        []string{path.Join(cfg.Out, cfg.ServerName) + ".crt", path.Join(cfg.Out, cfg.ServerName) + ".key"},
+		caCertPath:         path.Join(cfg.Out, cfg.CAName) + ".crt",
+		caKeyPath:          path.Join(cfg.Out, cfg.CAName) + ".key",
+		serverCertPath:     path.Join(cfg.Out, cfg.ServerName) + ".crt",
+		serverKeyPath:      path.Join(cfg.Out, cfg.ServerName) + ".key",
+		clientCertPath:     path.Join(cfg.Out, cfg.ClientName) + ".crt",
+		clientKeyPath:      path.Join(cfg.Out, cfg.ClientName) + ".key",
 		roleDefPath:        path.Join(cfg.Out, roleDefFileName),
 		fluentdConfPath:    path.Join(cfg.Out, fluentdConfFileName),
 		confPath:           path.Join(cfg.Out, confFileName),
-		caCert: x509.Certificate{ // caCert is a fluentd CA certificate
-			NotBefore:             notBefore,
-			NotAfter:              notAfter,
-			IsCA:                  true,
-			MaxPathLenZero:        true,
-			KeyUsage:              x509.KeyUsageCRLSign | x509.KeyUsageCertSign,
-			BasicConstraintsValid: true,
-		},
-		clientCert: x509.Certificate{ // clientCert is a fluentd client certificate
-			Subject:     entity,
-			NotBefore:   notBefore,
-			NotAfter:    notAfter,
-			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-			KeyUsage:    x509.KeyUsageDigitalSignature,
-		},
-		serverCert: x509.Certificate{ // Server CSR
-			Subject:     entity,
-			NotBefore:   notBefore,
-			NotAfter:    notAfter,
-			KeyUsage:    x509.KeyUsageDigitalSignature,
-			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-		},
 	}
 
-	// Generate and assign serial numbers
-	sn, err := rand.Int(rand.Reader, maxBigInt)
+	g, err := GenerateMTLSCerts(cfg.CN, cfg.DNSNames, cfg.IP, cfg.TTL, cfg.Length)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	c.caCert.SerialNumber = sn
-
-	sn, err = rand.Int(rand.Reader, maxBigInt)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	c.clientCert.SerialNumber = sn
-
-	sn, err = rand.Int(rand.Reader, maxBigInt)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	c.serverCert.SerialNumber = sn
-
-	// Append SANs and IPs
-	c.appendSANs(&c.serverCert)
+	c.mtls = g
 
 	return c.Run()
 }
@@ -193,11 +145,6 @@ func (c *ConfigureCmd) Run() error {
 	fmt.Printf("Teleport event handler %v %v\n\n", Version, Sha)
 
 	c.step = 1
-
-	rel, err := os.Getwd()
-	if err != nil {
-		return trace.Wrap(err)
-	}
 
 	// Get password either from STDIN or generated string
 	pwd, err := c.getPwd()
@@ -212,15 +159,10 @@ func (c *ConfigureCmd) Run() error {
 	}
 
 	// Print paths to generated fluentd certificate files
-	paths := append(append(c.caPaths, c.serverPaths...), c.clientPaths...)
-	for i, p := range paths {
-		r, err := filepath.Rel(rel, p)
-
-		if err != nil {
-			return trace.Wrap(err)
-		}
-
-		paths[i] = filepath.Clean(r)
+	paths := []string{c.caCertPath, c.caKeyPath, c.serverCertPath, c.serverKeyPath, c.clientCertPath, c.clientKeyPath}
+	paths, err = c.cleanupPaths(paths...)
+	if err != nil {
+		return trace.Wrap(err)
 	}
 
 	c.printStep("Generated mTLS Fluentd certificates %v", strings.Join(paths, ", "))
@@ -231,12 +173,12 @@ func (c *ConfigureCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	p, err := filepath.Rel(rel, c.roleDefPath)
+	path, err := c.cleanupPath(c.roleDefPath)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	c.printStep("Generated sample teleport-event-handler role and user file %v", filepath.Clean(p))
+	c.printStep("Generated sample teleport-event-handler role and user file %v", path)
 
 	// Write fluentd configuration file
 	err = c.writeFluentdConf(pwd)
@@ -244,12 +186,12 @@ func (c *ConfigureCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	p, err = filepath.Rel(rel, c.fluentdConfPath)
+	path, err = c.cleanupPath(c.fluentdConfPath)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	c.printStep("Generated sample fluentd configuration file %v", filepath.Clean(p))
+	c.printStep("Generated sample fluentd configuration file %v", path)
 
 	// Write main configuration file
 	err = c.writeConf()
@@ -257,12 +199,12 @@ func (c *ConfigureCmd) Run() error {
 		return trace.Wrap(err)
 	}
 
-	p, err = filepath.Rel(rel, c.confPath)
+	path, err = c.cleanupPath(c.confPath)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	c.printStep("Generated plugin configuration file %v", filepath.Clean(p))
+	c.printStep("Generated plugin configuration file %v", path)
 
 	fmt.Println()
 	fmt.Println("Follow-along with our getting started guide:")
@@ -272,68 +214,68 @@ func (c *ConfigureCmd) Run() error {
 	return nil
 }
 
-// Generates fluentd certificates
-func (c *ConfigureCmd) genCerts(pwd string) error {
-	caPK, caCertBytes, err := c.genCertAndPK(&c.caCert, nil, nil)
+// cleanupPaths cleans up paths passed as arguments
+func (c *ConfigureCmd) cleanupPaths(args ...string) ([]string, error) {
+	result := make([]string, len(args))
+
+	rel, err := os.Getwd()
 	if err != nil {
-		return trace.Wrap(err)
+		return nil, trace.Wrap(err)
 	}
 
-	serverPK, serverCertBytes, err := c.genCertAndPK(&c.serverCert, &c.caCert, caPK)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	clientPK, clientCertBytes, err := c.genCertAndPK(&c.clientCert, &c.caCert, caPK)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	ok := c.askOverwrite(c.caPaths[0])
-	if ok {
-		err = c.writeKeyAndCert(c.caPaths, caCertBytes, caPK, "")
+	for i, p := range args {
+		r, err := filepath.Rel(rel, p)
 		if err != nil {
-			return trace.Wrap(err)
+			return nil, trace.Wrap(err)
 		}
+		r = filepath.Clean(r)
+
+		if strings.Contains(r, "..") {
+			r, err = filepath.Abs(r)
+			if err != nil {
+				return nil, trace.Wrap(err)
+			}
+		}
+
+		result[i] = r
 	}
 
-	ok = c.askOverwrite(c.serverPaths[0])
-	if ok {
-		err = c.writeKeyAndCert(c.serverPaths, serverCertBytes, serverPK, pwd)
-		if err != nil {
-			return trace.Wrap(err)
-		}
-	}
-
-	ok = c.askOverwrite(c.clientPaths[0])
-	if ok {
-		err = c.writeKeyAndCert(c.clientPaths, clientCertBytes, clientPK, "")
-		if err != nil {
-			return trace.Wrap(err)
-		}
-	}
-
-	return nil
+	return result, nil
 }
 
-// appendSANs appends subjectAltName
-func (c *ConfigureCmd) appendSANs(cert *x509.Certificate) error {
-	cert.DNSNames = c.DNSNames
+// cleanupPath cleans up a single path
+func (c *ConfigureCmd) cleanupPath(arg string) (string, error) {
+	p, err := c.cleanupPaths(arg)
+	if err != nil {
+		return "", err
+	}
 
-	if len(c.IP) == 0 {
-		for _, name := range c.DNSNames {
-			ips, err := net.LookupIP(name)
-			if err != nil {
-				return trace.Wrap(err)
-			}
+	return p[0], nil
+}
 
-			if ips != nil {
-				cert.IPAddresses = append(cert.IPAddresses, ips...)
-			}
+// Generates fluentd certificates
+func (c *ConfigureCmd) genCerts(pwd string) error {
+	ok := c.askOverwrite(c.caKeyPath)
+	if ok {
+		err := c.mtls.CACert.WriteFile(c.caCertPath, c.caKeyPath, "")
+		if err != nil {
+			return trace.Wrap(err)
 		}
-	} else {
-		for _, ip := range c.IP {
-			cert.IPAddresses = append(cert.IPAddresses, net.ParseIP(ip))
+	}
+
+	ok = c.askOverwrite(c.serverKeyPath)
+	if ok {
+		err := c.mtls.ServerCert.WriteFile(c.serverCertPath, c.serverKeyPath, pwd)
+		if err != nil {
+			return trace.Wrap(err)
+		}
+	}
+
+	ok = c.askOverwrite(c.clientKeyPath)
+	if ok {
+		err := c.mtls.ClientCert.WriteFile(c.clientCertPath, c.clientKeyPath, "")
+		if err != nil {
+			return trace.Wrap(err)
 		}
 	}
 
@@ -405,9 +347,9 @@ func (c *ConfigureCmd) writeFluentdConf(pwd string) error {
 		ServerKeyFileName  string
 		Pwd                string
 	}{
-		path.Base(c.caPaths[0]),
-		path.Base(c.serverPaths[0]),
-		path.Base(c.serverPaths[1]),
+		path.Base(c.caCertPath),
+		path.Base(c.serverCertPath),
+		path.Base(c.serverKeyPath),
 		pwd,
 	}
 
@@ -423,10 +365,11 @@ func (c *ConfigureCmd) writeFluentdConf(pwd string) error {
 func (c *ConfigureCmd) writeConf() error {
 	var b bytes.Buffer
 	var pipeline = struct {
-		CaPaths     []string
-		ClientPaths []string
-		Addr        string
-	}{c.caPaths, c.clientPaths, c.Addr}
+		CaCertPath     string
+		ClientCertPath string
+		ClientKeyPath  string
+		Addr           string
+	}{c.caCertPath, c.clientCertPath, c.clientKeyPath, c.Addr}
 
 	err := lib.RenderTemplate(confTpl, pipeline, &b)
 	if err != nil {
@@ -444,64 +387,4 @@ func (c *ConfigureCmd) askOverwrite(path string) bool {
 	}
 
 	return true
-}
-
-// genCertAndPK generates and returns certificate and primary key
-func (c *ConfigureCmd) genCertAndPK(cert *x509.Certificate, parent *x509.Certificate, signer *rsa.PrivateKey) (*rsa.PrivateKey, []byte, error) {
-	// Generate PK
-	pk, err := rsa.GenerateKey(rand.Reader, c.Length)
-	if err != nil {
-		return nil, nil, trace.Wrap(err)
-	}
-
-	// Check if it's self-signed, assign signer and parent to self
-	s := signer
-	p := parent
-
-	if s == nil {
-		s = pk
-	}
-
-	if p == nil {
-		p = cert
-	}
-
-	// Generate and sign cert
-	certBytes, err := x509.CreateCertificate(rand.Reader, cert, p, &pk.PublicKey, s)
-	if err != nil {
-		return nil, nil, trace.Wrap(err)
-	}
-
-	return pk, certBytes, nil
-}
-
-// writeKeyAndCert writes private key and certificate on disk, returns file names actually written
-func (c *ConfigureCmd) writeKeyAndCert(certAndKeyPaths []string, certBytes []byte, pk *rsa.PrivateKey, pwd string) error {
-	var err error
-
-	pkBlock := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(pk)}
-	bytesPEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certBytes})
-
-	// Encrypt with passphrase
-	if pwd != "" {
-		//nolint // deprecated, but we still need it to be encrypted because of fluentd requirements
-		pkBlock, err = x509.EncryptPEMBlock(rand.Reader, pkBlock.Type, pkBlock.Bytes, []byte(pwd), x509.PEMCipherAES256)
-		if err != nil {
-			return trace.Wrap(err)
-		}
-	}
-
-	pkBytesPEM := pem.EncodeToMemory(pkBlock)
-
-	err = ioutil.WriteFile(certAndKeyPaths[0], bytesPEM, perms)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	err = ioutil.WriteFile(certAndKeyPaths[1], pkBytesPEM, perms)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	return nil
 }

@@ -24,9 +24,6 @@ teleport:
     enabled: false
   log:
     output: stdout
-  storage:
-    type: sqlite
-    poll_stream_period: 50000000
 
 auth_service:
   license_file: {{TELEPORT_LICENSE_FILE}}
@@ -56,9 +53,6 @@ teleport:
     enabled: false
   log:
     output: stdout
-  storage:
-    type: sqlite
-    poll_stream_period: 50000000
 
 auth_service:
   enabled: false
@@ -84,9 +78,6 @@ teleport:
     enabled: false
   log:
     output: stdout
-  storage:
-    type: sqlite
-    poll_stream_period: 50000000
 
 auth_service:
   enabled: false

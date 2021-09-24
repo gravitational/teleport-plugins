@@ -48,9 +48,9 @@ func TestGenID(t *testing.T) {
 }
 
 func TestSessionEnd(t *testing.T) {
-	e := &events.SessionEnd{
+	e := &events.SessionUpload{
 		Metadata: events.Metadata{
-			Type: "session.end",
+			Type: "session.upload",
 		},
 		SessionMetadata: events.SessionMetadata{
 			SessionID: "session",

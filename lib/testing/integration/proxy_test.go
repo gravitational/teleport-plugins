@@ -24,13 +24,13 @@ import (
 )
 
 type IntegrationProxySuite struct {
-	IntegrationProxySetup
+	ProxySetup
 }
 
 func TestIntegrationProxy(t *testing.T) { suite.Run(t, &IntegrationProxySuite{}) }
 
 func (s *IntegrationProxySuite) SetupTest() {
-	s.IntegrationProxySetup.Setup()
+	s.ProxySetup.Setup()
 }
 
 func (s *IntegrationProxySuite) TestPing() {

@@ -28,7 +28,7 @@ import (
 
 const (
 	// sessionEndType type name for session end event
-	sessionEndType = "session.end"
+	sessionEndType = "session.upload"
 )
 
 // TeleportEvent represents helper struct around main audit log event
@@ -76,7 +76,7 @@ func NewTeleportEvent(e events.AuditEvent, cursor string) (TeleportEvent, error)
 	t := e.GetType()
 	isSessionEnd := t == sessionEndType
 	if isSessionEnd {
-		sid = events.MustToOneOf(e).GetSessionEnd().SessionID
+		sid = events.MustToOneOf(e).GetSessionUpload().SessionID
 	}
 
 	return TeleportEvent{

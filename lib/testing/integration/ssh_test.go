@@ -28,13 +28,13 @@ import (
 )
 
 type IntegrationSSHSuite struct {
-	IntegrationSSHSetup
+	SSHSetup
 }
 
 func TestIntegrationSSH(t *testing.T) { suite.Run(t, &IntegrationSSHSuite{}) }
 
 func (s *IntegrationSSHSuite) SetupTest() {
-	s.IntegrationSSHSetup.Setup()
+	s.SSHSetup.Setup()
 }
 
 func (s *IntegrationSSHSuite) TestBench() {

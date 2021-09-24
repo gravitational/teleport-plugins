@@ -24,62 +24,111 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"path"
 	"strings"
+	"time"
 
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 )
 
-const (
-	// caCrtPath is a path to root CA
-	caCrtPath = "example/keys/ca.crt"
-	// crtPath is the path to the fluentd server certificate
-	crtPath = "example/keys/server_nopass.crt"
-	// keyPath is the path to the fluentd server key
-	keyPath = "example/keys/server_nopass.key"
-	// clientCrtPath is the path to the fluentd client certificate
-	clientCrtPath = "example/keys/client.crt"
-	// clientKeyPath is the path to the fluentd client key
-	clientKeyPath = "example/keys/client.key"
-)
-
-var (
-	// fluentdTestConfig is the app configuration with all required client variables
-	fluentdTestConfig = &FluentdConfig{
-		FluentdCA:   caCrtPath,
-		FluentdCert: clientCrtPath,
-		FluentdKey:  clientKeyPath,
-	}
-)
-
 type FakeFluentd struct {
+	keyTmpDir      string
+	caCertPath     string
+	caKeyPath      string
+	clientCertPath string
+	clientKeyPath  string
+	serverCertPath string
+	serverKeyPath  string
+
 	server     *httptest.Server
 	chMessages chan string
 }
 
 // NewFakeFluentd creates new unstarted fake server instance
 func NewFakeFluentd(concurrency int) (*FakeFluentd, error) {
-	caCert, err := ioutil.ReadFile(caCrtPath)
+	dir, err := ioutil.TempDir("", "teleport-plugins-event-handler-*")
 	if err != nil {
 		return nil, trace.Wrap(err)
+	}
+
+	f := &FakeFluentd{keyTmpDir: dir}
+	err = f.writeCerts()
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	err = f.createServer(concurrency)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	f.chMessages = make(chan string, concurrency)
+
+	return f, nil
+}
+
+// writeCerts generates and writes temporary mTLS keys
+func (f *FakeFluentd) writeCerts() error {
+	g, err := GenerateMTLSCerts("localhost", []string{"localhost"}, []string{}, time.Hour, 1024)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	f.caCertPath = path.Join(f.keyTmpDir, "ca.crt")
+	f.caKeyPath = path.Join(f.keyTmpDir, "ca.key")
+	f.serverCertPath = path.Join(f.keyTmpDir, "server.crt")
+	f.serverKeyPath = path.Join(f.keyTmpDir, "server.key")
+	f.clientCertPath = path.Join(f.keyTmpDir, "client.crt")
+	f.clientKeyPath = path.Join(f.keyTmpDir, "client.key")
+
+	err = g.CACert.WriteFile(f.caCertPath, f.caKeyPath, "")
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	err = g.ServerCert.WriteFile(f.serverCertPath, f.serverKeyPath, "")
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	err = g.ClientCert.WriteFile(f.clientCertPath, f.clientKeyPath, "")
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	return nil
+}
+
+// createServer initialises new server instance
+func (f *FakeFluentd) createServer(concurrency int) error {
+	caCert, err := ioutil.ReadFile(f.caCertPath)
+	if err != nil {
+		return trace.Wrap(err)
 	}
 	pool := x509.NewCertPool()
 	pool.AppendCertsFromPEM(caCert)
 
-	cert, err := tls.LoadX509KeyPair(crtPath, keyPath)
+	cert, err := tls.LoadX509KeyPair(f.serverCertPath, f.serverKeyPath)
 	if err != nil {
-		return nil, trace.Wrap(err)
+		return trace.Wrap(err)
 	}
 
 	tlsConfig := &tls.Config{RootCAs: pool, Certificates: []tls.Certificate{cert}}
 
-	f := &FakeFluentd{}
-
 	f.server = httptest.NewUnstartedServer(http.HandlerFunc(f.Respond))
 	f.server.TLS = tlsConfig
-	f.chMessages = make(chan string, concurrency)
 
-	return f, nil
+	return nil
+}
+
+// GetClientConfig returns FlientdConfig to connect to this fake fluentd server instance
+func (f *FakeFluentd) GetClientConfig() FluentdConfig {
+	return FluentdConfig{
+		FluentdCA:   f.caCertPath,
+		FluentdCert: f.clientCertPath,
+		FluentdKey:  f.clientKeyPath,
+	}
 }
 
 // Start starts fake fluentd server
