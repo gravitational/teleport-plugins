@@ -45,8 +45,12 @@ type FakeFluentd struct {
 	chMessages chan string
 }
 
+const (
+	concurrency = 255
+)
+
 // NewFakeFluentd creates new unstarted fake server instance
-func NewFakeFluentd(concurrency int) (*FakeFluentd, error) {
+func NewFakeFluentd() (*FakeFluentd, error) {
 	dir, err := ioutil.TempDir("", "teleport-plugins-event-handler-*")
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -58,7 +62,7 @@ func NewFakeFluentd(concurrency int) (*FakeFluentd, error) {
 		return nil, trace.Wrap(err)
 	}
 
-	err = f.createServer(concurrency)
+	err = f.createServer()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -101,7 +105,7 @@ func (f *FakeFluentd) writeCerts() error {
 }
 
 // createServer initialises new server instance
-func (f *FakeFluentd) createServer(concurrency int) error {
+func (f *FakeFluentd) createServer() error {
 	caCert, err := ioutil.ReadFile(f.caCertPath)
 	if err != nil {
 		return trace.Wrap(err)

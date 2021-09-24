@@ -105,7 +105,7 @@ func (s *EventHandlerSuite) SetupSuite() {
 	s.teleportConfig.Addr = s.Auth.AuthAddr().String()
 	s.teleportConfig.Identity = identityPath
 
-	s.SetContextTimeout(60 * time.Second)
+	s.SetContextTimeout(5 * time.Minute)
 }
 
 func (s *EventHandlerSuite) SetupTest() {
@@ -113,7 +113,7 @@ func (s *EventHandlerSuite) SetupTest() {
 
 	logger.Setup(logger.Config{Severity: "debug"})
 
-	fd, err := NewFakeFluentd(100) // TODO: Think if concurrency is required here
+	fd, err := NewFakeFluentd()
 	require.NoError(t, err)
 	s.fakeFluentd = fd
 	s.fakeFluentd.Start()
