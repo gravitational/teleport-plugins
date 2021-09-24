@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"os/user"
 	"testing"
@@ -32,7 +33,7 @@ import (
 )
 
 type EventHandlerSuite struct {
-	integration.IntegrationSSHSetup
+	integration.SSHSetup
 	appConfig   StartCmdConfig
 	fakeFluentd *FakeFluentd
 
@@ -46,14 +47,18 @@ type EventHandlerSuite struct {
 	teleportConfig lib.TeleportConfig
 }
 
+type event struct {
+	Type string `json:"event,omitempty"`
+}
+
 func TestEventHandler(t *testing.T) { suite.Run(t, &EventHandlerSuite{}) }
 
 func (s *EventHandlerSuite) SetupSuite() {
 	var err error
 	t := s.T()
 
-	s.IntegrationSSHSetup.SetupSuite()
-	s.IntegrationSSHSetup.Setup()
+	s.SSHSetup.SetupSuite()
+	s.SSHSetup.Setup()
 
 	me, err := user.Current()
 	require.NoError(t, err)
@@ -99,6 +104,8 @@ func (s *EventHandlerSuite) SetupSuite() {
 	s.me = me
 	s.teleportConfig.Addr = s.Auth.AuthAddr().String()
 	s.teleportConfig.Identity = identityPath
+
+	s.SetContextTimeout(60 * time.Second)
 }
 
 func (s *EventHandlerSuite) SetupTest() {
@@ -106,7 +113,7 @@ func (s *EventHandlerSuite) SetupTest() {
 
 	logger.Setup(logger.Config{Severity: "debug"})
 
-	fd, err := NewFakeFluentd(10) // TODO: Think if concurrency is required here
+	fd, err := NewFakeFluentd(100) // TODO: Think if concurrency is required here
 	require.NoError(t, err)
 	s.fakeFluentd = fd
 	s.fakeFluentd.Start()
@@ -119,12 +126,14 @@ func (s *EventHandlerSuite) SetupTest() {
 			TeleportAddr:         s.teleportConfig.Addr,
 			TeleportIdentityFile: s.teleportConfig.Identity,
 		},
-		FluentdConfig: *fluentdTestConfig,
+		FluentdConfig: s.fakeFluentd.GetClientConfig(),
 		IngestConfig: IngestConfig{
-			StorageDir: os.TempDir(),
-			Timeout:    time.Second,
-			BatchSize:  100,
-			StartTime:  &startTime,
+			StorageDir:       os.TempDir(),
+			Timeout:          time.Second,
+			BatchSize:        100,
+			Concurrency:      5,
+			StartTime:        &startTime,
+			SkipSessionTypes: map[string]struct{}{"print": {}},
 		},
 	}
 
@@ -132,7 +141,6 @@ func (s *EventHandlerSuite) SetupTest() {
 	conf.FluentdSessionURL = conf.FluentdURL + "/session"
 
 	s.appConfig = conf
-	s.SetContextTimeout(5 * time.Second)
 }
 
 func (s *EventHandlerSuite) startApp() {
@@ -164,13 +172,7 @@ func (s *EventHandlerSuite) TestEvents() {
 	})
 	require.NoError(t, err)
 
-	// We've got to do everything in a single method because event order is important in this case
-	s.testBootstrapEvents()
-	// s.testBench()
-}
-
-func (s *EventHandlerSuite) testBootstrapEvents() {
-	t := s.T()
+	// Test bootstrap events
 
 	evt, err := s.fakeFluentd.GetMessage(s.Context())
 	require.NoError(t, err)
@@ -199,24 +201,44 @@ func (s *EventHandlerSuite) testBootstrapEvents() {
 	require.Contains(t, evt, `"event":"user.create"`)
 	require.Contains(t, evt, `"name":"fake-ruler"`)
 	require.Contains(t, evt, `"roles":["access-event-handler"]`)
+
+	// Test session ingestion
+	tshCmd := s.Integration.NewTsh(s.Proxy.WebAndSSHProxyAddr(), s.teleportConfig.Identity)
+	cmd := tshCmd.SSHCommand(s.Context(), s.me.Username+"@localhost")
+
+	stdinPipe, err := cmd.StdinPipe()
+	require.NoError(t, err)
+
+	err = cmd.Start()
+	require.NoError(t, err)
+
+	_, err = stdinPipe.Write([]byte("exit\n"))
+	require.NoError(t, err)
+
+	err = cmd.Wait()
+	require.NoError(t, err)
+
+	err = stdinPipe.Close()
+	require.NoError(t, err)
+
+	// Our test session is very simple. There would be to copies of the same messages: one copy is supposed to be received
+	// via audit log, other one - via session log.
+	counters := make(map[string]int)
+	for i := 0; i < 8; i++ {
+		msg, err := s.fakeFluentd.GetMessage(s.Context())
+		require.NoError(t, err)
+
+		var e event
+		err = json.Unmarshal([]byte(msg), &e)
+		require.NoError(t, err)
+		counters[e.Type]++
+	}
+
+	require.Equal(t, counters["session.start"], 2)
+	require.Equal(t, counters["session.leave"], 2)
+	require.Equal(t, counters["session.end"], 2)
+
+	// That's the difference in channels
+	require.Equal(t, counters["session.data"], 1)
+	require.Equal(t, counters["session.upload"], 1)
 }
-
-// NOTE: Bench finishes sessions incorrectly
-//
-// func (s *EventHandlerSuite) testBench() {
-// 	t := s.T()
-
-// 	tshCmd := s.Integration.NewTsh(s.Proxy.WebAndSSHProxyAddr(), s.teleportConfig.Identity)
-// 	result, err := tshCmd.Bench(s.Context(), tsh.BenchFlags{Interactive: true}, s.me.Username+"@localhost", "ls")
-// 	require.NoError(t, err)
-// 	fmt.Println(result.Output)
-// 	assert.Positive(t, result.RequestsOriginated)
-// 	assert.Zero(t, result.RequestsFailed)
-
-// 	for i := 0; i < result.RequestsOriginated*10; i++ {
-// 		evt, err := s.fakeFluentd.GetMessage(s.Context())
-// 		require.NoError(t, err)
-// 		fmt.Println(evt)
-// 		fmt.Println()
-// 	}
-// }

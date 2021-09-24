@@ -61,6 +61,7 @@ func (tsh Tsh) CheckExecutable() error {
 	return trace.Wrap(err, "tsh executable is not found")
 }
 
+// Bench runs tsh bench on behalf of userHost
 func (tsh Tsh) Bench(ctx context.Context, flags BenchFlags, userHost, command string) (BenchResult, error) {
 	log := logger.Get(ctx)
 	args := append(tsh.baseArgs(), "bench")
@@ -102,6 +103,17 @@ func (tsh Tsh) Bench(ctx context.Context, flags BenchFlags, userHost, command st
 	}
 
 	return result, nil
+}
+
+// SSHCommand creates exec.CommandContext for tsh ssh --tty on behalf of userHost
+func (tsh Tsh) SSHCommand(ctx context.Context, userHost string) *exec.Cmd {
+	log := logger.Get(ctx)
+	args := append(tsh.baseArgs(), "ssh", "--tty", userHost)
+
+	cmd := exec.CommandContext(ctx, tsh.cmd(), args...)
+	log.Debugf("Running %s", cmd)
+
+	return cmd
 }
 
 func (tsh Tsh) cmd() string {

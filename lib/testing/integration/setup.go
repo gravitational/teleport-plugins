@@ -20,57 +20,55 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	. "github.com/gravitational/teleport-plugins/lib/testing"
+	"github.com/gravitational/teleport-plugins/lib/testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-type IntegrationSetup struct {
-	Suite
+type BaseSetup struct {
+	testing.Suite
 	Integration *Integration
 }
 
-type IntegrationAuthSetup struct {
-	IntegrationSetup
+type AuthSetup struct {
+	BaseSetup
 	Auth *AuthService
 }
 
-type IntegrationProxySetup struct {
-	IntegrationAuthSetup
+type ProxySetup struct {
+	AuthSetup
 	Proxy *ProxyService
 }
 
-type IntegrationSSHSetup struct {
-	IntegrationProxySetup
+type SSHSetup struct {
+	ProxySetup
 	SSH *SSHService
 }
 
-func (s *IntegrationSetup) SetupSuite() {
+func (s *BaseSetup) SetupSuite() {
 	logger.Init()
 	logger.Setup(logger.Config{Severity: "debug"})
 }
 
-func (s *IntegrationSetup) Setup() {
+func (s *BaseSetup) Setup() {
 	t := s.T()
 	var err error
 
 	// We set such a big timeout because integration.NewFromEnv could start
 	// downloading a Teleport *-bin.tar.gz file which can take a long time.
-	ctx := s.SetContextTimeout(2 * time.Minute)
+	ctx := s.SetContextTimeout(4 * time.Minute)
 	integration, err := NewFromEnv(ctx)
 	require.NoError(t, err)
 	t.Cleanup(integration.Close)
 	s.Integration = integration
-
-	s.SetContextTimeout(time.Second * 15)
 }
 
-func (s *IntegrationAuthSetup) SetupSuite() {
-	s.IntegrationSetup.SetupSuite()
+func (s *AuthSetup) SetupSuite() {
+	s.BaseSetup.SetupSuite()
 }
 
-func (s *IntegrationAuthSetup) Setup() {
-	s.IntegrationSetup.Setup()
+func (s *AuthSetup) Setup() {
+	s.BaseSetup.Setup()
 	t := s.T()
 	auth, err := s.Integration.NewAuthService()
 	require.NoError(t, err)
@@ -82,12 +80,12 @@ func (s *IntegrationAuthSetup) Setup() {
 	require.NoError(t, err)
 }
 
-func (s *IntegrationProxySetup) SetupSuite() {
-	s.IntegrationAuthSetup.SetupSuite()
+func (s *ProxySetup) SetupSuite() {
+	s.AuthSetup.SetupSuite()
 }
 
-func (s *IntegrationProxySetup) Setup() {
-	s.IntegrationAuthSetup.Setup()
+func (s *ProxySetup) Setup() {
+	s.AuthSetup.Setup()
 	t := s.T()
 	proxy, err := s.Integration.NewProxyService(s.Auth)
 	require.NoError(t, err)
@@ -95,12 +93,12 @@ func (s *IntegrationProxySetup) Setup() {
 	s.Proxy = proxy
 }
 
-func (s *IntegrationSSHSetup) SetupSuite() {
-	s.IntegrationProxySetup.SetupSuite()
+func (s *SSHSetup) SetupSuite() {
+	s.ProxySetup.SetupSuite()
 }
 
-func (s *IntegrationSSHSetup) Setup() {
-	s.IntegrationProxySetup.Setup()
+func (s *SSHSetup) Setup() {
+	s.ProxySetup.Setup()
 	t := s.T()
 	ssh, err := s.Integration.NewSSHService(s.Auth)
 	require.NoError(t, err)

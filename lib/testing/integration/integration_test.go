@@ -27,13 +27,13 @@ import (
 )
 
 type IntegrationSuite struct {
-	IntegrationSetup
+	BaseSetup
 }
 
 func TestIntegration(t *testing.T) { suite.Run(t, &IntegrationSuite{}) }
 
 func (s *IntegrationSuite) SetupTest() {
-	s.IntegrationSetup.Setup()
+	s.BaseSetup.Setup()
 }
 
 func (s *IntegrationSuite) TestVersion() {

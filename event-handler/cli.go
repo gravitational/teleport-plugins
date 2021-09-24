@@ -110,7 +110,7 @@ type ConfigureCmdConfig struct {
 	// Out path and file prefix to put certificates into
 	Out string `arg:"true" help:"Output directory" type:"existingdir" required:"true"`
 
-	// Configure is a mock arg for now, it specifies export target
+	// Output is a mock arg for now, it specifies export target
 	Output string `help:"Export target service" type:"string" required:"true" default:"fluentd"`
 
 	// Addr is Teleport auth proxy instance address
@@ -135,7 +135,7 @@ type ConfigureCmdConfig struct {
 	IP []string `help:"Certificate SAN IPs"`
 
 	// Length is RSA key length
-	Length int `help:"Key length" enum:"1024,2048,4096" default:"2048"`
+	Length int `help:"Key length" enum:"1024,2048,4096" default:"4096"`
 
 	// CN certificate common name
 	CN string `help:"Common name for server cert" default:"localhost"`
@@ -144,7 +144,7 @@ type ConfigureCmdConfig struct {
 // CLI represents command structure
 type CLI struct {
 	// Config is the path to configuration file
-	Config kong.ConfigFlag `help:"Path to TOML configuration file" optional:"true" type:"existingfile" env:"FDFWD_CONFIG"`
+	Config kong.ConfigFlag `help:"Path to TOML configuration file" optional:"true" short:"c" type:"existingfile" env:"FDFWD_CONFIG"`
 
 	// Debug is a debug logging mode flag
 	Debug bool `help:"Debug logging" short:"d"`
@@ -179,6 +179,7 @@ func (c *StartCmdConfig) Dump(ctx context.Context) {
 	log.WithField("batch", c.BatchSize).Info("Using batch size")
 	log.WithField("namespace", c.Namespace).Info("Using namespace")
 	log.WithField("types", c.Types).Info("Using type filter")
+	log.WithField("types", c.SkipSessionTypes).Info("Skipping session events of type")
 	log.WithField("value", c.StartTime).Info("Using start time")
 	log.WithField("timeout", c.Timeout).Info("Using timeout")
 	log.WithField("url", c.FluentdURL).Info("Using Fluentd url")

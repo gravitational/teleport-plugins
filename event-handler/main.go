@@ -62,7 +62,6 @@ func main() {
 		}
 	}
 
-	fmt.Println(ctx.Command())
 	switch {
 	case ctx.Command() == "version":
 		lib.PrintVersion(pluginName, Version, Sha)

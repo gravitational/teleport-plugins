@@ -26,13 +26,13 @@ import (
 )
 
 type IntegrationAuthSuite struct {
-	IntegrationAuthSetup
+	AuthSetup
 }
 
 func TestIntegrationAuth(t *testing.T) { suite.Run(t, &IntegrationAuthSuite{}) }
 
 func (s *IntegrationAuthSuite) SetupTest() {
-	s.IntegrationAuthSetup.Setup()
+	s.AuthSetup.Setup()
 }
 
 func (s *IntegrationAuthSuite) TestBootstrap() {
