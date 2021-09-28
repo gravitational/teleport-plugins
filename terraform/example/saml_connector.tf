@@ -20,7 +20,7 @@ resource "teleport_saml_connector" "example-saml" {
       value = "okta-dev"
     }
 
-    assertion_consumer_service = "https://${var.addr}/v1/webapi/saml/acs"
+    acs = "https://${var.addr}/v1/webapi/saml/acs"
     entity_descriptor = var.saml_entity_descriptor
   }
 }
