@@ -57,6 +57,7 @@ type Integration struct {
 	cleanup []func() error
 	version Version
 	token   string
+	caPin   string
 }
 
 type BinPaths struct {
@@ -279,6 +280,7 @@ func (integration *Integration) NewAuthService() (*AuthService, error) {
 
 	auth := newAuthService(integration.paths.Teleport, configFile.Name())
 	integration.registerService(auth)
+
 	return auth, nil
 }
 
@@ -293,9 +295,11 @@ func (integration *Integration) NewProxyService(auth Auth) (*ProxyService, error
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to write config file")
 	}
+
 	yaml := strings.ReplaceAll(teleportProxyYAML, "{{TELEPORT_DATA_DIR}}", dataDir)
 	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_SERVER}}", auth.AuthAddr().String())
 	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_TOKEN}}", integration.token)
+	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_CA_PIN}}", integration.caPin)
 	webListenAddr, err := getFreeTCPPort()
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -308,6 +312,7 @@ func (integration *Integration) NewProxyService(auth Auth) (*ProxyService, error
 	}
 	yaml = strings.ReplaceAll(yaml, "{{PROXY_TUN_LISTEN_ADDR}}", tunListenAddr.String())
 	yaml = strings.ReplaceAll(yaml, "{{PROXY_TUN_LISTEN_PORT}}", tunListenAddr.Port)
+
 	if _, err := configFile.WriteString(yaml); err != nil {
 		return nil, trace.Wrap(err, "failed to write config file")
 	}
@@ -334,12 +339,14 @@ func (integration *Integration) NewSSHService(auth Auth) (*SSHService, error) {
 	yaml := strings.ReplaceAll(teleportSSHYAML, "{{TELEPORT_DATA_DIR}}", dataDir)
 	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_SERVER}}", auth.AuthAddr().String())
 	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_TOKEN}}", integration.token)
+	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_CA_PIN}}", integration.caPin)
 	sshListenAddr, err := getFreeTCPPort()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 	yaml = strings.ReplaceAll(yaml, "{{SSH_LISTEN_ADDR}}", sshListenAddr.String())
 	yaml = strings.ReplaceAll(yaml, "{{SSH_LISTEN_PORT}}", sshListenAddr.Port)
+
 	if _, err := configFile.WriteString(yaml); err != nil {
 		return nil, trace.Wrap(err, "failed to write config file")
 	}
@@ -417,6 +424,27 @@ func (integration *Integration) Sign(ctx context.Context, auth *AuthService, use
 		return "", trace.Wrap(err)
 	}
 	return outPath, nil
+}
+
+// SetCAPin sets integration with the auth service's CA Pin.
+func (integration *Integration) SetCAPin(ctx context.Context, auth *AuthService) error {
+	if integration.caPin != "" {
+		return nil
+	}
+
+	if ready, err := auth.WaitReady(ctx); err != nil {
+		return trace.Wrap(err)
+	} else if !ready {
+		return trace.Wrap(auth.Err())
+	}
+
+	caPin, err := integration.tctl(auth).GetCAPin(ctx)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	integration.caPin = caPin
+	return nil
 }
 
 // NewTsh makes a new tsh runner.

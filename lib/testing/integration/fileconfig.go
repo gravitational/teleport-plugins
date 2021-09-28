@@ -51,6 +51,7 @@ teleport:
   data_dir: {{TELEPORT_DATA_DIR}}
   auth_servers: ['{{TELEPORT_AUTH_SERVER}}']
   auth_token: '{{TELEPORT_AUTH_TOKEN}}'
+  ca_pin: '{{TELEPORT_AUTH_CA_PIN}}'
   cache:
     enabled: false
   log:
@@ -78,6 +79,7 @@ teleport:
   data_dir: {{TELEPORT_DATA_DIR}}
   auth_servers: ['{{TELEPORT_AUTH_SERVER}}']
   auth_token: '{{TELEPORT_AUTH_TOKEN}}'
+  ca_pin: '{{TELEPORT_AUTH_CA_PIN}}'
   cache:
     enabled: false
   log:

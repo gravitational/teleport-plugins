@@ -76,6 +76,10 @@ func (s *IntegrationAuthSetup) SetupTest() {
 	require.NoError(t, err)
 	s.StartApp(auth)
 	s.auth = auth
+
+	// Set CA Pin so that Proxy and SSH can register to auth securely.
+	err = s.integration.SetCAPin(s.Context(), s.auth)
+	require.NoError(t, err)
 }
 
 func (s *IntegrationProxySetup) SetupSuite() {
