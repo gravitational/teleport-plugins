@@ -134,6 +134,18 @@ func (t *TeleportClient) fetch(latestID string) error {
 	// Mark position as unresolved (the page is empty)
 	t.pos = -1
 
+	// Filter out any events that don't have an ID.
+	n := 0
+	for _, v := range batch {
+		if v.GetID() != "" {
+			batch[n] = v
+			n++
+		} else {
+			log.WithFields(log.Fields{"type": v.GetType()}).Warn("Event has no ID. Skipping...")
+		}
+	}
+	batch = batch[:n]
+
 	log.WithFields(log.Fields{"cursor": t.cursor, "next": nextCursor, "len": len(batch)}).Info("Fetched page")
 
 	// Page is empty: do nothing, return

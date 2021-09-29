@@ -20,8 +20,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/gravitational/teleport/api/types/events"
-	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 )
 
@@ -56,31 +56,75 @@ func newTeleportClient(e []events.AuditEvent) *TeleportClient {
 }
 
 func TestNext(t *testing.T) {
-	e := make([]events.AuditEvent, 2)
-	e[0] = &events.UserCreate{
-		Metadata: events.Metadata{
-			ID: "1",
+	testCases := []struct {
+		desc   string
+		events []events.AuditEvent
+		want   []events.AuditEvent
+	}{
+		{
+			desc: "test fetch events without error",
+			events: []events.AuditEvent{
+				&events.UserCreate{
+					Metadata: events.Metadata{ID: "1"},
+				},
+				&events.UserDelete{
+					Metadata: events.Metadata{ID: "2"},
+				},
+			},
+			want: []events.AuditEvent{
+				&events.UserCreate{
+					Metadata: events.Metadata{ID: "1"},
+				},
+				&events.UserDelete{
+					Metadata: events.Metadata{ID: "2"},
+				},
+			},
+		},
+		{
+			desc:   "test no events is not an error",
+			events: []events.AuditEvent{},
+			want:   nil,
+		},
+		{
+			desc: "test events without an ID are skipped",
+			events: []events.AuditEvent{
+				&events.UserCreate{
+					Metadata: events.Metadata{},
+				},
+				&events.UserDelete{
+					Metadata: events.Metadata{ID: "2"},
+				},
+			},
+			want: []events.AuditEvent{
+				&events.UserDelete{
+					Metadata: events.Metadata{ID: "2"},
+				},
+			},
+		},
+		{
+			desc:   "test SearchEvents error",
+			events: []events.AuditEvent{},
+			want:   nil,
 		},
 	}
-	e[1] = &events.UserDelete{
-		Metadata: events.Metadata{
-			ID: "2",
-		},
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			c := newTeleportClient(tc.events)
+			var got []events.AuditEvent
+			for {
+				// c.Next() is considered done when there is no events and nil error.
+				e, _, err := c.Next()
+				if e == nil && err == nil {
+					break
+				}
+				if err != nil {
+					t.Fatalf("c.Next() error = %v, want nil error", err)
+				}
+				got = append(got, e)
+			}
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("c.Next() mismatch (-want +got):\n%s", diff)
+			}
+		})
 	}
-
-	client := newTeleportClient(e)
-	n1, _, err := client.Next()
-
-	require.NoError(t, err)
-	require.IsType(t, &events.UserCreate{}, n1)
-
-	n2, _, err := client.Next()
-
-	require.NoError(t, err)
-	require.IsType(t, &events.UserDelete{}, n2)
-
-	n3, _, err := client.Next()
-
-	require.NoError(t, err)
-	require.Nil(t, n3)
 }
