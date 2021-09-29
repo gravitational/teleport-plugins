@@ -69,36 +69,23 @@ func resourceProvisionTokenCreate(ctx context.Context, d *schema.ResourceData, m
 		return diagFromErr(describeErr(err, "token"))
 	}
 
-	// Read token from ResourceData
-	tmp := types.ProvisionTokenV2{}
-	err = tfschema.GetProvisionTokenV2(&tmp, d)
+	t := types.ProvisionTokenV2{}
+	err = tfschema.GetProvisionTokenV2(&t, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	// Create and validate token
-	t, err := types.NewProvisionToken(name, tmp.Spec.Roles, tmp.Metadata.Expiry())
+	err = t.CheckAndSetDefaults()
 	if err != nil {
 		return diagFromErr(err)
 	}
 
-	// Fill in token info
-	tV2, ok := t.(*types.ProvisionTokenV2)
-	if !ok {
-		return diagFromErr(fmt.Errorf("failed to convert created user to types.ProvisionTokenV2 from %T", t))
-	}
-
-	err = tfschema.GetProvisionTokenV2(tV2, d)
-	if err != nil {
-		return diagFromErr(err)
-	}
-
-	err = c.UpsertToken(ctx, tV2)
+	err = c.UpsertToken(ctx, &t)
 	if err != nil {
 		return diagFromErr(describeErr(err, "token"))
 	}
 
-	d.SetId(tV2.GetName())
+	d.SetId(t.GetName())
 
 	return resourceProvisionTokenRead(ctx, d, m)
 }

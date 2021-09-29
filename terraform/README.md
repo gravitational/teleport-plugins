@@ -8,13 +8,11 @@
 git clone git@github.com:gravitational/teleport-plugins
 ```
 
-_NOTE: This URL will be changed after merge_
-
 2. Install the plugin to Teleport:
 
 ```bash
 cd teleport-plugins/terraform
-make build
+make install
 ```
 
 3. Configure teleport:
@@ -43,8 +41,4 @@ make gen-schema
 
 # Usage
 
-See `example/main.tf` for available configuration options. `make apply` to do an initial application of this configuration to your Terraform cluster.
-
-# TODO
-
-- [ ] Data Sources (if applicable, needs discussing)
+See `example/*.tf` for available configuration options. `make apply` to do an initial application of this configuration to your Terraform cluster.
