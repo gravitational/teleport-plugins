@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/job"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
@@ -75,8 +76,8 @@ func NewWebhookServer(conf lib.HTTPConfig, onWebhook WebhookFunc) (*WebhookServe
 	return srv, nil
 }
 
-func (s *WebhookServer) ServiceJob() lib.ServiceJob {
-	return s.http.ServiceJob()
+func (s *WebhookServer) Job() job.Job {
+	return s.http.Job()
 }
 
 func (s *WebhookServer) BaseURL() *url.URL {

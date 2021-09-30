@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestSequential checks that events with the different resource names are being processed in parallel.
+// TestConcurrent checks that events with the different resource names are being processed in parallel.
 func TestConcurrent(t *testing.T) {
 	t.Parallel()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

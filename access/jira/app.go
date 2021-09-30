@@ -22,6 +22,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jonboulle/clockwork"
@@ -30,6 +31,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/backoff"
+	"github.com/gravitational/teleport-plugins/lib/job"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/watcherjob"
 	"github.com/gravitational/teleport/api/client"
@@ -67,39 +69,44 @@ type App struct {
 	apiClient  *client.Client
 	jira       Jira
 	webhookSrv *WebhookServer
-	mainJob    lib.ServiceJob
+	readiness  job.Readiness
+	future     job.FutureResult
 
-	*lib.Process
+	once sync.Once
+	*job.Process
 }
 
 func NewApp(conf Config) (*App, error) {
-	app := &App{conf: conf}
-	app.mainJob = lib.NewServiceJob(app.run)
-	return app, nil
+	return &App{
+		conf:   conf,
+		future: job.NewFutureResult(),
+	}, nil
 }
 
 // Run initializes and runs a watcher and a callback server
 func (a *App) Run(ctx context.Context) error {
-	// Initialize the process.
-	a.Process = lib.NewProcess(ctx)
-	a.SpawnCriticalJob(a.mainJob)
+	a.once.Do(func() {
+		// Initialize the process.
+		a.Process = job.NewProcess(ctx)
+		a.SpawnFunc(a.run, job.Critical(true), job.WithReadiness(&a.readiness), job.WithResult(a.future))
+	})
 	<-a.Process.Done()
-	return trace.Wrap(a.mainJob.Err())
+	return a.Err()
 }
 
 // Err returns the error app finished with.
 func (a *App) Err() error {
-	return trace.Wrap(a.mainJob.Err())
+	return trace.Wrap(a.future.Err())
 }
 
 // WaitReady waits for http and watcher service to start up.
 func (a *App) WaitReady(ctx context.Context) (bool, error) {
-	return a.mainJob.WaitReady(ctx)
+	return a.readiness.WaitReady(ctx)
 }
 
 // PublicURL returns a webhook base URL.
 func (a *App) PublicURL() *url.URL {
-	if !a.mainJob.IsReady() {
+	if !a.readiness.IsReady() {
 		panic("app is not running")
 	}
 	return a.webhookSrv.BaseURL()
@@ -115,39 +122,49 @@ func (a *App) run(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	httpJob := a.webhookSrv.ServiceJob()
-	a.SpawnCriticalJob(httpJob)
-	httpOk, err := httpJob.WaitReady(ctx)
+	// Spawn a webhook server.
+
+	var httpReady job.Readiness
+	httpRes := job.NewFutureResult()
+	a.Spawn(a.webhookSrv.Job(), job.Critical(true), job.WithReadiness(&httpReady), job.WithResult(httpRes))
+	httpOk, err := httpReady.WaitReady(ctx)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	watcherJob := watcherjob.NewJob(
+	// Spawn a request watcher.
+
+	var watcherReady job.Readiness
+	watcherRes := job.NewFutureResult()
+	a.Spawn(watcherjob.NewJob(
 		a.apiClient,
 		watcherjob.Config{
 			Watch:            types.Watch{Kinds: []types.WatchKind{types.WatchKind{Kind: types.KindAccessRequest}}},
 			EventFuncTimeout: handlerTimeout,
 		},
 		a.onWatcherEvent,
-	)
-	a.SpawnCriticalJob(watcherJob)
-	watcherOk, err := watcherJob.WaitReady(ctx)
+	), job.Critical(true), job.WithReadiness(&watcherReady), job.WithResult(watcherRes))
+	watcherOk, err := watcherReady.WaitReady(ctx)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
+	// Set readiness status.
+
 	ok := httpOk && watcherOk
-	a.mainJob.SetReady(ok)
+	job.SetReady(ctx, ok)
 	if ok {
 		log.Info("Plugin is ready")
 	} else {
 		log.Error("Plugin is not ready")
 	}
 
-	<-httpJob.Done()
-	<-watcherJob.Done()
+	// Wait for completeness.
 
-	return trace.NewAggregate(httpJob.Err(), watcherJob.Err())
+	<-httpRes.Done()
+	<-watcherRes.Done()
+
+	return trace.NewAggregate(httpRes.Err(), watcherRes.Err())
 }
 
 func (a *App) init(ctx context.Context) error {

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/job"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 
@@ -89,8 +89,9 @@ func (w MockWatcher) Error() error {
 
 // MockEventsProcess is a new process with a mock events streamer.
 type MockEventsProcess struct {
-	*lib.Process
-	eventsJob lib.ServiceJob
+	*job.Process
+	eventsJob job.Job
+	future    job.Future
 	Events    MockEvents
 }
 
@@ -98,15 +99,17 @@ type MockEventsProcess struct {
 func NewMockEventsProcess(ctx context.Context, t *testing.T, config Config, fn EventFunc) *MockEventsProcess {
 	t.Helper()
 	process := MockEventsProcess{
-		Process: lib.NewProcess(ctx),
+		Process: job.NewProcess(ctx),
 	}
 	t.Cleanup(func() {
-		process.Terminate()
+		process.Stop()
 		assert.NoError(t, process.Shutdown(ctx))
 		process.Close()
 	})
 	process.eventsJob = NewJobWithEvents(&process.Events, config, fn)
-	process.SpawnCriticalJob(process.eventsJob)
+	result := job.NewFutureResult()
+	process.future = result
+	process.Spawn(process.eventsJob, job.Critical(true), job.WithResult(result))
 	require.NoError(t, process.Events.WaitSomeWatchers(ctx))
 	process.Events.Fire(types.Event{Type: types.OpInit})
 
@@ -115,13 +118,13 @@ func NewMockEventsProcess(ctx context.Context, t *testing.T, config Config, fn E
 
 // Shutdown sends a termination signal and waits for process completion.
 func (process *MockEventsProcess) Shutdown(ctx context.Context) error {
-	process.Terminate()
-	job := process.eventsJob
+	process.Stop()
+	future := process.future
 	select {
-	case <-job.Done():
+	case <-future.Done():
 		select {
-		case <-process.Done():
-			return trace.Wrap(job.Err())
+		case <-future.Done():
+			return trace.Wrap(future.Err())
 		case <-ctx.Done():
 			return trace.Wrap(ctx.Err())
 		}

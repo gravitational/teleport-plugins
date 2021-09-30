@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/job"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/types"
@@ -24,8 +24,7 @@ type Config struct {
 	EventFuncTimeout time.Duration
 }
 
-type job struct {
-	lib.ServiceJob
+type watcherJob struct {
 	config    Config
 	eventFunc EventFunc
 	events    types.Events
@@ -37,98 +36,82 @@ type eventKey struct {
 	name string
 }
 
-func NewJob(client *client.Client, config Config, fn EventFunc) lib.ServiceJob {
+func NewJob(client *client.Client, config Config, fn EventFunc) job.Job {
 	client = client.WithCallOptions(grpc.WaitForReady(true)) // Enable backoff on reconnecting.
 	return NewJobWithEvents(client, config, fn)
 }
 
-func NewJobWithEvents(events types.Events, config Config, fn EventFunc) lib.ServiceJob {
+func NewJobWithEvents(events types.Events, config Config, fn EventFunc) job.Job {
 	if config.MaxConcurrency == 0 {
 		config.MaxConcurrency = DefaultMaxConcurrency
 	}
 	if config.EventFuncTimeout == 0 {
 		config.EventFuncTimeout = DefaultEventFuncTimeout
 	}
-	job := job{
+	return watcherJob{
 		events:    events,
 		config:    config,
 		eventFunc: fn,
 		eventCh:   make(chan *types.Event, config.MaxConcurrency),
 	}
-	job.ServiceJob = lib.NewServiceJob(func(ctx context.Context) error {
-		process := lib.MustGetProcess(ctx)
+}
 
-		// Run a separate event loop thread which does not depend on streamer context.
-		defer close(job.eventCh)
-		process.Spawn(job.eventLoop)
+func (watcherJob watcherJob) DoJob(ctx context.Context) error {
+	process := job.MustGetProcess(ctx)
 
-		// Create a cancellable ctx for event watcher.
-		ctx, cancel := context.WithCancel(ctx)
-		process.OnTerminate(func(_ context.Context) error {
-			cancel()
+	// Run a separate event loop thread which does not depend on streamer context.
+	defer close(watcherJob.eventCh)
+	process.SpawnFunc(watcherJob.eventLoop)
+
+	log := logger.Get(ctx)
+	for {
+		err := watcherJob.watchEvents(ctx)
+		switch {
+		case trace.IsConnectionProblem(err):
+			log.WithError(err).Error("Failed to connect to Teleport Auth server. Reconnecting...")
+		case trace.IsEOF(err):
+			log.WithError(err).Error("Watcher stream closed. Reconnecting...")
+		case err != nil:
+			log.WithError(err).Error("Watcher event loop failed")
+			return trace.Wrap(err)
+		default:
 			return nil
-		})
-
-		log := logger.Get(ctx)
-		for {
-			err := job.watchEvents(ctx)
-			switch {
-			case trace.IsConnectionProblem(err):
-				log.WithError(err).Error("Failed to connect to Teleport Auth server. Reconnecting...")
-			case trace.IsEOF(err):
-				log.WithError(err).Error("Watcher stream closed. Reconnecting...")
-			case lib.IsCanceled(err):
-				log.Debug("Watcher context is cancelled")
-				// Context cancellation is not an error
-				return nil
-			default:
-				log.WithError(err).Error("Watcher event loop failed")
-				return trace.Wrap(err)
-			}
 		}
-	})
-	return job
+	}
 }
 
 // watchEvents spawns a watcher and reads events from it.
-func (job job) watchEvents(ctx context.Context) error {
-	watcher, err := job.events.NewWatcher(ctx, job.config.Watch)
+func (watcherJob watcherJob) watchEvents(ctx context.Context) error {
+	watcher, err := watcherJob.events.NewWatcher(ctx, watcherJob.config.Watch)
 	if err != nil {
 		return trace.Wrap(err)
 	}
-	defer func() {
-		if err := watcher.Close(); err != nil {
-			logger.Get(ctx).WithError(err).Error("Failed to close a watcher")
-		}
-	}()
 
-	if err := job.waitInit(ctx, watcher, 15*time.Second); err != nil {
+	if err := watcherJob.waitInit(ctx, watcher, 15*time.Second); err != nil {
 		return trace.Wrap(err)
 	}
 
 	logger.Get(ctx).Debug("Watcher connected")
-	job.SetReady(true)
+	job.SetReady(ctx, true)
 
 	for {
 		select {
 		case event := <-watcher.Events():
-			job.eventCh <- &event
-		case <-watcher.Done(): // When the watcher completes, read the rest of events and quit.
-			events := takeEvents(watcher.Events())
-			for i := range events {
-				select {
-				case job.eventCh <- &events[i]:
-				case <-ctx.Done():
-					return trace.Wrap(ctx.Err())
-				}
+			watcherJob.eventCh <- &event
+		case <-job.Stopped(ctx):
+			logger.Get(ctx).Debug("Gracefully terminating the watcher")
+			if err := watcher.Close(); err != nil {
+				return trace.Wrap(err)
 			}
+			return nil
+		case <-watcher.Done():
 			return trace.Wrap(watcher.Error())
 		}
 	}
 }
 
 // waitInit waits for OpInit event be received on a stream.
-func (job job) waitInit(ctx context.Context, watcher types.Watcher, timeout time.Duration) error {
+func (watcherJob watcherJob) waitInit(ctx context.Context, watcher types.Watcher, timeout time.Duration) error {
 	select {
 	case event := <-watcher.Events():
 		if event.Type != types.OpInit {
@@ -158,19 +141,19 @@ func (job job) waitInit(ctx context.Context, watcher types.Watcher, timeout time
 // - Events for the same resource being processed "sequentially" i.e. in the order they came to the queue.
 //
 // By "sameness" we mean that Kind and Name fields of one resource object are the same as in the other resource object.
-func (job job) eventLoop(ctx context.Context) error {
+func (watcherJob watcherJob) eventLoop(ctx context.Context) error {
 	var concurrency int
-	process := lib.MustGetProcess(ctx)
+	process := job.MustGetProcess(ctx)
 	log := logger.Get(ctx)
 	queues := make(map[eventKey][]types.Event)
-	eventDone := make(chan eventKey, job.config.MaxConcurrency)
+	eventDone := make(chan eventKey, watcherJob.config.MaxConcurrency)
 
 	for {
 		var eventCh <-chan *types.Event
-		if concurrency < job.config.MaxConcurrency {
+		if concurrency < watcherJob.config.MaxConcurrency {
 			// If haven't yet reached the limit then we allowed to read from the queue.
 			// Otherwise, eventCh would be nil which is a forever-blocking channel.
-			eventCh = job.eventCh
+			eventCh = watcherJob.eventCh
 		}
 
 		select {
@@ -188,7 +171,7 @@ func (job job) eventLoop(ctx context.Context) error {
 				queues[key] = append(queue, event)
 			} else {
 				queues[key] = nil
-				process.Spawn(job.eventFuncHandler(event, key, eventDone))
+				process.SpawnFunc(watcherJob.eventFuncHandler(event, key, eventDone))
 			}
 			concurrency++
 
@@ -200,7 +183,7 @@ func (job job) eventLoop(ctx context.Context) error {
 			}
 			if len(queue) > 0 {
 				event := queue[0]
-				process.Spawn(job.eventFuncHandler(event, key, eventDone))
+				process.SpawnFunc(watcherJob.eventFuncHandler(event, key, eventDone))
 				queue = queue[1:]
 				queues[key] = queue
 			}
@@ -215,7 +198,7 @@ func (job job) eventLoop(ctx context.Context) error {
 }
 
 // eventFuncHandler returns an event handler ready to spawn.
-func (job job) eventFuncHandler(event types.Event, key eventKey, doneCh chan<- eventKey) func(ctx context.Context) error {
+func (watcherJob watcherJob) eventFuncHandler(event types.Event, key eventKey, doneCh chan<- eventKey) func(ctx context.Context) error {
 	return func(ctx context.Context) error {
 		defer func() {
 			select {
@@ -223,21 +206,8 @@ func (job job) eventFuncHandler(event types.Event, key eventKey, doneCh chan<- e
 			case <-ctx.Done():
 			}
 		}()
-		eventCtx, cancel := context.WithTimeout(ctx, job.config.EventFuncTimeout)
+		eventCtx, cancel := context.WithTimeout(ctx, watcherJob.config.EventFuncTimeout)
 		defer cancel()
-		return job.eventFunc(eventCtx, event)
-	}
-}
-
-// takeEvents reads all the buffered events from channel.
-func takeEvents(events <-chan types.Event) []types.Event {
-	var result []types.Event
-	for {
-		select {
-		case event := <-events:
-			result = append(result, event)
-		default:
-			return result
-		}
+		return watcherJob.eventFunc(eventCtx, event)
 	}
 }

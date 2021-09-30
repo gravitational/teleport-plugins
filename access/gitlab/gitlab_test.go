@@ -33,6 +33,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/job"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	. "github.com/gravitational/teleport-plugins/lib/testing"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
@@ -861,9 +862,9 @@ func (s *GitlabSuite) TestRace() {
 	defer watcher.Close()
 	assert.Equal(t, types.OpInit, (<-watcher.Events()).Type)
 
-	process := lib.NewProcess(s.Context())
+	process := job.NewProcess(s.Context())
 	for i := 0; i < s.raceNumber; i++ {
-		process.SpawnCritical(func(ctx context.Context) error {
+		process.SpawnFunc(func(ctx context.Context) error {
 			req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
@@ -872,8 +873,8 @@ func (s *GitlabSuite) TestRace() {
 				return setRaceErr(trace.Wrap(err))
 			}
 			return nil
-		})
-		process.SpawnCritical(func(ctx context.Context) error {
+		}, job.Critical(true))
+		process.SpawnFunc(func(ctx context.Context) error {
 			issue, err := s.fakeGitlab.CheckNewIssue(ctx)
 			if err := trace.Wrap(err); err != nil {
 				return setRaceErr(err)
@@ -910,9 +911,9 @@ func (s *GitlabSuite) TestRace() {
 					return nil
 				}
 			}
-		})
-		process.SpawnCritical(func(ctx context.Context) error {
-			issue, err := s.fakeGitlab.CheckIssueUpdate(ctx)
+		}, job.Critical(true))
+		process.SpawnFunc(func(watcherRes context.Context) error {
+			issue, err := s.fakeGitlab.CheckIssueUpdate(watcherRes)
 			if err := trace.Wrap(err); err != nil {
 				return setRaceErr(err)
 			}
@@ -920,15 +921,15 @@ func (s *GitlabSuite) TestRace() {
 				return setRaceErr(trace.Errorf("wrong issue state. expected %q, obtained %q", expected, obtained))
 			}
 			return nil
-		})
+		}, job.Critical(true))
 	}
 	for i := 0; i < 2*s.raceNumber; i++ {
-		process.SpawnCritical(func(ctx context.Context) error {
+		process.SpawnFunc(func(watcherRes context.Context) error {
 			var event types.Event
 			select {
 			case event = <-watcher.Events():
-			case <-ctx.Done():
-				return setRaceErr(trace.Wrap(ctx.Err()))
+			case <-watcherRes.Done():
+				return setRaceErr(trace.Wrap(watcherRes.Err()))
 			}
 			if obtained, expected := event.Type, types.OpPut; obtained != expected {
 				return setRaceErr(trace.Errorf("wrong event type. expected %v, obtained %v", expected, obtained))
@@ -945,9 +946,9 @@ func (s *GitlabSuite) TestRace() {
 				return setRaceErr(trace.Errorf("wrong request state %v", state))
 			}
 			return nil
-		})
+		}, job.Critical(true))
 	}
-	process.Terminate()
+	process.Stop()
 	<-process.Done()
 	require.NoError(t, raceErr)
 

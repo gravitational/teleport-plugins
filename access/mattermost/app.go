@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/jonboulle/clockwork"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/backoff"
+	"github.com/gravitational/teleport-plugins/lib/job"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/stringset"
 	"github.com/gravitational/teleport-plugins/lib/watcherjob"
@@ -43,34 +45,39 @@ type App struct {
 
 	apiClient *client.Client
 	bot       Bot
-	mainJob   lib.ServiceJob
+	readiness job.Readiness
+	future    job.FutureResult
 
-	*lib.Process
+	once sync.Once
+	*job.Process
 }
 
 func NewApp(conf Config) (*App, error) {
-	app := &App{conf: conf}
-	app.mainJob = lib.NewServiceJob(app.run)
-	return app, nil
+	return &App{
+		conf:   conf,
+		future: job.NewFutureResult(),
+	}, nil
 }
 
-// Run initializes and runs a watcher and a callback server
+// Run initializes and runs a request watcher.
 func (a *App) Run(ctx context.Context) error {
-	// Initialize the process.
-	a.Process = lib.NewProcess(ctx)
-	a.SpawnCriticalJob(a.mainJob)
+	a.once.Do(func() {
+		// Initialize the process.
+		a.Process = job.NewProcess(ctx)
+		a.SpawnFunc(a.run, job.Critical(true), job.WithReadiness(&a.readiness), job.WithResult(a.future))
+	})
 	<-a.Process.Done()
 	return a.Err()
 }
 
 // Err returns the error app finished with.
 func (a *App) Err() error {
-	return trace.Wrap(a.mainJob.Err())
+	return trace.Wrap(a.future.Err())
 }
 
 // WaitReady waits for http and watcher service to start up.
 func (a *App) WaitReady(ctx context.Context) (bool, error) {
-	return a.mainJob.WaitReady(ctx)
+	return a.readiness.WaitReady(ctx)
 }
 
 func (a *App) run(ctx context.Context) error {
@@ -83,30 +90,36 @@ func (a *App) run(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	watcherJob := watcherjob.NewJob(
+	// Spawn a request watcher.
+
+	var watcherReady job.Readiness
+	watcherRes := job.NewFutureResult()
+	a.Spawn(watcherjob.NewJob(
 		a.apiClient,
 		watcherjob.Config{
 			Watch:            types.Watch{Kinds: []types.WatchKind{types.WatchKind{Kind: types.KindAccessRequest}}},
 			EventFuncTimeout: handlerTimeout,
 		},
 		a.onWatcherEvent,
-	)
-	a.SpawnCriticalJob(watcherJob)
-	ok, err := watcherJob.WaitReady(ctx)
+	), job.Critical(true), job.WithReadiness(&watcherReady), job.WithResult(watcherRes))
+	ok, err := watcherReady.WaitReady(ctx)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	a.mainJob.SetReady(ok)
+	// Set readiness status.
+
+	job.SetReady(ctx, ok)
 	if ok {
 		log.Info("Plugin is ready")
 	} else {
 		log.Error("Plugin is not ready")
 	}
 
-	<-watcherJob.Done()
+	// Wait for completeness.
 
-	return trace.Wrap(watcherJob.Err())
+	<-watcherRes.Done()
+	return trace.Wrap(watcherRes.Err())
 }
 
 func (a *App) init(ctx context.Context) error {

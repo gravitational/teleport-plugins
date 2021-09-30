@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/job"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	. "github.com/gravitational/teleport-plugins/lib/testing"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
@@ -578,9 +579,9 @@ func (s *MattermostSuite) TestRace() {
 		return err
 	}
 
-	process := lib.NewProcess(s.Context())
+	process := job.NewProcess(s.Context())
 	for i := 0; i < s.raceNumber; i++ {
-		process.SpawnCritical(func(ctx context.Context) error {
+		process.SpawnFunc(func(ctx context.Context) error {
 			req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
@@ -590,7 +591,7 @@ func (s *MattermostSuite) TestRace() {
 				return setRaceErr(trace.Wrap(err))
 			}
 			return nil
-		})
+		}, job.Critical(true))
 	}
 
 	// Having TWO suggested reviewers will post TWO messages for each request.
@@ -600,7 +601,7 @@ func (s *MattermostSuite) TestRace() {
 	// Multiplier SIX means that we handle TWO messages for each request and also
 	// TWO comments for each message: 2 * (1 message + 2 comments).
 	for i := 0; i < 6*s.raceNumber; i++ {
-		process.SpawnCritical(func(ctx context.Context) error {
+		process.SpawnFunc(func(ctx context.Context) error {
 			post, err := s.fakeMattermost.CheckNewPost(ctx)
 			if err := trace.Wrap(err); err != nil {
 				return setRaceErr(err)
@@ -655,12 +656,12 @@ func (s *MattermostSuite) TestRace() {
 			}
 
 			return nil
-		})
+		}, job.Critical(true))
 	}
 
 	// Multiplier TWO means that we handle updates for each of the two messages posted to reviewers.
 	for i := 0; i < 2*s.raceNumber; i++ {
-		process.SpawnCritical(func(ctx context.Context) error {
+		process.SpawnFunc(func(ctx context.Context) error {
 			post, err := s.fakeMattermost.CheckPostUpdate(ctx)
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
@@ -673,10 +674,10 @@ func (s *MattermostSuite) TestRace() {
 			atomic.AddInt32(counterPtr, 1)
 
 			return nil
-		})
+		}, job.Critical(true))
 	}
 
-	process.Terminate()
+	process.Stop()
 	<-process.Done()
 	require.NoError(t, raceErr)
 

@@ -32,6 +32,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/job"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	. "github.com/gravitational/teleport-plugins/lib/testing"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
@@ -723,9 +724,9 @@ func (s *JiraSuite) TestRace() {
 	defer watcher.Close()
 	assert.Equal(t, types.OpInit, (<-watcher.Events()).Type)
 
-	process := lib.NewProcess(s.Context())
+	process := job.NewProcess(s.Context())
 	for i := 0; i < s.raceNumber; i++ {
-		process.SpawnCritical(func(ctx context.Context) error {
+		process.SpawnFunc(func(ctx context.Context) error {
 			req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
@@ -734,8 +735,8 @@ func (s *JiraSuite) TestRace() {
 				return setRaceErr(trace.Wrap(err))
 			}
 			return nil
-		})
-		process.SpawnCritical(func(ctx context.Context) error {
+		}, job.Critical(true))
+		process.SpawnFunc(func(ctx context.Context) error {
 			issue, err := s.fakeJira.CheckNewIssue(ctx)
 			if err := trace.Wrap(err); err != nil {
 				return setRaceErr(err)
@@ -766,8 +767,8 @@ func (s *JiraSuite) TestRace() {
 					return nil
 				}
 			}
-		})
-		process.SpawnCritical(func(ctx context.Context) error {
+		}, job.Critical(true))
+		process.SpawnFunc(func(ctx context.Context) error {
 			issue, err := s.fakeJira.CheckIssueTransition(ctx)
 			if err := trace.Wrap(err); err != nil {
 				return setRaceErr(err)
@@ -776,10 +777,10 @@ func (s *JiraSuite) TestRace() {
 				return setRaceErr(trace.Errorf("wrong issue status. expected %q, obtained %q", expected, obtained))
 			}
 			return nil
-		})
+		}, job.Critical(true))
 	}
 	for i := 0; i < 2*s.raceNumber; i++ {
-		process.SpawnCritical(func(ctx context.Context) error {
+		process.SpawnFunc(func(ctx context.Context) error {
 			var event types.Event
 			select {
 			case event = <-watcher.Events():
@@ -801,9 +802,9 @@ func (s *JiraSuite) TestRace() {
 				return setRaceErr(trace.Errorf("wrong request state %v", state))
 			}
 			return nil
-		})
+		}, job.Critical(true))
 	}
-	process.Terminate()
+	process.Stop()
 	<-process.Done()
 	require.NoError(t, raceErr)
 

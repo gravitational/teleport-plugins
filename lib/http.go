@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"path"
 	"sync"
-	"time"
 
+	"github.com/gravitational/teleport-plugins/lib/job"
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
@@ -254,33 +254,23 @@ func (h *HTTP) Shutdown(ctx context.Context) error {
 	return h.server.Shutdown(ctx)
 }
 
-// ShutdownWithTimeout stops the server gracefully.
-func (h *HTTP) ShutdownWithTimeout(ctx context.Context, duration time.Duration) error {
-	ctx, cancel := context.WithTimeout(ctx, duration)
-	defer cancel()
-
-	return h.Shutdown(ctx)
-}
-
-// ServiceJob creates a service job for the HTTP service,
+// Job creates a service job for the HTTP service,
 // wraps it with a termination handler so it shuts down and
 // logs when it quits.
-func (h *HTTP) ServiceJob() ServiceJob {
-	return NewServiceJob(func(ctx context.Context) error {
-		MustGetProcess(ctx).OnTerminate(func(ctx context.Context) error {
-			if err := h.ShutdownWithTimeout(ctx, time.Second*5); err != nil {
-				log.Error("HTTP server graceful shutdown failed")
-				return err
+func (h *HTTP) Job() job.Job {
+	return job.FuncJob(func(ctx context.Context) error {
+		go func() {
+			<-job.Stopped(ctx)
+			if err := h.Shutdown(ctx); err != nil {
+				log.WithError(trace.Wrap(err)).Error("HTTP server graceful shutdown failed")
 			}
-			return nil
-		})
+		}()
 		listenChan := make(chan net.Addr)
-		var outChan chan<- net.Addr = listenChan
-		ctx = context.WithValue(ctx, httpListenChanKey{}, outChan)
+		ctx = context.WithValue(ctx, httpListenChanKey{}, chan<- net.Addr(listenChan))
 		go func() {
 			addr := <-listenChan
 			close(listenChan)
-			MustGetServiceJob(ctx).SetReady(addr != nil)
+			job.SetReady(ctx, addr != nil)
 		}()
 		return h.ListenAndServe(ctx)
 	})

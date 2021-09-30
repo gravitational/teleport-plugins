@@ -29,6 +29,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/job"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	. "github.com/gravitational/teleport-plugins/lib/testing"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
@@ -861,7 +862,7 @@ func (s *PagerdutySuite) TestRace() {
 	defer watcher.Close()
 	assert.Equal(t, types.OpInit, (<-watcher.Events()).Type)
 
-	process := lib.NewProcess(s.Context())
+	process := job.NewProcess(s.Context())
 	for i := 0; i < s.raceNumber; i++ {
 		userName := s.userNames.racer1
 		var proposedState types.RequestState
@@ -872,7 +873,7 @@ func (s *PagerdutySuite) TestRace() {
 		case 1:
 			proposedState = types.RequestState_DENIED
 		}
-		process.SpawnCritical(func(ctx context.Context) error {
+		process.SpawnFunc(func(ctx context.Context) error {
 			req, err := types.NewAccessRequest(uuid.New().String(), userName, "admin")
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
@@ -882,8 +883,8 @@ func (s *PagerdutySuite) TestRace() {
 			}
 			pendingRequests.Store(req.GetName(), struct{}{})
 			return nil
-		})
-		process.SpawnCritical(func(ctx context.Context) error {
+		}, job.Critical(true))
+		process.SpawnFunc(func(ctx context.Context) error {
 			incident, err := s.fakePagerduty.CheckNewIncident(ctx)
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
@@ -926,8 +927,8 @@ func (s *PagerdutySuite) TestRace() {
 				}
 			}
 			return nil
-		})
-		process.SpawnCritical(func(ctx context.Context) error {
+		}, job.Critical(true))
+		process.SpawnFunc(func(ctx context.Context) error {
 			incident, err := s.fakePagerduty.CheckIncidentUpdate(ctx)
 			if err := trace.Wrap(err); err != nil {
 				return setRaceErr(err)
@@ -936,10 +937,10 @@ func (s *PagerdutySuite) TestRace() {
 				return setRaceErr(trace.Errorf("wrong incident status. expected %q, obtained %q", expected, obtained))
 			}
 			return nil
-		})
+		}, job.Critical(true))
 	}
 	for i := 0; i < 3*s.raceNumber; i++ {
-		process.SpawnCritical(func(ctx context.Context) error {
+		process.SpawnFunc(func(ctx context.Context) error {
 			note, err := s.fakePagerduty.CheckNewIncidentNote(ctx)
 			if err := trace.Wrap(err); err != nil {
 				return setRaceErr(err)
@@ -951,9 +952,9 @@ func (s *PagerdutySuite) TestRace() {
 			atomic.AddInt32(counterPtr, 1)
 
 			return nil
-		})
+		}, job.Critical(true))
 	}
-	process.SpawnCritical(func(ctx context.Context) error {
+	process.SpawnFunc(func(ctx context.Context) error {
 		for {
 			var event types.Event
 			select {
@@ -976,8 +977,8 @@ func (s *PagerdutySuite) TestRace() {
 				return nil
 			}
 		}
-	})
-	process.Terminate()
+	}, job.Critical(true))
+	process.Stop()
 	<-process.Done()
 	require.NoError(t, raceErr)
 
