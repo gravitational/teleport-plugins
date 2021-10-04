@@ -17,9 +17,10 @@ limitations under the License.
 package main
 
 import (
-	"fmt"
 	"strings"
 	"time"
+
+	"github.com/gravitational/teleport-plugins/lib/plugindata"
 )
 
 // PluginData is a data associated with access request that we store in Teleport using UpdatePluginData API.
@@ -54,64 +55,43 @@ type GitlabData struct {
 	ProjectID IntID
 }
 
-// DecodePluginData deserializes a string map to PluginData struct.
-func DecodePluginData(dataMap map[string]string) (data PluginData) {
+// UnmarshalPluginData deserializes a string map to PluginData struct.
+func (data *PluginData) UnmarshalPluginData(dataMap plugindata.StringMap) {
 	data.User = dataMap["user"]
-	if str := dataMap["roles"]; str != "" {
-		data.Roles = strings.Split(str, ",")
-	}
-	if str := dataMap["created"]; str != "" {
-		var created int64
-		fmt.Sscanf(str, "%d", &created)
-		data.Created = time.Unix(created, 0)
-	}
+	data.Roles = plugindata.SplitString(dataMap["roles"], ",")
+	data.Created = plugindata.DecodeTime(dataMap["created"])
 	data.RequestReason = dataMap["request_reason"]
-	if str := dataMap["reviews_count"]; str != "" {
-		fmt.Sscanf(str, "%d", &data.ReviewsCount)
-	}
+	data.ReviewsCount = plugindata.DecodeInt(dataMap["reviews_count"])
 	data.Resolution.Tag = ResolutionTag(dataMap["resolution"])
 	data.Resolution.Reason = dataMap["resolve_reason"]
-	if str := dataMap["project_id"]; str != "" {
-		fmt.Sscanf(str, "%d", &data.ProjectID)
-	}
-	if str := dataMap["issue_iid"]; str != "" {
-		fmt.Sscanf(str, "%d", &data.IssueIID)
-	}
-	if str := dataMap["issue_id"]; str != "" {
-		fmt.Sscanf(str, "%d", &data.IssueID)
-	}
-	return
+	data.ProjectID = decodeIntID(dataMap["project_id"])
+	data.IssueIID = decodeIntID(dataMap["issue_iid"])
+	data.IssueID = decodeIntID(dataMap["issue_id"])
 }
 
-// EncodePluginData serializes a PluginData struct into a string map.
-func EncodePluginData(data PluginData) map[string]string {
-	result := make(map[string]string)
-
-	result["project_id"] = encodeUInt64(uint64(data.ProjectID))
-	result["issue_iid"] = encodeUInt64(uint64(data.IssueIID))
-	result["issue_id"] = encodeUInt64(uint64(data.IssueID))
-
-	result["user"] = data.User
-	result["roles"] = strings.Join(data.Roles, ",")
-
-	var createdStr string
-	if !data.Created.IsZero() {
-		createdStr = fmt.Sprintf("%d", data.Created.Unix())
+// MarshalPluginData serializes a PluginData struct into a string map.
+func (data *PluginData) MarshalPluginData() plugindata.StringMap {
+	if data == nil {
+		data = &PluginData{}
 	}
-	result["created"] = createdStr
-
-	result["request_reason"] = data.RequestReason
-	result["reviews_count"] = encodeUInt64(uint64(data.ReviewsCount))
-
-	result["resolution"] = string(data.Resolution.Tag)
-	result["resolve_reason"] = data.Resolution.Reason
-
-	return result
+	return plugindata.StringMap{
+		"user":           data.User,
+		"roles":          strings.Join(data.Roles, ","),
+		"created":        plugindata.EncodeTime(data.Created),
+		"request_reason": data.RequestReason,
+		"reviews_count":  plugindata.EncodeInt(data.ReviewsCount),
+		"resolution":     string(data.Resolution.Tag),
+		"resolve_reason": data.Resolution.Reason,
+		"project_id":     encodeIntID(data.ProjectID),
+		"issue_iid":      encodeIntID(data.IssueIID),
+		"issue_id":       encodeIntID(data.IssueID),
+	}
 }
 
-func encodeUInt64(val uint64) string {
-	if val == 0 {
-		return ""
-	}
-	return fmt.Sprintf("%d", val)
+func decodeIntID(str string) IntID {
+	return IntID(plugindata.DecodeUint64(str))
+}
+
+func encodeIntID(id IntID) string {
+	return plugindata.EncodeUint64(uint64(id))
 }

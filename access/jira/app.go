@@ -31,6 +31,7 @@ import (
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport-plugins/lib/plugindata"
 	"github.com/gravitational/teleport-plugins/lib/watcherjob"
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
@@ -623,71 +624,36 @@ func (a *App) resolveIssue(ctx context.Context, reqID string, resolution Resolut
 	return nil
 }
 
-// modifyPluginData performs a compare-and-swap update of access request's plugin data.
-// Callback function parameter is nil if plugin data hasn't been created yet.
-// Otherwise, callback function parameter is a pointer to current plugin data contents.
-// Callback function return value is an updated plugin data contents plus the boolean flag
-// indicating whether it should be written or not.
-// Note that callback function fn might be called more than once due to retry mechanism baked in
-// so make sure that the function is "pure" i.e. it doesn't interact with the outside world:
-// it doesn't perform any sort of I/O operations so even things like Go channels must be avoided.
-// Indeed, this limitation is not that ultimate at least if you know what you're doing.
-func (a *App) modifyPluginData(ctx context.Context, reqID string, fn func(data *PluginData) (PluginData, bool)) (bool, error) {
-	backoff := backoff.NewDecorr(modifyPluginDataBackoffBase, modifyPluginDataBackoffMax, clockwork.NewRealClock())
-	for {
-		oldData, err := a.getPluginData(ctx, reqID)
-		if err != nil && !trace.IsNotFound(err) {
-			return false, trace.Wrap(err)
-		}
-		newData, ok := fn(oldData)
-		if !ok {
-			return false, nil
-		}
-		var expectData PluginData
-		if oldData != nil {
-			expectData = *oldData
-		}
-		err = trace.Wrap(a.updatePluginData(ctx, reqID, newData, expectData))
-		if err == nil {
-			return true, nil
-		}
-		if !trace.IsCompareFailed(err) {
-			return false, trace.Wrap(err)
-		}
-		if err := backoff.Do(ctx); err != nil {
-			return false, trace.Wrap(err)
-		}
+// plugindata makes a plugindata client.
+func (a *App) plugindata() plugindata.Client {
+	return plugindata.Client{
+		APIClient:  a.apiClient,
+		PluginName: pluginName,
 	}
+}
+
+// modifyPluginData performs a compare-and-swap update of access request's plugin data.
+// For details, see the plugindata package documentation on the Modify method.
+func (a *App) modifyPluginData(ctx context.Context, reqID string, fn func(*PluginData) (PluginData, bool)) (bool, error) {
+	ok, err := a.plugindata().Modify(
+		ctx,
+		backoff.NewDecorr(modifyPluginDataBackoffBase, modifyPluginDataBackoffMax, clockwork.NewRealClock()),
+		types.KindAccessRequest,
+		reqID,
+		(*PluginData)(nil),
+		func(data interface{}) (plugindata.Marshaller, bool) {
+			newData, ok := fn(data.(*PluginData))
+			return &newData, ok
+		},
+	)
+	return ok, trace.Wrap(err)
 }
 
 // getPluginData loads a plugin data for a given access request. It returns nil if it's not found.
-func (a *App) getPluginData(ctx context.Context, reqID string) (*PluginData, error) {
-	dataMaps, err := a.apiClient.GetPluginData(ctx, types.PluginDataFilter{
-		Kind:     types.KindAccessRequest,
-		Resource: reqID,
-		Plugin:   pluginName,
-	})
-	if err != nil {
-		return nil, trace.Wrap(err)
+func (a *App) getPluginData(ctx context.Context, reqID string) (PluginData, error) {
+	var data PluginData
+	if err := a.plugindata().Get(ctx, types.KindAccessRequest, reqID, &data); err != nil {
+		return PluginData{}, trace.Wrap(err)
 	}
-	if len(dataMaps) == 0 {
-		return nil, trace.NotFound("plugin data not found")
-	}
-	entry := dataMaps[0].Entries()[pluginName]
-	if entry == nil {
-		return nil, trace.NotFound("plugin data entry not found")
-	}
-	data := DecodePluginData(entry.Data)
-	return &data, nil
-}
-
-// updatePluginData updates an existing plugin data or sets a new one if it didn't exist.
-func (a *App) updatePluginData(ctx context.Context, reqID string, data PluginData, expectData PluginData) error {
-	return a.apiClient.UpdatePluginData(ctx, types.PluginDataUpdateParams{
-		Kind:     types.KindAccessRequest,
-		Resource: reqID,
-		Plugin:   pluginName,
-		Set:      EncodePluginData(data),
-		Expect:   EncodePluginData(expectData),
-	})
+	return data, nil
 }

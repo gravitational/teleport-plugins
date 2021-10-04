@@ -239,7 +239,8 @@ func (s *SlackSuite) checkPluginData(reqID string, cond func(PluginData) bool) P
 	for {
 		rawData, err := s.ruler().PollAccessRequestPluginData(s.Context(), "slack", reqID)
 		require.NoError(t, err)
-		if data := DecodePluginData(rawData); cond(data) {
+		var data PluginData
+		if data.UnmarshalPluginData(rawData); cond(data) {
 			return data
 		}
 	}

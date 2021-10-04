@@ -20,7 +20,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/gravitational/teleport-plugins/lib/plugindata"
+	"github.com/stretchr/testify/require"
 )
 
 var samplePluginData = PluginData{
@@ -38,44 +39,43 @@ var samplePluginData = PluginData{
 	},
 }
 
-func TestEncodePluginData(t *testing.T) {
-	dataMap := EncodePluginData(samplePluginData)
-	assert.Len(t, dataMap, 9)
-	assert.Equal(t, "user-foo", dataMap["user"])
-	assert.Equal(t, "role-foo,role-bar", dataMap["roles"])
-	assert.Equal(t, "1622554037", dataMap["created"])
-	assert.Equal(t, "foo reason", dataMap["request_reason"])
-	assert.Equal(t, "3", dataMap["reviews_count"])
-	assert.Equal(t, "approved", dataMap["resolution"])
-	assert.Equal(t, "foo ok", dataMap["resolve_reason"])
-	assert.Equal(t, "123", dataMap["issue_id"])
-	assert.Equal(t, "ISSUE-123", dataMap["issue_key"])
+var sampleStringMap = plugindata.StringMap{
+	"user":           "user-foo",
+	"roles":          "role-foo,role-bar",
+	"created":        "1622554037",
+	"request_reason": "foo reason",
+	"reviews_count":  "3",
+	"resolution":     "approved",
+	"resolve_reason": "foo ok",
+	"issue_id":       "123",
+	"issue_key":      "ISSUE-123",
 }
 
-func TestDecodePluginData(t *testing.T) {
-	pluginData := DecodePluginData(map[string]string{
-		"user":           "user-foo",
-		"roles":          "role-foo,role-bar",
-		"created":        "1622554037",
-		"request_reason": "foo reason",
-		"reviews_count":  "3",
-		"resolution":     "approved",
-		"resolve_reason": "foo ok",
-		"issue_id":       "123",
-		"issue_key":      "ISSUE-123",
-	})
-	assert.Equal(t, samplePluginData, pluginData)
+func TestMarshalPluginData(t *testing.T) {
+	require.Equal(t, sampleStringMap, samplePluginData.MarshalPluginData())
 }
 
-func TestEncodeEmptyPluginData(t *testing.T) {
-	dataMap := EncodePluginData(PluginData{})
-	assert.Len(t, dataMap, 9)
+func TestUnmarshalPluginData(t *testing.T) {
+	var data PluginData
+	data.UnmarshalPluginData(sampleStringMap)
+	require.Equal(t, samplePluginData, data)
+}
+
+func TestMarshalEmptyPluginData(t *testing.T) {
+	data := &PluginData{}
+	dataMap := data.MarshalPluginData()
+	require.Len(t, dataMap, 9)
 	for key, value := range dataMap {
-		assert.Emptyf(t, value, "value at key %q must be empty", key)
+		require.Zerof(t, value, "value at key %q must be a zero", key)
 	}
 }
 
-func TestDecodeEmptyPluginData(t *testing.T) {
-	assert.Empty(t, DecodePluginData(nil))
-	assert.Empty(t, DecodePluginData(make(map[string]string)))
+func TestUnmarshalEmptyPluginData(t *testing.T) {
+	var data PluginData
+
+	data.UnmarshalPluginData(nil)
+	require.Zero(t, data)
+
+	data.UnmarshalPluginData(make(map[string]string))
+	require.Zero(t, data)
 }

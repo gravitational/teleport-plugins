@@ -259,7 +259,8 @@ func (s *JiraSuite) checkPluginData(reqID string, cond func(PluginData) bool) Pl
 	for {
 		rawData, err := s.ruler().PollAccessRequestPluginData(s.Context(), "jira", reqID)
 		require.NoError(t, err)
-		if data := DecodePluginData(rawData); cond(data) {
+		var data PluginData
+		if data.UnmarshalPluginData(rawData); cond(data) {
 			return data
 		}
 	}
