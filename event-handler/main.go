@@ -17,30 +17,81 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"strings"
+	"time"
 
 	"github.com/alecthomas/kong"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 )
 
-func init() {
-	// initConfig()
-}
-
+// cli is CLI configuration
 var cli CLI
 
+const (
+	// pluginName is the plugin name
+	pluginName = "Teleport event handler"
+
+	// pluginDescription is the plugin description
+	pluginDescription = "Forwards Teleport AuditLog to external sources"
+
+	// gracefulShutdownTimeout is the graceful shutdown timeout
+	gracefulShutdownTimeout = 5 * time.Second
+)
+
 func main() {
+	logger.Init()
+
 	ctx := kong.Parse(
 		&cli,
 		kong.UsageOnError(),
-		kong.Configuration(TOML),
-		kong.Name("Teleport event handler"),
-		kong.Description("Forwards Teleport AuditLog to external sources"),
+		kong.Configuration(KongTOMLResolver),
+		kong.Name(pluginName),
+		kong.Description(pluginDescription),
 	)
 
-	err := ctx.Run()
 	if cli.Debug {
-		fmt.Printf("%v\n", trace.DebugReport(err))
+		err := logger.Setup(logger.Config{Severity: "debug", Output: "stderr"})
+		if err != nil {
+			fmt.Println(trace.DebugReport(err))
+			os.Exit(-1)
+		}
 	}
-	ctx.FatalIfErrorf(err)
+
+	switch {
+	case ctx.Command() == "version":
+		lib.PrintVersion(pluginName, Version, Sha)
+	case strings.HasPrefix(ctx.Command(), "configure"):
+		err := RunConfigureCmd(&cli.Configure)
+		if err != nil {
+			fmt.Println(trace.DebugReport(err))
+			os.Exit(-1)
+		}
+	case ctx.Command() == "start":
+		err := start()
+
+		if err != nil {
+			lib.Bail(err)
+		} else {
+			logger.Standard().Info("Successfully shut down")
+		}
+	}
+}
+
+// start spawns the main process
+func start() error {
+	app, err := NewApp(&cli.Start)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	go lib.ServeSignals(app, gracefulShutdownTimeout)
+
+	return trace.Wrap(
+		app.Run(context.Background()),
+	)
 }

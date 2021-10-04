@@ -28,10 +28,14 @@ import (
 )
 
 type IntegrationSSHSuite struct {
-	IntegrationSSHSetup
+	SSHSetup
 }
 
 func TestIntegrationSSH(t *testing.T) { suite.Run(t, &IntegrationSSHSuite{}) }
+
+func (s *IntegrationSSHSuite) SetupTest() {
+	s.SSHSetup.Setup()
+}
 
 func (s *IntegrationSSHSuite) TestBench() {
 	t := s.T()
@@ -42,11 +46,11 @@ func (s *IntegrationSSHSuite) TestBench() {
 	require.NoError(t, err)
 	user, err := bootstrap.AddUserWithRoles(me.Username, role.GetName())
 	require.NoError(t, err)
-	err = s.integration.Bootstrap(s.Context(), s.auth, bootstrap.Resources())
+	err = s.Integration.Bootstrap(s.Context(), s.Auth, bootstrap.Resources())
 	require.NoError(t, err)
-	identityPath, err := s.integration.Sign(s.Context(), s.auth, user.GetName())
+	identityPath, err := s.Integration.Sign(s.Context(), s.Auth, user.GetName())
 	require.NoError(t, err)
-	tshCmd := s.integration.NewTsh(s.proxy.WebAndSSHProxyAddr(), identityPath)
+	tshCmd := s.Integration.NewTsh(s.Proxy.WebAndSSHProxyAddr(), identityPath)
 	result, err := tshCmd.Bench(s.Context(), tsh.BenchFlags{}, user.GetName()+"@localhost", "ls")
 	require.NoError(t, err)
 	assert.Positive(t, result.RequestsOriginated)

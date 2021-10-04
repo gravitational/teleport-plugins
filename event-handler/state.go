@@ -17,117 +17,113 @@ limitations under the License.
 package main
 
 import (
+	"encoding/binary"
 	"net"
+	"os"
+	"path"
 	"strings"
 	"time"
 
+	"github.com/gravitational/teleport-plugins/event-handler/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 	"github.com/peterbourgon/diskv"
-	log "github.com/sirupsen/logrus"
 )
 
 const (
 	// cacheSizeMaxBytes max memory cache
 	cacheSizeMaxBytes = 1024
+
+	// startTimeName is the start time variable name
+	startTimeName = "start_time"
+
+	// cursorName is the cursor variable name
+	cursorName = "cursor"
+
+	// idName is the id variable name
+	idName = "id"
+
+	// sessionPrefix is the session key prefix
+	sessionPrefix = "session"
+
+	// storageDirPerms is storage directory permissions when created
+	storageDirPerms = 0755
 )
 
-// State is the state repository
+// State manages the plugin persistent state. It is stored on disk as a simple key-value database.
 type State struct {
 	// dv is a diskv instance
 	dv *diskv.Diskv
-
-	// prefix is the state variable prefix
-	prefix string
-
-	// startTimeName is the start time variable name
-	startTimeName string
-
-	// cursorName is the cursor variable name
-	cursorName string
-
-	// idName is the id variable name
-	idName string
 }
 
 // NewCursor creates new cursor instance
-func NewState(c *StartCmd) (*State, error) {
+func NewState(c *StartCmdConfig) (*State, error) {
 	// Simplest transform function: put all the data files into the base dir.
 	flatTransform := func(s string) []string { return []string{} }
 
+	dir, err := createStorageDir(c)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
 	dv := diskv.New(diskv.Options{
-		BasePath:     c.StorageDir,
+		BasePath:     dir,
 		Transform:    flatTransform,
 		CacheSizeMax: cacheSizeMaxBytes,
 	})
 
-	host, port, err := net.SplitHostPort(c.TeleportAddr)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	prefix := strings.TrimSpace(host + "_" + port)
-	if prefix == "_" {
-		return nil, trace.Errorf("Can not generate cursor name from Teleport host %s", c.TeleportAddr)
-	}
-
-	log.WithField("prefix", prefix).Info("Using state prefix")
-
-	s := State{dv, prefix, prefix + "_start_time", prefix + "_cursor", prefix + "_id"}
-
-	err = s.resetOnStartTimeChanged(c)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	t, err := s.GetStartTime()
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	log.WithField("value", t).Info("Using start time")
+	s := State{dv}
 
 	return &s, nil
 }
 
-// resetOnStartTimeChanged resets state if start time explicitly changed from the previous run
-func (s *State) resetOnStartTimeChanged(c *StartCmd) error {
-	prevStartTime, err := s.GetStartTime()
+// createStorageDir is used to calculate storage dir path and create dir if it does not exits
+func createStorageDir(c *StartCmdConfig) (string, error) {
+	log := logger.Standard()
+
+	host, port, err := net.SplitHostPort(c.TeleportAddr)
 	if err != nil {
-		return trace.Wrap(err)
+		return "", trace.Wrap(err)
 	}
 
-	if prevStartTime == nil {
-		log.WithField("value", c.StartTime).Debug("Setting start time")
+	dir := strings.TrimSpace(host + "_" + port)
+	if dir == "_" {
+		return "", trace.Errorf("Can not generate cursor name from Teleport host %s", c.TeleportAddr)
+	}
 
-		err := s.dv.EraseAll()
+	if c.DryRun {
+		rs, err := lib.RandomString(32)
 		if err != nil {
-			return trace.Wrap(err)
+			return "", trace.Wrap(err)
 		}
 
-		if c.StartTime == nil {
-			t := time.Now().UTC().Truncate(time.Second)
-			return s.SetStartTime(&t)
+		dir = path.Join(dir, "dry_run", rs)
+	}
+
+	dir = path.Join(c.StorageDir, dir)
+
+	_, err = os.Stat(dir)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(dir, storageDirPerms)
+		if err != nil {
+			return "", trace.Errorf("Can not create storage directory %v : %w", dir, err)
 		}
 
-		return s.SetStartTime(c.StartTime)
+		log.WithField("dir", dir).Info("Created storage directory")
+	} else {
+		log.WithField("dir", dir).Info("Using existing storage directory")
 	}
 
-	// If there is a time saved in the state and this time does not equal to the time passed from CLI and a
-	// time was explicitly passed from CLI
-	if prevStartTime != nil && c.StartTime != nil && *prevStartTime != *c.StartTime {
-		return trace.Errorf("You can not change start time in the middle of ingestion. To restart the ingestion, rm -rf %v", c.StorageDir)
-	}
-
-	return nil
+	return dir, nil
 }
 
 // GetStartTime gets current start time
 func (s *State) GetStartTime() (*time.Time, error) {
-	if !s.dv.Has(s.startTimeName) {
+	if !s.dv.Has(startTimeName) {
 		return nil, nil
 	}
 
-	b, err := s.dv.Read(s.startTimeName)
+	b, err := s.dv.Read(startTimeName)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -150,31 +146,31 @@ func (s *State) GetStartTime() (*time.Time, error) {
 // SetStartTime sets current start time
 func (s *State) SetStartTime(t *time.Time) error {
 	if t == nil {
-		return s.dv.Write(s.startTimeName, []byte(""))
+		return s.dv.Write(startTimeName, []byte(""))
 	}
 
 	v := t.Truncate(time.Second).Format(time.RFC3339)
-	return s.dv.Write(s.startTimeName, []byte(v))
+	return s.dv.Write(startTimeName, []byte(v))
 }
 
-// GetCursor sets current cursor value
+// GetCursor gets current cursor value
 func (s *State) GetCursor() (string, error) {
-	return s.getStringValue(s.cursorName)
+	return s.getStringValue(cursorName)
 }
 
 // SetCursor sets cursor value
 func (s *State) SetCursor(v string) error {
-	return s.setStringValue(s.cursorName, v)
+	return s.setStringValue(cursorName, v)
 }
 
-// GetID sets current ID value
+// GetID gets current ID value
 func (s *State) GetID() (string, error) {
-	return s.getStringValue(s.idName)
+	return s.getStringValue(idName)
 }
 
 // SetID sets cursor value
 func (s *State) SetID(v string) error {
-	return s.setStringValue(s.idName, v)
+	return s.setStringValue(idName, v)
 }
 
 // getStringValue gets a string value
@@ -195,4 +191,35 @@ func (s *State) getStringValue(name string) (string, error) {
 func (s *State) setStringValue(name string, value string) error {
 	err := s.dv.Write(name, []byte(value))
 	return trace.Wrap(err)
+}
+
+// GetSessions get active sessions (map[id]index)
+func (s *State) GetSessions() (map[string]int64, error) {
+	r := make(map[string]int64)
+
+	for key := range s.dv.KeysPrefix(sessionPrefix, nil) {
+		b, err := s.dv.Read(key)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		id := key[len(sessionPrefix):]
+		r[id] = int64(binary.BigEndian.Uint64(b))
+	}
+
+	return r, nil
+}
+
+// SetSessionIndex writes current session index into state
+func (s *State) SetSessionIndex(id string, index int64) error {
+	var b []byte = make([]byte, 8)
+
+	binary.BigEndian.PutUint64(b, uint64(index))
+
+	return s.dv.Write(sessionPrefix+id, b)
+}
+
+// RemoveSession removes session from the state
+func (s *State) RemoveSession(id string) error {
+	return s.dv.Erase(sessionPrefix + id)
 }

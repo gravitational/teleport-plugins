@@ -4,10 +4,11 @@ batch = 20
 namespace = "default"
 
 [forward.fluentd]
-ca = "{{index .CaPaths 0}}"
-cert = "{{index .ClientPaths 0}}"
-key = "{{index .ClientPaths 1}}"
+ca = "{{index .CaCertPath}}"
+cert = "{{index .ClientCertPath}}"
+key = "{{index .ClientKeyPath}}"
 url = "https://localhost:8888/test.log"
+session-url = "https://localhost:8888/session"
 
 [teleport]
 addr = "{{.Addr}}"
