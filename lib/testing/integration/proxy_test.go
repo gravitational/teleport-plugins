@@ -19,27 +19,31 @@ package integration
 import (
 	"testing"
 
-	"github.com/hashicorp/go-version"
-
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
-type IntegrationSuite struct {
-	IntegrationSetup
+type IntegrationProxySuite struct {
+	IntegrationProxySetup
 }
 
-func TestIntegration(t *testing.T) { suite.Run(t, &IntegrationSuite{}) }
+func TestIntegrationProxy(t *testing.T) { suite.Run(t, &IntegrationProxySuite{}) }
 
-func (s *IntegrationSuite) TestVersion() {
+func (s *IntegrationProxySuite) TestPing() {
 	t := s.T()
 
-	versionMin, err := version.NewVersion("v6.2.7")
+	var bootstrap Bootstrap
+	user, err := bootstrap.AddUserWithRoles("vladimir", "admin")
 	require.NoError(t, err)
-	versionMax, err := version.NewVersion("v8")
+	err = s.integration.Bootstrap(s.Context(), s.auth, bootstrap.Resources())
 	require.NoError(t, err)
 
-	assert.True(t, s.integration.Version().GreaterThanOrEqual(versionMin))
-	assert.True(t, s.integration.Version().LessThan(versionMax))
+	identity, err := s.integration.Sign(s.Context(), s.auth, user.GetName())
+	require.NoError(t, err)
+
+	client, err := s.integration.NewSignedClient(s.Context(), s.proxy, identity, user.GetName())
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = client.Close() })
+	_, err = client.Ping(s.Context())
+	require.NoError(t, err)
 }

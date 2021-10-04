@@ -19,6 +19,7 @@ package integration
 const teleportAuthYAML = `
 teleport:
   data_dir: {{TELEPORT_DATA_DIR}}
+  auth_token: {{TELEPORT_AUTH_TOKEN}}
   cache:
     enabled: false
   log:
@@ -33,6 +34,8 @@ auth_service:
   enabled: true
   listen_addr: 127.0.0.1:0
   public_addr: localhost
+  tokens:
+  - node,auth,proxy,app:{{TELEPORT_AUTH_TOKEN}}
   authentication:
     type: local
 
@@ -41,4 +44,58 @@ proxy_service:
 
 ssh_service:
   enabled: false
+`
+
+const teleportProxyYAML = `
+teleport:
+  data_dir: {{TELEPORT_DATA_DIR}}
+  auth_servers: ['{{TELEPORT_AUTH_SERVER}}']
+  auth_token: '{{TELEPORT_AUTH_TOKEN}}'
+  ca_pin: '{{TELEPORT_AUTH_CA_PIN}}'
+  cache:
+    enabled: false
+  log:
+    output: stdout
+  storage:
+    type: sqlite
+    poll_stream_period: 50000000
+
+auth_service:
+  enabled: false
+
+proxy_service:
+  enabled: true
+  tunnel_public_addr: localhost:{{PROXY_TUN_LISTEN_PORT}}
+  listen_addr: 127.0.0.1:0
+  web_listen_addr: {{PROXY_WEB_LISTEN_ADDR}}
+  tunnel_listen_addr: {{PROXY_TUN_LISTEN_ADDR}}
+
+ssh_service:
+  enabled: false
+`
+
+const teleportSSHYAML = `
+teleport:
+  data_dir: {{TELEPORT_DATA_DIR}}
+  auth_servers: ['{{TELEPORT_AUTH_SERVER}}']
+  auth_token: '{{TELEPORT_AUTH_TOKEN}}'
+  ca_pin: '{{TELEPORT_AUTH_CA_PIN}}'
+  cache:
+    enabled: false
+  log:
+    output: stdout
+  storage:
+    type: sqlite
+    poll_stream_period: 50000000
+
+auth_service:
+  enabled: false
+
+proxy_service:
+  enabled: false
+
+ssh_service:
+  enabled: true
+  listen_addr: {{SSH_LISTEN_ADDR}}
+  public_addr: localhost:{{SSH_LISTEN_PORT}}
 `

@@ -18,8 +18,11 @@ package integration
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/exec"
 	"path"
@@ -33,6 +36,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/tctl"
+	"github.com/gravitational/teleport-plugins/lib/tsh"
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
@@ -52,16 +56,26 @@ type Integration struct {
 	workDir string
 	cleanup []func() error
 	version Version
+	token   string
+	caPin   string
 }
 
 type BinPaths struct {
 	Teleport string
 	Tctl     string
+	Tsh      string
+}
+
+type Addr struct {
+	Host string
+	Port string
+}
+
+type Auth interface {
+	AuthAddr() Addr
 }
 
 type Service interface {
-	PublicAddr() string
-	ConfigPath() string
 	Run(context.Context) error
 	WaitReady(ctx context.Context) (bool, error)
 	Err() error
@@ -99,6 +113,7 @@ func New(ctx context.Context, paths BinPaths, licenseStr string) (*Integration, 
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to get teleport version")
 	}
+
 	tctlVersion, err := getBinaryVersion(ctx, integration.paths.Tctl)
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to get tctl version")
@@ -106,6 +121,15 @@ func New(ctx context.Context, paths BinPaths, licenseStr string) (*Integration, 
 	if !teleportVersion.Equal(tctlVersion.Version) {
 		return nil, trace.Wrap(err, "teleport version %s does not match tctl version %s", teleportVersion.Version, tctlVersion.Version)
 	}
+
+	tshVersion, err := getBinaryVersion(ctx, integration.paths.Tsh)
+	if err != nil {
+		return nil, trace.Wrap(err, "failed to get tsh version")
+	}
+	if !teleportVersion.Equal(tshVersion.Version) {
+		return nil, trace.Wrap(err, "teleport version %s does not match tsh version %s", teleportVersion.Version, tshVersion.Version)
+	}
+
 	if teleportVersion.IsEnterprise {
 		if licenseStr == "" {
 			return nil, trace.Errorf("%s appears to be an Enterprise binary but license path is not specified", integration.paths.Teleport)
@@ -134,6 +158,13 @@ func New(ctx context.Context, paths BinPaths, licenseStr string) (*Integration, 
 
 	integration.version = teleportVersion
 
+	tokenBytes := make([]byte, 16)
+	_, err = rand.Read(tokenBytes)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	integration.token = hex.EncodeToString(tokenBytes)
+
 	initialized = true
 	return &integration, nil
 }
@@ -160,6 +191,7 @@ func NewFromEnv(ctx context.Context) (*Integration, error) {
 		paths = BinPaths{
 			Teleport: os.Getenv("TELEPORT_BINARY"),
 			Tctl:     os.Getenv("TELEPORT_BINARY_TCTL"),
+			Tsh:      os.Getenv("TELEPORT_BINARY_TSH"),
 		}
 
 		// Look up binaries either in file system or in PATH.
@@ -175,6 +207,13 @@ func NewFromEnv(ctx context.Context) (*Integration, error) {
 			paths.Tctl = "tctl"
 		}
 		if paths.Tctl, err = exec.LookPath(paths.Tctl); err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		if paths.Tsh == "" {
+			paths.Tsh = "tsh"
+		}
+		if paths.Tsh, err = exec.LookPath(paths.Tsh); err != nil {
 			return nil, trace.Wrap(err)
 		}
 	} else {
@@ -218,9 +257,9 @@ func (integration *Integration) Version() Version {
 	return integration.version
 }
 
-// NewAuthServer creates a new auth server instance.
-func (integration *Integration) NewAuthServer() (*AuthServer, error) {
-	dataDir, err := integration.tempDir("data-*")
+// NewAuthService creates a new auth server instance.
+func (integration *Integration) NewAuthService() (*AuthService, error) {
+	dataDir, err := integration.tempDir("data-auth-*")
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to initialize data directory")
 	}
@@ -231,6 +270,7 @@ func (integration *Integration) NewAuthServer() (*AuthServer, error) {
 	}
 	yaml := strings.ReplaceAll(teleportAuthYAML, "{{TELEPORT_DATA_DIR}}", dataDir)
 	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_LICENSE_FILE}}", integration.paths.license)
+	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_TOKEN}}", integration.token)
 	if _, err := configFile.WriteString(yaml); err != nil {
 		return nil, trace.Wrap(err, "failed to write config file")
 	}
@@ -238,24 +278,106 @@ func (integration *Integration) NewAuthServer() (*AuthServer, error) {
 		return nil, trace.Wrap(err, "failed to write config file")
 	}
 
-	auth := newAuthServer(integration.paths.Teleport, configFile.Name())
+	auth := newAuthService(integration.paths.Teleport, configFile.Name())
 	integration.registerService(auth)
+
 	return auth, nil
 }
 
-func (integration *Integration) Bootstrap(ctx context.Context, service Service, resources []types.Resource) error {
-	return integration.tctl(service).Create(ctx, resources)
-}
+// NewProxyService creates a new auth server instance.
+func (integration *Integration) NewProxyService(auth Auth) (*ProxyService, error) {
+	dataDir, err := integration.tempDir("data-proxy-*")
+	if err != nil {
+		return nil, trace.Wrap(err, "failed to initialize data directory")
+	}
 
-// Client builds an API client for a given user.
-func (integration *Integration) NewClient(ctx context.Context, service Service, userName string) (*Client, error) {
-	outPath, err := integration.Sign(ctx, service, userName)
+	configFile, err := integration.tempFile("teleport-proxy-*.yaml")
+	if err != nil {
+		return nil, trace.Wrap(err, "failed to write config file")
+	}
+
+	yaml := strings.ReplaceAll(teleportProxyYAML, "{{TELEPORT_DATA_DIR}}", dataDir)
+	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_SERVER}}", auth.AuthAddr().String())
+	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_TOKEN}}", integration.token)
+	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_CA_PIN}}", integration.caPin)
+	webListenAddr, err := getFreeTCPPort()
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
+	yaml = strings.ReplaceAll(yaml, "{{PROXY_WEB_LISTEN_ADDR}}", webListenAddr.String())
+	yaml = strings.ReplaceAll(yaml, "{{PROXY_WEB_LISTEN_PORT}}", webListenAddr.Port)
+	tunListenAddr, err := getFreeTCPPort()
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	yaml = strings.ReplaceAll(yaml, "{{PROXY_TUN_LISTEN_ADDR}}", tunListenAddr.String())
+	yaml = strings.ReplaceAll(yaml, "{{PROXY_TUN_LISTEN_PORT}}", tunListenAddr.Port)
+
+	if _, err := configFile.WriteString(yaml); err != nil {
+		return nil, trace.Wrap(err, "failed to write config file")
+	}
+	if err := configFile.Close(); err != nil {
+		return nil, trace.Wrap(err, "failed to write config file")
+	}
+
+	proxy := newProxyService(integration.paths.Teleport, configFile.Name())
+	integration.registerService(proxy)
+	return proxy, nil
+}
+
+// NewSSHService creates a new auth server instance.
+func (integration *Integration) NewSSHService(auth Auth) (*SSHService, error) {
+	dataDir, err := integration.tempDir("data-ssh-*")
+	if err != nil {
+		return nil, trace.Wrap(err, "failed to initialize data directory")
+	}
+
+	configFile, err := integration.tempFile("teleport-ssh-*.yaml")
+	if err != nil {
+		return nil, trace.Wrap(err, "failed to write config file")
+	}
+	yaml := strings.ReplaceAll(teleportSSHYAML, "{{TELEPORT_DATA_DIR}}", dataDir)
+	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_SERVER}}", auth.AuthAddr().String())
+	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_TOKEN}}", integration.token)
+	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_CA_PIN}}", integration.caPin)
+	sshListenAddr, err := getFreeTCPPort()
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	yaml = strings.ReplaceAll(yaml, "{{SSH_LISTEN_ADDR}}", sshListenAddr.String())
+	yaml = strings.ReplaceAll(yaml, "{{SSH_LISTEN_PORT}}", sshListenAddr.Port)
+
+	if _, err := configFile.WriteString(yaml); err != nil {
+		return nil, trace.Wrap(err, "failed to write config file")
+	}
+	if err := configFile.Close(); err != nil {
+		return nil, trace.Wrap(err, "failed to write config file")
+	}
+
+	ssh := newSSHService(integration.paths.Teleport, configFile.Name())
+	integration.registerService(ssh)
+	return ssh, nil
+}
+
+func (integration *Integration) Bootstrap(ctx context.Context, auth *AuthService, resources []types.Resource) error {
+	return integration.tctl(auth).Create(ctx, resources)
+}
+
+// NewClient builds an API client for a given user.
+func (integration *Integration) NewClient(ctx context.Context, auth *AuthService, userName string) (*Client, error) {
+	outPath, err := integration.Sign(ctx, auth, userName)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	return integration.NewSignedClient(ctx, auth, outPath, userName)
+}
+
+// NewSignedClient builds a client for a given user given the identity file.
+func (integration *Integration) NewSignedClient(ctx context.Context, auth Auth, identityPath, userName string) (*Client, error) {
 	apiClient, err := client.New(ctx, client.Config{
-		Addrs:       []string{service.PublicAddr()},
-		Credentials: []client.Credentials{client.LoadIdentityFile(outPath)},
+		InsecureAddressDiscovery: true,
+		Addrs:                    []string{auth.AuthAddr().String()},
+		Credentials:              []client.Credentials{client.LoadIdentityFile(identityPath)},
 	})
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -265,7 +387,7 @@ func (integration *Integration) NewClient(ctx context.Context, service Service, 
 	return client, nil
 }
 
-func (integration *Integration) MakeAdmin(ctx context.Context, service Service, userName string) (*Client, error) {
+func (integration *Integration) MakeAdmin(ctx context.Context, auth *AuthService, userName string) (*Client, error) {
 	var bootstrap Bootstrap
 	if _, err := bootstrap.AddRole(IntegrationAdminRole, types.RoleSpecV4{
 		Allow: types.RoleConditions{
@@ -282,14 +404,14 @@ func (integration *Integration) MakeAdmin(ctx context.Context, service Service, 
 	if _, err := bootstrap.AddUserWithRoles(userName, IntegrationAdminRole); err != nil {
 		return nil, trace.Wrap(err, fmt.Sprintf("failed to initialize %s user", userName))
 	}
-	if err := integration.Bootstrap(ctx, service, bootstrap.Resources()); err != nil {
+	if err := integration.Bootstrap(ctx, auth, bootstrap.Resources()); err != nil {
 		return nil, trace.Wrap(err, fmt.Sprintf("failed to bootstrap admin user %s", userName))
 	}
-	return integration.NewClient(ctx, service, userName)
+	return integration.NewClient(ctx, auth, userName)
 }
 
-// Sign generates a credentials file for the user.
-func (integration *Integration) Sign(ctx context.Context, service Service, userName string) (string, error) {
+// Sign generates a credentials file for the user and returns an identity file path.
+func (integration *Integration) Sign(ctx context.Context, auth *AuthService, userName string) (string, error) {
 	outFile, err := integration.tempFile(fmt.Sprintf("credentials-%s-*", userName))
 	if err != nil {
 		return "", trace.Wrap(err)
@@ -298,10 +420,41 @@ func (integration *Integration) Sign(ctx context.Context, service Service, userN
 		return "", trace.Wrap(err)
 	}
 	outPath := outFile.Name()
-	if err := integration.tctl(service).Sign(ctx, userName, outPath); err != nil {
+	if err := integration.tctl(auth).Sign(ctx, userName, outPath); err != nil {
 		return "", trace.Wrap(err)
 	}
 	return outPath, nil
+}
+
+// SetCAPin sets integration with the auth service's CA Pin.
+func (integration *Integration) SetCAPin(ctx context.Context, auth *AuthService) error {
+	if integration.caPin != "" {
+		return nil
+	}
+
+	if ready, err := auth.WaitReady(ctx); err != nil {
+		return trace.Wrap(err)
+	} else if !ready {
+		return trace.Wrap(auth.Err())
+	}
+
+	caPin, err := integration.tctl(auth).GetCAPin(ctx)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	integration.caPin = caPin
+	return nil
+}
+
+// NewTsh makes a new tsh runner.
+func (integration *Integration) NewTsh(proxyAddr, identityPath string) tsh.Tsh {
+	return tsh.Tsh{
+		Path:     integration.paths.Tsh,
+		Proxy:    proxyAddr,
+		Identity: identityPath,
+		Insecure: true,
+	}
 }
 
 func getBinaryVersion(ctx context.Context, binaryPath string) (Version, error) {
@@ -324,11 +477,11 @@ func getBinaryVersion(ctx context.Context, binaryPath string) (Version, error) {
 	return Version{Version: version, IsEnterprise: submatch[1] != ""}, nil
 }
 
-func (integration *Integration) tctl(service Service) tctl.Tctl {
+func (integration *Integration) tctl(auth *AuthService) tctl.Tctl {
 	return tctl.Tctl{
 		Path:       integration.paths.Tctl,
-		AuthServer: service.PublicAddr(),
-		ConfigPath: service.ConfigPath(),
+		AuthServer: auth.AuthAddr().String(),
+		ConfigPath: auth.ConfigPath(),
 	}
 }
 
@@ -362,4 +515,25 @@ func (integration *Integration) tempDir(pattern string) (string, error) {
 	}
 	integration.registerCleanup(func() error { return os.RemoveAll(dir) })
 	return dir, nil
+}
+
+func getFreeTCPPort() (Addr, error) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return Addr{}, trace.Wrap(err)
+	}
+	if err := listener.Close(); err != nil {
+		return Addr{}, trace.Wrap(err)
+	}
+	addrStr := listener.Addr().String()
+	parts := strings.SplitN(addrStr, ":", 2)
+	return Addr{Host: parts[0], Port: parts[1]}, nil
+}
+
+func (addr Addr) IsEmpty() bool {
+	return addr.Host == "" && addr.Port == ""
+}
+
+func (addr Addr) String() string {
+	return fmt.Sprintf("%s:%s", addr.Host, addr.Port)
 }

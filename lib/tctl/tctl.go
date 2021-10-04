@@ -19,11 +19,14 @@ package tctl
 import (
 	"context"
 	"os/exec"
+	"regexp"
 
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 )
+
+var regexpStatusCAPin = regexp.MustCompile(`CA pin +(sha256:[a-zA-Z0-9]+)`)
 
 // Tctl is a runner of tctl command.
 type Tctl struct {
@@ -95,6 +98,7 @@ func (tctl Tctl) GetAll(ctx context.Context, query string) ([]types.Resource, er
 	log := logger.Get(ctx)
 	args := append(tctl.baseArgs(), "get", query)
 	cmd := exec.CommandContext(ctx, tctl.cmd(), args...)
+
 	log.Debugf("Running %s", cmd)
 	stdoutPipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -124,6 +128,26 @@ func (tctl Tctl) Get(ctx context.Context, kind, name string) (types.Resource, er
 		return nil, trace.NotFound("resource %q is not found", query)
 	}
 	return resources[0], nil
+}
+
+// GetCAPin sets the auth service CA Pin using output from tctl.
+func (tctl Tctl) GetCAPin(ctx context.Context) (string, error) {
+	log := logger.Get(ctx)
+
+	args := append(tctl.baseArgs(), "status")
+	cmd := exec.CommandContext(ctx, tctl.cmd(), args...)
+
+	log.Debugf("Running %s", cmd)
+	output, err := cmd.Output()
+	if err != nil {
+		return "", trace.Wrap(err, "failed to get auth status")
+	}
+
+	submatch := regexpStatusCAPin.FindStringSubmatch(string(output))
+	if len(submatch) < 2 || submatch[1] == "" {
+		return "", trace.Errorf("failed to find CA Pin in auth status")
+	}
+	return submatch[1], nil
 }
 
 func (tctl Tctl) cmd() string {

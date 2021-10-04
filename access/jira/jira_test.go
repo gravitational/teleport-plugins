@@ -84,7 +84,7 @@ func (s *JiraSuite) SetupSuite() {
 	require.NoError(t, err)
 	t.Cleanup(teleport.Close)
 
-	auth, err := teleport.NewAuthServer()
+	auth, err := teleport.NewAuthService()
 	require.NoError(t, err)
 	s.StartApp(auth)
 
@@ -179,7 +179,7 @@ func (s *JiraSuite) SetupSuite() {
 	identityPath, err := teleport.Sign(ctx, auth, s.userNames.plugin)
 	require.NoError(t, err)
 
-	s.teleportConfig.Addr = auth.PublicAddr()
+	s.teleportConfig.Addr = auth.AuthAddr().String()
 	s.teleportConfig.Identity = identityPath
 	s.teleportFeatures = teleportFeatures
 }
