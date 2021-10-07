@@ -75,6 +75,13 @@ const (
 	sessionBackoffMax = 2 * time.Minute
 	// sessionBackoffNumTries is the maximum number of backoff tries
 	sessionBackoffNumTries = 5
+
+	// sendBackoffBase is an initial (minimum) backoff value.
+	sendBackoffBase = 1 * time.Second
+	// sendBackoffMax is a backoff threshold
+	sendBackoffMax = 10 * time.Second
+	// sendBackoffNumTries is the maximum number of backoff tries
+	sendBackoffNumTries = 5
 )
 
 // NewApp creates new app instance
@@ -149,7 +156,6 @@ Loop:
 			_, ok := a.config.SkipSessionTypes[e.Type]
 			if !ok {
 				err := a.sendEvent(ctx, url, &e)
-
 				if err != nil && trace.IsConnectionProblem(err) {
 					return true, trace.Wrap(err)
 				}
@@ -385,9 +391,29 @@ func (a *App) sendEvent(ctx context.Context, url string, e *TeleportEvent) error
 	log := logger.Get(ctx)
 
 	if !a.config.DryRun {
-		err := a.fluentd.Send(ctx, url, e.Event)
-		if err != nil {
-			return trace.Wrap(err)
+		backoff := backoff.NewDecorr(sendBackoffBase, sendBackoffMax, clockwork.NewRealClock())
+		backoffCount := sendBackoffNumTries
+
+		for {
+			err := a.fluentd.Send(ctx, url, e.Event)
+			if err == nil {
+				break
+			}
+
+			log.Error("Error sending event to Teleport: ", err)
+
+			bErr := backoff.Do(ctx)
+			if bErr != nil {
+				return trace.Wrap(err)
+			}
+
+			backoffCount--
+			if backoffCount < 0 {
+				if !lib.IsCanceled(err) {
+					return trace.Wrap(err)
+				}
+				return nil
+			}
 		}
 	}
 
@@ -396,7 +422,7 @@ func (a *App) sendEvent(ctx context.Context, url string, e *TeleportEvent) error
 		fields["sid"] = e.SessionID
 	}
 
-	log.WithFields(fields).Info("Event sent")
+	log.WithFields(fields).Debug("Event sent")
 	log.WithField("event", e).Debug("Event dump")
 
 	return nil

@@ -35,12 +35,12 @@ type decorr struct {
 	clock clockwork.Clock
 }
 
-// NewDecorr initializes an alogoritm.
+// NewDecorr initializes an alogorithm.
 func NewDecorr(base, cap time.Duration, clock clockwork.Clock) Backoff {
 	return NewDecorrWithMul(base, cap, 3, clock)
 }
 
-// NewDecorrWithMul initializes a backoff alogoritm with a give multiplier.
+// NewDecorrWithMul initializes a backoff alogorithm with a give multiplier.
 func NewDecorrWithMul(base, cap time.Duration, mul int64, clock clockwork.Clock) Backoff {
 	return &decorr{
 		base:  int64(base),
