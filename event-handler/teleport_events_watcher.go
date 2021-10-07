@@ -132,7 +132,7 @@ func (t *TeleportEventsWatcher) fetch(ctx context.Context) error {
 	// Mark position as unresolved (the page is empty)
 	t.pos = -1
 
-	log.WithField("cursor", t.cursor).WithField("next", nextCursor).WithField("len", len(b)).Info("Fetched page")
+	log.WithField("cursor", t.cursor).WithField("next", nextCursor).WithField("len", len(b)).Debug("Fetched page")
 
 	// Page is empty: do nothing, return
 	if len(b) == 0 {
@@ -164,7 +164,7 @@ func (t *TeleportEventsWatcher) fetch(ctx context.Context) error {
 	// Set the position of the last known event
 	t.pos = pos
 
-	log.WithField("id", t.id).WithField("new_pos", t.pos).Info("Skipping last known event")
+	log.WithField("id", t.id).WithField("new_pos", t.pos).Debug("Skipping last known event")
 
 	return nil
 }
@@ -186,7 +186,7 @@ func (t *TeleportEventsWatcher) getEvents(ctx context.Context) ([]events.AuditEv
 // pause sleeps for timeout seconds
 func (t *TeleportEventsWatcher) pause(ctx context.Context) error {
 	log := logger.Get(ctx)
-	log.Infof("No new events, pause for %v seconds", t.config.Timeout)
+	log.Debugf("No new events, pause for %v seconds", t.config.Timeout)
 
 	select {
 	case <-ctx.Done():
