@@ -24,10 +24,10 @@ require (
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mailgun/holster/v3 v3.15.2
+	github.com/mailgun/mailgun-go/v4 v4.5.3
 	github.com/manifoldco/promptui v0.8.0
 	github.com/pelletier/go-toml v1.8.0
-	github.com/peterbourgon/diskv v2.0.1+incompatible
-	github.com/peterbourgon/diskv/v3 v3.0.0 // indirect
+	github.com/peterbourgon/diskv/v3 v3.0.0
 	github.com/sergi/go-diff v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.8.1-0.20210219125412-f104497f2b21
 	github.com/stretchr/testify v1.7.0
@@ -39,6 +39,8 @@ require (
 	golang.org/x/text v0.3.5 // indirect
 	google.golang.org/genproto v0.0.0-20210223151946-22b48be4551b // indirect
 	google.golang.org/grpc v1.31.0
+	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
+	gopkg.in/mail.v2 v2.3.1
 	gopkg.in/resty.v1 v1.12.0
 	k8s.io/apimachinery v0.20.4
 )
