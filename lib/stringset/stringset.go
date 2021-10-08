@@ -6,9 +6,7 @@ type StringSet map[string]struct{}
 // New builds a string set with elements from a given slice.
 func New(elems ...string) StringSet {
 	set := NewWithCap(len(elems))
-	for _, str := range elems {
-		set.Add(str)
-	}
+	set.Add(elems...)
 	return set
 }
 
@@ -18,8 +16,10 @@ func NewWithCap(cap int) StringSet {
 }
 
 // Add inserts a string to the set.
-func (set StringSet) Add(str string) {
-	set[str] = struct{}{}
+func (set StringSet) Add(elems ...string) {
+	for _, str := range elems {
+		set[str] = struct{}{}
+	}
 }
 
 // Del removes a string from the set.

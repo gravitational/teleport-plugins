@@ -129,15 +129,15 @@ func resourceProvisionTokenCreate(ctx context.Context, d *schema.ResourceData, m
 		return diagFromErr(describeErr(err, "token"))
 	}
 
-	// Read token from ResourceData
-	tmp := types.ProvisionTokenV2{}
-	err = tfschema.GetProvisionTokenV2(&tmp, d)
+	t := types.ProvisionTokenV2{}
+	err = tfschema.GetProvisionTokenV2(&t, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
 
 	// Create and validate token
 	t, err := types.NewProvisionToken(token, tmp.Spec.Roles, tmp.Metadata.Expiry())
+	err = t.CheckAndSetDefaults()
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -154,7 +154,6 @@ func resourceProvisionTokenCreate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	err = c.UpsertToken(ctx, tV2)
-
 	if err != nil {
 		return diagFromErr(describeErr(err, "token"))
 	}

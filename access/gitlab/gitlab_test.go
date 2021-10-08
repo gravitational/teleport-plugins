@@ -30,15 +30,14 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/google/uuid"
 
-	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	. "github.com/gravitational/teleport-plugins/lib/testing"
+	"github.com/gravitational/teleport-plugins/lib/testing/integration"
+	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/teleport/lib/auth/testauthority"
-	"github.com/gravitational/teleport/lib/backend"
-	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/trace"
 
 	"github.com/stretchr/testify/assert"
@@ -47,9 +46,6 @@ import (
 )
 
 const (
-	Host          = "localhost"
-	HostID        = "00000000-0000-0000-0000-000000000000"
-	Site          = "local-site"
 	WebhookSecret = "0000"
 	projectID     = IntID(1111)
 )
@@ -58,18 +54,20 @@ type GitlabSuite struct {
 	Suite
 	appConfig Config
 	userNames struct {
-		plugin    string
+		ruler     string
 		requestor string
 		reviewer1 string
 		reviewer2 string
+		plugin    string
 	}
 	approverEmail string
-	publicURL     string
 	raceNumber    int
 	dbPath        string
-	app           *App
 	fakeGitlab    *FakeGitlab
-	teleport      *integration.TeleInstance
+
+	clients          map[string]*integration.Client
+	teleportFeatures *proto.Features
+	teleportConfig   lib.TeleportConfig
 }
 
 func TestGitlab(t *testing.T) { suite.Run(t, &GitlabSuite{}) }
@@ -77,42 +75,79 @@ func TestGitlab(t *testing.T) { suite.Run(t, &GitlabSuite{}) }
 func (s *GitlabSuite) SetupSuite() {
 	var err error
 	t := s.T()
-	log.SetLevel(log.DebugLevel)
-	priv, pub, err := testauthority.New().GenerateKeyPair("")
-	require.NoError(t, err)
-	teleport := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Priv: priv, Pub: pub})
 
+	logger.Init()
+	logger.Setup(logger.Config{Severity: "debug"})
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
 
-	role, err := types.NewRole("foo", types.RoleSpecV3{
-		Allow: types.RoleConditions{
-			Request: &types.AccessRequestConditions{
-				Roles: []string{"admin"},
-				Thresholds: []types.AccessReviewThreshold{
-					types.AccessReviewThreshold{Approve: 2, Deny: 2},
-				},
-			},
-		},
-	})
-	require.NoError(t, err)
-	s.userNames.requestor = teleport.AddUserWithRole(me.Username+"@example.com", role).Username
-
-	role, err = types.NewRole("foo-reviewer", types.RoleSpecV3{
-		Allow: types.RoleConditions{
-			ReviewRequests: &types.AccessReviewConditions{
-				Roles: []string{"admin"},
-			},
-		},
-	})
-	require.NoError(t, err)
-	s.userNames.reviewer1 = teleport.AddUserWithRole(me.Username+"-reviewer1@example.com", role).Username
-	s.userNames.reviewer2 = teleport.AddUserWithRole(me.Username+"-reviewer2@example.com", role).Username
-
 	s.approverEmail = me.Username + "-approver@example.com"
 
-	role, err = types.NewRole("access-gitlab", types.RoleSpecV3{
+	// We set such a big timeout because integration.NewFromEnv could start
+	// downloading a Teleport *-bin.tar.gz file which can take a long time.
+	ctx := s.SetContextTimeout(2 * time.Minute)
+
+	teleport, err := integration.NewFromEnv(ctx)
+	require.NoError(t, err)
+	t.Cleanup(teleport.Close)
+
+	auth, err := teleport.NewAuthService()
+	require.NoError(t, err)
+	s.StartApp(auth)
+
+	s.clients = make(map[string]*integration.Client)
+
+	// Set up the user who has an access to all kinds of resources.
+
+	s.userNames.ruler = me.Username + "-ruler@example.com"
+	client, err := teleport.MakeAdmin(ctx, auth, s.userNames.ruler)
+	require.NoError(t, err)
+	s.clients[s.userNames.ruler] = client
+
+	// Get the server features.
+
+	pong, err := client.Ping(ctx)
+	require.NoError(t, err)
+	teleportFeatures := pong.GetServerFeatures()
+
+	var bootstrap integration.Bootstrap
+
+	// Set up user who can request the access to role "admin".
+
+	conditions := types.RoleConditions{Request: &types.AccessRequestConditions{Roles: []string{"admin"}}}
+	if teleportFeatures.AdvancedAccessWorkflows {
+		conditions.Request.Thresholds = []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}}
+	}
+	role, err := bootstrap.AddRole("foo", types.RoleSpecV4{Allow: conditions})
+	require.NoError(t, err)
+
+	user, err := bootstrap.AddUserWithRoles(me.Username+"@example.com", role.GetName())
+	require.NoError(t, err)
+	s.userNames.requestor = user.GetName()
+
+	if teleportFeatures.AdvancedAccessWorkflows {
+		// Set up TWO users who can review access requests to role "admin".
+
+		role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV4{
+			Allow: types.RoleConditions{
+				ReviewRequests: &types.AccessReviewConditions{Roles: []string{"admin"}},
+			},
+		})
+		require.NoError(t, err)
+
+		user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer1@example.com", role.GetName())
+		require.NoError(t, err)
+		s.userNames.reviewer1 = user.GetName()
+
+		user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer2@example.com", role.GetName())
+		require.NoError(t, err)
+		s.userNames.reviewer2 = user.GetName()
+	}
+
+	// Set up plugin user.
+
+	role, err = bootstrap.AddRole("access-gitlab", types.RoleSpecV4{
 		Allow: types.RoleConditions{
 			Rules: []types.Rule{
 				types.NewRule("access_request", []string{"list", "read", "update"}),
@@ -120,18 +155,44 @@ func (s *GitlabSuite) SetupSuite() {
 		},
 	})
 	require.NoError(t, err)
-	s.userNames.plugin = teleport.AddUserWithRole("access-gitlab", role).Username
 
-	err = teleport.Create(nil, nil)
+	user, err = bootstrap.AddUserWithRoles("access-gitlab", role.GetName())
 	require.NoError(t, err)
-	if err := teleport.Start(); err != nil {
-		t.Fatalf("Unexpected response from Start: %v", err)
+	s.userNames.plugin = user.GetName()
+
+	// Bake all the resources.
+
+	err = teleport.Bootstrap(ctx, auth, bootstrap.Resources())
+	require.NoError(t, err)
+
+	// Initialize the clients.
+
+	client, err = teleport.NewClient(ctx, auth, s.userNames.requestor)
+	require.NoError(t, err)
+	s.clients[s.userNames.requestor] = client
+
+	if teleportFeatures.AdvancedAccessWorkflows {
+		client, err = teleport.NewClient(ctx, auth, s.userNames.reviewer1)
+		require.NoError(t, err)
+		s.clients[s.userNames.reviewer1] = client
+
+		client, err = teleport.NewClient(ctx, auth, s.userNames.reviewer2)
+		require.NoError(t, err)
+		s.clients[s.userNames.reviewer2] = client
 	}
-	s.teleport = teleport
+
+	identityPath, err := teleport.Sign(ctx, auth, s.userNames.plugin)
+	require.NoError(t, err)
+
+	s.teleportConfig.Addr = auth.AuthAddr().String()
+	s.teleportConfig.Identity = identityPath
+	s.teleportFeatures = teleportFeatures
 }
 
 func (s *GitlabSuite) SetupTest() {
 	t := s.T()
+
+	logger.Setup(logger.Config{Severity: "debug"})
 
 	s.fakeGitlab = NewFakeGitLab(projectID, s.raceNumber)
 	t.Cleanup(s.fakeGitlab.Close)
@@ -140,38 +201,8 @@ func (s *GitlabSuite) SetupTest() {
 	s.dbPath = dbFile.Name()
 	dbFile.Close()
 
-	auth := s.teleport.Process.GetAuthServer()
-	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
-	require.NoError(t, err)
-	pluginKey := s.teleport.Secrets.Users["access-gitlab"].Key
-
-	keyFile := s.NewTmpFile("auth.*.key")
-	_, err = keyFile.Write(pluginKey.Priv)
-	require.NoError(t, err)
-	keyFile.Close()
-
-	certFile := s.NewTmpFile("auth.*.crt")
-	_, err = certFile.Write(pluginKey.TLSCert)
-	require.NoError(t, err)
-	certFile.Close()
-
-	casFile := s.NewTmpFile("auth.*.cas")
-	for _, ca := range certAuthorities {
-		for _, keyPair := range ca.GetTLSKeyPairs() {
-			_, err = casFile.Write(keyPair.Cert)
-			require.NoError(t, err)
-		}
-	}
-	casFile.Close()
-
-	authAddr, err := s.teleport.Process.AuthSSHAddr()
-	require.NoError(t, err)
-
 	var conf Config
-	conf.Teleport.Addr = authAddr.Addr
-	conf.Teleport.ClientCrt = certFile.Name()
-	conf.Teleport.ClientKey = keyFile.Name()
-	conf.Teleport.RootCAs = casFile.Name()
+	conf.Teleport = s.teleportConfig
 	conf.Gitlab.URL = s.fakeGitlab.URL()
 	conf.Gitlab.WebhookSecret = WebhookSecret
 	conf.Gitlab.ProjectID = fmt.Sprintf("%d", projectID)
@@ -180,9 +211,10 @@ func (s *GitlabSuite) SetupTest() {
 	conf.HTTP.Insecure = true
 
 	s.appConfig = conf
+	s.SetContextTimeout(15 * time.Second)
 }
 
-func (s *GitlabSuite) startApp() {
+func (s *GitlabSuite) startApp() *App {
 	t := s.T()
 	t.Helper()
 
@@ -190,45 +222,41 @@ func (s *GitlabSuite) startApp() {
 	require.NoError(t, err)
 
 	s.StartApp(app)
-	s.publicURL = app.PublicURL().String()
-	s.app = app
-	t.Cleanup(func() {
-		s.app = nil
-	})
+
+	return app
 }
 
-func (s *GitlabSuite) shutdownApp() {
+func (s *GitlabSuite) ruler() *integration.Client {
+	return s.clients[s.userNames.ruler]
+}
+
+func (s *GitlabSuite) requestor() *integration.Client {
+	return s.clients[s.userNames.requestor]
+}
+
+func (s *GitlabSuite) reviewer1() *integration.Client {
+	return s.clients[s.userNames.reviewer1]
+}
+
+func (s *GitlabSuite) reviewer2() *integration.Client {
+	return s.clients[s.userNames.reviewer2]
+}
+
+func (s *GitlabSuite) newAccessRequest() types.AccessRequest {
 	t := s.T()
 	t.Helper()
 
-	err := s.app.Shutdown(s.Ctx())
-	require.NoError(t, err)
-}
-
-func (s *GitlabSuite) newAccessRequest() services.AccessRequest {
-	t := s.T()
-	t.Helper()
-
-	req, err := services.NewAccessRequest(s.userNames.requestor, "admin")
-	require.NoError(t, err)
-	return req
-}
-func (s *GitlabSuite) createAccessRequest() services.AccessRequest {
-	t := s.T()
-	t.Helper()
-
-	req := s.newAccessRequest()
-	err := s.teleport.CreateAccessRequest(s.Ctx(), req)
+	req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 	require.NoError(t, err)
 	return req
 }
 
-func (s *GitlabSuite) createExpiredAccessRequest() services.AccessRequest {
+func (s *GitlabSuite) createAccessRequest() types.AccessRequest {
 	t := s.T()
 	t.Helper()
 
 	req := s.newAccessRequest()
-	err := s.teleport.CreateExpiredAccessRequest(s.Ctx(), req)
+	err := s.requestor().CreateAccessRequest(s.Context(), req)
 	require.NoError(t, err)
 	return req
 }
@@ -238,7 +266,7 @@ func (s *GitlabSuite) checkPluginData(reqID string, cond func(PluginData) bool) 
 	t.Helper()
 
 	for {
-		rawData, err := s.teleport.PollAccessRequestPluginData(s.Ctx(), "gitlab", reqID)
+		rawData, err := s.ruler().PollAccessRequestPluginData(s.Context(), "gitlab", reqID)
 		require.NoError(t, err)
 		if data := DecodePluginData(rawData); cond(data) {
 			return data
@@ -257,7 +285,7 @@ func (s *GitlabSuite) assertNewLabels(expected int) map[string]Label {
 	return newLabels
 }
 
-func (s *GitlabSuite) postIssueUpdateHook(ctx context.Context, oldIssue, newIssue Issue) (*http.Response, error) {
+func (s *GitlabSuite) postIssueUpdateHook(ctx context.Context, url string, oldIssue, newIssue Issue) (*http.Response, error) {
 	var labelsChange *LabelsChange
 	if !reflect.DeepEqual(oldIssue.Labels, newIssue.Labels) {
 		labelsChange = &LabelsChange{Previous: s.fakeGitlab.GetLabels(oldIssue.Labels...), Current: s.fakeGitlab.GetLabels(newIssue.Labels...)}
@@ -286,7 +314,7 @@ func (s *GitlabSuite) postIssueUpdateHook(ctx context.Context, oldIssue, newIssu
 		return nil, trace.Wrap(err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, s.publicURL+gitlabWebhookPath, &buf)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, &buf)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -298,11 +326,11 @@ func (s *GitlabSuite) postIssueUpdateHook(ctx context.Context, oldIssue, newIssu
 	return response, trace.Wrap(err)
 }
 
-func (s *GitlabSuite) postIssueUpdateHookAndCheck(oldIssue, newIssue Issue) {
+func (s *GitlabSuite) postIssueUpdateHookAndCheck(url string, oldIssue, newIssue Issue) {
 	t := s.T()
 	t.Helper()
 
-	resp, err := s.postIssueUpdateHook(s.Ctx(), oldIssue, newIssue)
+	resp, err := s.postIssueUpdateHook(s.Context(), url, oldIssue, newIssue)
 	require.NoError(t, err)
 	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 	err = resp.Body.Close()
@@ -326,13 +354,14 @@ func (s *GitlabSuite) openDB(fn func(db DB) error) {
 func (s *GitlabSuite) TestProjectHookSetup() {
 	t := s.T()
 
-	s.startApp()
+	app := s.startApp()
 
-	hook, err := s.fakeGitlab.CheckNewProjectHook(s.Ctx())
+	hook, err := s.fakeGitlab.CheckNewProjectHook(s.Context())
 	require.NoError(t, err, "no new project hooks stored")
-	assert.Equal(t, s.publicURL+gitlabWebhookPath, hook.URL)
+	assert.Equal(t, app.PublicURL().String()+gitlabWebhookPath, hook.URL)
 
-	s.shutdownApp()
+	err = app.Shutdown(s.Context())
+	require.NoError(t, err)
 
 	var dbHookID IntID
 	s.openDB(func(db DB) error {
@@ -353,8 +382,9 @@ func (s *GitlabSuite) TestProjectHookSetupWhenItExists() {
 		URL:       s.appConfig.HTTP.PublicAddr + gitlabWebhookPath,
 	})
 
-	s.startApp()
-	s.shutdownApp()
+	app := s.startApp()
+	err := app.Shutdown(s.Context())
+	require.NoError(t, err)
 
 	require.True(t, s.fakeGitlab.CheckNoNewProjectHooks())
 
@@ -382,15 +412,16 @@ func (s *GitlabSuite) TestProjectHookSetupWhenItExistsInDB() {
 		})
 	})
 
-	s.startApp()
+	app := s.startApp()
 
-	hook, err := s.fakeGitlab.CheckProjectHookUpdate(s.Ctx())
+	hook, err := s.fakeGitlab.CheckProjectHookUpdate(s.Context())
 	require.NoError(t, err, "no project hooks updated")
 	assert.Equal(t, existingHook.ProjectID, hook.ProjectID)
 	assert.Equal(t, existingHook.ID, hook.ID)
-	assert.Equal(t, s.publicURL+gitlabWebhookPath, hook.URL)
+	assert.Equal(t, app.PublicURL().String()+gitlabWebhookPath, hook.URL)
 
-	s.shutdownApp()
+	err = app.Shutdown(s.Context())
+	require.NoError(t, err)
 
 	var dbHookID IntID
 	s.openDB(func(db DB) error {
@@ -405,7 +436,7 @@ func (s *GitlabSuite) TestProjectHookSetupWhenItExistsInDB() {
 func (s *GitlabSuite) TestLabelsSetup() {
 	t := s.T()
 
-	s.startApp()
+	app := s.startApp()
 
 	newLabels := s.assertNewLabels(4)
 	assert.Equal(t, "Teleport: Pending", newLabels["pending"].Name)
@@ -413,7 +444,8 @@ func (s *GitlabSuite) TestLabelsSetup() {
 	assert.Equal(t, "Teleport: Denied", newLabels["denied"].Name)
 	assert.Equal(t, "Teleport: Expired", newLabels["expired"].Name)
 
-	s.shutdownApp()
+	err := app.Shutdown(s.Context())
+	require.NoError(t, err)
 
 	var dbLabels map[string]string
 	s.openDB(func(db DB) error {
@@ -436,13 +468,14 @@ func (s *GitlabSuite) TestLabelsSetupWhenSomeExist() {
 		"expired": s.fakeGitlab.StoreLabel(Label{Name: "teleport:expired"}),
 	}
 
-	s.startApp()
+	app := s.startApp()
 
 	newLabels := s.assertNewLabels(2)
 	assert.Equal(t, "Teleport: Approved", newLabels["approved"].Name)
 	assert.Equal(t, "Teleport: Denied", newLabels["denied"].Name)
 
-	s.shutdownApp()
+	err := app.Shutdown(s.Context())
+	require.NoError(t, err)
 
 	var dbLabels map[string]string
 	s.openDB(func(db DB) error {
@@ -461,14 +494,14 @@ func (s *GitlabSuite) TestLabelsSetupWhenSomeExist() {
 func (s *GitlabSuite) TestIssueCreation() {
 	t := s.T()
 
-	s.startApp()
+	app := s.startApp()
 
 	request := s.createAccessRequest()
 	pluginData := s.checkPluginData(request.GetName(), func(data PluginData) bool {
 		return data.GitlabData.IssueID != 0
 	}) // when issue id is written, we are sure that request is completely served.
 
-	issue, err := s.fakeGitlab.CheckNewIssue(s.Ctx())
+	issue, err := s.fakeGitlab.CheckNewIssue(s.Context())
 	require.NoError(t, err, "no new issues stored")
 	assert.Equal(t, projectID, issue.ProjectID)
 	assert.Len(t, issue.Labels, 1)
@@ -478,7 +511,8 @@ func (s *GitlabSuite) TestIssueCreation() {
 	assert.Equal(t, issue.IID, pluginData.IssueIID)
 	assert.Equal(t, issue.ID, pluginData.IssueID)
 
-	s.shutdownApp()
+	err = app.Shutdown(s.Context())
+	require.NoError(t, err)
 
 	var reqID string
 	s.openDB(func(db DB) error {
@@ -494,17 +528,21 @@ func (s *GitlabSuite) TestIssueCreation() {
 func (s *GitlabSuite) TestReviewComments() {
 	t := s.T()
 
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
 	s.startApp()
 	req := s.createAccessRequest()
 
-	req, err := s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	err := s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
 		Reason:        "okay",
 	})
 	require.NoError(t, err)
-	req, err = s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	err = s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -517,7 +555,7 @@ func (s *GitlabSuite) TestReviewComments() {
 	})
 	issueID := pluginData.IssueID
 
-	note, err := s.fakeGitlab.CheckNewNote(s.Ctx())
+	note, err := s.fakeGitlab.CheckNewNote(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "Issue", note.NoteableType)
 	assert.Equal(t, issueID, note.NoteableID)
@@ -525,7 +563,7 @@ func (s *GitlabSuite) TestReviewComments() {
 	assert.Contains(t, note.Body, "Resolution: **APPROVED**", "comment must contain an approval resolution")
 	assert.Contains(t, note.Body, "Reason: okay", "comment must contain an approval reason")
 
-	note, err = s.fakeGitlab.CheckNewNote(s.Ctx())
+	note, err = s.fakeGitlab.CheckNewNote(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "Issue", note.NoteableType)
 	assert.Equal(t, issueID, note.NoteableID)
@@ -537,6 +575,10 @@ func (s *GitlabSuite) TestReviewComments() {
 func (s *GitlabSuite) TestReviewerApproval() {
 	t := s.T()
 
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
 	s.startApp()
 	req := s.createAccessRequest()
 
@@ -545,7 +587,7 @@ func (s *GitlabSuite) TestReviewerApproval() {
 	})
 	issueID := pluginData.IssueID
 
-	req, err := s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	err := s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
@@ -553,13 +595,13 @@ func (s *GitlabSuite) TestReviewerApproval() {
 	})
 	require.NoError(t, err)
 
-	note, err := s.fakeGitlab.CheckNewNote(s.Ctx())
+	note, err := s.fakeGitlab.CheckNewNote(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "Issue", note.NoteableType)
 	assert.Equal(t, issueID, note.NoteableID)
 	assert.Contains(t, note.Body, "**"+s.userNames.reviewer1+"** reviewed the request", "comment must contain a review author")
 
-	req, err = s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	err = s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
@@ -567,7 +609,7 @@ func (s *GitlabSuite) TestReviewerApproval() {
 	})
 	require.NoError(t, err)
 
-	note, err = s.fakeGitlab.CheckNewNote(s.Ctx())
+	note, err = s.fakeGitlab.CheckNewNote(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "Issue", note.NoteableType)
 	assert.Equal(t, issueID, note.NoteableID)
@@ -579,14 +621,14 @@ func (s *GitlabSuite) TestReviewerApproval() {
 	assert.Equal(t, issueID, pluginData.IssueID)
 	assert.Equal(t, Resolution{Tag: ResolvedApproved, Reason: "finally okay"}, pluginData.Resolution)
 
-	issue, err := s.fakeGitlab.CheckIssueUpdate(s.Ctx())
+	issue, err := s.fakeGitlab.CheckIssueUpdate(s.Context())
 	require.NoError(t, err, "no issues updated")
 	assert.Equal(t, issueID, issue.ID)
 	assert.Len(t, issue.Labels, 1)
 	assert.Equal(t, "approved", LabelName(issue.Labels[0]).Reduced())
 	assert.Equal(t, "closed", issue.State)
 
-	note, err = s.fakeGitlab.CheckNewNote(s.Ctx())
+	note, err = s.fakeGitlab.CheckNewNote(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "Issue", note.NoteableType)
 	assert.Equal(t, issueID, note.NoteableID)
@@ -597,6 +639,10 @@ func (s *GitlabSuite) TestReviewerApproval() {
 func (s *GitlabSuite) TestReviewerDenial() {
 	t := s.T()
 
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
 	s.startApp()
 	req := s.createAccessRequest()
 
@@ -605,7 +651,7 @@ func (s *GitlabSuite) TestReviewerDenial() {
 	})
 	issueID := pluginData.IssueID
 
-	req, err := s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	err := s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -613,13 +659,13 @@ func (s *GitlabSuite) TestReviewerDenial() {
 	})
 	require.NoError(t, err)
 
-	note, err := s.fakeGitlab.CheckNewNote(s.Ctx())
+	note, err := s.fakeGitlab.CheckNewNote(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "Issue", note.NoteableType)
 	assert.Equal(t, issueID, note.NoteableID)
 	assert.Contains(t, note.Body, "**"+s.userNames.reviewer1+"** reviewed the request", "comment must contain a review author")
 
-	req, err = s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	err = s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -627,7 +673,7 @@ func (s *GitlabSuite) TestReviewerDenial() {
 	})
 	require.NoError(t, err)
 
-	note, err = s.fakeGitlab.CheckNewNote(s.Ctx())
+	note, err = s.fakeGitlab.CheckNewNote(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "Issue", note.NoteableType)
 	assert.Equal(t, issueID, note.NoteableID)
@@ -639,14 +685,14 @@ func (s *GitlabSuite) TestReviewerDenial() {
 	assert.Equal(t, issueID, pluginData.IssueID)
 	assert.Equal(t, Resolution{Tag: ResolvedDenied, Reason: "finally not okay"}, pluginData.Resolution)
 
-	issue, err := s.fakeGitlab.CheckIssueUpdate(s.Ctx())
+	issue, err := s.fakeGitlab.CheckIssueUpdate(s.Context())
 	require.NoError(t, err, "no issues updated")
 	assert.Equal(t, issueID, issue.ID)
 	assert.Len(t, issue.Labels, 1)
 	assert.Equal(t, "denied", LabelName(issue.Labels[0]).Reduced())
 	assert.Equal(t, "closed", issue.State)
 
-	note, err = s.fakeGitlab.CheckNewNote(s.Ctx())
+	note, err = s.fakeGitlab.CheckNewNote(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "Issue", note.NoteableType)
 	assert.Equal(t, issueID, note.NoteableID)
@@ -657,7 +703,7 @@ func (s *GitlabSuite) TestReviewerDenial() {
 func (s *GitlabSuite) TestWebhookApproval() {
 	t := s.T()
 
-	s.startApp()
+	app := s.startApp()
 
 	labels := s.assertNewLabels(4)
 	request := s.createAccessRequest()
@@ -666,7 +712,7 @@ func (s *GitlabSuite) TestWebhookApproval() {
 	})
 	issueID := pluginData.IssueID
 
-	issue, err := s.fakeGitlab.CheckNewIssue(s.Ctx())
+	issue, err := s.fakeGitlab.CheckNewIssue(s.Context())
 	require.NoError(t, err, "no new issues stored")
 	assert.Equal(t, issueID, issue.ID)
 	assert.Len(t, issue.Labels, 1)
@@ -675,26 +721,26 @@ func (s *GitlabSuite) TestWebhookApproval() {
 	oldIssue := issue
 	issue.Labels = []string{labels["approved"].Title}
 	s.fakeGitlab.StoreIssue(issue)
-	s.postIssueUpdateHookAndCheck(oldIssue, issue)
+	s.postIssueUpdateHookAndCheck(app.PublicURL().String()+gitlabWebhookPath, oldIssue, issue)
 
-	issue, err = s.fakeGitlab.CheckIssueUpdate(s.Ctx())
+	issue, err = s.fakeGitlab.CheckIssueUpdate(s.Context())
 	require.NoError(t, err, "no issues updated")
 	assert.Equal(t, issueID, issue.ID)
 	assert.Len(t, issue.Labels, 1)
 	assert.Equal(t, "approved", LabelName(issue.Labels[0]).Reduced())
 	assert.Equal(t, "closed", issue.State)
 
-	request, err = s.teleport.GetAccessRequest(s.Ctx(), request.GetName())
+	request, err = s.ruler().GetAccessRequest(s.Context(), request.GetName())
 	require.NoError(t, err)
 	assert.Equal(t, types.RequestState_APPROVED, request.GetState())
 
-	events, err := s.teleport.SearchAccessRequestEvents(request.GetName())
+	events, err := s.ruler().SearchAccessRequestEvents(s.Context(), request.GetName())
 	require.NoError(t, err)
 	assert.Len(t, events, 1)
 	assert.Equal(t, "APPROVED", events[0].RequestState)
 	assert.Equal(t, "gitlab:"+s.approverEmail, events[0].Delegator)
 
-	note, err := s.fakeGitlab.CheckNewNote(s.Ctx())
+	note, err := s.fakeGitlab.CheckNewNote(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "Issue", note.NoteableType)
 	assert.Equal(t, issueID, note.NoteableID)
@@ -704,7 +750,7 @@ func (s *GitlabSuite) TestWebhookApproval() {
 func (s *GitlabSuite) TestWebhookDenial() {
 	t := s.T()
 
-	s.startApp()
+	app := s.startApp()
 
 	labels := s.assertNewLabels(4)
 	request := s.createAccessRequest()
@@ -713,7 +759,7 @@ func (s *GitlabSuite) TestWebhookDenial() {
 	})
 	issueID := pluginData.IssueID
 
-	issue, err := s.fakeGitlab.CheckNewIssue(s.Ctx())
+	issue, err := s.fakeGitlab.CheckNewIssue(s.Context())
 	require.NoError(t, err, "no new issues stored")
 	assert.Equal(t, issueID, issue.ID)
 	assert.Len(t, issue.Labels, 1)
@@ -722,26 +768,26 @@ func (s *GitlabSuite) TestWebhookDenial() {
 	oldIssue := issue
 	issue.Labels = []string{labels["denied"].Title}
 	s.fakeGitlab.StoreIssue(issue)
-	s.postIssueUpdateHookAndCheck(oldIssue, issue)
+	s.postIssueUpdateHookAndCheck(app.PublicURL().String()+gitlabWebhookPath, oldIssue, issue)
 
-	issue, err = s.fakeGitlab.CheckIssueUpdate(s.Ctx())
+	issue, err = s.fakeGitlab.CheckIssueUpdate(s.Context())
 	require.NoError(t, err, "no issues updated")
 	assert.Equal(t, issueID, issue.ID)
 	assert.Len(t, issue.Labels, 1)
 	assert.Equal(t, "denied", LabelName(issue.Labels[0]).Reduced())
 	assert.Equal(t, "closed", issue.State)
 
-	request, err = s.teleport.GetAccessRequest(s.Ctx(), request.GetName())
+	request, err = s.ruler().GetAccessRequest(s.Context(), request.GetName())
 	require.NoError(t, err)
 	assert.Equal(t, types.RequestState_DENIED, request.GetState())
 
-	events, err := s.teleport.SearchAccessRequestEvents(request.GetName())
+	events, err := s.ruler().SearchAccessRequestEvents(s.Context(), request.GetName())
 	require.NoError(t, err)
 	assert.Len(t, events, 1)
 	assert.Equal(t, "DENIED", events[0].RequestState)
 	assert.Equal(t, "gitlab:"+s.approverEmail, events[0].Delegator)
 
-	note, err := s.fakeGitlab.CheckNewNote(s.Ctx())
+	note, err := s.fakeGitlab.CheckNewNote(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "Issue", note.NoteableType)
 	assert.Equal(t, issueID, note.NoteableID)
@@ -752,27 +798,30 @@ func (s *GitlabSuite) TestExpiration() {
 	t := s.T()
 
 	s.startApp()
-	request := s.createExpiredAccessRequest()
 
+	request := s.createAccessRequest()
 	pluginData := s.checkPluginData(request.GetName(), func(data PluginData) bool {
 		return data.IssueID != 0
 	})
 	issueID := pluginData.IssueID
 
-	issue, err := s.fakeGitlab.CheckNewIssue(s.Ctx())
+	issue, err := s.fakeGitlab.CheckNewIssue(s.Context())
 	require.NoError(t, err, "no new issues stored")
 	assert.Equal(t, issueID, issue.ID)
 	assert.Len(t, issue.Labels, 1)
 	assert.Equal(t, "pending", LabelName(issue.Labels[0]).Reduced())
 
-	issue, err = s.fakeGitlab.CheckIssueUpdate(s.Ctx())
+	err = s.ruler().DeleteAccessRequest(s.Context(), request.GetName()) // simulate expiration
+	require.NoError(t, err)
+
+	issue, err = s.fakeGitlab.CheckIssueUpdate(s.Context())
 	require.NoError(t, err, "no issues updated")
 	assert.Equal(t, issueID, issue.ID)
 	assert.Len(t, issue.Labels, 1)
 	assert.Equal(t, "expired", LabelName(issue.Labels[0]).Reduced())
 	assert.Equal(t, "closed", issue.State)
 
-	note, err := s.fakeGitlab.CheckNewNote(s.Ctx())
+	note, err := s.fakeGitlab.CheckNewNote(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "Issue", note.NoteableType)
 	assert.Equal(t, issueID, note.NoteableID)
@@ -782,12 +831,10 @@ func (s *GitlabSuite) TestExpiration() {
 func (s *GitlabSuite) TestRace() {
 	t := s.T()
 
-	prevLogLevel := log.GetLevel()
-	log.SetLevel(log.InfoLevel) // Turn off noisy debug logging
-	defer log.SetLevel(prevLogLevel)
+	logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
 
-	s.SetContext(30 * time.Second)
-	s.startApp()
+	s.SetContextTimeout(30 * time.Second)
+	app := s.startApp()
 
 	labels := s.assertNewLabels(4)
 
@@ -803,8 +850,8 @@ func (s *GitlabSuite) TestRace() {
 		return err
 	}
 
-	watcher, err := s.teleport.Process.GetAuthServer().NewWatcher(s.Ctx(), services.Watch{
-		Kinds: []services.WatchKind{
+	watcher, err := s.ruler().NewWatcher(s.Context(), types.Watch{
+		Kinds: []types.WatchKind{
 			{
 				Kind: types.KindAccessRequest,
 			},
@@ -812,16 +859,16 @@ func (s *GitlabSuite) TestRace() {
 	})
 	require.NoError(t, err)
 	defer watcher.Close()
-	assert.Equal(t, backend.OpInit, (<-watcher.Events()).Type)
+	assert.Equal(t, types.OpInit, (<-watcher.Events()).Type)
 
-	process := lib.NewProcess(s.Ctx())
+	process := lib.NewProcess(s.Context())
 	for i := 0; i < s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			req, err := services.NewAccessRequest(s.userNames.requestor, "admin")
+			req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
-			if err = s.teleport.CreateAccessRequest(ctx, req); err != nil {
+			if err = s.requestor().CreateAccessRequest(ctx, req); err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
 			return nil
@@ -846,8 +893,8 @@ func (s *GitlabSuite) TestRace() {
 			defer cancel()
 			var lastErr error
 			for {
-				log.Infof("Trying to approve issue %v", issue.ID)
-				resp, err := s.postIssueUpdateHook(ctx, oldIssue, issue)
+				logger.Get(ctx).Infof("Trying to approve issue %v", issue.ID)
+				resp, err := s.postIssueUpdateHook(ctx, app.PublicURL().String()+gitlabWebhookPath, oldIssue, issue)
 				if err != nil {
 					if lib.IsDeadline(err) {
 						return setRaceErr(lastErr)
@@ -877,16 +924,16 @@ func (s *GitlabSuite) TestRace() {
 	}
 	for i := 0; i < 2*s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			var event services.Event
+			var event types.Event
 			select {
 			case event = <-watcher.Events():
 			case <-ctx.Done():
 				return setRaceErr(trace.Wrap(ctx.Err()))
 			}
-			if obtained, expected := event.Type, backend.OpPut; obtained != expected {
+			if obtained, expected := event.Type, types.OpPut; obtained != expected {
 				return setRaceErr(trace.Errorf("wrong event type. expected %v, obtained %v", expected, obtained))
 			}
-			req := event.Resource.(services.AccessRequest)
+			req := event.Resource.(types.AccessRequest)
 			var newCounter int64
 			val, _ := requests.LoadOrStore(req.GetName(), &newCounter)
 			switch state := req.GetState(); state {

@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"os"
 	"strings"
 
 	"github.com/gravitational/teleport-plugins/lib/stringset"
@@ -91,4 +92,17 @@ func (cfg TeleportConfig) Credentials() []client.Credentials {
 	default:
 		return nil
 	}
+}
+
+// ReadPassword reads password from file or env var, trims and returns
+func ReadPassword(filename string) (string, error) {
+	p, err := os.ReadFile(filename)
+	if os.IsNotExist(err) {
+		return "", trace.BadParameter("Error reading password from %v", filename)
+	}
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+
+	return strings.TrimSpace(string(p)), nil
 }

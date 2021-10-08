@@ -29,15 +29,14 @@ import (
 	"testing"
 	"time"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/google/uuid"
 
-	"github.com/gravitational/teleport-plugins/access/integration"
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 	. "github.com/gravitational/teleport-plugins/lib/testing"
+	"github.com/gravitational/teleport-plugins/lib/testing/integration"
+	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/teleport/lib/auth/testauthority"
-	"github.com/gravitational/teleport/lib/backend"
-	"github.com/gravitational/teleport/lib/services"
 	"github.com/gravitational/trace"
 
 	"github.com/stretchr/testify/assert"
@@ -45,27 +44,24 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-const (
-	Host   = "localhost"
-	HostID = "00000000-0000-0000-0000-000000000000"
-	Site   = "local-site"
-)
-
 type JiraSuite struct {
 	Suite
 	appConfig Config
 	userNames struct {
-		plugin    string
+		ruler     string
 		requestor string
 		reviewer1 string
 		reviewer2 string
+		plugin    string
 	}
-	publicURL  string
 	raceNumber int
 	authorUser UserDetails
 	otherUser  UserDetails
 	fakeJira   *FakeJira
-	teleport   *integration.TeleInstance
+
+	clients          map[string]*integration.Client
+	teleportFeatures *proto.Features
+	teleportConfig   lib.TeleportConfig
 }
 
 func TestJira(t *testing.T) { suite.Run(t, &JiraSuite{}) }
@@ -73,43 +69,80 @@ func TestJira(t *testing.T) { suite.Run(t, &JiraSuite{}) }
 func (s *JiraSuite) SetupSuite() {
 	var err error
 	t := s.T()
-	log.SetLevel(log.DebugLevel)
-	priv, pub, err := testauthority.New().GenerateKeyPair("")
-	require.NoError(t, err)
-	teleport := integration.NewInstance(integration.InstanceConfig{ClusterName: Site, HostID: HostID, NodeName: Host, Priv: priv, Pub: pub})
 
+	logger.Init()
+	logger.Setup(logger.Config{Severity: "debug"})
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
 
-	role, err := types.NewRole("foo", types.RoleSpecV3{
-		Allow: types.RoleConditions{
-			Request: &types.AccessRequestConditions{
-				Roles: []string{"admin"},
-				Thresholds: []types.AccessReviewThreshold{
-					types.AccessReviewThreshold{Approve: 2, Deny: 2},
-				},
-			},
-		},
-	})
+	// We set such a big timeout because integration.NewFromEnv could start
+	// downloading a Teleport *-bin.tar.gz file which can take a long time.
+	ctx := s.SetContextTimeout(2 * time.Minute)
+
+	teleport, err := integration.NewFromEnv(ctx)
 	require.NoError(t, err)
-	s.userNames.requestor = teleport.AddUserWithRole(me.Username+"@example.com", role).Username
+	t.Cleanup(teleport.Close)
+
+	auth, err := teleport.NewAuthService()
+	require.NoError(t, err)
+	s.StartApp(auth)
+
+	s.clients = make(map[string]*integration.Client)
+
+	// Set up the user who has an access to all kinds of resources.
+
+	s.userNames.ruler = me.Username + "-ruler@example.com"
+	client, err := teleport.MakeAdmin(ctx, auth, s.userNames.ruler)
+	require.NoError(t, err)
+	s.clients[s.userNames.ruler] = client
+
+	// Get the server features.
+
+	pong, err := client.Ping(ctx)
+	require.NoError(t, err)
+	teleportFeatures := pong.GetServerFeatures()
+
+	var bootstrap integration.Bootstrap
+
+	// Set up user who can request the access to role "admin".
+
+	conditions := types.RoleConditions{Request: &types.AccessRequestConditions{Roles: []string{"admin"}}}
+	if teleportFeatures.AdvancedAccessWorkflows {
+		conditions.Request.Thresholds = []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}}
+	}
+	role, err := bootstrap.AddRole("foo", types.RoleSpecV4{Allow: conditions})
+	require.NoError(t, err)
+
+	user, err := bootstrap.AddUserWithRoles(me.Username+"@example.com", role.GetName())
+	require.NoError(t, err)
+	s.userNames.requestor = user.GetName()
 
 	s.authorUser = UserDetails{AccountID: "USER-1", DisplayName: me.Username, EmailAddress: s.userNames.requestor}
 	s.otherUser = UserDetails{AccountID: "USER-2", DisplayName: me.Username + " evil twin", EmailAddress: me.Username + "-evil@example.com"}
 
-	role, err = types.NewRole("foo-reviewer", types.RoleSpecV3{
-		Allow: types.RoleConditions{
-			ReviewRequests: &types.AccessReviewConditions{
-				Roles: []string{"admin"},
-			},
-		},
-	})
-	require.NoError(t, err)
-	s.userNames.reviewer1 = teleport.AddUserWithRole(me.Username+"-reviewer1@example.com", role).Username
-	s.userNames.reviewer2 = teleport.AddUserWithRole(me.Username+"-reviewer2@example.com", role).Username
+	if teleportFeatures.AdvancedAccessWorkflows {
+		// Set up TWO users who can review access requests to role "admin".
 
-	role, err = types.NewRole("access-jira", types.RoleSpecV3{
+		role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV4{
+			Allow: types.RoleConditions{
+				ReviewRequests: &types.AccessReviewConditions{Roles: []string{"admin"}},
+			},
+		})
+		require.NoError(t, err)
+
+		user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer1@example.com", role.GetName())
+		require.NoError(t, err)
+		s.userNames.reviewer1 = user.GetName()
+
+		user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer2@example.com", role.GetName())
+		require.NoError(t, err)
+		s.userNames.reviewer2 = user.GetName()
+	}
+
+	// Set up plugin user.
+
+	role, err = bootstrap.AddRole("access-jira", types.RoleSpecV4{
 		Allow: types.RoleConditions{
 			Rules: []types.Rule{
 				types.NewRule("access_request", []string{"list", "read", "update"}),
@@ -117,54 +150,50 @@ func (s *JiraSuite) SetupSuite() {
 		},
 	})
 	require.NoError(t, err)
-	s.userNames.plugin = teleport.AddUserWithRole("access-jira", role).Username
 
-	err = teleport.Create(nil, nil)
+	user, err = bootstrap.AddUserWithRoles("access-jira", role.GetName())
 	require.NoError(t, err)
-	if err := teleport.Start(); err != nil {
-		t.Fatalf("Unexpected response from Start: %v", err)
+	s.userNames.plugin = user.GetName()
+
+	// Bake all the resources.
+
+	err = teleport.Bootstrap(ctx, auth, bootstrap.Resources())
+	require.NoError(t, err)
+
+	// Initialize the clients.
+
+	client, err = teleport.NewClient(ctx, auth, s.userNames.requestor)
+	require.NoError(t, err)
+	s.clients[s.userNames.requestor] = client
+
+	if teleportFeatures.AdvancedAccessWorkflows {
+		client, err = teleport.NewClient(ctx, auth, s.userNames.reviewer1)
+		require.NoError(t, err)
+		s.clients[s.userNames.reviewer1] = client
+
+		client, err = teleport.NewClient(ctx, auth, s.userNames.reviewer2)
+		require.NoError(t, err)
+		s.clients[s.userNames.reviewer2] = client
 	}
-	s.teleport = teleport
+
+	identityPath, err := teleport.Sign(ctx, auth, s.userNames.plugin)
+	require.NoError(t, err)
+
+	s.teleportConfig.Addr = auth.AuthAddr().String()
+	s.teleportConfig.Identity = identityPath
+	s.teleportFeatures = teleportFeatures
 }
 
 func (s *JiraSuite) SetupTest() {
 	t := s.T()
 
+	logger.Setup(logger.Config{Severity: "debug"})
+
 	s.fakeJira = NewFakeJira(s.authorUser, s.raceNumber)
 	t.Cleanup(s.fakeJira.Close)
 
-	auth := s.teleport.Process.GetAuthServer()
-	certAuthorities, err := auth.GetCertAuthorities(services.HostCA, false)
-	require.NoError(t, err)
-	pluginKey := s.teleport.Secrets.Users["access-jira"].Key
-
-	keyFile := s.NewTmpFile("auth.*.key")
-	_, err = keyFile.Write(pluginKey.Priv)
-	require.NoError(t, err)
-	keyFile.Close()
-
-	certFile := s.NewTmpFile("auth.*.crt")
-	_, err = certFile.Write(pluginKey.TLSCert)
-	require.NoError(t, err)
-	certFile.Close()
-
-	casFile := s.NewTmpFile("auth.*.cas")
-	for _, ca := range certAuthorities {
-		for _, keyPair := range ca.GetTLSKeyPairs() {
-			_, err = casFile.Write(keyPair.Cert)
-			require.NoError(t, err)
-		}
-	}
-	casFile.Close()
-
-	authAddr, err := s.teleport.Process.AuthSSHAddr()
-	require.NoError(t, err)
-
 	var conf Config
-	conf.Teleport.Addr = authAddr.Addr
-	conf.Teleport.ClientCrt = certFile.Name()
-	conf.Teleport.ClientKey = keyFile.Name()
-	conf.Teleport.RootCAs = casFile.Name()
+	conf.Teleport = s.teleportConfig
 	conf.Jira.URL = s.fakeJira.URL()
 	conf.Jira.Username = "jira-bot@example.com"
 	conf.Jira.APIToken = "xyz"
@@ -173,9 +202,10 @@ func (s *JiraSuite) SetupTest() {
 	conf.HTTP.Insecure = true
 
 	s.appConfig = conf
+	s.SetContextTimeout(5 * time.Second)
 }
 
-func (s *JiraSuite) startApp() {
+func (s *JiraSuite) startApp() *App {
 	t := s.T()
 	t.Helper()
 
@@ -183,34 +213,41 @@ func (s *JiraSuite) startApp() {
 	require.NoError(t, err)
 
 	s.StartApp(app)
-	s.publicURL = app.PublicURL().String()
+
+	return app
 }
 
-func (s *JiraSuite) newAccessRequest() services.AccessRequest {
+func (s *JiraSuite) ruler() *integration.Client {
+	return s.clients[s.userNames.ruler]
+}
+
+func (s *JiraSuite) requestor() *integration.Client {
+	return s.clients[s.userNames.requestor]
+}
+
+func (s *JiraSuite) reviewer1() *integration.Client {
+	return s.clients[s.userNames.reviewer1]
+}
+
+func (s *JiraSuite) reviewer2() *integration.Client {
+	return s.clients[s.userNames.reviewer2]
+}
+
+func (s *JiraSuite) newAccessRequest() types.AccessRequest {
 	t := s.T()
 	t.Helper()
 
-	req, err := services.NewAccessRequest(s.userNames.requestor, "admin")
+	req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 	require.NoError(t, err)
 	return req
 }
 
-func (s *JiraSuite) createAccessRequest() services.AccessRequest {
+func (s *JiraSuite) createAccessRequest() types.AccessRequest {
 	t := s.T()
 	t.Helper()
 
 	req := s.newAccessRequest()
-	err := s.teleport.CreateAccessRequest(s.Ctx(), req)
-	require.NoError(t, err)
-	return req
-}
-
-func (s *JiraSuite) createExpiredAccessRequest() services.AccessRequest {
-	t := s.T()
-	t.Helper()
-
-	req := s.newAccessRequest()
-	err := s.teleport.CreateExpiredAccessRequest(s.Ctx(), req)
+	err := s.requestor().CreateAccessRequest(s.Context(), req)
 	require.NoError(t, err)
 	return req
 }
@@ -220,7 +257,7 @@ func (s *JiraSuite) checkPluginData(reqID string, cond func(PluginData) bool) Pl
 	t.Helper()
 
 	for {
-		rawData, err := s.teleport.PollAccessRequestPluginData(s.Ctx(), "jira", reqID)
+		rawData, err := s.ruler().PollAccessRequestPluginData(s.Context(), "jira", reqID)
 		require.NoError(t, err)
 		if data := DecodePluginData(rawData); cond(data) {
 			return data
@@ -228,7 +265,7 @@ func (s *JiraSuite) checkPluginData(reqID string, cond func(PluginData) bool) Pl
 	}
 }
 
-func (s *JiraSuite) postWebhook(ctx context.Context, issueID string) (*http.Response, error) {
+func (s *JiraSuite) postWebhook(ctx context.Context, url, issueID string) (*http.Response, error) {
 	var buf bytes.Buffer
 	wh := Webhook{
 		WebhookEvent:       "jira:issue_updated",
@@ -240,7 +277,7 @@ func (s *JiraSuite) postWebhook(ctx context.Context, issueID string) (*http.Resp
 		return nil, trace.Wrap(err)
 	}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, s.publicURL, &buf)
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, url, &buf)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -250,11 +287,11 @@ func (s *JiraSuite) postWebhook(ctx context.Context, issueID string) (*http.Resp
 	return response, trace.Wrap(err)
 }
 
-func (s *JiraSuite) postWebhookAndCheck(issueID string) {
+func (s *JiraSuite) postWebhookAndCheck(url, issueID string) {
 	t := s.T()
 	t.Helper()
 
-	resp, err := s.postWebhook(s.Ctx(), issueID)
+	resp, err := s.postWebhook(s.Context(), url, issueID)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -270,7 +307,7 @@ func (s *JiraSuite) TestIssueCreation() {
 		return data.IssueID != ""
 	}) // when issue id is written, we are sure that request is completely served.
 
-	issue, err := s.fakeJira.CheckNewIssue(s.Ctx())
+	issue, err := s.fakeJira.CheckNewIssue(s.Context())
 	require.NoError(t, err, "no new issue stored")
 	assert.Equal(t, "PROJ", issue.Fields.Project.Key)
 	assert.Equal(t, request.GetName(), issue.Properties[RequestIDPropertyKey])
@@ -284,13 +321,13 @@ func (s *JiraSuite) TestIssueCreationWithRequestReason() {
 
 	req := s.newAccessRequest()
 	req.SetRequestReason("because of")
-	err := s.teleport.CreateAccessRequest(s.Ctx(), req)
+	err := s.requestor().CreateAccessRequest(s.Context(), req)
 	require.NoError(t, err)
 	s.checkPluginData(req.GetName(), func(data PluginData) bool {
 		return data.IssueID != ""
 	}) // when issue id is written, we are sure that request is completely served.
 
-	issue, err := s.fakeJira.CheckNewIssue(s.Ctx())
+	issue, err := s.fakeJira.CheckNewIssue(s.Context())
 	require.NoError(t, err)
 
 	if !strings.Contains(issue.Fields.Description, `Reason: *because of*`) {
@@ -301,17 +338,21 @@ func (s *JiraSuite) TestIssueCreationWithRequestReason() {
 func (s *JiraSuite) TestReviewComments() {
 	t := s.T()
 
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
 	s.startApp()
 	req := s.createAccessRequest()
 
-	req, err := s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	err := s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
 		Reason:        "okay",
 	})
 	require.NoError(t, err)
-	req, err = s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	err = s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -323,14 +364,14 @@ func (s *JiraSuite) TestReviewComments() {
 		return data.IssueID != "" && data.ReviewsCount == 2
 	})
 
-	comment, err := s.fakeJira.CheckNewIssueComment(s.Ctx())
+	comment, err := s.fakeJira.CheckNewIssueComment(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, pluginData.IssueID, comment.IssueID)
 	assert.Contains(t, comment.Body, "*"+s.userNames.reviewer1+"* reviewed the request", "comment must contain a review author")
 	assert.Contains(t, comment.Body, "Resolution: *APPROVED*", "comment must contain an approval resolution")
 	assert.Contains(t, comment.Body, "Reason: okay", "comment must contain an approval reason")
 
-	comment, err = s.fakeJira.CheckNewIssueComment(s.Ctx())
+	comment, err = s.fakeJira.CheckNewIssueComment(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, pluginData.IssueID, comment.IssueID)
 	assert.Contains(t, comment.Body, "*"+s.userNames.reviewer2+"* reviewed the request", "comment must contain a review author")
@@ -341,6 +382,10 @@ func (s *JiraSuite) TestReviewComments() {
 func (s *JiraSuite) TestReviewerApproval() {
 	t := s.T()
 
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
 	s.startApp()
 	req := s.createAccessRequest()
 
@@ -349,7 +394,7 @@ func (s *JiraSuite) TestReviewerApproval() {
 	})
 	issueID := pluginData.IssueID
 
-	req, err := s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	err := s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
@@ -357,12 +402,12 @@ func (s *JiraSuite) TestReviewerApproval() {
 	})
 	require.NoError(t, err)
 
-	comment, err := s.fakeJira.CheckNewIssueComment(s.Ctx())
+	comment, err := s.fakeJira.CheckNewIssueComment(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, issueID, comment.IssueID)
 	assert.Contains(t, comment.Body, "*"+s.userNames.reviewer1+"* reviewed the request", "comment must contain a review author")
 
-	req, err = s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	err = s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
@@ -370,7 +415,7 @@ func (s *JiraSuite) TestReviewerApproval() {
 	})
 	require.NoError(t, err)
 
-	comment, err = s.fakeJira.CheckNewIssueComment(s.Ctx())
+	comment, err = s.fakeJira.CheckNewIssueComment(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, issueID, comment.IssueID)
 	assert.Contains(t, comment.Body, "*"+s.userNames.reviewer2+"* reviewed the request", "comment must contain a review author")
@@ -381,12 +426,12 @@ func (s *JiraSuite) TestReviewerApproval() {
 	assert.Equal(t, issueID, pluginData.IssueID)
 	assert.Equal(t, Resolution{Tag: ResolvedApproved, Reason: "finally okay"}, pluginData.Resolution)
 
-	issue, err := s.fakeJira.CheckIssueTransition(s.Ctx())
+	issue, err := s.fakeJira.CheckIssueTransition(s.Context())
 	require.NoError(t, err, "no issue transition detected")
 	assert.Equal(t, issueID, issue.ID)
 	assert.Equal(t, "Approved", issue.Fields.Status.Name)
 
-	comment, err = s.fakeJira.CheckNewIssueComment(s.Ctx())
+	comment, err = s.fakeJira.CheckNewIssueComment(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, issueID, comment.IssueID)
 	assert.Contains(t, comment.Body, "Access request has been approved")
@@ -396,6 +441,10 @@ func (s *JiraSuite) TestReviewerApproval() {
 func (s *JiraSuite) TestReviewerDenial() {
 	t := s.T()
 
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
 	s.startApp()
 	req := s.createAccessRequest()
 
@@ -404,7 +453,7 @@ func (s *JiraSuite) TestReviewerDenial() {
 	})
 	issueID := pluginData.IssueID
 
-	req, err := s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	err := s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -412,12 +461,12 @@ func (s *JiraSuite) TestReviewerDenial() {
 	})
 	require.NoError(t, err)
 
-	comment, err := s.fakeJira.CheckNewIssueComment(s.Ctx())
+	comment, err := s.fakeJira.CheckNewIssueComment(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, issueID, comment.IssueID)
 	assert.Contains(t, comment.Body, "*"+s.userNames.reviewer1+"* reviewed the request", "comment must contain a review author")
 
-	req, err = s.teleport.SubmitAccessReview(s.Ctx(), req.GetName(), types.AccessReview{
+	err = s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
@@ -425,7 +474,7 @@ func (s *JiraSuite) TestReviewerDenial() {
 	})
 	require.NoError(t, err)
 
-	comment, err = s.fakeJira.CheckNewIssueComment(s.Ctx())
+	comment, err = s.fakeJira.CheckNewIssueComment(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, issueID, comment.IssueID)
 	assert.Contains(t, comment.Body, "*"+s.userNames.reviewer2+"* reviewed the request", "comment must contain a review author")
@@ -436,12 +485,12 @@ func (s *JiraSuite) TestReviewerDenial() {
 	assert.Equal(t, issueID, pluginData.IssueID)
 	assert.Equal(t, Resolution{Tag: ResolvedDenied, Reason: "finally not okay"}, pluginData.Resolution)
 
-	issue, err := s.fakeJira.CheckIssueTransition(s.Ctx())
+	issue, err := s.fakeJira.CheckIssueTransition(s.Context())
 	require.NoError(t, err, "no issue transition detected")
 	assert.Equal(t, issueID, issue.ID)
 	assert.Equal(t, "Denied", issue.Fields.Status.Name)
 
-	comment, err = s.fakeJira.CheckNewIssueComment(s.Ctx())
+	comment, err = s.fakeJira.CheckNewIssueComment(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, issueID, comment.IssueID)
 	assert.Contains(t, comment.Body, "Access request has been denied")
@@ -451,32 +500,33 @@ func (s *JiraSuite) TestReviewerDenial() {
 func (s *JiraSuite) TestWebhookApproval() {
 	t := s.T()
 
-	s.startApp()
+	app := s.startApp()
+
 	request := s.createAccessRequest()
 	pluginData := s.checkPluginData(request.GetName(), func(data PluginData) bool {
 		return data.IssueID != ""
 	}) // when issue id is written, we are sure that request is completely served.
 	issueID := pluginData.IssueID
 
-	issue, err := s.fakeJira.CheckNewIssue(s.Ctx())
+	issue, err := s.fakeJira.CheckNewIssue(s.Context())
 	require.NoError(t, err, "no new issue stored")
 	assert.Equal(t, issueID, issue.ID)
 
 	s.fakeJira.TransitionIssue(issue, "Approved")
-	s.postWebhookAndCheck(issue.ID)
+	s.postWebhookAndCheck(app.PublicURL().String(), issue.ID)
 
-	request, err = s.teleport.GetAccessRequest(s.Ctx(), request.GetName())
+	request, err = s.ruler().GetAccessRequest(s.Context(), request.GetName())
 	require.NoError(t, err)
 	assert.Equal(t, types.RequestState_APPROVED, request.GetState())
 
-	events, err := s.teleport.SearchAccessRequestEvents(request.GetName())
+	events, err := s.ruler().SearchAccessRequestEvents(s.Context(), request.GetName())
 	require.NoError(t, err)
 	if assert.Len(t, events, 1) {
 		assert.Equal(t, "APPROVED", events[0].RequestState)
 		assert.Equal(t, "jira:"+s.authorUser.EmailAddress, events[0].Delegator)
 	}
 
-	comment, err := s.fakeJira.CheckNewIssueComment(s.Ctx())
+	comment, err := s.fakeJira.CheckNewIssueComment(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, issueID, comment.IssueID)
 	assert.Contains(t, comment.Body, "Access request has been approved")
@@ -485,32 +535,33 @@ func (s *JiraSuite) TestWebhookApproval() {
 func (s *JiraSuite) TestWebhookDenial() {
 	t := s.T()
 
-	s.startApp()
+	app := s.startApp()
+
 	request := s.createAccessRequest()
 	pluginData := s.checkPluginData(request.GetName(), func(data PluginData) bool {
 		return data.IssueID != ""
 	}) // when issue id is written, we are sure that request is completely served.
 	issueID := pluginData.IssueID
 
-	issue, err := s.fakeJira.CheckNewIssue(s.Ctx())
+	issue, err := s.fakeJira.CheckNewIssue(s.Context())
 	require.NoError(t, err, "no new issue stored")
 	assert.Equal(t, issueID, issue.ID)
 
 	s.fakeJira.TransitionIssue(issue, "Denied")
-	s.postWebhookAndCheck(issue.ID)
+	s.postWebhookAndCheck(app.PublicURL().String(), issue.ID)
 
-	request, err = s.teleport.GetAccessRequest(s.Ctx(), request.GetName())
+	request, err = s.ruler().GetAccessRequest(s.Context(), request.GetName())
 	require.NoError(t, err)
 	assert.Equal(t, types.RequestState_DENIED, request.GetState())
 
-	events, err := s.teleport.SearchAccessRequestEvents(request.GetName())
+	events, err := s.ruler().SearchAccessRequestEvents(s.Context(), request.GetName())
 	require.NoError(t, err)
 	if assert.Len(t, events, 1) {
 		assert.Equal(t, "DENIED", events[0].RequestState)
 		assert.Equal(t, "jira:"+s.authorUser.EmailAddress, events[0].Delegator)
 	}
 
-	comment, err := s.fakeJira.CheckNewIssueComment(s.Ctx())
+	comment, err := s.fakeJira.CheckNewIssueComment(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, issueID, comment.IssueID)
 	assert.Contains(t, comment.Body, "Access request has been denied")
@@ -519,14 +570,15 @@ func (s *JiraSuite) TestWebhookDenial() {
 func (s *JiraSuite) TestWebhookApprovalWithReason() {
 	t := s.T()
 
-	s.startApp()
+	app := s.startApp()
+
 	request := s.createAccessRequest()
 	pluginData := s.checkPluginData(request.GetName(), func(data PluginData) bool {
 		return data.IssueID != ""
 	})
 	issueID := pluginData.IssueID
 
-	issue, err := s.fakeJira.CheckNewIssue(s.Ctx())
+	issue, err := s.fakeJira.CheckNewIssue(s.Context())
 	require.NoError(t, err, "no new issue stored")
 	assert.Equal(t, issueID, issue.ID)
 
@@ -536,21 +588,21 @@ func (s *JiraSuite) TestWebhookApprovalWithReason() {
 	})
 
 	s.fakeJira.TransitionIssue(issue, "Approved")
-	s.postWebhookAndCheck(issue.ID)
+	s.postWebhookAndCheck(app.PublicURL().String(), issue.ID)
 
-	request, err = s.teleport.GetAccessRequest(s.Ctx(), request.GetName())
+	request, err = s.ruler().GetAccessRequest(s.Context(), request.GetName())
 	require.NoError(t, err)
-	assert.Equal(t, services.RequestState_APPROVED, request.GetState())
+	assert.Equal(t, types.RequestState_APPROVED, request.GetState())
 	assert.Equal(t, "foo\nbar\nbaz", request.GetResolveReason())
 
-	events, err := s.teleport.SearchAccessRequestEvents(request.GetName())
+	events, err := s.ruler().SearchAccessRequestEvents(s.Context(), request.GetName())
 	require.NoError(t, err)
 	if assert.Len(t, events, 1) {
 		assert.Equal(t, "APPROVED", events[0].RequestState)
 		assert.Equal(t, "jira:"+s.authorUser.EmailAddress, events[0].Delegator)
 	}
 
-	comment, err := s.fakeJira.CheckNewIssueComment(s.Ctx())
+	comment, err := s.fakeJira.CheckNewIssueComment(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, issueID, comment.IssueID)
 	assert.Contains(t, comment.Body, "Access request has been approved")
@@ -560,14 +612,15 @@ func (s *JiraSuite) TestWebhookApprovalWithReason() {
 func (s *JiraSuite) TestWebhookDenialWithReason() {
 	t := s.T()
 
-	s.startApp()
+	app := s.startApp()
+
 	request := s.createAccessRequest()
 	pluginData := s.checkPluginData(request.GetName(), func(data PluginData) bool {
 		return data.IssueID != ""
 	})
 	issueID := pluginData.IssueID
 
-	issue, err := s.fakeJira.CheckNewIssue(s.Ctx())
+	issue, err := s.fakeJira.CheckNewIssue(s.Context())
 	require.NoError(t, err, "no new issue stored")
 	assert.Equal(t, issueID, issue.ID)
 
@@ -589,21 +642,21 @@ func (s *JiraSuite) TestWebhookDenialWithReason() {
 	})
 
 	s.fakeJira.TransitionIssue(issue, "Denied")
-	s.postWebhookAndCheck(issue.ID)
+	s.postWebhookAndCheck(app.PublicURL().String(), issue.ID)
 
-	request, err = s.teleport.GetAccessRequest(s.Ctx(), request.GetName())
+	request, err = s.ruler().GetAccessRequest(s.Context(), request.GetName())
 	require.NoError(t, err)
-	assert.Equal(t, services.RequestState_DENIED, request.GetState())
+	assert.Equal(t, types.RequestState_DENIED, request.GetState())
 	assert.Equal(t, "foo bar baz", request.GetResolveReason())
 
-	events, err := s.teleport.SearchAccessRequestEvents(request.GetName())
+	events, err := s.ruler().SearchAccessRequestEvents(s.Context(), request.GetName())
 	require.NoError(t, err)
 	if assert.Len(t, events, 1) {
 		assert.Equal(t, "DENIED", events[0].RequestState)
 		assert.Equal(t, "jira:"+s.authorUser.EmailAddress, events[0].Delegator)
 	}
 
-	comment, err := s.fakeJira.CheckNewIssueComment(s.Ctx())
+	comment, err := s.fakeJira.CheckNewIssueComment(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, issueID, comment.IssueID)
 	assert.Contains(t, comment.Body, "Access request has been denied")
@@ -614,23 +667,26 @@ func (s *JiraSuite) TestExpiration() {
 	t := s.T()
 
 	s.startApp()
-	request := s.createExpiredAccessRequest()
 
+	request := s.createAccessRequest()
 	pluginData := s.checkPluginData(request.GetName(), func(data PluginData) bool {
 		return data.IssueID != ""
 	})
 	issueID := pluginData.IssueID
 
-	issue, err := s.fakeJira.CheckNewIssue(s.Ctx())
+	issue, err := s.fakeJira.CheckNewIssue(s.Context())
 	require.NoError(t, err, "no new issue stored")
 	assert.Equal(t, issueID, issue.ID)
 
-	issue, err = s.fakeJira.CheckIssueTransition(s.Ctx())
+	err = s.ruler().DeleteAccessRequest(s.Context(), request.GetName()) // simulate expiration
+	require.NoError(t, err)
+
+	issue, err = s.fakeJira.CheckIssueTransition(s.Context())
 	require.NoError(t, err, "no issue transition detected")
 	assert.Equal(t, issueID, issue.ID)
 	assert.Equal(t, "Expired", issue.Fields.Status.Name)
 
-	comment, err := s.fakeJira.CheckNewIssueComment(s.Ctx())
+	comment, err := s.fakeJira.CheckNewIssueComment(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, issueID, comment.IssueID)
 	assert.Contains(t, comment.Body, "Access request has been expired")
@@ -639,12 +695,10 @@ func (s *JiraSuite) TestExpiration() {
 func (s *JiraSuite) TestRace() {
 	t := s.T()
 
-	prevLogLevel := log.GetLevel()
-	log.SetLevel(log.InfoLevel) // Turn off noisy debug logging
-	defer log.SetLevel(prevLogLevel)
+	logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
 
-	s.SetContext(20 * time.Second)
-	s.startApp()
+	s.SetContextTimeout(20 * time.Second)
+	app := s.startApp()
 
 	var (
 		raceErr     error
@@ -658,8 +712,8 @@ func (s *JiraSuite) TestRace() {
 		return err
 	}
 
-	watcher, err := s.teleport.Process.GetAuthServer().NewWatcher(s.Ctx(), services.Watch{
-		Kinds: []services.WatchKind{
+	watcher, err := s.ruler().NewWatcher(s.Context(), types.Watch{
+		Kinds: []types.WatchKind{
 			{
 				Kind: types.KindAccessRequest,
 			},
@@ -667,16 +721,16 @@ func (s *JiraSuite) TestRace() {
 	})
 	require.NoError(t, err)
 	defer watcher.Close()
-	assert.Equal(t, backend.OpInit, (<-watcher.Events()).Type)
+	assert.Equal(t, types.OpInit, (<-watcher.Events()).Type)
 
-	process := lib.NewProcess(s.Ctx())
+	process := lib.NewProcess(s.Context())
 	for i := 0; i < s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			req, err := services.NewAccessRequest(s.userNames.requestor, "admin")
+			req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
-			if err = s.teleport.CreateAccessRequest(s.Ctx(), req); err != nil {
+			if err = s.requestor().CreateAccessRequest(s.Context(), req); err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
 			return nil
@@ -695,8 +749,8 @@ func (s *JiraSuite) TestRace() {
 			defer cancel()
 			var lastErr error
 			for {
-				log.Infof("Trying to approve issue %q", issue.Key)
-				resp, err := s.postWebhook(ctx, issue.ID)
+				logger.Get(ctx).Infof("Trying to approve issue %q", issue.Key)
+				resp, err := s.postWebhook(ctx, app.PublicURL().String(), issue.ID)
 				if err != nil {
 					if lib.IsDeadline(err) {
 						return setRaceErr(lastErr)
@@ -726,16 +780,16 @@ func (s *JiraSuite) TestRace() {
 	}
 	for i := 0; i < 2*s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			var event services.Event
+			var event types.Event
 			select {
 			case event = <-watcher.Events():
 			case <-ctx.Done():
 				return setRaceErr(trace.Wrap(ctx.Err()))
 			}
-			if obtained, expected := event.Type, backend.OpPut; obtained != expected {
+			if obtained, expected := event.Type, types.OpPut; obtained != expected {
 				return setRaceErr(trace.Errorf("wrong event type. expected %v, obtained %v", expected, obtained))
 			}
-			req := event.Resource.(services.AccessRequest)
+			req := event.Resource.(types.AccessRequest)
 			var newCounter int64
 			val, _ := requests.LoadOrStore(req.GetName(), &newCounter)
 			switch state := req.GetState(); state {

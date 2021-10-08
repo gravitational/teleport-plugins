@@ -23,16 +23,16 @@ github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/empty
 github.com/golang/protobuf/ptypes/struct
 github.com/golang/protobuf/ptypes/timestamp
-# github.com/google/go-cmp v0.5.5
+# github.com/google/go-cmp v0.5.6
 github.com/google/go-cmp/cmp
 github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/gravitational/protoc-gen-terraform v0.0.0-20210415164617-d46beb1615f0
+# github.com/gravitational/protoc-gen-terraform v0.0.0-20210903054627-b2b9686ac5ca
 ## explicit
 github.com/gravitational/protoc-gen-terraform/accessors
-# github.com/gravitational/teleport/api v0.0.0-20210625041250-ca1e47bef0d4
+# github.com/gravitational/teleport/api v0.0.0-20210915192615-a8ca2d3f910e
 ## explicit
 github.com/gravitational/teleport/api
 github.com/gravitational/teleport/api/client
@@ -71,28 +71,32 @@ github.com/hashicorp/go-hclog
 # github.com/hashicorp/go-multierror v1.1.1
 ## explicit
 github.com/hashicorp/go-multierror
-# github.com/hashicorp/go-plugin v1.4.0
+# github.com/hashicorp/go-plugin v1.4.1
 github.com/hashicorp/go-plugin
 github.com/hashicorp/go-plugin/internal/plugin
 # github.com/hashicorp/go-uuid v1.0.2
 ## explicit
 github.com/hashicorp/go-uuid
 # github.com/hashicorp/go-version v1.3.0
-## explicit
 github.com/hashicorp/go-version
 # github.com/hashicorp/hcl/v2 v2.9.1
 ## explicit
 github.com/hashicorp/hcl/v2
 github.com/hashicorp/hcl/v2/ext/customdecode
 github.com/hashicorp/hcl/v2/hclsyntax
-# github.com/hashicorp/terraform-plugin-go v0.2.1
+# github.com/hashicorp/terraform-plugin-go v0.3.0
 github.com/hashicorp/terraform-plugin-go/tfprotov5
 github.com/hashicorp/terraform-plugin-go/tfprotov5/internal/fromproto
 github.com/hashicorp/terraform-plugin-go/tfprotov5/internal/tfplugin5
 github.com/hashicorp/terraform-plugin-go/tfprotov5/internal/toproto
 github.com/hashicorp/terraform-plugin-go/tfprotov5/server
-github.com/hashicorp/terraform-plugin-go/tfprotov5/tftypes
-# github.com/hashicorp/terraform-plugin-sdk/v2 v2.5.0
+github.com/hashicorp/terraform-plugin-go/tfprotov6
+github.com/hashicorp/terraform-plugin-go/tfprotov6/internal/fromproto
+github.com/hashicorp/terraform-plugin-go/tfprotov6/internal/tfplugin6
+github.com/hashicorp/terraform-plugin-go/tfprotov6/internal/toproto
+github.com/hashicorp/terraform-plugin-go/tfprotov6/server
+github.com/hashicorp/terraform-plugin-go/tftypes
+# github.com/hashicorp/terraform-plugin-sdk/v2 v2.7.0
 ## explicit
 github.com/hashicorp/terraform-plugin-sdk/v2/diag
 github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema
@@ -116,14 +120,11 @@ github.com/jonboulle/clockwork
 # github.com/konsorten/go-windows-terminal-sequences v1.0.3
 ## explicit
 github.com/konsorten/go-windows-terminal-sequences
-# github.com/kr/pretty v0.2.0
-## explicit
 # github.com/mattn/go-colorable v0.1.8
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.12
 github.com/mattn/go-isatty
-# github.com/mitchellh/copystructure v1.1.2
-## explicit
+# github.com/mitchellh/copystructure v1.2.0
 github.com/mitchellh/copystructure
 # github.com/mitchellh/go-testing-interface v1.14.1
 ## explicit
@@ -134,7 +135,7 @@ github.com/mitchellh/go-wordwrap
 # github.com/mitchellh/mapstructure v1.4.1
 ## explicit
 github.com/mitchellh/mapstructure
-# github.com/mitchellh/reflectwalk v1.0.1
+# github.com/mitchellh/reflectwalk v1.0.2
 github.com/mitchellh/reflectwalk
 # github.com/oklog/run v1.1.0
 ## explicit
@@ -145,8 +146,7 @@ github.com/sirupsen/logrus
 # github.com/vmihailenco/msgpack v4.0.4+incompatible
 github.com/vmihailenco/msgpack
 github.com/vmihailenco/msgpack/codes
-# github.com/zclconf/go-cty v1.8.1
-## explicit
+# github.com/zclconf/go-cty v1.8.4
 github.com/zclconf/go-cty/cty
 github.com/zclconf/go-cty/cty/convert
 github.com/zclconf/go-cty/cty/function
@@ -154,8 +154,7 @@ github.com/zclconf/go-cty/cty/function/stdlib
 github.com/zclconf/go-cty/cty/gocty
 github.com/zclconf/go-cty/cty/json
 github.com/zclconf/go-cty/cty/set
-# golang.org/x/crypto v0.0.0-20210415154028-4f45737414dc
-## explicit
+# golang.org/x/crypto v0.0.0-20210421170649-83a5a9bb288b
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/chacha20
 golang.org/x/crypto/curve25519
@@ -176,8 +175,7 @@ golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
 golang.org/x/net/trace
-# golang.org/x/sys v0.0.0-20210415045647-66c3f260301c
-## explicit
+# golang.org/x/sys v0.0.0-20210502180810-71e4cd670f79
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/plan9

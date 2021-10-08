@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Gravitational, Inc.
+Copyright 2019-2021 Gravitational, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,9 +25,9 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"time"
 
-	"github.com/gravitational/teleport-plugins/access"
+	"github.com/gravitational/teleport/api/client"
+	"github.com/gravitational/teleport/api/types"
 
 	"github.com/gravitational/trace"
 )
@@ -60,69 +60,82 @@ func run(configPath string) error {
 	if err != nil {
 		return trace.Wrap(err)
 	}
-	tc, err := conf.LoadTLSConfig()
-	if err != nil {
-		return trace.Wrap(err)
-	}
 	ctx := context.TODO()
 	// Establish new client connection to the Teleport auth server.
-	client, err := access.NewClient(ctx, "example", conf.AuthServer, tc)
+	client, err := client.New(ctx, client.Config{
+		Addrs:       conf.GetAddrs(),
+		Credentials: conf.Credentials(),
+	})
 	if err != nil {
 		return trace.Wrap(err)
 	}
 	// Register a watcher for pending access requests.
-	watcher := client.WatchRequests(ctx, access.Filter{
-		State: access.StatePending,
+	filter := types.AccessRequestFilter{State: types.RequestState_PENDING}
+	watcher, err := client.NewWatcher(ctx, types.Watch{
+		Kinds: []types.WatchKind{
+			{
+				Kind:   types.KindAccessRequest,
+				Filter: filter.IntoMap(),
+			},
+		},
 	})
-	if err := watcher.WaitInit(ctx, 5*time.Second); err != nil {
+	if err != nil {
 		return trace.Wrap(err)
+	}
+	select {
+	case event := <-watcher.Events():
+		if event.Type != types.OpInit {
+			return trace.Errorf("expected to get OpInit, but got %s", event.Type)
+		}
+	case <-ctx.Done():
+		return trace.Wrap(ctx.Err())
 	}
 	eprintln("watcher initialized...")
 	defer watcher.Close()
 	for {
 		select {
 		case event := <-watcher.Events():
-			req, op := event.Request, event.Type
+			op := event.Type
 			switch op {
-			case access.OpPut:
+			case types.OpPut:
+				request := event.Resource.(types.AccessRequest)
 				// OpPut indicates that a request has been created or updated.  Since we specified
 				// StatePending in our filter, only pending requests should appear here.
-				eprintln("Handling request: %+v", req)
+				eprintln("Handling request: %+v", request)
 				whitelisted := false
 			CheckWhitelist:
 				for _, user := range conf.Whitelist {
-					if req.User == user {
+					if request.GetUser() == user {
 						whitelisted = true
 						break CheckWhitelist
 					}
 				}
-				params := access.RequestStateParams{
-					Delegator: "example",
+				params := types.AccessRequestUpdate{
 					Annotations: map[string][]string{
 						"strategy": []string{"whitelist"},
 					},
 				}
 				if whitelisted {
-					eprintln("User %q in whitelist, approving request...", req.User)
-					params.State = access.StateApproved
+					eprintln("User %q in whitelist, approving request...", request.GetUser())
+					params.State = types.RequestState_APPROVED
 					params.Reason = "user in whitelist"
 				} else {
-					eprintln("User %q not in whitelist, denying request...", req.User)
-					params.State = access.StateDenied
+					eprintln("User %q not in whitelist, denying request...", request.GetUser())
+					params.State = types.RequestState_DENIED
 					params.Reason = "user not in whitelist"
 				}
-				if err := client.SetRequestStateExt(ctx, req.ID, params); err != nil {
+				if err := client.SetAccessRequestState(ctx, params); err != nil {
 					return trace.Wrap(err)
 				}
 				eprintln("ok.")
-			case access.OpDelete:
+			case types.OpDelete:
 				// request has been removed (expired).
 				// Only the ID is non-zero in this case.
 				// Due to some limitations in Teleport's event system, filters
 				// don't really work with OpDelete events.  As such, we may get
 				// OpDelete events for requests that would not typically match
 				// the filter argument we supplied above.
-				eprintln("Request %s has automatically expired.", req.ID)
+				eprintln("Request %s has automatically expired.", event.Resource.GetName())
 			default:
 				return trace.BadParameter("unexpected event operation %s", op)
 			}

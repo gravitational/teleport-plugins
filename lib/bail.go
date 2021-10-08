@@ -10,11 +10,11 @@ import (
 // Bail exits with nonzero exit code and prints an error to a log.
 func Bail(err error) {
 	if agg, ok := trace.Unwrap(err).(trace.Aggregate); ok {
-		for _, err := range agg.Errors() {
-			log.WithError(err).Error("Terminating...")
+		for i, err := range agg.Errors() {
+			log.WithError(err).Errorf("Terminating with fatal error [%d]...", i+1)
 		}
 	} else {
-		log.WithError(err).Error("Terminating...")
+		log.WithError(err).Error("Terminating with fatal error...")
 	}
 	os.Exit(1)
 }

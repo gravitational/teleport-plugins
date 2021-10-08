@@ -82,6 +82,17 @@ func SchemaLabels() *schema.Schema {
 	return SchemaTraits()
 }
 
+// SchemaStrings represents schema of utils.Strings
+func SchemaStrings() *schema.Schema {
+	return &schema.Schema{
+		Type:     schema.TypeList,
+		Optional: true,
+		Elem: &schema.Schema{
+			Type: schema.TypeString,
+		},
+	}
+}
+
 // GetBoolOption unmarshals bool value
 func GetBoolOption(path string, target reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
 	v := data.Get(path)
@@ -180,6 +191,38 @@ func GetTraits(path string, target reflect.Value, meta *accessors.SchemaMeta, sc
 	)
 }
 
+// GetStrings unmarshals strings value
+func GetStrings(path string, target reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
+	zeroValue := make(utils.Strings, 0)
+
+	l, err := accessors.GetLen(path, data)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	if l == 0 {
+		target.Set(reflect.ValueOf(zeroValue))
+		return nil
+	}
+
+	v := make(wrappers.Strings, l)
+
+	for i := 0; i < l; i++ {
+		elementPath := fmt.Sprintf("%v.%v", path, i)
+		el := data.Get(elementPath)
+		s, ok := el.(string)
+		if !ok {
+			return trace.BadParameter("Failed to convert %T to string", el)
+		}
+
+		v[i] = s
+	}
+
+	target.Set(reflect.ValueOf(v))
+
+	return nil
+}
+
 func SetBoolOption(source reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema) (interface{}, error) {
 	if !source.IsValid() {
 		return nil, nil
@@ -244,4 +287,26 @@ func SetLabels(source reflect.Value, meta *accessors.SchemaMeta, sch *schema.Sch
 // SetLables sets traits from data to object
 func SetTraits(source reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema) (interface{}, error) {
 	return setArrayMap(source, reflect.TypeOf(([]string)(nil)), meta, sch)
+}
+
+// SetStrings sets traits from data to object
+func SetStrings(source reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema) (interface{}, error) {
+	if source.Len() == 0 {
+		return nil, nil
+	}
+
+	slice := make(utils.Strings, source.Len())
+
+	for i := 0; i < source.Len(); i++ {
+		val := source.Index(i).Interface()
+
+		v, ok := val.(string)
+		if !ok {
+			return nil, trace.BadParameter("%T can not be converted to string", v)
+		}
+
+		slice[i] = v
+	}
+
+	return slice, nil
 }
