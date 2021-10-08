@@ -98,6 +98,7 @@ update-tag:
 	git tag teleport-slack-v$(VERSION)
 	git tag teleport-pagerduty-v$(VERSION)
 	git tag terraform-provider-teleport-v$(VERSION)
+	git tag v$(VERSION)
 	# Push all releases to origin.
 	git push origin teleport-event-handler-v$(VERSION)
 	git push origin teleport-jira-v$(VERSION)
@@ -105,6 +106,7 @@ update-tag:
 	git push origin teleport-slack-v$(VERSION)
 	git push origin teleport-pagerduty-v$(VERSION)
 	git push origin terraform-provider-teleport-v$(VERSION)
+	git push origin v$(VERSION)
 
 #
 # Lint the Go code.
