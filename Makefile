@@ -22,6 +22,10 @@ access-gitlab:
 access-example:
 	go build -o build/access-example ./access/example
 
+.PHONY: access-email
+access-email:
+	go build -o build/access-email ./access/email
+
 .PHONY: terraform
 terraform:
 	make -C terraform
@@ -56,6 +60,10 @@ release/access-pagerduty:
 release/access-gitlab:
 	make -C access/gitlab clean release
 
+.PHONY: release/access-email
+release/access-email:
+	make -C access/email clean release
+
 .PHONY: release/terraform
 release/terraform:
 	make -C terraform clean release
@@ -66,10 +74,10 @@ release/event-handler:
 
 # Run all releases
 .PHONY: releases
-releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-gitlab
+releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-gitlab release/access-email
 
 .PHONY: build-all
-build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab terraform event-handler
+build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab access-email terraform event-handler
 
 .PHONY: update-version
 update-version:
@@ -85,6 +93,8 @@ update-version:
 	make -C access/slack version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
 	make -C access/pagerduty version.go
+	sed -i '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
+	make -C access/email version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
 
 .PHONY: update-tag
@@ -97,6 +107,7 @@ update-tag:
 	git tag teleport-mattermost-v$(VERSION)
 	git tag teleport-slack-v$(VERSION)
 	git tag teleport-pagerduty-v$(VERSION)
+	git tag teleport-email-v$(VERSION)
 	git tag terraform-provider-teleport-v$(VERSION)
 	git tag v$(VERSION)
 	# Push all releases to origin.
@@ -105,6 +116,7 @@ update-tag:
 	git push origin teleport-mattermost-v$(VERSION)
 	git push origin teleport-slack-v$(VERSION)
 	git push origin teleport-pagerduty-v$(VERSION)
+	git push origin teleport-email-v$(VERSION)
 	git push origin terraform-provider-teleport-v$(VERSION)
 	git push origin v$(VERSION)
 
