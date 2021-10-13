@@ -36,7 +36,7 @@ const (
 // TeleportEvent represents helper struct around main audit log event
 type TeleportEvent struct {
 	// event is the event
-	Event events.AuditEvent
+	Event interface{}
 	// cursor is the event ID (real/generated when empty)
 	ID string
 	// cursor is the current cursor value
@@ -55,20 +55,37 @@ type TeleportEvent struct {
 	SessionID string
 }
 
+// printEvent represents an artificial print event struct which adds json-serialisable data field
+type printEvent struct {
+	EI          int64     `json:"ei"`
+	Event       string    `json:"event"`
+	Data        []byte    `json:"data"`
+	Time        time.Time `json:"time"`
+	ClusterName string    `json:"cluster_name"`
+	CI          int64     `json:"ci"`
+	Bytes       int64     `json:"bytes"`
+	MS          int64     `json:"ms"`
+	Offset      int64     `json:"offset"`
+	UID         string    `json:"uid"`
+}
+
 // NewTeleportEvent creates TeleportEvent using AuditEvent as a source
 func NewTeleportEvent(e events.AuditEvent, cursor string) (TeleportEvent, error) {
 	var sid string
 
 	id := e.GetID()
 	if id == "" {
-		data, err := lib.FastMarshal(e, false)
+		data, err := lib.FastMarshal(e)
 		if err != nil {
 			return TeleportEvent{}, trace.Wrap(err)
 		}
 
 		hash := sha256.Sum256(data)
 		id = hex.EncodeToString(hash[:])
+		e.SetID(id)
 	}
+
+	var i interface{} = e
 
 	t := e.GetType()
 	isSessionEnd := t == sessionEndType
@@ -76,17 +93,31 @@ func NewTeleportEvent(e events.AuditEvent, cursor string) (TeleportEvent, error)
 		sid = events.MustToOneOf(e).GetSessionUpload().SessionID
 	}
 
-	isPrint := t == printType
+	if t == printType {
+		p := events.MustToOneOf(e).GetSessionPrint()
+
+		i = &printEvent{
+			EI:          p.GetIndex(),
+			Event:       printType,
+			Data:        p.Data,
+			Time:        p.Time,
+			ClusterName: p.ClusterName,
+			CI:          p.ChunkIndex,
+			Bytes:       p.Bytes,
+			MS:          p.DelayMilliseconds,
+			Offset:      p.Offset,
+			UID:         id,
+		}
+	}
 
 	return TeleportEvent{
-		Event:        e,
+		Event:        i,
 		ID:           id,
 		Cursor:       cursor,
 		Type:         t,
 		Time:         e.GetTime(),
 		Index:        e.GetIndex(),
 		IsSessionEnd: isSessionEnd,
-		IsPrint:      isPrint,
 		SessionID:    sid,
 	}, nil
 }
