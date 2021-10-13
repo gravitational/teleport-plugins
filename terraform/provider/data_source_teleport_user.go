@@ -53,7 +53,7 @@ func dataSourceUserRead(ctx context.Context, d *schema.ResourceData, m interface
 		return diagFromErr(trace.Errorf("can not convert %T to *types.UserV2", u))
 	}
 
-	err = tfschema.SetUserV2(u2, d)
+	err = tfschema.ToTerraformUserV2(u2, d)
 	if err != nil {
 		return diagFromErr(err)
 	}

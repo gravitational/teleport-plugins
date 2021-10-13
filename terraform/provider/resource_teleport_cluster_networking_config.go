@@ -54,7 +54,7 @@ func resourceNetworkingConfigCreate(ctx context.Context, d *schema.ResourceData,
 
 	n := types.ClusterNetworkingConfigV2{}
 
-	err = tfschema.GetClusterNetworkingConfigV2(&n, d)
+	err = tfschema.FromTerraformClusterNetworkingConfigV2(d, &n)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -93,7 +93,7 @@ func resourceNetworkingConfigRead(ctx context.Context, d *schema.ResourceData, m
 
 	removeOriginLabel(n.Metadata.Labels)
 
-	err = tfschema.SetClusterNetworkingConfigV2(n, d)
+	err = tfschema.ToTerraformClusterNetworkingConfigV2(n, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -121,7 +121,7 @@ func resourceNetworkingConfigUpdate(ctx context.Context, d *schema.ResourceData,
 		return diagFromErr(fmt.Errorf("failed to convert created role to types.ClusterNetworkingConfigV2 from %T", n))
 	}
 
-	err = tfschema.GetClusterNetworkingConfigV2(n, d)
+	err = tfschema.FromTerraformClusterNetworkingConfigV2(d, n)
 	if err != nil {
 		return diagFromErr(err)
 	}

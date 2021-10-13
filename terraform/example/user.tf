@@ -1,6 +1,11 @@
 # Teleport User resource
 
 resource "teleport_user" "example" {
+  # Tells Terraform that the role could not be destroyed while this user exists
+  depends_on = [
+    teleport_role.example
+  ]
+
   metadata {
     name        = "example"
     description = "Example Teleport User"

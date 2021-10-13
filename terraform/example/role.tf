@@ -17,7 +17,7 @@ resource "teleport_role" "example" {
       port_forwarding         = false
       client_idle_timeout     = "1h"
       disconnect_expired_cert = true
-      permit_x11_forwarding    = false
+      permit_x11_forwarding   = false
       request_access          = "denied"
     }
 

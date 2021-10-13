@@ -1,12 +1,13 @@
 # Teleport OIDC connector
 
-resource "teleport_oidc_connector" "oidc" {
+resource "teleport_oidc_connector" "example" {
   metadata {
-     name = "test"
+     name = "example"
      labels = {
        test = "yes"
      }
   }
+
   spec {
     client_id = "client"
     client_secret = "value"

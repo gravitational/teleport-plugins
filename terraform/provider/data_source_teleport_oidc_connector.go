@@ -53,7 +53,7 @@ func dataSourceTeleportOIDCConnectorRead(ctx context.Context, d *schema.Resource
 		return diagFromErr(trace.Errorf("can not convert %T to *types.OIDCConnectorV2", o))
 	}
 
-	err = tfschema.SetOIDCConnectorV2(o2, d)
+	err = tfschema.ToTerraformOIDCConnectorV2(o2, d)
 	if err != nil {
 		return diagFromErr(err)
 	}

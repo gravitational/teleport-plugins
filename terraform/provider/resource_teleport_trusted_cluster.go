@@ -71,7 +71,7 @@ func resourceTrustedClusterCreate(ctx context.Context, d *schema.ResourceData, m
 
 	t := types.TrustedClusterV2{}
 
-	err = tfschema.GetTrustedClusterV2(&t, d)
+	err = tfschema.FromTerraformTrustedClusterV2(d, &t)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -116,7 +116,7 @@ func resourceTrustedClusterRead(ctx context.Context, d *schema.ResourceData, m i
 		return diagFromErr(fmt.Errorf("failed to convert created user to types.TrustedClusterV2 from %T", t))
 	}
 
-	err = tfschema.SetTrustedClusterV2(t2, d)
+	err = tfschema.ToTerraformTrustedClusterV2(t2, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -143,7 +143,7 @@ func resourceTrustedClusterUpdate(ctx context.Context, d *schema.ResourceData, m
 		return diagFromErr(fmt.Errorf("failed to convert created trusted cluster to types.TrustedClusterV2 from %T", t))
 	}
 
-	err = tfschema.GetTrustedClusterV2(t2, d)
+	err = tfschema.FromTerraformTrustedClusterV2(d, t2)
 	if err != nil {
 		return diagFromErr(err)
 	}

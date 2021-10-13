@@ -70,7 +70,7 @@ func resourceGithubConnectorCreate(ctx context.Context, d *schema.ResourceData, 
 
 	cn := types.GithubConnectorV3{}
 
-	err = tfschema.GetGithubConnectorV3(&cn, d)
+	err = tfschema.FromTerraformGithubConnectorV3(d, &cn)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -114,7 +114,7 @@ func resourceGithubConnectorRead(ctx context.Context, d *schema.ResourceData, m 
 		return diagFromErr(fmt.Errorf("failed to convert created user to types.GithubConnectorV3 from %T", cn))
 	}
 
-	err = tfschema.SetGithubConnectorV3(cn3, d)
+	err = tfschema.ToTerraformGithubConnectorV3(cn3, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -143,7 +143,7 @@ func resourceGithubConnectorUpdate(ctx context.Context, d *schema.ResourceData, 
 		return diagFromErr(fmt.Errorf("failed to convert created role to types.GithubConnectorV3 from %T", cn))
 	}
 
-	err = tfschema.GetGithubConnectorV3(cn3, d)
+	err = tfschema.FromTerraformGithubConnectorV3(d, cn3)
 	if err != nil {
 		return diagFromErr(err)
 	}

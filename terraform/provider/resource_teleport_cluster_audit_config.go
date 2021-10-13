@@ -54,7 +54,7 @@ func resourceAuditConfigCreate(ctx context.Context, d *schema.ResourceData, m in
 
 	n := types.ClusterAuditConfigV2{}
 
-	err = tfschema.GetClusterAuditConfigV2(&n, d)
+	err = tfschema.FromTerraformClusterAuditConfigV2(d, &n)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -93,7 +93,7 @@ func resourceAuditConfigRead(ctx context.Context, d *schema.ResourceData, m inte
 
 	removeOriginLabel(n.Metadata.Labels)
 
-	err = tfschema.SetClusterAuditConfigV2(n, d)
+	err = tfschema.ToTerraformClusterAuditConfigV2(n, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -121,7 +121,7 @@ func resourceAuditConfigUpdate(ctx context.Context, d *schema.ResourceData, m in
 		return diagFromErr(fmt.Errorf("failed to convert created role to types.ClusterAuditConfigV2 from %T", n))
 	}
 
-	err = tfschema.GetClusterAuditConfigV2(n, d)
+	err = tfschema.FromTerraformClusterAuditConfigV2(d, n)
 	if err != nil {
 		return diagFromErr(err)
 	}

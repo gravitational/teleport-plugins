@@ -18,6 +18,7 @@ limitations under the License.
 package accessors
 
 import (
+	"fmt"
 	"reflect"
 	"time"
 
@@ -39,12 +40,12 @@ var (
 	stringType = reflect.TypeOf((*string)(nil)).Elem()
 )
 
-// Set assigns object data from object to schema.ResourceData
+// ToTerraform copies data from an object to the schema.ResourceData
 //
 // Example:
 //   user := UserV2{Name: "example"}
-//   Set(&user, data, SchemaUserV2, MetaUserV2)
-func Set(
+//   ToTerraform(&user, data, SchemaUserV2, MetaUserV2)
+func ToTerraform(
 	obj interface{},
 	data *schema.ResourceData,
 	sch map[string]*schema.Schema,
@@ -54,7 +55,7 @@ func Set(
 		return trace.Errorf("obj must not be nil")
 	}
 
-	root, err := setFragment(reflect.Indirect(reflect.ValueOf(obj)), meta, sch)
+	root, err := setFragment(reflect.Indirect(reflect.ValueOf(obj)), meta, sch, "", data)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -76,6 +77,8 @@ func setFragment(
 	source reflect.Value,
 	meta map[string]*SchemaMeta,
 	sch map[string]*schema.Schema,
+	path string,
+	data *schema.ResourceData,
 ) (map[string]interface{}, error) {
 	target := make(map[string]interface{})
 
@@ -84,6 +87,8 @@ func setFragment(
 	}
 
 	for key, fieldMeta := range meta {
+		p := path + key
+
 		fieldSchema, ok := sch[key]
 		if !ok {
 			return nil, trace.Errorf("field %v not found in corresponding schema", key)
@@ -95,8 +100,8 @@ func setFragment(
 			return nil, trace.Errorf("field %v not found in source struct", key)
 		}
 
-		if fieldMeta.Setter != nil {
-			r, err := fieldMeta.Setter(fieldValue, fieldMeta, fieldSchema)
+		if fieldMeta.ToTerraform != nil {
+			r, err := fieldMeta.ToTerraform(p, fieldValue, fieldMeta, fieldSchema, data)
 			if err != nil {
 				return nil, trace.Wrap(err)
 			}
@@ -115,15 +120,13 @@ func setFragment(
 				return nil, trace.Wrap(err)
 			}
 
-			if result != nil {
-				err = setConvertedKey(target, key, result, fieldSchema)
-				if err != nil {
-					return nil, trace.Wrap(err)
-				}
+			err = convertValueToTerraform(target, key, result, fieldSchema)
+			if err != nil {
+				return nil, trace.Wrap(err)
 			}
 
 		case schema.TypeList:
-			result, err := setList(fieldValue, fieldMeta, fieldSchema)
+			result, err := setList(fieldValue, fieldMeta, fieldSchema, p, data)
 			if err != nil {
 				return nil, trace.Wrap(err)
 			}
@@ -132,14 +135,14 @@ func setFragment(
 			}
 
 		case schema.TypeMap:
-			result, err := setMap(fieldValue, fieldMeta, fieldSchema)
+			result, err := setMap(fieldValue, fieldMeta, fieldSchema, p, data)
 			if err != nil {
 				return nil, trace.Wrap(err)
 			}
 			target[key] = result
 
 		case schema.TypeSet:
-			result, err := setSet(fieldValue, fieldMeta, fieldSchema)
+			result, err := setSet(fieldValue, fieldMeta, fieldSchema, p, data)
 			if err != nil {
 				return nil, trace.Wrap(err)
 			}
@@ -183,7 +186,17 @@ func setElementary(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (
 }
 
 // setList converts source value to list
-func setList(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (interface{}, error) {
+func setList(source reflect.Value, meta *SchemaMeta, sch *schema.Schema, path string, data *schema.ResourceData) (interface{}, error) {
+	// We must not construct new arrays in the state. That would cause state drift.
+	l, err := GetListLen(path, data)
+	if err != nil {
+		return nil, err
+	}
+
+	if l == 0 {
+		return nil, nil
+	}
+
 	if source.Type().Kind() == reflect.Slice {
 		if source.Len() == 0 {
 			return nil, nil
@@ -194,7 +207,7 @@ func setList(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (interf
 		for i := 0; i < source.Len(); i++ {
 			value := source.Index(i)
 
-			el, err := setEnumerableElement(value, meta, sch)
+			el, err := setEnumerableElement(value, meta, sch, fmt.Sprintf("%v.%v.", path, i), data)
 			if err != nil {
 				return nil, err
 			}
@@ -207,7 +220,7 @@ func setList(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (interf
 
 	slice := make([]interface{}, 1)
 
-	item, err := setEnumerableElement(reflect.Indirect(source), meta, sch)
+	item, err := setEnumerableElement(reflect.Indirect(source), meta, sch, path+".0.", data)
 	if err != nil {
 		return nil, err
 	}
@@ -221,7 +234,16 @@ func setList(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (interf
 }
 
 // setMap converts source value to map
-func setMap(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (interface{}, error) {
+func setMap(source reflect.Value, meta *SchemaMeta, sch *schema.Schema, path string, data *schema.ResourceData) (interface{}, error) {
+	l, err := GetMapLen(path, data)
+	if err != nil {
+		return nil, err
+	}
+
+	if l == 0 {
+		return nil, nil
+	}
+
 	if source.Len() == 0 {
 		return nil, nil
 	}
@@ -231,7 +253,12 @@ func setMap(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (interfa
 	for _, key := range source.MapKeys() {
 		i := source.MapIndex(key)
 
-		value, err := setEnumerableElement(i, meta, sch)
+		k, ok := key.Interface().(string)
+		if !ok {
+			return nil, trace.Errorf("Can not convert %T to string", k)
+		}
+
+		value, err := setEnumerableElement(i, meta, sch, path+k+".", data)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
@@ -243,7 +270,16 @@ func setMap(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (interfa
 }
 
 // setSet converts source value to set
-func setSet(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (interface{}, error) {
+func setSet(source reflect.Value, meta *SchemaMeta, sch *schema.Schema, path string, data *schema.ResourceData) (interface{}, error) {
+	l, err := GetListLen(path, data)
+	if err != nil {
+		return nil, err
+	}
+
+	if l == 0 {
+		return nil, nil
+	}
+
 	if source.Len() == 0 {
 		return nil, nil
 	}
@@ -266,7 +302,12 @@ func setSet(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (interfa
 
 			valueSchema := sch.Elem.(*schema.Resource).Schema["value"]
 
-			value, err := setEnumerableElement(i, meta, valueSchema)
+			k, ok := key.Interface().(string)
+			if !ok {
+				return nil, trace.Errorf("Can not convert %T to string", k)
+			}
+
+			value, err := setEnumerableElement(i, meta, valueSchema, path+"."+k+".", data)
 			if err != nil {
 				return nil, trace.Wrap(err)
 			}
@@ -317,6 +358,22 @@ func setDuration(source reflect.Value) (interface{}, error) {
 	return nil, nil
 }
 
+// convertValueToTerraform converts value to target schema type and sets it to resulting map if not nil
+func convertValueToTerraform(target map[string]interface{}, key string, source interface{}, sch *schema.Schema) error {
+	v := reflect.ValueOf(source)
+
+	// We do not need to set nil value, and we do not need to explicitly refresh zero value
+	if source != nil && !v.IsZero() {
+		value, err := convert(v, sch)
+		if err != nil {
+			return trace.Wrap(err)
+		}
+		target[key] = value
+	}
+
+	return nil
+}
+
 // convert converts source value to schema type given in meta
 func convert(source reflect.Value, sch *schema.Schema) (interface{}, error) {
 	sourceValue := reflect.Indirect(source)
@@ -332,25 +389,14 @@ func convert(source reflect.Value, sch *schema.Schema) (interface{}, error) {
 	return sourceValue.Convert(schemaType).Interface(), nil
 }
 
-// setConvertedKey converts value to target schema type and sets it to resulting map if not nil
-func setConvertedKey(target map[string]interface{}, key string, source interface{}, sch *schema.Schema) error {
-	if source != nil {
-		value, err := convert(reflect.ValueOf(source), sch)
-		if err != nil {
-			return trace.Wrap(err)
-		}
-		target[key] = value
-	}
-
-	return nil
-}
-
 // setEnumerableElement gets singular slice element from a resource data and sets it to target. If enumerable element
 // is empty, it assigns an empty value to the target.
 func setEnumerableElement(
 	source reflect.Value,
 	meta *SchemaMeta,
 	sch *schema.Schema,
+	path string,
+	data *schema.ResourceData,
 ) (interface{}, error) {
 	switch s := sch.Elem.(type) {
 	case *schema.Schema:
@@ -367,7 +413,7 @@ func setEnumerableElement(
 		return target, nil
 
 	case *schema.Resource:
-		value, err := setFragment(reflect.Indirect(source), meta.Nested, s.Schema)
+		value, err := setFragment(reflect.Indirect(source), meta.Nested, s.Schema, path, data)
 		if err != nil {
 			return nil, err
 		}

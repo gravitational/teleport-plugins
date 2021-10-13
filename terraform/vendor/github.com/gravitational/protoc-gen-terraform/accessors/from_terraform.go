@@ -26,12 +26,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// Get reads object data from schema.ResourceData to object
+// FromTerraform copies data from the schema.ResourceData to an object
 //
 // Example:
 //   user := UserV2{}
-//   Get(&user, data, SchemaUserV2, MetaUserV2)
-func Get(
+//   FromTerraform(&user, data, SchemaUserV2, MetaUserV2)
+func FromTerraform(
 	obj interface{},
 	data *schema.ResourceData,
 	sch map[string]*schema.Schema,
@@ -49,21 +49,6 @@ func Get(
 	value = reflect.Indirect(value)
 
 	return getFragment("", value, meta, sch, data)
-}
-
-// GetLen returns TypeSet or TypeList value length
-func GetLen(path string, data *schema.ResourceData) (int, error) {
-	num, ok := data.GetOk(path + ".#") // Terraform stores collection length in "collection_name.#" key
-	if !ok || num == nil {
-		return 0, nil
-	}
-
-	len, ok := num.(int)
-	if !ok {
-		return 0, trace.Errorf("failed to convert list count to number %s", path)
-	}
-
-	return len, nil
 }
 
 // getFragment iterates over a schema fragment and calls appropriate getters for a fields of passed target.
@@ -88,8 +73,8 @@ func getFragment(
 
 		fieldPath := path + key
 
-		if fieldMeta.Getter != nil {
-			err := fieldMeta.Getter(fieldPath, fieldValue, fieldMeta, fieldSchema, data)
+		if fieldMeta.FromTerraform != nil {
+			err := fieldMeta.FromTerraform(fieldPath, fieldValue, fieldMeta, fieldSchema, data)
 			if err != nil {
 				return trace.Wrap(err)
 			}
@@ -223,7 +208,7 @@ func assignDuration(source interface{}, target reflect.Value) error {
 
 // setList gets list from ResourceData
 func getList(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
-	len, err := GetLen(path, data)
+	len, err := GetListLen(path, data)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -255,7 +240,7 @@ func getList(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Sc
 	return getEnumerableElement(path+".0", target, sch, meta, data)
 }
 
-// setMap sets map of elementary values (scalar, string, time, duration)
+// getMap sets map of elementary values (scalar, string, time, duration)
 func getMap(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
 	raw, ok := data.GetOk(path)
 	if !ok {
@@ -296,7 +281,7 @@ func getMap(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Sch
 
 // setSet reads set from resource data
 func getSet(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
-	len, err := GetLen(path, data)
+	len, err := GetListLen(path, data)
 	if err != nil {
 		return trace.Wrap(err)
 	}

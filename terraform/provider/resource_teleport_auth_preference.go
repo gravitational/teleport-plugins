@@ -62,7 +62,7 @@ func resourceAuthPreferenceCreate(ctx context.Context, d *schema.ResourceData, m
 		return diagFromErr(fmt.Errorf("failed to convert created role to types.AuthPreferenceV3 from %T", cn))
 	}
 
-	err = tfschema.GetAuthPreferenceV2(cn3, d)
+	err = tfschema.FromTerraformAuthPreferenceV2(d, cn3)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -102,7 +102,7 @@ func resourceAuthPreferenceRead(ctx context.Context, d *schema.ResourceData, m i
 
 	removeOriginLabel(cn3.Metadata.Labels)
 
-	err = tfschema.SetAuthPreferenceV2(cn3, d)
+	err = tfschema.ToTerraformAuthPreferenceV2(cn3, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -127,10 +127,10 @@ func resourceAuthPreferenceUpdate(ctx context.Context, d *schema.ResourceData, m
 
 	cn3, ok := cn.(*types.AuthPreferenceV2)
 	if !ok {
-		return diagFromErr(fmt.Errorf("failed to convert created role to types.AuthPreferenceV3 from %T", cn))
+		return diagFromErr(fmt.Errorf("failed to convert created auth preference to types.AuthPreferenceV3 from %T", cn))
 	}
 
-	err = tfschema.GetAuthPreferenceV2(cn3, d)
+	err = tfschema.FromTerraformAuthPreferenceV2(d, cn3)
 	if err != nil {
 		return diagFromErr(err)
 	}
