@@ -23,3 +23,7 @@
 <match test.log>
   @type stdout
 </match>
+
+<match session.*.log> 
+  @type stdout
+</match>
