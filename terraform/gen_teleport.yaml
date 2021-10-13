@@ -55,6 +55,7 @@ computed_fields:
     - "types.SAMLConnectorV2.Spec.ServiceProviderIssuer"
     - "types.SAMLConnectorV2.Spec.SSO"
     - "types.SAMLConnectorV2.Spec.SigningKeyPair" # Questionable: this is the list. No other way to avoid useless state triggers.
+    - "types.SAMLConnectorV2.Spec.EncryptionKeyPair"
 
 # These fields will be marked as Required: true 
 required_fields:
@@ -170,18 +171,22 @@ defaults:
     "types.ClusterAuditConfigV2.Kind": "cluster_audit_config"
     "types.ClusterAuditConfigV2.SubKind": ""
 
-# These fields will be marked as ConfigMode: schema.SchemaConfigModeAttrs
-config_mode_attr_fields:
-
-# These fields will be marked as ConfigMode: schema.SchemaConfigModeBlock
-config_mode_block_fields:
-
 # These suffixes for custom methods called when field has custom_type flag. By default they might be weird.
 suffixes:
     "BoolOption": "BoolOption" # This is listed here for convenience. Just to have all custom method names in a single place.
     "Labels": "Labels"
     "github.com/gravitational/teleport/api/types/wrappers.Traits": "Traits"
     "github.com/gravitational/teleport/api/types/wrappers.Strings": "Strings"
+
+# Sensitive fields
+sensitive:
+    - "types.ProvisionTokenV2.Metadata.Name"
+    - "types.SAMLConnectorV2.Spec.Cert"
+    - "types.SAMLConnectorV2.Spec.SigningKeyPair.PrivateKey"
+    - "types.SAMLConnectorV2.Spec.EncryptionKeyPair.PrivateKey"
+    - "types.GithubConnectorV3.Spec.ClientSecret"
+    - "types.OIDCConnectorSpecV2.Spec.ClientSecret"
+
 
 # These funcs will be used as a state funcs for a fields
 state_func:

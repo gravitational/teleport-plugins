@@ -12,7 +12,7 @@ require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/gogo/protobuf v1.3.2
-	github.com/gravitational/protoc-gen-terraform v0.0.0-20210903054627-b2b9686ac5ca
+	github.com/gravitational/protoc-gen-terraform v0.0.0-20211013165003-4af11abb961e
 	github.com/gravitational/teleport/api v0.0.0-20210915192615-a8ca2d3f910e
 	github.com/gravitational/trace v1.1.15
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -20,7 +20,7 @@ require (
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.2 // indirect
 	github.com/hashicorp/hcl/v2 v2.9.1 // indirect
-	github.com/hashicorp/terraform-plugin-sdk/v2 v2.7.0
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.8.0
 	github.com/hashicorp/yamux v0.0.0-20210316155119-a95892c5f864 // indirect
 	github.com/konsorten/go-windows-terminal-sequences v1.0.3 // indirect
 	github.com/mitchellh/go-testing-interface v1.14.1 // indirect

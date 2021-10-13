@@ -219,6 +219,7 @@ func GenSchemaProvisionTokenV2() map[string]*schema.Schema {
 						Description: "Name is an object name",
 						Required:    true,
 						ForceNew:    true,
+						Sensitive:   true,
 					},
 					// Namespace is object namespace. The field should be called "namespace"
 					// when it returns in Teleport 2.4.
@@ -783,6 +784,14 @@ func GenSchemaClusterNetworkingConfigV2() map[string]*schema.Schema {
 						Description: "ClientIdleTimeoutMessage is the message sent to the user when a connection times out.",
 						Optional:    true,
 					},
+					// WebIdleTimeout sets global cluster default setting for the web UI idle
+					// timeouts.
+					"web_idle_timeout": {
+						Type:             schema.TypeString,
+						Description:      "WebIdleTimeout sets global cluster default setting for the web UI idle  timeouts.",
+						DiffSuppressFunc: SuppressDurationChange,
+						Optional:         true,
+					},
 				},
 			},
 		},
@@ -886,6 +895,13 @@ func GenSchemaMetaClusterNetworkingConfigV2() map[string]*accessors.SchemaMeta {
 					Name:       "ClientIdleTimeoutMessage",
 					IsTime:     false,
 					IsDuration: false,
+				},
+				// WebIdleTimeout sets global cluster default setting for the web UI idle
+				// timeouts.
+				"web_idle_timeout": {
+					Name:       "WebIdleTimeout",
+					IsTime:     false,
+					IsDuration: true,
 				},
 			},
 		},
@@ -1223,6 +1239,19 @@ func GenSchemaAuthPreferenceV2() map[string]*schema.Schema {
 					"disconnect_expired_cert": SchemaBoolOption(),
 					// AllowLocalAuth is true if local authentication is enabled.
 					"allow_local_auth": SchemaBoolOption(),
+
+					"message_of_the_day": {
+						Type:        schema.TypeString,
+						Description: "",
+						Optional:    true,
+					},
+					// LockingMode is the cluster-wide locking mode default.
+					"locking_mode": {
+						Type:        schema.TypeString,
+						Description: "LockingMode is the cluster-wide locking mode default.",
+						Optional:    true,
+						Default:     "best_effort",
+					},
 				},
 			},
 		},
@@ -1361,6 +1390,18 @@ func GenSchemaMetaAuthPreferenceV2() map[string]*accessors.SchemaMeta {
 					IsDuration: false,
 					Getter:     GetBoolOption,
 					Setter:     SetBoolOption,
+				},
+
+				"message_of_the_day": {
+					Name:       "MessageOfTheDay",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// LockingMode is the cluster-wide locking mode default.
+				"locking_mode": {
+					Name:       "LockingMode",
+					IsTime:     false,
+					IsDuration: false,
 				},
 			},
 		},
@@ -1553,6 +1594,13 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 								"require_session_mfa": {
 									Type:        schema.TypeBool,
 									Description: "RequireSessionMFA specifies whether a user is required to do an MFA  check for every session.",
+									Optional:    true,
+								},
+								// Lock specifies the locking mode (strict|best_effort) to be applied with
+								// the role.
+								"lock": {
+									Type:        schema.TypeString,
+									Description: "Lock specifies the locking mode (strict|best_effort) to be applied with  the role.",
 									Optional:    true,
 								},
 							},
@@ -1891,6 +1939,16 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 												Default:     "",
 											},
 										},
+									},
+								},
+								// AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.
+								"aws_role_arns": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
 									},
 								},
 							},
@@ -2232,6 +2290,16 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 										},
 									},
 								},
+								// AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.
+								"aws_role_arns": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
 							},
 						},
 					},
@@ -2403,6 +2471,13 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 						// check for every session.
 						"require_session_mfa": {
 							Name:       "RequireSessionMFA",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Lock specifies the locking mode (strict|best_effort) to be applied with
+						// the role.
+						"lock": {
+							Name:       "Lock",
 							IsTime:     false,
 							IsDuration: false,
 						},
@@ -2690,6 +2765,12 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 								},
 							},
 						},
+						// AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.
+						"aws_role_arns": {
+							Name:       "AWSRoleARNs",
+							IsTime:     false,
+							IsDuration: false,
+						},
 					},
 				},
 				// Deny is the set of conditions evaluated to deny access. Deny takes priority
@@ -2974,6 +3055,12 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 									IsDuration: false,
 								},
 							},
+						},
+						// AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.
+						"aws_role_arns": {
+							Name:       "AWSRoleARNs",
+							IsTime:     false,
+							IsDuration: false,
 						},
 					},
 				},
@@ -3803,6 +3890,7 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Cert is the identity provider certificate PEM.  IDP signs <Response> responses using this certificate.",
 						Optional:    true,
+						Sensitive:   true,
 					},
 					// Display controls how this connector is displayed.
 					"display": {
@@ -3892,6 +3980,7 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Description: "PrivateKey is a PEM encoded x509 private key.",
 									Optional:    true,
+									Sensitive:   true,
 								},
 								// Cert is a PEM-encoded x509 certificate.
 								"cert": {
@@ -3922,6 +4011,7 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Description: "PrivateKey is a PEM encoded x509 private key.",
 									Optional:    true,
+									Sensitive:   true,
 								},
 								// Cert is a PEM-encoded x509 certificate.
 								"cert": {
@@ -4239,6 +4329,7 @@ func GenSchemaGithubConnectorV3() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "ClientSecret is the Github OAuth app client secret.",
 						Required:    true,
+						Sensitive:   true,
 					},
 					// RedirectURL is the authorization callback URL.
 					"redirect_url": {

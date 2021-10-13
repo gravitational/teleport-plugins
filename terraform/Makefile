@@ -4,7 +4,7 @@ LOCALDIR := $(dir $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
 GENTERRAFORMPATH := $(shell go env GOPATH)/bin
 
 BUILDDIR ?= build
-TFDIR ?= example
+TFDIR ?= tf
 
 ADDFLAGS ?=
 BUILDFLAGS ?= $(ADDFLAGS) -ldflags '-w -s'
@@ -34,8 +34,20 @@ build: clean
 release: build
 	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
 
+.PHONY: setup-tf
+setup-tf:
+	mkdir -p tf
+	cp example/* tf
+	cp tf/vars.tfvars.example tf/vars.tfvars
+
 .PHONY: apply
 apply: install
+	-tctl tokens rm example
+	-tctl users rm example
+	-tctl rm role/example
+	-tctl rm github/example
+	-tctl rm oidc/example
+	-tctl rm saml/example
 	terraform -chdir=$(TFDIR) init -var-file="vars.tfvars" && terraform -chdir=$(TFDIR) apply -auto-approve -var-file="vars.tfvars"
 
 .PHONY: reapply
