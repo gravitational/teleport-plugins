@@ -27,33 +27,30 @@ import (
 )
 
 const (
-	// sessionEndType type name for session end event
+	// sessionEndType represents type name for session end event
 	sessionEndType = "session.upload"
+	// printType represents type name for print event
+	printType = "print"
 )
 
 // TeleportEvent represents helper struct around main audit log event
 type TeleportEvent struct {
 	// event is the event
 	Event events.AuditEvent
-
 	// cursor is the event ID (real/generated when empty)
 	ID string
-
 	// cursor is the current cursor value
 	Cursor string
-
 	// Type is an event type
 	Type string
-
 	// Time is an event timestamp
 	Time time.Time
-
 	// Index is an event index within session
 	Index int64
-
 	// IsSessionEnd is true when this event is session.end
 	IsSessionEnd bool
-
+	// IsPrint is true when this event is print
+	IsPrint bool
 	// SessionID is the session ID this event belongs to
 	SessionID string
 }
@@ -64,7 +61,7 @@ func NewTeleportEvent(e events.AuditEvent, cursor string) (TeleportEvent, error)
 
 	id := e.GetID()
 	if id == "" {
-		data, err := lib.FastMarshal(e)
+		data, err := lib.FastMarshal(e, false)
 		if err != nil {
 			return TeleportEvent{}, trace.Wrap(err)
 		}
@@ -79,6 +76,8 @@ func NewTeleportEvent(e events.AuditEvent, cursor string) (TeleportEvent, error)
 		sid = events.MustToOneOf(e).GetSessionUpload().SessionID
 	}
 
+	isPrint := t == printType
+
 	return TeleportEvent{
 		Event:        e,
 		ID:           id,
@@ -87,6 +86,7 @@ func NewTeleportEvent(e events.AuditEvent, cursor string) (TeleportEvent, error)
 		Time:         e.GetTime(),
 		Index:        e.GetIndex(),
 		IsSessionEnd: isSessionEnd,
+		IsPrint:      isPrint,
 		SessionID:    sid,
 	}, nil
 }

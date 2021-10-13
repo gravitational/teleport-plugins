@@ -21,9 +21,22 @@ import (
 	jsoniter "github.com/json-iterator/go"
 )
 
+// configFastestRelaxed represents jsoniter config which encodes all message fields, even those which are marked as jsontag:"-"
+var configFastestRelaxed = jsoniter.Config{
+	EscapeHTML:                    false,
+	MarshalFloatWith6Digits:       true,
+	ObjectFieldMustBeSimpleString: true,
+	TagKey:                        "-", // This forces jsoniter to serialize all event fields, use with caution
+}.Froze()
+
 // FastMarshal serializes given interface to json
-func FastMarshal(v interface{}) ([]byte, error) {
-	data, err := jsoniter.ConfigFastest.Marshal(v)
+func FastMarshal(v interface{}, relaxed bool) ([]byte, error) {
+	c := jsoniter.ConfigFastest
+	if relaxed {
+		c = configFastestRelaxed
+	}
+
+	data, err := c.Marshal(v)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}

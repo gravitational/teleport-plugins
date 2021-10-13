@@ -84,8 +84,8 @@ func getCertPool(c *FluentdConfig) (*x509.CertPool, error) {
 }
 
 // Send sends event to fluentd
-func (f *FluentdClient) Send(ctx context.Context, url string, obj interface{}) error {
-	b, err := lib.FastMarshal(obj)
+func (f *FluentdClient) Send(ctx context.Context, url string, obj interface{}, relaxed bool) error {
+	b, err := lib.FastMarshal(obj, relaxed)
 	if err != nil {
 		return trace.Wrap(err)
 	}
