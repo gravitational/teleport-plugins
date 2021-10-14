@@ -35,3 +35,5 @@ require (
 	google.golang.org/grpc v1.37.0
 	google.golang.org/protobuf v1.26.0
 )
+
+replace github.com/gravitational/protoc-gen-terraform => /Users/gzigzigzeo/go/src/github.com/gravitational/protoc-gen-terraform

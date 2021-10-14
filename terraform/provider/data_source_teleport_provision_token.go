@@ -53,7 +53,7 @@ func dataSourceTeleportProvisionTokenRead(ctx context.Context, d *schema.Resourc
 		return diagFromErr(trace.Errorf("can not convert %T to *types.ProvisionTokenV2", t))
 	}
 
-	err = tfschema.SetProvisionTokenV2(t2, d)
+	err = tfschema.ToTerraformProvisionTokenV2(t2, d)
 	if err != nil {
 		return diagFromErr(err)
 	}

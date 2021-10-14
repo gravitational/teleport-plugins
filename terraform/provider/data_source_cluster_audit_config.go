@@ -51,7 +51,7 @@ func dataSourceTeleportClusterAuditConfigRead(ctx context.Context, d *schema.Res
 		return diagFromErr(trace.Errorf("can not convert %T to *types.ClusterAuditConfigV2", cfg))
 	}
 
-	err = tfschema.SetClusterAuditConfigV2(cfg, d)
+	err = tfschema.ToTerraformClusterAuditConfigV2(cfg, d)
 	if err != nil {
 		return diagFromErr(err)
 	}

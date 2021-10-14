@@ -70,7 +70,7 @@ func resourceProvisionTokenCreate(ctx context.Context, d *schema.ResourceData, m
 	}
 
 	t := types.ProvisionTokenV2{}
-	err = tfschema.GetProvisionTokenV2(&t, d)
+	err = tfschema.FromTerraformProvisionTokenV2(d, &t)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -114,7 +114,7 @@ func resourceProvisionTokenRead(ctx context.Context, d *schema.ResourceData, m i
 		return diagFromErr(fmt.Errorf("failed to convert created user to types.ProvisionTokenV2 from %T", t))
 	}
 
-	err = tfschema.SetProvisionTokenV2(tV2, d)
+	err = tfschema.ToTerraformProvisionTokenV2(tV2, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -142,7 +142,7 @@ func resourceProvisionTokenUpdate(ctx context.Context, d *schema.ResourceData, m
 		return diagFromErr(fmt.Errorf("failed to convert created token to types.GithubConnectorV3 from %T", t))
 	}
 
-	err = tfschema.GetProvisionTokenV2(tV2, d)
+	err = tfschema.FromTerraformProvisionTokenV2(d, tV2)
 	if err != nil {
 		return diagFromErr(err)
 	}

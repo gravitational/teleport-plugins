@@ -78,7 +78,7 @@ func resourceRoleCreate(ctx context.Context, d *schema.ResourceData, m interface
 
 	r := types.RoleV4{}
 
-	err = tfschema.GetRoleV4(&r, d)
+	err = tfschema.FromTerraformRoleV4(d, &r)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -120,7 +120,7 @@ func resourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}
 		return diag.Diagnostics{}
 	}
 
-	err = tfschema.SetRoleV4(r, d)
+	err = tfschema.ToTerraformRoleV4(r, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -145,7 +145,7 @@ func resourceRoleUpdate(ctx context.Context, d *schema.ResourceData, m interface
 
 	removeMapAndListDefaults(r)
 
-	err = tfschema.GetRoleV4(r, d)
+	err = tfschema.FromTerraformRoleV4(d, r)
 	if err != nil {
 		return diagFromErr(err)
 	}

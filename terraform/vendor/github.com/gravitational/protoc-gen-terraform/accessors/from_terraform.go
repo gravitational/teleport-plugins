@@ -26,12 +26,12 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// Get reads object data from schema.ResourceData to object
+// FromTerraform copies data from the schema.ResourceData to an object
 //
 // Example:
 //   user := UserV2{}
-//   Get(&user, data, SchemaUserV2, MetaUserV2)
-func Get(
+//   FromTerraform(&user, data, SchemaUserV2, MetaUserV2)
+func FromTerraform(
 	obj interface{},
 	data *schema.ResourceData,
 	sch map[string]*schema.Schema,
@@ -255,7 +255,7 @@ func getList(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Sc
 	return getEnumerableElement(path+".0", target, sch, meta, data)
 }
 
-// setMap sets map of elementary values (scalar, string, time, duration)
+// getMap sets map of elementary values (scalar, string, time, duration)
 func getMap(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
 	raw, ok := data.GetOk(path)
 	if !ok {

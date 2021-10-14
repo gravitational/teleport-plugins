@@ -50,12 +50,18 @@ exclude_fields:
 # These fields will be marked as Computed: true
 computed_fields:
     # SAML connector
+    - "types.SAMLConnectorV2.Kind"
+    - "types.SAMLConnectorV2.Version"
+    - "types.SAMLConnectorV2.Metadata.Namespace"
     - "types.SAMLConnectorV2.Spec.Audience"
     - "types.SAMLConnectorV2.Spec.Issuer"
     - "types.SAMLConnectorV2.Spec.ServiceProviderIssuer"
     - "types.SAMLConnectorV2.Spec.SSO"
-    - "types.SAMLConnectorV2.Spec.SigningKeyPair" # Questionable: this is the list. No other way to avoid useless state triggers.
-    - "types.SAMLConnectorV2.Spec.EncryptionKeyPair"
+    - "types.SAMLConnectorV2.Spec.SigningKeyPair.PrivateKey"
+    - "types.SAMLConnectorV2.Spec.SigningKeyPair.Cert"
+    - "types.SAMLConnectorV2.Spec.EncryprionKeyPair"
+    - "types.SAMLConnectorV2.Spec.EncryptionKeyPair.PrivateKey"
+    - "types.SAMLConnectorV2.Spec.EncryptionKeyPair.Cert"
 
 # These fields will be marked as Required: true 
 required_fields:
@@ -101,18 +107,17 @@ force_new_fields:
 
 # Field default values
 defaults:
-    # Metadata
-    "types.Metadata.Namespace": "default"    
-
     # User
     "types.UserV2.Version": "v2"
     "types.UserV2.Kind": "user"
     "types.UserV2.SubKind": ""
+    "types.UserV2.Metadata.Namespace": "default"
 
     # Role
     "types.RoleV4.Version": "v4"
     "types.RoleV4.Kind": "role"
     "types.RoleV4.SubKind": ""
+    "types.RoleV4.Metadata.Namespace": "default"
     "types.RoleV4.Spec.Options.MaxSessionTTL": "30h"
     "types.RoleV4.Spec.Options.CertificateFormat": "standard"
     "types.RoleV4.Spec.Allow.ReviewRequests.Where": ""
@@ -124,26 +129,30 @@ defaults:
     "types.ProvisionTokenV2.Version": "v2"
     "types.ProvisionTokenV2.Kind": "token"
     "types.ProvisionTokenV2.SubKind": ""
+    "types.ProvisionTokenV2.Metadata.Namespace": "default"
 
     # Github connector
     "types.GithubConnectorV3.Version": "v3"
     "types.GithubConnectorV3.Kind": "github"
     "types.GithubConnectorV3.SubKind": ""
+    "types.GithubConnectorV3.Metadata.Namespace": "default"
 
     # SAML connector
-    "types.SAMLConnectorV2.Version": "v2"
-    "types.SAMLConnectorV2.Kind": "saml"
-    "types.SAMLConnectorV2.SubKind": ""
+    # "types.SAMLConnectorV2.Version": "v2"
+    # "types.SAMLConnectorV2.Kind": "saml"
+    # "types.SAMLConnectorV2.SubKind": ""
 
     # OIDC connector
     "types.OIDCConnectorV2.Version": "v2"
     "types.OIDCConnectorV2.Kind": "oidc"
     "types.OIDCConnectorV2.SubKind": ""
+    "types.OIDCConnectorV2.Metadata.Namespace": "default"
 
     # Trusted cluster
     "types.TrustedClusterV2.Version": "v2"
     "types.TrustedClusterV2.Kind": "trusted_cluster"
     "types.TrustedClusterV2.SubKind": ""
+    "types.TrustedClusterV2.Metadata.Namespace": "default"
 
     # Auth preference
     "types.AuthPreferenceV2.Version": "v2"
@@ -152,6 +161,7 @@ defaults:
     "types.AuthPreferenceV2.Spec.SecondFactor": "otp"
     "types.AuthPreferenceV2.Spec.Type": "local"
     "types.AuthPreferenceV2.Spec.LockingMode": "best_effort"
+    "types.AuthPreferenceV2.Metadata.Namespace": "default"
 
     # Cluster networking config
     "types.ClusterNetworkingConfigV2.Version": "v2"
@@ -159,17 +169,20 @@ defaults:
     "types.ClusterNetworkingConfigV2.SubKind": ""
     "types.ClusterNetworkingConfigV2.Spec.KeepAliveCountMax": 3
     "types.ClusterNetworkingConfigV2.Spec.KeepAliveInterval": "5m0s"
+    "types.ClusterNetworkingConfigV2.Metadata.Namespace": "default"
 
     # Session recording config
     "types.SessionRecordingConfigV2.Version": "v2"
     "types.SessionRecordingConfigV2.Kind": "session_recording_config"
     "types.SessionRecordingConfigV2.SubKind": ""
     "types.SessionRecordingConfigV2.Spec.Mode": "node"
+    "types.SessionRecordingConfigV2.Metadata.Namespace": "default"
 
     # Cluster audit config
     "types.ClusterAuditConfigV2.Version": "v2"
     "types.ClusterAuditConfigV2.Kind": "cluster_audit_config"
     "types.ClusterAuditConfigV2.SubKind": ""
+    "types.ClusterAuditConfigV2.Metadata.Namespace": "default"
 
 # These suffixes for custom methods called when field has custom_type flag. By default they might be weird.
 suffixes:
@@ -184,9 +197,9 @@ sensitive:
     - "types.SAMLConnectorV2.Spec.Cert"
     - "types.SAMLConnectorV2.Spec.SigningKeyPair.PrivateKey"
     - "types.SAMLConnectorV2.Spec.EncryptionKeyPair.PrivateKey"
+    - "types.SAMLConnectorV2.Spec.EntityDescriptor"    
     - "types.GithubConnectorV3.Spec.ClientSecret"
     - "types.OIDCConnectorSpecV2.Spec.ClientSecret"
-
 
 # These funcs will be used as a state funcs for a fields
 state_func:

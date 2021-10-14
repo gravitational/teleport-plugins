@@ -51,7 +51,7 @@ func dataSourceTeleportClusterNetworkingConfigRead(ctx context.Context, d *schem
 		return diagFromErr(trace.Errorf("can not convert %T to *types.ClusterNetworkingConfigV2", cfg))
 	}
 
-	err = tfschema.SetClusterNetworkingConfigV2(cfg, d)
+	err = tfschema.ToTerraformClusterNetworkingConfigV2(cfg, d)
 	if err != nil {
 		return diagFromErr(err)
 	}

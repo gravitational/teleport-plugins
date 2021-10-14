@@ -29,7 +29,7 @@ github.com/google/go-cmp/cmp/internal/diff
 github.com/google/go-cmp/cmp/internal/flags
 github.com/google/go-cmp/cmp/internal/function
 github.com/google/go-cmp/cmp/internal/value
-# github.com/gravitational/protoc-gen-terraform v0.0.0-20211013165003-4af11abb961e
+# github.com/gravitational/protoc-gen-terraform v0.0.0-20211013165003-4af11abb961e => /Users/gzigzigzeo/go/src/github.com/gravitational/protoc-gen-terraform
 ## explicit
 github.com/gravitational/protoc-gen-terraform/accessors
 # github.com/gravitational/teleport/api v0.0.0-20210915192615-a8ca2d3f910e
@@ -297,3 +297,4 @@ gopkg.in/yaml.v2
 # github.com/coreos/go-oidc => github.com/gravitational/go-oidc v0.0.3
 # github.com/iovisor/gobpf => github.com/gravitational/gobpf v0.0.1
 # github.com/sirupsen/logrus => github.com/gravitational/logrus v1.4.3
+# github.com/gravitational/protoc-gen-terraform => /Users/gzigzigzeo/go/src/github.com/gravitational/protoc-gen-terraform

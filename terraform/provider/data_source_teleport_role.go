@@ -53,7 +53,7 @@ func dataSourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface
 		return diagFromErr(trace.Errorf("can not convert %T to *types.RoleV3", r))
 	}
 
-	err = tfschema.SetRoleV4(r4, d)
+	err = tfschema.ToTerraformRoleV4(r4, d)
 	if err != nil {
 		return diagFromErr(err)
 	}

@@ -70,7 +70,7 @@ func resourceOIDCConnectorCreate(ctx context.Context, d *schema.ResourceData, m 
 
 	cn := types.OIDCConnectorV2{}
 
-	err = tfschema.GetOIDCConnectorV2(&cn, d)
+	err = tfschema.FromTerraformOIDCConnectorV2(d, &cn)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -114,7 +114,7 @@ func resourceOIDCConnectorRead(ctx context.Context, d *schema.ResourceData, m in
 		return diagFromErr(fmt.Errorf("failed to convert created user to types.OIDCConnectorV2 from %T", cn))
 	}
 
-	err = tfschema.SetOIDCConnectorV2(cnV2, d)
+	err = tfschema.ToTerraformOIDCConnectorV2(cnV2, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -141,7 +141,7 @@ func resourceOIDCConnectorUpdate(ctx context.Context, d *schema.ResourceData, m 
 		return diagFromErr(fmt.Errorf("failed to convert created oidc connector to types.OIDCConnectorV2 from %T", cn))
 	}
 
-	err = tfschema.GetOIDCConnectorV2(cnV2, d)
+	err = tfschema.FromTerraformOIDCConnectorV2(d, cnV2)
 	if err != nil {
 		return diagFromErr(err)
 	}

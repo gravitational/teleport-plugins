@@ -100,82 +100,82 @@ func SuppressDurationChange(k string, old string, new string, d *schema.Resource
 
 	return o == n
 }
-func GetProvisionTokenV2(obj *types.ProvisionTokenV2, data *schema.ResourceData) error {
-	return accessors.Get(obj, data, SchemaProvisionTokenV2, SchemaMetaProvisionTokenV2)
+func FromTerraformProvisionTokenV2(data *schema.ResourceData, obj *types.ProvisionTokenV2) error {
+	return accessors.FromTerraform(obj, data, SchemaProvisionTokenV2, SchemaMetaProvisionTokenV2)
 }
 
-func SetProvisionTokenV2(obj *types.ProvisionTokenV2, data *schema.ResourceData) error {
-	return accessors.Set(obj, data, SchemaProvisionTokenV2, SchemaMetaProvisionTokenV2)
+func ToTerraformProvisionTokenV2(obj *types.ProvisionTokenV2, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaProvisionTokenV2, SchemaMetaProvisionTokenV2)
 }
-func GetClusterAuditConfigV2(obj *types.ClusterAuditConfigV2, data *schema.ResourceData) error {
-	return accessors.Get(obj, data, SchemaClusterAuditConfigV2, SchemaMetaClusterAuditConfigV2)
-}
-
-func SetClusterAuditConfigV2(obj *types.ClusterAuditConfigV2, data *schema.ResourceData) error {
-	return accessors.Set(obj, data, SchemaClusterAuditConfigV2, SchemaMetaClusterAuditConfigV2)
-}
-func GetClusterNetworkingConfigV2(obj *types.ClusterNetworkingConfigV2, data *schema.ResourceData) error {
-	return accessors.Get(obj, data, SchemaClusterNetworkingConfigV2, SchemaMetaClusterNetworkingConfigV2)
+func FromTerraformClusterAuditConfigV2(data *schema.ResourceData, obj *types.ClusterAuditConfigV2) error {
+	return accessors.FromTerraform(obj, data, SchemaClusterAuditConfigV2, SchemaMetaClusterAuditConfigV2)
 }
 
-func SetClusterNetworkingConfigV2(obj *types.ClusterNetworkingConfigV2, data *schema.ResourceData) error {
-	return accessors.Set(obj, data, SchemaClusterNetworkingConfigV2, SchemaMetaClusterNetworkingConfigV2)
+func ToTerraformClusterAuditConfigV2(obj *types.ClusterAuditConfigV2, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaClusterAuditConfigV2, SchemaMetaClusterAuditConfigV2)
 }
-func GetSessionRecordingConfigV2(obj *types.SessionRecordingConfigV2, data *schema.ResourceData) error {
-	return accessors.Get(obj, data, SchemaSessionRecordingConfigV2, SchemaMetaSessionRecordingConfigV2)
-}
-
-func SetSessionRecordingConfigV2(obj *types.SessionRecordingConfigV2, data *schema.ResourceData) error {
-	return accessors.Set(obj, data, SchemaSessionRecordingConfigV2, SchemaMetaSessionRecordingConfigV2)
-}
-func GetAuthPreferenceV2(obj *types.AuthPreferenceV2, data *schema.ResourceData) error {
-	return accessors.Get(obj, data, SchemaAuthPreferenceV2, SchemaMetaAuthPreferenceV2)
+func FromTerraformClusterNetworkingConfigV2(data *schema.ResourceData, obj *types.ClusterNetworkingConfigV2) error {
+	return accessors.FromTerraform(obj, data, SchemaClusterNetworkingConfigV2, SchemaMetaClusterNetworkingConfigV2)
 }
 
-func SetAuthPreferenceV2(obj *types.AuthPreferenceV2, data *schema.ResourceData) error {
-	return accessors.Set(obj, data, SchemaAuthPreferenceV2, SchemaMetaAuthPreferenceV2)
+func ToTerraformClusterNetworkingConfigV2(obj *types.ClusterNetworkingConfigV2, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaClusterNetworkingConfigV2, SchemaMetaClusterNetworkingConfigV2)
 }
-func GetRoleV4(obj *types.RoleV4, data *schema.ResourceData) error {
-	return accessors.Get(obj, data, SchemaRoleV4, SchemaMetaRoleV4)
-}
-
-func SetRoleV4(obj *types.RoleV4, data *schema.ResourceData) error {
-	return accessors.Set(obj, data, SchemaRoleV4, SchemaMetaRoleV4)
-}
-func GetUserV2(obj *types.UserV2, data *schema.ResourceData) error {
-	return accessors.Get(obj, data, SchemaUserV2, SchemaMetaUserV2)
+func FromTerraformSessionRecordingConfigV2(data *schema.ResourceData, obj *types.SessionRecordingConfigV2) error {
+	return accessors.FromTerraform(obj, data, SchemaSessionRecordingConfigV2, SchemaMetaSessionRecordingConfigV2)
 }
 
-func SetUserV2(obj *types.UserV2, data *schema.ResourceData) error {
-	return accessors.Set(obj, data, SchemaUserV2, SchemaMetaUserV2)
+func ToTerraformSessionRecordingConfigV2(obj *types.SessionRecordingConfigV2, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaSessionRecordingConfigV2, SchemaMetaSessionRecordingConfigV2)
 }
-func GetOIDCConnectorV2(obj *types.OIDCConnectorV2, data *schema.ResourceData) error {
-	return accessors.Get(obj, data, SchemaOIDCConnectorV2, SchemaMetaOIDCConnectorV2)
-}
-
-func SetOIDCConnectorV2(obj *types.OIDCConnectorV2, data *schema.ResourceData) error {
-	return accessors.Set(obj, data, SchemaOIDCConnectorV2, SchemaMetaOIDCConnectorV2)
-}
-func GetSAMLConnectorV2(obj *types.SAMLConnectorV2, data *schema.ResourceData) error {
-	return accessors.Get(obj, data, SchemaSAMLConnectorV2, SchemaMetaSAMLConnectorV2)
+func FromTerraformAuthPreferenceV2(data *schema.ResourceData, obj *types.AuthPreferenceV2) error {
+	return accessors.FromTerraform(obj, data, SchemaAuthPreferenceV2, SchemaMetaAuthPreferenceV2)
 }
 
-func SetSAMLConnectorV2(obj *types.SAMLConnectorV2, data *schema.ResourceData) error {
-	return accessors.Set(obj, data, SchemaSAMLConnectorV2, SchemaMetaSAMLConnectorV2)
+func ToTerraformAuthPreferenceV2(obj *types.AuthPreferenceV2, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaAuthPreferenceV2, SchemaMetaAuthPreferenceV2)
 }
-func GetGithubConnectorV3(obj *types.GithubConnectorV3, data *schema.ResourceData) error {
-	return accessors.Get(obj, data, SchemaGithubConnectorV3, SchemaMetaGithubConnectorV3)
-}
-
-func SetGithubConnectorV3(obj *types.GithubConnectorV3, data *schema.ResourceData) error {
-	return accessors.Set(obj, data, SchemaGithubConnectorV3, SchemaMetaGithubConnectorV3)
-}
-func GetTrustedClusterV2(obj *types.TrustedClusterV2, data *schema.ResourceData) error {
-	return accessors.Get(obj, data, SchemaTrustedClusterV2, SchemaMetaTrustedClusterV2)
+func FromTerraformRoleV4(data *schema.ResourceData, obj *types.RoleV4) error {
+	return accessors.FromTerraform(obj, data, SchemaRoleV4, SchemaMetaRoleV4)
 }
 
-func SetTrustedClusterV2(obj *types.TrustedClusterV2, data *schema.ResourceData) error {
-	return accessors.Set(obj, data, SchemaTrustedClusterV2, SchemaMetaTrustedClusterV2)
+func ToTerraformRoleV4(obj *types.RoleV4, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaRoleV4, SchemaMetaRoleV4)
+}
+func FromTerraformUserV2(data *schema.ResourceData, obj *types.UserV2) error {
+	return accessors.FromTerraform(obj, data, SchemaUserV2, SchemaMetaUserV2)
+}
+
+func ToTerraformUserV2(obj *types.UserV2, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaUserV2, SchemaMetaUserV2)
+}
+func FromTerraformOIDCConnectorV2(data *schema.ResourceData, obj *types.OIDCConnectorV2) error {
+	return accessors.FromTerraform(obj, data, SchemaOIDCConnectorV2, SchemaMetaOIDCConnectorV2)
+}
+
+func ToTerraformOIDCConnectorV2(obj *types.OIDCConnectorV2, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaOIDCConnectorV2, SchemaMetaOIDCConnectorV2)
+}
+func FromTerraformSAMLConnectorV2(data *schema.ResourceData, obj *types.SAMLConnectorV2) error {
+	return accessors.FromTerraform(obj, data, SchemaSAMLConnectorV2, SchemaMetaSAMLConnectorV2)
+}
+
+func ToTerraformSAMLConnectorV2(obj *types.SAMLConnectorV2, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaSAMLConnectorV2, SchemaMetaSAMLConnectorV2)
+}
+func FromTerraformGithubConnectorV3(data *schema.ResourceData, obj *types.GithubConnectorV3) error {
+	return accessors.FromTerraform(obj, data, SchemaGithubConnectorV3, SchemaMetaGithubConnectorV3)
+}
+
+func ToTerraformGithubConnectorV3(obj *types.GithubConnectorV3, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaGithubConnectorV3, SchemaMetaGithubConnectorV3)
+}
+func FromTerraformTrustedClusterV2(data *schema.ResourceData, obj *types.TrustedClusterV2) error {
+	return accessors.FromTerraform(obj, data, SchemaTrustedClusterV2, SchemaMetaTrustedClusterV2)
+}
+
+func ToTerraformTrustedClusterV2(obj *types.TrustedClusterV2, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaTrustedClusterV2, SchemaMetaTrustedClusterV2)
 }
 
 // SchemaProvisionTokenV2 returns schema for ProvisionTokenV2
@@ -3793,21 +3793,20 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Kind is a resource kind.",
 			Optional:    true,
-			Default:     "saml",
+			Computed:    true,
 		},
 		// SubKind is an optional resource sub kind, used in some resources.
 		"sub_kind": {
 			Type:        schema.TypeString,
 			Description: "SubKind is an optional resource sub kind, used in some resources.",
 			Optional:    true,
-			Default:     "",
 		},
 		// Version is a resource version.
 		"version": {
 			Type:        schema.TypeString,
 			Description: "Version is a resource version.",
 			Optional:    true,
-			Default:     "v2",
+			Computed:    true,
 		},
 		// Metadata holds resource metadata.
 		"metadata": {
@@ -3831,7 +3830,7 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
 						Optional:    true,
-						Default:     "default",
+						Computed:    true,
 					},
 					// Description is object description
 					"description": {
@@ -3925,6 +3924,7 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "EntityDescriptor is XML with descriptor. It can be used to supply configuration  parameters in one XML file rather than supplying them in the individual elements.",
 						Required:    true,
+						Sensitive:   true,
 					},
 					// EntityDescriptorURL is a URL that supplies a configuration XML.
 					"entity_descriptor_url": {
@@ -3972,7 +3972,6 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 						Description: "AsymmetricKeyPair is a combination of a public certificate and  private key that can be used for encryption and signing.",
 
 						Optional: true,
-						Computed: true,
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
 								// PrivateKey is a PEM encoded x509 private key.
@@ -3980,6 +3979,7 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Description: "PrivateKey is a PEM encoded x509 private key.",
 									Optional:    true,
+									Computed:    true,
 									Sensitive:   true,
 								},
 								// Cert is a PEM-encoded x509 certificate.
@@ -3987,6 +3987,7 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Description: "Cert is a PEM-encoded x509 certificate.",
 									Optional:    true,
+									Computed:    true,
 								},
 							},
 						},
@@ -4011,6 +4012,7 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Description: "PrivateKey is a PEM encoded x509 private key.",
 									Optional:    true,
+									Computed:    true,
 									Sensitive:   true,
 								},
 								// Cert is a PEM-encoded x509 certificate.
@@ -4018,6 +4020,7 @@ func GenSchemaSAMLConnectorV2() map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Description: "Cert is a PEM-encoded x509 certificate.",
 									Optional:    true,
+									Computed:    true,
 								},
 							},
 						},

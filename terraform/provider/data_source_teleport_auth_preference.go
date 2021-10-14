@@ -51,7 +51,7 @@ func dataSourceTeleportAuthPreferenceRead(ctx context.Context, d *schema.Resourc
 		return diagFromErr(trace.Errorf("can not convert %T to *types.AuthPreferenceV2", g))
 	}
 
-	err = tfschema.SetAuthPreferenceV2(g3, d)
+	err = tfschema.ToTerraformAuthPreferenceV2(g3, d)
 	if err != nil {
 		return diagFromErr(err)
 	}

@@ -51,7 +51,7 @@ func dataSourceTeleportSessionRecordingConfigRead(ctx context.Context, d *schema
 		return diagFromErr(trace.Errorf("can not convert %T to *types.SessionRecordingConfigV2", cfg))
 	}
 
-	err = tfschema.SetSessionRecordingConfigV2(cfg, d)
+	err = tfschema.ToTerraformSessionRecordingConfigV2(cfg, d)
 	if err != nil {
 		return diagFromErr(err)
 	}

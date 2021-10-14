@@ -53,7 +53,7 @@ func dataSourceGithubConnectorRead(ctx context.Context, d *schema.ResourceData, 
 		return diagFromErr(trace.Errorf("can not convert %T to *types.GithubConnectorV3", g))
 	}
 
-	err = tfschema.SetGithubConnectorV3(g3, d)
+	err = tfschema.ToTerraformGithubConnectorV3(g3, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
