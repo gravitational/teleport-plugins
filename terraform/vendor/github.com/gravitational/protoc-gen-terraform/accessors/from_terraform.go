@@ -51,21 +51,6 @@ func FromTerraform(
 	return getFragment("", value, meta, sch, data)
 }
 
-// GetLen returns TypeSet or TypeList value length
-func GetLen(path string, data *schema.ResourceData) (int, error) {
-	num, ok := data.GetOk(path + ".#") // Terraform stores collection length in "collection_name.#" key
-	if !ok || num == nil {
-		return 0, nil
-	}
-
-	len, ok := num.(int)
-	if !ok {
-		return 0, trace.Errorf("failed to convert list count to number %s", path)
-	}
-
-	return len, nil
-}
-
 // getFragment iterates over a schema fragment and calls appropriate getters for a fields of passed target.
 // Target must point to a struct.
 func getFragment(
@@ -88,8 +73,8 @@ func getFragment(
 
 		fieldPath := path + key
 
-		if fieldMeta.Getter != nil {
-			err := fieldMeta.Getter(fieldPath, fieldValue, fieldMeta, fieldSchema, data)
+		if fieldMeta.FromTerraform != nil {
+			err := fieldMeta.FromTerraform(fieldPath, fieldValue, fieldMeta, fieldSchema, data)
 			if err != nil {
 				return trace.Wrap(err)
 			}
@@ -223,7 +208,7 @@ func assignDuration(source interface{}, target reflect.Value) error {
 
 // setList gets list from ResourceData
 func getList(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
-	len, err := GetLen(path, data)
+	len, err := GetListLen(path, data)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -296,7 +281,7 @@ func getMap(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Sch
 
 // setSet reads set from resource data
 func getSet(path string, target reflect.Value, meta *SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
-	len, err := GetLen(path, data)
+	len, err := GetListLen(path, data)
 	if err != nil {
 		return trace.Wrap(err)
 	}

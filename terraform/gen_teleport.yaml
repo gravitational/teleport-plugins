@@ -8,47 +8,89 @@ use_json_tag: true
 
 # Top-level type names to export
 types:
-    - "types.UserV2"
-    - "types.RoleV4"
-    - "types.ProvisionTokenV2"    
-    - "types.GithubConnectorV3"
-    - "types.SAMLConnectorV2"
-    - "types.OIDCConnectorV2"
-    - "types.TrustedClusterV2"
     - "types.AuthPreferenceV2"
-    - "types.ClusterNetworkingConfigV2"
-    - "types.SessionRecordingConfigV2"
     - "types.ClusterAuditConfigV2"
+    - "types.ClusterNetworkingConfigV2"
+    - "types.GithubConnectorV3"
+    - "types.OIDCConnectorV2"
+    - "types.ProvisionTokenV2"    
+    - "types.RoleV4"
+    - "types.SAMLConnectorV2"
+    - "types.SessionRecordingConfigV2"
+    - "types.TrustedClusterV2"
+    - "types.UserV2"
 
 # These fields will be excluded
 exclude_fields:
     # Metadata (we id resources by name on our side)
     - "types.Metadata.ID"
-    
+
+    # AuthPreference
+    - "types.AuthPreferenceV2.Metadata.Name" # It's a signleton resource
+
+    # ClusterAuditConfig
+    - "types.ClusterAuditConfigV2.Metadata.Name" # It's a signleton resource
+
+    # NetworkingConfig
+    - "types.ClusterNetworkingConfigV2.Metadata.Name" # It's a signleton resource
+
+    # Role
+    - "types.RoleV4.Spec.Allow.Namespaces" # These fields are not settable via API
+    - "types.RoleV4.Spec.Deny.Namespaces"
+
+    # SessionRecordingConfig
+    - "types.SessionRecordingConfigV2.Metadata.Name" # It's a signleton resource
+
     # User
     - "types.UserSpecV2.LocalAuth" # We do not need to set user auth data
     - "types.UserSpecV2.Expires"   # Those fields are Teleport side meta, we do not need to change them via Terraform
     - "types.UserSpecV2.CreatedBy"
     - "types.UserSpecV2.Status"
 
-    # Role
-    - "types.RoleV4.Spec.Allow.Namespaces" # These fields are not settable via API
-    - "types.RoleV4.Spec.Deny.Namespaces"
-
-    # AuthPreference
-    - "types.AuthPreferenceV2.Metadata.Name" # It's a signleton resource
-
-    # NetworkingConfig
-    - "types.ClusterNetworkingConfigV2.Metadata.Name" # It's a signleton resource
-
-    # SessionRecordingConfig
-    - "types.SessionRecordingConfigV2.Metadata.Name" # It's a signleton resource
-
-    # ClusterAuditConfig
-    - "types.ClusterAuditConfigV2.Metadata.Name" # It's a signleton resource
-
 # These fields will be marked as Computed: true
 computed_fields:
+    # Auth preference
+    - "types.AuthPreferenceV2.Version"
+    - "types.AuthPreferenceV2.Kind"
+    - "types.AuthPreferenceV2.Spec.SecondFactor"
+    - "types.AuthPreferenceV2.Spec.Type"
+    - "types.AuthPreferenceV2.Spec.LockingMode"
+    - "types.AuthPreferenceV2.Metadata.Namespace"
+
+    # Audit config
+    - "types.ClusterAuditConfigV2.Version"
+    - "types.ClusterAuditConfigV2.Kind"
+    - "types.ClusterAuditConfigV2.Metadata.Namespace"
+
+    # Networking config
+    - "types.ClusterNetworkingConfigV2.Version"
+    - "types.ClusterNetworkingConfigV2.Kind"
+    - "types.ClusterNetworkingConfigV2.Metadata.Namespace"    
+    - "types.ClusterNetworkingConfigV2.Spec.KeepAliveCountMax"
+    - "types.ClusterNetworkingConfigV2.Spec.KeepAliveInterval"
+
+    # GitHub connector
+    - "types.GithubConnectorV3.Kind"
+    - "types.GithubConnectorV3.Version"
+    - "types.GithubConnectorV3.Metadata.Namespace"
+
+    # OIDC connector
+    - "types.OIDCConnectorV2.Version"
+    - "types.OIDCConnectorV2.Kind"
+    - "types.OIDCConnectorV2.Metadata.Namespace"
+
+    # Provision Token
+    - "types.ProvisionTokenV2.Kind"
+    - "types.ProvisionTokenV2.Version"
+    - "types.ProvisionTokenV2.Metadata.Namespace"
+
+    # Role
+    - "types.RoleV4.Kind"
+    - "types.RoleV4.Version"
+    - "types.RoleV4.Metadata.Namespace"
+    - "types.RoleV4.Spec.Options.MaxSessionTTL"
+    - "types.RoleV4.Spec.Options.CertificateFormat"
+
     # SAML connector
     - "types.SAMLConnectorV2.Kind"
     - "types.SAMLConnectorV2.Version"
@@ -63,23 +105,36 @@ computed_fields:
     - "types.SAMLConnectorV2.Spec.EncryptionKeyPair.PrivateKey"
     - "types.SAMLConnectorV2.Spec.EncryptionKeyPair.Cert"
 
+    # Session recording
+    - "types.SessionRecordingConfigV2.Version"
+    - "types.SessionRecordingConfigV2.Kind"
+    - "types.SessionRecordingConfigV2.Spec.Mode"
+    - "types.SessionRecordingConfigV2.Metadata.Namespace"
+
+    # Trusted cluster
+    - "types.TrustedClusterV2.Version"
+    - "types.TrustedClusterV2.Kind"
+    - "types.TrustedClusterV2.Spec.Mode"
+    - "types.TrustedClusterV2.Metadata.Namespace"
+
+    # User
+    - "types.UserV2.Kind"
+    - "types.UserV2.Version"
+    - "types.UserV2.Metadata.Namespace"
+
 # These fields will be marked as Required: true 
 required_fields:
     # Metadata
     - "types.Metadata.Name"
 
-    # Role
-    - "types.RoleV4.Spec"
-    
-    # Provision token
-    - "types.ProvisionTokenV2.Spec"
-    # This field is required because it is non-empty by default. It can't be Computed because in this case
-    # user would not be able to reset all nested fields to default values. If user sets an empty Computed field
-    # to nil value, it keeps it's last value in the state and never gets reset to default value or deleted. 
-    # So, it's a workaround.
-    - "types.ProvisionTokenV2.Spec.Options"
-    - "types.ProvisionTokenV2.Spec.Roles"
-    - "types.ProvisionTokenV2.Metadata.Expires"
+    # Auth preference
+    - "types.AuthPreferenceV2.Spec"
+
+    # Audit config
+    - "types.ClusterAuditConfigV2.Spec"
+
+    # Networking config
+    - "types.ClusterNetworkingConfigV2.Spec"
 
     # Github connector
     - "types.GithubConnectorV3.Spec"
@@ -89,100 +144,36 @@ required_fields:
     - "types.GithubConnectorV3.Spec.TeamsToLogins.Team"
     - "types.GithubConnectorV3.Spec.TeamsToLogins.Logins"
 
+    # OIDC connector
+    - "types.OIDCConnectorV2.Spec"
+
+    # Provision token
+    - "types.ProvisionTokenV2.Spec"
+    - "types.ProvisionTokenV2.Spec.Roles"
+    - "types.ProvisionTokenV2.Metadata.Expires"
+
+    # Role
+    - "types.RoleV4.Spec"
+
     # SAML connector
     - "types.SAMLConnectorV2.Spec"
     - "types.SAMLConnectorV2.Spec.AssertionConsumerService"
     - "types.SAMLConnectorV2.Spec.EntityDescriptor"
     - "types.SAMLConnectorV2.Spec.AttributesToRoles"
 
-    # OIDC connector
-    - "types.OIDCConnectorV2.Spec"
+    # SAML connector
+    - "types.SessionRecordingConfigV2.Spec"
 
-    # Auth preference
-    - "types.AuthPreferenceV2.Spec"
+    # SAML connector
+    - "types.TrustedClusterV2.Spec"
+
+    # User
+    - "types.UserV2.Spec"
+
 
 # These fields will be marked as ForceNew: true
 force_new_fields:
     - "types.Metadata.Name" # We need to recreate object if it's name is changed
-
-# Field default values
-defaults:
-    # User
-    "types.UserV2.Version": "v2"
-    "types.UserV2.Kind": "user"
-    "types.UserV2.SubKind": ""
-    "types.UserV2.Metadata.Namespace": "default"
-
-    # Role
-    "types.RoleV4.Version": "v4"
-    "types.RoleV4.Kind": "role"
-    "types.RoleV4.SubKind": ""
-    "types.RoleV4.Metadata.Namespace": "default"
-    "types.RoleV4.Spec.Options.MaxSessionTTL": "30h"
-    "types.RoleV4.Spec.Options.CertificateFormat": "standard"
-    "types.RoleV4.Spec.Allow.ReviewRequests.Where": ""
-    "types.RoleV4.Spec.Deny.ReviewRequests.Where": ""
-    "types.RoleV4.Spec.Allow.Rules.Where": ""
-    "types.RoleV4.Spec.Deny.Rules.Where": ""
-
-    # Provision token
-    "types.ProvisionTokenV2.Version": "v2"
-    "types.ProvisionTokenV2.Kind": "token"
-    "types.ProvisionTokenV2.SubKind": ""
-    "types.ProvisionTokenV2.Metadata.Namespace": "default"
-
-    # Github connector
-    "types.GithubConnectorV3.Version": "v3"
-    "types.GithubConnectorV3.Kind": "github"
-    "types.GithubConnectorV3.SubKind": ""
-    "types.GithubConnectorV3.Metadata.Namespace": "default"
-
-    # SAML connector
-    # "types.SAMLConnectorV2.Version": "v2"
-    # "types.SAMLConnectorV2.Kind": "saml"
-    # "types.SAMLConnectorV2.SubKind": ""
-
-    # OIDC connector
-    "types.OIDCConnectorV2.Version": "v2"
-    "types.OIDCConnectorV2.Kind": "oidc"
-    "types.OIDCConnectorV2.SubKind": ""
-    "types.OIDCConnectorV2.Metadata.Namespace": "default"
-
-    # Trusted cluster
-    "types.TrustedClusterV2.Version": "v2"
-    "types.TrustedClusterV2.Kind": "trusted_cluster"
-    "types.TrustedClusterV2.SubKind": ""
-    "types.TrustedClusterV2.Metadata.Namespace": "default"
-
-    # Auth preference
-    "types.AuthPreferenceV2.Version": "v2"
-    "types.AuthPreferenceV2.Kind": "cluster_auth_preference"
-    "types.AuthPreferenceV2.SubKind": ""
-    "types.AuthPreferenceV2.Spec.SecondFactor": "otp"
-    "types.AuthPreferenceV2.Spec.Type": "local"
-    "types.AuthPreferenceV2.Spec.LockingMode": "best_effort"
-    "types.AuthPreferenceV2.Metadata.Namespace": "default"
-
-    # Cluster networking config
-    "types.ClusterNetworkingConfigV2.Version": "v2"
-    "types.ClusterNetworkingConfigV2.Kind": "cluster_networking_config"
-    "types.ClusterNetworkingConfigV2.SubKind": ""
-    "types.ClusterNetworkingConfigV2.Spec.KeepAliveCountMax": 3
-    "types.ClusterNetworkingConfigV2.Spec.KeepAliveInterval": "5m0s"
-    "types.ClusterNetworkingConfigV2.Metadata.Namespace": "default"
-
-    # Session recording config
-    "types.SessionRecordingConfigV2.Version": "v2"
-    "types.SessionRecordingConfigV2.Kind": "session_recording_config"
-    "types.SessionRecordingConfigV2.SubKind": ""
-    "types.SessionRecordingConfigV2.Spec.Mode": "node"
-    "types.SessionRecordingConfigV2.Metadata.Namespace": "default"
-
-    # Cluster audit config
-    "types.ClusterAuditConfigV2.Version": "v2"
-    "types.ClusterAuditConfigV2.Kind": "cluster_audit_config"
-    "types.ClusterAuditConfigV2.SubKind": ""
-    "types.ClusterAuditConfigV2.Metadata.Namespace": "default"
 
 # These suffixes for custom methods called when field has custom_type flag. By default they might be weird.
 suffixes:

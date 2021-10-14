@@ -19,7 +19,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	"github.com/gravitational/trace"
@@ -88,12 +87,6 @@ func resourceRoleCreate(ctx context.Context, d *schema.ResourceData, m interface
 		return diagFromErr(err)
 	}
 
-	removeMapAndListDefaults(&r)
-	err = checkOptionsProvided(d)
-	if err != nil {
-		return diagFromErr(err)
-	}
-
 	err = c.UpsertRole(ctx, &r)
 	if err != nil {
 		return diagFromErr(err)
@@ -143,8 +136,6 @@ func resourceRoleUpdate(ctx context.Context, d *schema.ResourceData, m interface
 		return diag.Diagnostics{}
 	}
 
-	removeMapAndListDefaults(r)
-
 	err = tfschema.FromTerraformRoleV4(d, r)
 	if err != nil {
 		return diagFromErr(err)
@@ -193,40 +184,5 @@ func getRole(ctx context.Context, d *schema.ResourceData, c *client.Client) (*ty
 		return nil, fmt.Errorf("failed to convert created user to types.RoleV4 from %T", r)
 	}
 
-	removeMapAndListDefaults(r3)
-
 	return r3, nil
-}
-
-// removeMapAndListDefaults removes invalid default items
-func removeMapAndListDefaults(r *types.RoleV4) {
-	removeDefaultLabel(r.Spec.Allow.AppLabels)
-	removeDefaultLabel(r.Spec.Allow.DatabaseLabels)
-	removeDefaultLabel(r.Spec.Allow.NodeLabels)
-	removeDefaultLabel(r.Spec.Allow.KubernetesLabels)
-
-	if reflect.DeepEqual(r.Spec.Options.BPF, defaultBPF) {
-		r.Spec.Options.BPF = []string{}
-	}
-}
-
-// removeDefaultLabel removes label "*":"*" which is mistakenly assigned on Teleport side
-func removeDefaultLabel(l types.Labels) {
-	v := types.Labels{
-		"*": []string{"*"},
-	}
-
-	if reflect.DeepEqual(l, v) {
-		delete(l, "*")
-	}
-}
-
-// spec.0.options must be provided even it's empty
-func checkOptionsProvided(d *schema.ResourceData) error {
-	_, ok := d.GetOk("spec.0.options")
-	if !ok {
-		return trace.Errorf("You must provide spec.options for Role. If there are no options you need to specify, leave it empty: options { }")
-	}
-
-	return nil
 }

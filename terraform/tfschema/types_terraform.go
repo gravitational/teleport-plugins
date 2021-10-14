@@ -188,21 +188,20 @@ func GenSchemaProvisionTokenV2() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Kind is a resource kind",
 			Optional:    true,
-			Default:     "token",
+			Computed:    true,
 		},
 		// SubKind is an optional resource sub kind, used in some resources
 		"sub_kind": {
 			Type:        schema.TypeString,
 			Description: "SubKind is an optional resource sub kind, used in some resources",
 			Optional:    true,
-			Default:     "",
 		},
 		// Version is version
 		"version": {
 			Type:        schema.TypeString,
 			Description: "Version is version",
 			Optional:    true,
-			Default:     "v2",
+			Computed:    true,
 		},
 		// Metadata is resource metadata
 		"metadata": {
@@ -227,7 +226,7 @@ func GenSchemaProvisionTokenV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
 						Optional:    true,
-						Default:     "default",
+						Computed:    true,
 					},
 					// Description is object description
 					"description": {
@@ -376,21 +375,20 @@ func GenSchemaClusterAuditConfigV2() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Kind is a resource kind",
 			Optional:    true,
-			Default:     "cluster_audit_config",
+			Computed:    true,
 		},
 		// SubKind is an optional resource sub kind, used in some resources
 		"sub_kind": {
 			Type:        schema.TypeString,
 			Description: "SubKind is an optional resource sub kind, used in some resources",
 			Optional:    true,
-			Default:     "",
 		},
 		// Version is a resource version
 		"version": {
 			Type:        schema.TypeString,
 			Description: "Version is a resource version",
 			Optional:    true,
-			Default:     "v2",
+			Computed:    true,
 		},
 		// Metadata is resource metadata
 		"metadata": {
@@ -407,7 +405,7 @@ func GenSchemaClusterAuditConfigV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
 						Optional:    true,
-						Default:     "default",
+						Computed:    true,
 					},
 					// Description is object description
 					"description": {
@@ -443,7 +441,7 @@ func GenSchemaClusterAuditConfigV2() map[string]*schema.Schema {
 			MaxItems:    1,
 			Description: "ClusterAuditConfigSpecV2 is the actual data we care about  for ClusterAuditConfig.",
 
-			Optional: true,
+			Required: true,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					// Type is audit backend type
@@ -605,11 +603,11 @@ func GenSchemaMetaClusterAuditConfigV2() map[string]*accessors.SchemaMeta {
 				// AuditEventsURI is a parameter with all supported outputs
 				// for audit events
 				"audit_events_uri": {
-					Name:       "AuditEventsURI",
-					IsTime:     false,
-					IsDuration: false,
-					Getter:     GetStrings,
-					Setter:     SetStrings,
+					Name:          "AuditEventsURI",
+					IsTime:        false,
+					IsDuration:    false,
+					FromTerraform: FromTerraformStrings,
+					ToTerraform:   ToTerraformStrings,
 				},
 				// EnableContinuousBackups is used to enable (or disable) PITR (Point-In-Time Recovery).
 				"continuous_backups": {
@@ -674,21 +672,20 @@ func GenSchemaClusterNetworkingConfigV2() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Kind is a resource kind",
 			Optional:    true,
-			Default:     "cluster_networking_config",
+			Computed:    true,
 		},
 		// SubKind is an optional resource sub kind, used in some resources
 		"sub_kind": {
 			Type:        schema.TypeString,
 			Description: "SubKind is an optional resource sub kind, used in some resources",
 			Optional:    true,
-			Default:     "",
 		},
 		// Version is a resource version
 		"version": {
 			Type:        schema.TypeString,
 			Description: "Version is a resource version",
 			Optional:    true,
-			Default:     "v2",
+			Computed:    true,
 		},
 		// Metadata is resource metadata
 		"metadata": {
@@ -705,7 +702,7 @@ func GenSchemaClusterNetworkingConfigV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
 						Optional:    true,
-						Default:     "default",
+						Computed:    true,
 					},
 					// Description is object description
 					"description": {
@@ -741,7 +738,7 @@ func GenSchemaClusterNetworkingConfigV2() map[string]*schema.Schema {
 			MaxItems:    1,
 			Description: "ClusterNetworkingConfigSpecV2 is the actual data we care about  for ClusterNetworkingConfig.",
 
-			Optional: true,
+			Required: true,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					// ClientIdleTimeout sets global cluster default setting for client idle
@@ -759,7 +756,7 @@ func GenSchemaClusterNetworkingConfigV2() map[string]*schema.Schema {
 						Description:      "KeepAliveInterval is the interval at which the server sends keep-alive messsages  to the client.",
 						DiffSuppressFunc: SuppressDurationChange,
 						Optional:         true,
-						Default:          "5m0s",
+						Computed:         true,
 					},
 					// KeepAliveCountMax is the number of keep-alive messages that can be
 					// missed before the server disconnects the connection to the client.
@@ -767,7 +764,7 @@ func GenSchemaClusterNetworkingConfigV2() map[string]*schema.Schema {
 						Type:        schema.TypeInt,
 						Description: "KeepAliveCountMax is the number of keep-alive messages that can be  missed before the server disconnects the connection to the client.",
 						Optional:    true,
-						Default:     3,
+						Computed:    true,
 					},
 					// SessionControlTimeout is the session control lease expiry and defines
 					// the upper limit of how long a node may be out of contact with the auth
@@ -918,21 +915,20 @@ func GenSchemaSessionRecordingConfigV2() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Kind is a resource kind",
 			Optional:    true,
-			Default:     "session_recording_config",
+			Computed:    true,
 		},
 		// SubKind is an optional resource sub kind, used in some resources
 		"sub_kind": {
 			Type:        schema.TypeString,
 			Description: "SubKind is an optional resource sub kind, used in some resources",
 			Optional:    true,
-			Default:     "",
 		},
 		// Version is a resource version
 		"version": {
 			Type:        schema.TypeString,
 			Description: "Version is a resource version",
 			Optional:    true,
-			Default:     "v2",
+			Computed:    true,
 		},
 		// Metadata is resource metadata
 		"metadata": {
@@ -949,7 +945,7 @@ func GenSchemaSessionRecordingConfigV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
 						Optional:    true,
-						Default:     "default",
+						Computed:    true,
 					},
 					// Description is object description
 					"description": {
@@ -985,7 +981,7 @@ func GenSchemaSessionRecordingConfigV2() map[string]*schema.Schema {
 			MaxItems:    1,
 			Description: "SessionRecordingConfigSpecV2 is the actual data we care about  for SessionRecordingConfig.",
 
-			Optional: true,
+			Required: true,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					// Mode controls where (or if) the session is recorded.
@@ -993,7 +989,7 @@ func GenSchemaSessionRecordingConfigV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Mode controls where (or if) the session is recorded.",
 						Optional:    true,
-						Default:     "node",
+						Computed:    true,
 					},
 					// ProxyChecksHostKeys is used to control if the proxy will check host keys
 					// when in recording mode.
@@ -1076,11 +1072,11 @@ func GenSchemaMetaSessionRecordingConfigV2() map[string]*accessors.SchemaMeta {
 				// ProxyChecksHostKeys is used to control if the proxy will check host keys
 				// when in recording mode.
 				"proxy_checks_host_keys": {
-					Name:       "ProxyChecksHostKeys",
-					IsTime:     false,
-					IsDuration: false,
-					Getter:     GetBoolOption,
-					Setter:     SetBoolOption,
+					Name:          "ProxyChecksHostKeys",
+					IsTime:        false,
+					IsDuration:    false,
+					FromTerraform: FromTerraformBoolOption,
+					ToTerraform:   ToTerraformBoolOption,
 				},
 			},
 		},
@@ -1097,21 +1093,20 @@ func GenSchemaAuthPreferenceV2() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Kind is a resource kind",
 			Optional:    true,
-			Default:     "cluster_auth_preference",
+			Computed:    true,
 		},
 		// SubKind is an optional resource sub kind, used in some resources
 		"sub_kind": {
 			Type:        schema.TypeString,
 			Description: "SubKind is an optional resource sub kind, used in some resources",
 			Optional:    true,
-			Default:     "",
 		},
 		// Version is a resource version
 		"version": {
 			Type:        schema.TypeString,
 			Description: "Version is a resource version",
 			Optional:    true,
-			Default:     "v2",
+			Computed:    true,
 		},
 		// Metadata is resource metadata
 		"metadata": {
@@ -1128,7 +1123,7 @@ func GenSchemaAuthPreferenceV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
 						Optional:    true,
-						Default:     "default",
+						Computed:    true,
 					},
 					// Description is object description
 					"description": {
@@ -1172,14 +1167,14 @@ func GenSchemaAuthPreferenceV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Type is the type of authentication.",
 						Optional:    true,
-						Default:     "local",
+						Computed:    true,
 					},
 					// SecondFactor is the type of second factor.
 					"second_factor": {
 						Type:        schema.TypeString,
 						Description: "SecondFactor is the type of second factor.",
 						Optional:    true,
-						Default:     "otp",
+						Computed:    true,
 					},
 					// ConnectorName is the name of the OIDC or SAML connector. If this value is
 					// not set the first connector in the backend will be used.
@@ -1250,7 +1245,7 @@ func GenSchemaAuthPreferenceV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "LockingMode is the cluster-wide locking mode default.",
 						Optional:    true,
-						Default:     "best_effort",
+						Computed:    true,
 					},
 				},
 			},
@@ -1377,19 +1372,19 @@ func GenSchemaMetaAuthPreferenceV2() map[string]*accessors.SchemaMeta {
 				// DisconnectExpiredCert provides disconnect expired certificate setting -
 				// if true, connections with expired client certificates will get disconnected
 				"disconnect_expired_cert": {
-					Name:       "DisconnectExpiredCert",
-					IsTime:     false,
-					IsDuration: false,
-					Getter:     GetBoolOption,
-					Setter:     SetBoolOption,
+					Name:          "DisconnectExpiredCert",
+					IsTime:        false,
+					IsDuration:    false,
+					FromTerraform: FromTerraformBoolOption,
+					ToTerraform:   ToTerraformBoolOption,
 				},
 				// AllowLocalAuth is true if local authentication is enabled.
 				"allow_local_auth": {
-					Name:       "AllowLocalAuth",
-					IsTime:     false,
-					IsDuration: false,
-					Getter:     GetBoolOption,
-					Setter:     SetBoolOption,
+					Name:          "AllowLocalAuth",
+					IsTime:        false,
+					IsDuration:    false,
+					FromTerraform: FromTerraformBoolOption,
+					ToTerraform:   ToTerraformBoolOption,
 				},
 
 				"message_of_the_day": {
@@ -1418,21 +1413,20 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Kind is a resource kind",
 			Optional:    true,
-			Default:     "role",
+			Computed:    true,
 		},
 		// SubKind is an optional resource sub kind, used in some resources
 		"sub_kind": {
 			Type:        schema.TypeString,
 			Description: "SubKind is an optional resource sub kind, used in some resources",
 			Optional:    true,
-			Default:     "",
 		},
 		// Version is version
 		"version": {
 			Type:        schema.TypeString,
 			Description: "Version is version",
 			Optional:    true,
-			Default:     "v4",
+			Computed:    true,
 		},
 		// Metadata is resource metadata
 		"metadata": {
@@ -1456,7 +1450,7 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
 						Optional:    true,
-						Default:     "default",
+						Computed:    true,
 					},
 					// Description is object description
 					"description": {
@@ -1516,7 +1510,7 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 									Description:      "MaxSessionTTL defines how long a SSH session can last for.",
 									DiffSuppressFunc: SuppressDurationChange,
 									Optional:         true,
-									Default:          "30h",
+									Computed:         true,
 								},
 								// PortForwarding defines if the certificate will have
 								// "permit-port-forwarding"
@@ -1529,7 +1523,7 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Description: "CertificateFormat defines the format of the user certificate to allow  compatibility with older versions of OpenSSH.",
 									Optional:    true,
-									Default:     "standard",
+									Computed:    true,
 								},
 								// ClientIdleTimeout sets disconnect clients on idle timeout behavior,
 								// if set to 0 means do not disconnect, otherwise is set to the idle
@@ -1662,7 +1656,6 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 												Type:        schema.TypeString,
 												Description: "Where specifies optional advanced matcher",
 												Optional:    true,
-												Default:     "",
 											},
 											// Actions specifies optional actions taken when this rule matches
 											"actions": {
@@ -1936,7 +1929,6 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 												Type:        schema.TypeString,
 												Description: "Where is an optional predicate which further limits which requests are  reviewable.",
 												Optional:    true,
-												Default:     "",
 											},
 										},
 									},
@@ -2011,7 +2003,6 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 												Type:        schema.TypeString,
 												Description: "Where specifies optional advanced matcher",
 												Optional:    true,
-												Default:     "",
 											},
 											// Actions specifies optional actions taken when this rule matches
 											"actions": {
@@ -2285,7 +2276,6 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 												Type:        schema.TypeString,
 												Description: "Where is an optional predicate which further limits which requests are  reviewable.",
 												Optional:    true,
-												Default:     "",
 											},
 										},
 									},
@@ -2401,11 +2391,11 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 						// in the certificate. PortForwarding is "yes" if not set,
 						// that's why this is a pointer
 						"port_forwarding": {
-							Name:       "PortForwarding",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetBoolOption,
-							Setter:     SetBoolOption,
+							Name:          "PortForwarding",
+							IsTime:        false,
+							IsDuration:    false,
+							FromTerraform: FromTerraformBoolOption,
+							ToTerraform:   ToTerraformBoolOption,
 						},
 						// CertificateFormat defines the format of the user certificate to allow
 						// compatibility with older versions of OpenSSH.
@@ -2498,11 +2488,11 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 						// NodeLabels is a map of node labels (used to dynamically grant access to
 						// nodes).
 						"node_labels": {
-							Name:       "NodeLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
+							Name:          "NodeLabels",
+							IsTime:        false,
+							IsDuration:    false,
+							FromTerraform: FromTerraformLabels,
+							ToTerraform:   ToTerraformLabels,
 						},
 						// Rules is a list of rules and their access levels. Rules are a high level
 						// construct used for access control.
@@ -2589,11 +2579,11 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 								// external identity provider, to a plugin via `{{external.trait_name}}`
 								// style substitutions.
 								"annotations": {
-									Name:       "Annotations",
-									IsTime:     false,
-									IsDuration: false,
-									Getter:     GetTraits,
-									Setter:     SetTraits,
+									Name:          "Annotations",
+									IsTime:        false,
+									IsDuration:    false,
+									FromTerraform: FromTerraformTraits,
+									ToTerraform:   ToTerraformTraits,
 								},
 								// Thresholds is a list of thresholds, one of which must be met in order for reviews
 								// to trigger a state-transition.  If no thresholds are provided, a default threshold
@@ -2647,36 +2637,36 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 						},
 						// AppLabels is a map of labels used as part of the RBAC system.
 						"app_labels": {
-							Name:       "AppLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
+							Name:          "AppLabels",
+							IsTime:        false,
+							IsDuration:    false,
+							FromTerraform: FromTerraformLabels,
+							ToTerraform:   ToTerraformLabels,
 						},
 						// ClusterLabels is a map of node labels (used to dynamically grant access to
 						// clusters).
 						"cluster_labels": {
-							Name:       "ClusterLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
+							Name:          "ClusterLabels",
+							IsTime:        false,
+							IsDuration:    false,
+							FromTerraform: FromTerraformLabels,
+							ToTerraform:   ToTerraformLabels,
 						},
 						// KubernetesLabels is a map of kubernetes cluster labels used for RBAC.
 						"kubernetes_labels": {
-							Name:       "KubernetesLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
+							Name:          "KubernetesLabels",
+							IsTime:        false,
+							IsDuration:    false,
+							FromTerraform: FromTerraformLabels,
+							ToTerraform:   ToTerraformLabels,
 						},
 						// DatabaseLabels are used in RBAC system to allow/deny access to databases.
 						"db_labels": {
-							Name:       "DatabaseLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
+							Name:          "DatabaseLabels",
+							IsTime:        false,
+							IsDuration:    false,
+							FromTerraform: FromTerraformLabels,
+							ToTerraform:   ToTerraformLabels,
 						},
 						// DatabaseNames is a list of database names this role is allowed to connect to.
 						"db_names": {
@@ -2789,11 +2779,11 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 						// NodeLabels is a map of node labels (used to dynamically grant access to
 						// nodes).
 						"node_labels": {
-							Name:       "NodeLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
+							Name:          "NodeLabels",
+							IsTime:        false,
+							IsDuration:    false,
+							FromTerraform: FromTerraformLabels,
+							ToTerraform:   ToTerraformLabels,
 						},
 						// Rules is a list of rules and their access levels. Rules are a high level
 						// construct used for access control.
@@ -2880,11 +2870,11 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 								// external identity provider, to a plugin via `{{external.trait_name}}`
 								// style substitutions.
 								"annotations": {
-									Name:       "Annotations",
-									IsTime:     false,
-									IsDuration: false,
-									Getter:     GetTraits,
-									Setter:     SetTraits,
+									Name:          "Annotations",
+									IsTime:        false,
+									IsDuration:    false,
+									FromTerraform: FromTerraformTraits,
+									ToTerraform:   ToTerraformTraits,
 								},
 								// Thresholds is a list of thresholds, one of which must be met in order for reviews
 								// to trigger a state-transition.  If no thresholds are provided, a default threshold
@@ -2938,36 +2928,36 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 						},
 						// AppLabels is a map of labels used as part of the RBAC system.
 						"app_labels": {
-							Name:       "AppLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
+							Name:          "AppLabels",
+							IsTime:        false,
+							IsDuration:    false,
+							FromTerraform: FromTerraformLabels,
+							ToTerraform:   ToTerraformLabels,
 						},
 						// ClusterLabels is a map of node labels (used to dynamically grant access to
 						// clusters).
 						"cluster_labels": {
-							Name:       "ClusterLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
+							Name:          "ClusterLabels",
+							IsTime:        false,
+							IsDuration:    false,
+							FromTerraform: FromTerraformLabels,
+							ToTerraform:   ToTerraformLabels,
 						},
 						// KubernetesLabels is a map of kubernetes cluster labels used for RBAC.
 						"kubernetes_labels": {
-							Name:       "KubernetesLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
+							Name:          "KubernetesLabels",
+							IsTime:        false,
+							IsDuration:    false,
+							FromTerraform: FromTerraformLabels,
+							ToTerraform:   ToTerraformLabels,
 						},
 						// DatabaseLabels are used in RBAC system to allow/deny access to databases.
 						"db_labels": {
-							Name:       "DatabaseLabels",
-							IsTime:     false,
-							IsDuration: false,
-							Getter:     GetLabels,
-							Setter:     SetLabels,
+							Name:          "DatabaseLabels",
+							IsTime:        false,
+							IsDuration:    false,
+							FromTerraform: FromTerraformLabels,
+							ToTerraform:   ToTerraformLabels,
 						},
 						// DatabaseNames is a list of database names this role is allowed to connect to.
 						"db_names": {
@@ -3079,21 +3069,20 @@ func GenSchemaUserV2() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Kind is a resource kind",
 			Optional:    true,
-			Default:     "user",
+			Computed:    true,
 		},
 		// SubKind is an optional resource sub kind, used in some resources
 		"sub_kind": {
 			Type:        schema.TypeString,
 			Description: "SubKind is an optional resource sub kind, used in some resources",
 			Optional:    true,
-			Default:     "",
 		},
 		// Version is version
 		"version": {
 			Type:        schema.TypeString,
 			Description: "Version is version",
 			Optional:    true,
-			Default:     "v2",
+			Computed:    true,
 		},
 		// Metadata is resource metadata
 		"metadata": {
@@ -3117,7 +3106,7 @@ func GenSchemaUserV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
 						Optional:    true,
-						Default:     "default",
+						Computed:    true,
 					},
 					// Description is object description
 					"description": {
@@ -3153,7 +3142,7 @@ func GenSchemaUserV2() map[string]*schema.Schema {
 			MaxItems:    1,
 			Description: "UserSpecV2 is a specification for V2 user",
 
-			Optional: true,
+			Required: true,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					// OIDCIdentities lists associated OpenID Connect identities
@@ -3390,11 +3379,11 @@ func GenSchemaMetaUserV2() map[string]*accessors.SchemaMeta {
 				// OIDC claims or SAML assertions) or from a system administrator for local
 				// accounts. Traits are used to populate role variables.
 				"traits": {
-					Name:       "Traits",
-					IsTime:     false,
-					IsDuration: false,
-					Getter:     GetTraits,
-					Setter:     SetTraits,
+					Name:          "Traits",
+					IsTime:        false,
+					IsDuration:    false,
+					FromTerraform: FromTerraformTraits,
+					ToTerraform:   ToTerraformTraits,
 				},
 			},
 		},
@@ -3411,21 +3400,20 @@ func GenSchemaOIDCConnectorV2() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Kind is a resource kind.",
 			Optional:    true,
-			Default:     "oidc",
+			Computed:    true,
 		},
 		// SubKind is an optional resource sub kind, used in some resources.
 		"sub_kind": {
 			Type:        schema.TypeString,
 			Description: "SubKind is an optional resource sub kind, used in some resources.",
 			Optional:    true,
-			Default:     "",
 		},
 		// Version is a resource version.
 		"version": {
 			Type:        schema.TypeString,
 			Description: "Version is a resource version.",
 			Optional:    true,
-			Default:     "v2",
+			Computed:    true,
 		},
 		// Metadata holds resource metadata.
 		"metadata": {
@@ -3449,7 +3437,7 @@ func GenSchemaOIDCConnectorV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
 						Optional:    true,
-						Default:     "default",
+						Computed:    true,
 					},
 					// Description is object description
 					"description": {
@@ -4244,21 +4232,20 @@ func GenSchemaGithubConnectorV3() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Kind is a resource kind.",
 			Optional:    true,
-			Default:     "github",
+			Computed:    true,
 		},
 		// SubKind is an optional resource sub kind, used in some resources.
 		"sub_kind": {
 			Type:        schema.TypeString,
 			Description: "SubKind is an optional resource sub kind, used in some resources.",
 			Optional:    true,
-			Default:     "",
 		},
 		// Version is a resource version.
 		"version": {
 			Type:        schema.TypeString,
 			Description: "Version is a resource version.",
 			Optional:    true,
-			Default:     "v3",
+			Computed:    true,
 		},
 		// Metadata holds resource metadata.
 		"metadata": {
@@ -4282,7 +4269,7 @@ func GenSchemaGithubConnectorV3() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
 						Optional:    true,
-						Default:     "default",
+						Computed:    true,
 					},
 					// Description is object description
 					"description": {
@@ -4551,21 +4538,20 @@ func GenSchemaTrustedClusterV2() map[string]*schema.Schema {
 			Type:        schema.TypeString,
 			Description: "Kind is a resource kind.",
 			Optional:    true,
-			Default:     "trusted_cluster",
+			Computed:    true,
 		},
 		// SubKind is an optional resource sub kind, used in some resources.
 		"sub_kind": {
 			Type:        schema.TypeString,
 			Description: "SubKind is an optional resource sub kind, used in some resources.",
 			Optional:    true,
-			Default:     "",
 		},
 		// Version is a resource version.
 		"version": {
 			Type:        schema.TypeString,
 			Description: "Version is a resource version.",
 			Optional:    true,
-			Default:     "v2",
+			Computed:    true,
 		},
 		// Metadata holds resource metadata.
 		"metadata": {
@@ -4589,7 +4575,7 @@ func GenSchemaTrustedClusterV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
 						Optional:    true,
-						Default:     "default",
+						Computed:    true,
 					},
 					// Description is object description
 					"description": {
@@ -4625,7 +4611,7 @@ func GenSchemaTrustedClusterV2() map[string]*schema.Schema {
 			MaxItems:    1,
 			Description: "TrustedClusterSpecV2 is a Trusted Cluster specification.",
 
-			Optional: true,
+			Required: true,
 			Elem: &schema.Resource{
 				Schema: map[string]*schema.Schema{
 					// Enabled is a bool that indicates if the TrustedCluster is enabled or disabled.

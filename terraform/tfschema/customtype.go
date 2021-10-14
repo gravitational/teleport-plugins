@@ -93,8 +93,8 @@ func SchemaStrings() *schema.Schema {
 	}
 }
 
-// GetBoolOption unmarshals bool value
-func GetBoolOption(path string, target reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
+// FromTerraformBoolOption reads BoolOption from Terraform state
+func FromTerraformBoolOption(path string, target reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
 	v := data.Get(path)
 
 	b, ok := v.(bool)
@@ -108,8 +108,27 @@ func GetBoolOption(path string, target reflect.Value, meta *accessors.SchemaMeta
 	return nil
 }
 
-// getArrayMap gets map of arrays from data to object
-func getArrayMap(
+// ToTerraformBoolOption writes BoolOption to Terraform state
+func ToTerraformBoolOption(path string, source reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) (interface{}, error) {
+	if !source.IsValid() {
+		return nil, nil
+	}
+
+	if source.IsNil() {
+		return nil, nil
+	}
+
+	i := reflect.Indirect(source).Interface()
+	v, ok := i.(types.BoolOption)
+	if !ok {
+		return nil, trace.Errorf("can not convert %T to types.BoolOption", v)
+	}
+
+	return v.Value, nil
+}
+
+// fromTerraformArrayMap reads map of arrays from Terraform state to object
+func fromTerraformArrayMap(
 	obj interface{},
 	sliceT reflect.Type,
 	path string,
@@ -118,7 +137,7 @@ func getArrayMap(
 	sch *schema.Schema,
 	data *schema.ResourceData,
 ) error {
-	l, err := accessors.GetLen(path, data)
+	l, err := accessors.GetListLen(path, data)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -161,11 +180,11 @@ func getArrayMap(
 	return nil
 }
 
-// GetLabels unmarshals wrapper value map[string]utils.Strings
-func GetLabels(path string, target reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
+// FromTerraformLabels reads Labels from Terraform state
+func FromTerraformLabels(path string, target reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
 	t := reflect.TypeOf((*utils.Strings)(nil)).Elem()
 
-	return getArrayMap(
+	return fromTerraformArrayMap(
 		make(types.Labels),
 		t,
 		path,
@@ -176,11 +195,11 @@ func GetLabels(path string, target reflect.Value, meta *accessors.SchemaMeta, sc
 	)
 }
 
-// GetTraits unmarshals traits value map[string][]string
-func GetTraits(path string, target reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
+// FromTerraformTraits reads Traits from Terraform state
+func FromTerraformTraits(path string, target reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
 	t := reflect.TypeOf((*[]string)(nil)).Elem()
 
-	return getArrayMap(
+	return fromTerraformArrayMap(
 		make(wrappers.Traits),
 		t,
 		path,
@@ -191,11 +210,11 @@ func GetTraits(path string, target reflect.Value, meta *accessors.SchemaMeta, sc
 	)
 }
 
-// GetStrings unmarshals strings value
-func GetStrings(path string, target reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
+// FromTerraformStrings reads Strings from Terraform value
+func FromTerraformStrings(path string, target reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) error {
 	zeroValue := make(utils.Strings, 0)
 
-	l, err := accessors.GetLen(path, data)
+	l, err := accessors.GetListLen(path, data)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -223,26 +242,17 @@ func GetStrings(path string, target reflect.Value, meta *accessors.SchemaMeta, s
 	return nil
 }
 
-func SetBoolOption(source reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema) (interface{}, error) {
-	if !source.IsValid() {
+// toTerraformArrayMap sets map of labels/traits to data source
+func toTerraformArrayMap(path string, source reflect.Value, sliceT reflect.Type, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) (interface{}, error) {
+	l, err := accessors.GetListLen(path, data)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	if l == 0 {
 		return nil, nil
 	}
 
-	if source.IsNil() {
-		return nil, nil
-	}
-
-	i := reflect.Indirect(source).Interface()
-	v, ok := i.(types.BoolOption)
-	if !ok {
-		return nil, trace.Errorf("can not convert %T to types.BoolOption", v)
-	}
-
-	return v.Value, nil
-}
-
-// setArrayMap sets map of labels/traits to data source
-func setArrayMap(source reflect.Value, sliceT reflect.Type, meta *accessors.SchemaMeta, sch *schema.Schema) (interface{}, error) {
 	if source.Len() == 0 {
 		return nil, nil
 	}
@@ -279,18 +289,27 @@ func setArrayMap(source reflect.Value, sliceT reflect.Type, meta *accessors.Sche
 	return nil, nil
 }
 
-// SetLables sets labels from data to object
-func SetLabels(source reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema) (interface{}, error) {
-	return setArrayMap(source, reflect.TypeOf((utils.Strings)(nil)), meta, sch)
+// ToTerraformLabels copies labels from object to Terraform state
+func ToTerraformLabels(path string, source reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) (interface{}, error) {
+	return toTerraformArrayMap(path, source, reflect.TypeOf((utils.Strings)(nil)), meta, sch, data)
 }
 
-// SetLables sets traits from data to object
-func SetTraits(source reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema) (interface{}, error) {
-	return setArrayMap(source, reflect.TypeOf(([]string)(nil)), meta, sch)
+// ToTerraformTraits copies traits from object to Terraform state
+func ToTerraformTraits(path string, source reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) (interface{}, error) {
+	return toTerraformArrayMap(path, source, reflect.TypeOf(([]string)(nil)), meta, sch, data)
 }
 
 // SetStrings sets traits from data to object
-func SetStrings(source reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema) (interface{}, error) {
+func ToTerraformStrings(path string, source reflect.Value, meta *accessors.SchemaMeta, sch *schema.Schema, data *schema.ResourceData) (interface{}, error) {
+	l, err := accessors.GetListLen(path, data)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	if l == 0 {
+		return nil, nil
+	}
+
 	if source.Len() == 0 {
 		return nil, nil
 	}

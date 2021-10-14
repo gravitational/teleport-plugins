@@ -100,8 +100,8 @@ func setFragment(
 			return nil, trace.Errorf("field %v not found in source struct", key)
 		}
 
-		if fieldMeta.Setter != nil {
-			r, err := fieldMeta.Setter(fieldValue, fieldMeta, fieldSchema)
+		if fieldMeta.ToTerraform != nil {
+			r, err := fieldMeta.ToTerraform(p, fieldValue, fieldMeta, fieldSchema, data)
 			if err != nil {
 				return nil, trace.Wrap(err)
 			}
@@ -188,7 +188,7 @@ func setElementary(source reflect.Value, meta *SchemaMeta, sch *schema.Schema) (
 // setList converts source value to list
 func setList(source reflect.Value, meta *SchemaMeta, sch *schema.Schema, path string, data *schema.ResourceData) (interface{}, error) {
 	// We must not construct new arrays in the state. That would cause state drift.
-	l, err := GetLen(path, data)
+	l, err := GetListLen(path, data)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +235,7 @@ func setList(source reflect.Value, meta *SchemaMeta, sch *schema.Schema, path st
 
 // setMap converts source value to map
 func setMap(source reflect.Value, meta *SchemaMeta, sch *schema.Schema, path string, data *schema.ResourceData) (interface{}, error) {
-	l, err := GetLen(path, data)
+	l, err := GetMapLen(path, data)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +271,7 @@ func setMap(source reflect.Value, meta *SchemaMeta, sch *schema.Schema, path str
 
 // setSet converts source value to set
 func setSet(source reflect.Value, meta *SchemaMeta, sch *schema.Schema, path string, data *schema.ResourceData) (interface{}, error) {
-	l, err := GetLen(path, data)
+	l, err := GetListLen(path, data)
 	if err != nil {
 		return nil, err
 	}
