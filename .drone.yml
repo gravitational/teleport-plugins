@@ -169,6 +169,7 @@ trigger:
       - refs/tags/teleport-mattermost-v*
       - refs/tags/teleport-pagerduty-v*
       - refs/tags/teleport-slack-v*
+      - refs/tags/teleport-email-v*
 
 depends_on:
   - test-linux
@@ -414,6 +415,6 @@ steps:
 
 ---
 kind: signature
-hmac: 568e0db0dfc984d6b2b2fda50e3c1435d0af2679c3c54da0fc32e1967a9109c4
+hmac: 7d92a4296bbb567054d4b181fe7f0309c98201336772d7f7d8c780d4a4fbc99d
 
 ...
