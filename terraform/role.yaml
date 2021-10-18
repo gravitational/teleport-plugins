@@ -12,17 +12,10 @@ spec:
         - github
         - oidc
         - saml
-        - cluster_auth_preference
-        - cluster_networking_config
-        - session_recording_config
         - app
         - database
+        - session_recording_config
+        - cluster_networking_config
+        - cluster_auth_preference
         verbs: ['list','create','read','update','delete']
-version: v4
----
-kind: user
-metadata:
-  name: terraform
-spec:
-  roles: ['terraform']
-version: v2
+version: v3

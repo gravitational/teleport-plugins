@@ -40,6 +40,10 @@ var _ = math.Inf
 var _ = time.Kitchen
 
 var (
+	// SchemaAppV3 is schema for AppV3 represents an app resource.
+	SchemaAppV3 = GenSchemaAppV3()
+	// SchemaMetaAppV3 is schema metadata for AppV3 represents an app resource.
+	SchemaMetaAppV3 = GenSchemaMetaAppV3()
 	// SchemaProvisionTokenV2 is schema for ProvisionTokenV2 specifies provisioning token
 	SchemaProvisionTokenV2 = GenSchemaProvisionTokenV2()
 	// SchemaMetaProvisionTokenV2 is schema metadata for ProvisionTokenV2 specifies provisioning token
@@ -99,6 +103,13 @@ func SuppressDurationChange(k string, old string, new string, d *schema.Resource
 	}
 
 	return o == n
+}
+func FromTerraformAppV3(data *schema.ResourceData, obj *types.AppV3) error {
+	return accessors.FromTerraform(obj, data, SchemaAppV3, SchemaMetaAppV3)
+}
+
+func ToTerraformAppV3(obj *types.AppV3, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaAppV3, SchemaMetaAppV3)
 }
 func FromTerraformProvisionTokenV2(data *schema.ResourceData, obj *types.ProvisionTokenV2) error {
 	return accessors.FromTerraform(obj, data, SchemaProvisionTokenV2, SchemaMetaProvisionTokenV2)
@@ -176,6 +187,366 @@ func FromTerraformTrustedClusterV2(data *schema.ResourceData, obj *types.Trusted
 
 func ToTerraformTrustedClusterV2(obj *types.TrustedClusterV2, data *schema.ResourceData) error {
 	return accessors.ToTerraform(obj, data, SchemaTrustedClusterV2, SchemaMetaTrustedClusterV2)
+}
+
+// SchemaAppV3 returns schema for AppV3
+//
+// AppV3 represents an app resource.
+func GenSchemaAppV3() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		// Kind is the app resource kind. Always "app".
+		"kind": {
+			Type:        schema.TypeString,
+			Description: "Kind is the app resource kind. Always \"app\".",
+			Optional:    true,
+			Computed:    true,
+		},
+		// SubKind is an optional resource subkind.
+		"sub_kind": {
+			Type:        schema.TypeString,
+			Description: "SubKind is an optional resource subkind.",
+			Optional:    true,
+		},
+		// Version is the resource version.
+		"version": {
+			Type:        schema.TypeString,
+			Description: "Version is the resource version.",
+			Optional:    true,
+			Computed:    true,
+		},
+		// Metadata is the app resource metadata.
+		"metadata": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "Metadata is resource metadata",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Name is an object name
+					"name": {
+						Type:        schema.TypeString,
+						Description: "Name is an object name",
+						Required:    true,
+						ForceNew:    true,
+					},
+					// Namespace is object namespace. The field should be called "namespace"
+					// when it returns in Teleport 2.4.
+					"namespace": {
+						Type:        schema.TypeString,
+						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
+						Optional:    true,
+						Computed:    true,
+					},
+					// Description is object description
+					"description": {
+						Type:        schema.TypeString,
+						Description: "Description is object description",
+						Optional:    true,
+					},
+					// Labels is a set of labels
+					"labels": {
+
+						Optional:    true,
+						Type:        schema.TypeMap,
+						Description: "Labels is a set of labels",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Expires is a global expiry time header can be set on any resource in the
+					// system.
+					"expires": {
+						Type:         schema.TypeString,
+						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
+						ValidateFunc: validation.IsRFC3339Time,
+						StateFunc:    TruncateMs,
+						Optional:     true,
+					},
+				},
+			},
+		},
+		// Spec is the app resource spec.
+		"spec": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "AppSpecV3 is the AppV3 resource spec.",
+
+			Required: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// URI is the web app endpoint.
+					"uri": {
+						Type:        schema.TypeString,
+						Description: "URI is the web app endpoint.",
+						Optional:    true,
+					},
+					// PublicAddr is the public address the application is accessible at.
+					"public_addr": {
+						Type:        schema.TypeString,
+						Description: "PublicAddr is the public address the application is accessible at.",
+						Optional:    true,
+					},
+					// DynamicLabels are the app's command labels.
+					"dynamic_labels": {
+
+						Optional:    true,
+						Type:        schema.TypeSet,
+						Description: "DynamicLabels are the app's command labels.",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"key": {
+									Type:     schema.TypeString,
+									Required: true,
+								},
+								"value": {
+									Type:        schema.TypeList,
+									MaxItems:    1,
+									Description: "CommandLabelV2 is a label that has a value as a result of the  output generated by running command, e.g. hostname",
+
+									Optional: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Period is a time between command runs
+											"period": {
+												Type:             schema.TypeString,
+												Description:      "Period is a time between command runs",
+												DiffSuppressFunc: SuppressDurationChange,
+												Optional:         true,
+											},
+											// Command is a command to run
+											"command": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Command is a command to run",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Result captures standard output
+											"result": {
+												Type:        schema.TypeString,
+												Description: "Result captures standard output",
+												Optional:    true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					// InsecureSkipVerify disables app's TLS certificate verification.
+					"insecure_skip_verify": {
+						Type:        schema.TypeBool,
+						Description: "InsecureSkipVerify disables app's TLS certificate verification.",
+						Optional:    true,
+					},
+					// Rewrite is a list of rewriting rules to apply to requests and responses.
+					"rewrite": {
+						Type:        schema.TypeList,
+						MaxItems:    1,
+						Description: "Rewrite is a list of rewriting rules to apply to requests and responses.",
+
+						Optional: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// Redirect defines a list of hosts which will be rewritten to the public
+								// address of the application if they occur in the "Location" header.
+								"redirect": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "Redirect defines a list of hosts which will be rewritten to the public  address of the application if they occur in the \"Location\" header.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// Headers is a list of headers to inject when passing the request over
+								// to the application.
+								"headers": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "Headers is a list of headers to inject when passing the request over  to the application.",
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Name is the http header name.
+											"name": {
+												Type:        schema.TypeString,
+												Description: "Name is the http header name.",
+												Optional:    true,
+											},
+											// Value is the http header value.
+											"value": {
+												Type:        schema.TypeString,
+												Description: "Value is the http header value.",
+												Optional:    true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// GenSchemaMetaAppV3 returns schema for AppV3
+//
+// AppV3 represents an app resource.
+func GenSchemaMetaAppV3() map[string]*accessors.SchemaMeta {
+	return map[string]*accessors.SchemaMeta{
+		// Kind is the app resource kind. Always "app".
+		"kind": {
+			Name:       "Kind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// SubKind is an optional resource subkind.
+		"sub_kind": {
+			Name:       "SubKind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Version is the resource version.
+		"version": {
+			Name:       "Version",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Metadata is the app resource metadata.
+		"metadata": {
+			Name:       "Metadata",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Name is an object name
+				"name": {
+					Name:       "Name",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Namespace is object namespace. The field should be called "namespace"
+				// when it returns in Teleport 2.4.
+				"namespace": {
+					Name:       "Namespace",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Description is object description
+				"description": {
+					Name:       "Description",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Labels is a set of labels
+				"labels": {
+					Name:       "Labels",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Expires is a global expiry time header can be set on any resource in the
+				// system.
+				"expires": {
+					Name:       "Expires",
+					IsTime:     true,
+					IsDuration: false,
+				},
+			},
+		},
+		// Spec is the app resource spec.
+		"spec": {
+			Name:       "Spec",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// URI is the web app endpoint.
+				"uri": {
+					Name:       "URI",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// PublicAddr is the public address the application is accessible at.
+				"public_addr": {
+					Name:       "PublicAddr",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// DynamicLabels are the app's command labels.
+				"dynamic_labels": {
+					Name:       "DynamicLabels",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// Period is a time between command runs
+						"period": {
+							Name:       "Period",
+							IsTime:     false,
+							IsDuration: true,
+						},
+						// Command is a command to run
+						"command": {
+							Name:       "Command",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Result captures standard output
+						"result": {
+							Name:       "Result",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// InsecureSkipVerify disables app's TLS certificate verification.
+				"insecure_skip_verify": {
+					Name:       "InsecureSkipVerify",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Rewrite is a list of rewriting rules to apply to requests and responses.
+				"rewrite": {
+					Name:       "Rewrite",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// Redirect defines a list of hosts which will be rewritten to the public
+						// address of the application if they occur in the "Location" header.
+						"redirect": {
+							Name:       "Redirect",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Headers is a list of headers to inject when passing the request over
+						// to the application.
+						"headers": {
+							Name:       "Headers",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Name is the http header name.
+								"name": {
+									Name:       "Name",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Value is the http header value.
+								"value": {
+									Name:       "Value",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 // SchemaProvisionTokenV2 returns schema for ProvisionTokenV2
@@ -1320,6 +1691,76 @@ func GenSchemaAuthPreferenceV2() map[string]*schema.Schema {
 						Optional:    true,
 						Computed:    true,
 					},
+					// Webauthn are the settings for server-side Web Authentication support.
+					"webauthn": {
+						Type:        schema.TypeList,
+						MaxItems:    1,
+						Description: "Webauthn defines user-visible settings for server-side Web Authentication  support.",
+
+						Optional: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// RPID is the ID of the Relying Party.
+								// It should be set to the domain name of the Teleport installation.
+								// IMPORTANT: RPID must never change in the lifetime of the cluster, because
+								// it's recorded in the registration data on the WebAuthn device. If the
+								// RPID changes, all existing WebAuthn key registrations will become invalid
+								// and all users who use WebAuthn as the second factor will need to
+								// re-register.
+								"rp_id": {
+									Type:        schema.TypeString,
+									Description: "RPID is the ID of the Relying Party.  It should be set to the domain name of the Teleport installation.   IMPORTANT: RPID must never change in the lifetime of the cluster, because  it's recorded in the registration data on the WebAuthn device. If the  RPID changes, all existing WebAuthn key registrations will become invalid  and all users who use WebAuthn as the second factor will need to  re-register.",
+									Optional:    true,
+								},
+								// Allow list of device attestation CAs in PEM format.
+								// If present, only devices whose attestation certificates match the
+								// certificates specified here may be registered (existing registrations are
+								// unchanged).
+								// If supplied in conjunction with AttestationDeniedCAs, then both
+								// conditions need to be true for registration to be allowed (the device
+								// MUST match an allowed CA and MUST NOT match a denied CA).
+								// By default all devices are allowed.
+								"attestation_allowed_cas": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "Allow list of device attestation CAs in PEM format.  If present, only devices whose attestation certificates match the  certificates specified here may be registered (existing registrations are  unchanged).  If supplied in conjunction with AttestationDeniedCAs, then both  conditions need to be true for registration to be allowed (the device  MUST match an allowed CA and MUST NOT match a denied CA).  By default all devices are allowed.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// Deny list of device attestation CAs in PEM format.
+								// If present, only devices whose attestation certificates don't match the
+								// certificates specified here may be registered (existing registrations are
+								// unchanged).
+								// If supplied in conjunction with AttestationAllowedCAs, then both
+								// conditions need to be true for registration to be allowed (the device
+								// MUST match an allowed CA and MUST NOT match a denied CA).
+								// By default no devices are denied.
+								"attestation_denied_cas": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "Deny list of device attestation CAs in PEM format.  If present, only devices whose attestation certificates don't match the  certificates specified here may be registered (existing registrations are  unchanged).  If supplied in conjunction with AttestationAllowedCAs, then both  conditions need to be true for registration to be allowed (the device  MUST match an allowed CA and MUST NOT match a denied CA).  By default no devices are denied.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// Disables Webauthn, regardless of other cluster settings.
+								// Allows fallback to pure U2F in clusters with second_factor:on or
+								// second_factor:optional.
+								// Must not be set for clusters with second_factor:webauthn.
+								// Temporary safety switch for Webauthn, to be removed in future versions of
+								// Teleport.
+								// DELETE IN 9.x, fallback not possible without U2F (codingllama).
+								"disabled": {
+									Type:        schema.TypeBool,
+									Description: "Disables Webauthn, regardless of other cluster settings.  Allows fallback to pure U2F in clusters with second_factor:on or  second_factor:optional.  Must not be set for clusters with second_factor:webauthn.  Temporary safety switch for Webauthn, to be removed in future versions of  Teleport.  DELETE IN 9.x, fallback not possible without U2F (codingllama).",
+									Optional:    true,
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -1470,6 +1911,64 @@ func GenSchemaMetaAuthPreferenceV2() map[string]*accessors.SchemaMeta {
 					Name:       "LockingMode",
 					IsTime:     false,
 					IsDuration: false,
+				},
+				// Webauthn are the settings for server-side Web Authentication support.
+				"webauthn": {
+					Name:       "Webauthn",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// RPID is the ID of the Relying Party.
+						// It should be set to the domain name of the Teleport installation.
+						// IMPORTANT: RPID must never change in the lifetime of the cluster, because
+						// it's recorded in the registration data on the WebAuthn device. If the
+						// RPID changes, all existing WebAuthn key registrations will become invalid
+						// and all users who use WebAuthn as the second factor will need to
+						// re-register.
+						"rp_id": {
+							Name:       "RPID",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Allow list of device attestation CAs in PEM format.
+						// If present, only devices whose attestation certificates match the
+						// certificates specified here may be registered (existing registrations are
+						// unchanged).
+						// If supplied in conjunction with AttestationDeniedCAs, then both
+						// conditions need to be true for registration to be allowed (the device
+						// MUST match an allowed CA and MUST NOT match a denied CA).
+						// By default all devices are allowed.
+						"attestation_allowed_cas": {
+							Name:       "AttestationAllowedCAs",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Deny list of device attestation CAs in PEM format.
+						// If present, only devices whose attestation certificates don't match the
+						// certificates specified here may be registered (existing registrations are
+						// unchanged).
+						// If supplied in conjunction with AttestationAllowedCAs, then both
+						// conditions need to be true for registration to be allowed (the device
+						// MUST match an allowed CA and MUST NOT match a denied CA).
+						// By default no devices are denied.
+						"attestation_denied_cas": {
+							Name:       "AttestationDeniedCAs",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Disables Webauthn, regardless of other cluster settings.
+						// Allows fallback to pure U2F in clusters with second_factor:on or
+						// second_factor:optional.
+						// Must not be set for clusters with second_factor:webauthn.
+						// Temporary safety switch for Webauthn, to be removed in future versions of
+						// Teleport.
+						// DELETE IN 9.x, fallback not possible without U2F (codingllama).
+						"disabled": {
+							Name:       "Disabled",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
 				},
 			},
 		},

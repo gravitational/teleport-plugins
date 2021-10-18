@@ -26,19 +26,30 @@ mkdir ~/terraform-cluster && cd ~/terraform-cluster
 
 # Create Terraform user in Teleport
 
-Put the following content into terraform.yaml:
+Put the following content into [terraform.yaml](example/terraform.yaml):
 
 ```
-// terraform.yaml
 kind: role
 metadata:
   name: terraform
 spec:
   allow:
     rules:
-      - resources: ['user', 'role', 'token', 'trusted_cluster', 'github', 'oidc', 'saml']
+      - resources:
+        - user
+        - role
+        - token
+        - trusted_cluster
+        - github
+        - oidc
+        - saml
+        - cluster_auth_preference
+        - cluster_networking_config
+        - session_recording_config
+        - app
+        - database
         verbs: ['list','create','read','update','delete']
-version: v3
+version: v4
 ---
 kind: user
 metadata:

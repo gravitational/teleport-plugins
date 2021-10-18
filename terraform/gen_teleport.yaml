@@ -8,6 +8,8 @@ use_json_tag: true
 
 # Top-level type names to export
 types:
+    - "types.AppV3"
+    #- "types.DatabaseV3"
     - "types.AuthPreferenceV2"
     - "types.ClusterAuditConfigV2"
     - "types.ClusterNetworkingConfigV2"
@@ -49,6 +51,11 @@ exclude_fields:
 
 # These fields will be marked as Computed: true
 computed_fields:
+    # App
+    - "types.AppV3.Version"
+    - "types.AppV3.Kind"
+    - "types.AppV3.Metadata.Namespace"
+
     # Auth preference
     - "types.AuthPreferenceV2.Version"
     - "types.AuthPreferenceV2.Kind"
@@ -127,6 +134,9 @@ computed_fields:
 required_fields:
     # Metadata
     - "types.Metadata.Name"
+
+    # App
+    - "types.AppV3.Spec"
 
     # Auth preference
     - "types.AuthPreferenceV2.Spec"

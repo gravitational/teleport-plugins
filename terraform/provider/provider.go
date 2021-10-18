@@ -142,6 +142,7 @@ func Provider() *schema.Provider {
 			"teleport_cluster_networking_config": resourceTeleportClusterNetworkingConfig(),
 			"teleport_session_recording_config":  resourceTeleportSessionRecordingConfig(),
 			"teleport_cluster_audit_config":      resourceTeleportClusterAuditConfig(),
+			"teleport_app":                       resourceTeleportApp(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{
 			"teleport_role":                      dataSourceTeleportRole(),
@@ -155,6 +156,7 @@ func Provider() *schema.Provider {
 			"teleport_cluster_networking_config": dataSourceTeleportClusterNetworkingConfig(),
 			"teleport_session_recording_config":  dataSourceTeleportSessionRecordingConfig(),
 			"teleport_cluster_audit_config":      dataSourceTeleportClusterAuditConfig(),
+			"teleport_app":                       dataSourceTeleportApp(),
 		},
 		ConfigureContextFunc: configureContext,
 	}
