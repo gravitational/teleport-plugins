@@ -26,7 +26,7 @@ mkdir ~/terraform-cluster && cd ~/terraform-cluster
 
 # Create Terraform user in Teleport
 
-Put the following content into [terraform.yaml](example/terraform.yaml):
+Put the following content into `terraform.yaml`:
 
 ```
 kind: role
@@ -34,9 +34,9 @@ metadata:
   name: terraform
 spec:
   allow:
-    app_labels: # This gives Terraform an access to all apps in the cluster. You might want to restrict it.
+    app_labels: # This gives Terraform access to all apps in the cluster. You might want to restrict it.
       '*': '*'
-    db_labels: # This gives Terraform an access to all apps in the cluster. You might want to restrict it.
+    db_labels: # This gives Terraform access to all apps in the cluster. You might want to restrict it.
       '*': '*'
     rules:
       - resources:
