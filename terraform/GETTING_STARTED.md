@@ -4,7 +4,7 @@ We assume you have docker and Teleport installed on your system.
 
 # Install Terraform
 
-Check [Terraform official docs](https://learn.hashicorp.com/tutorials/terraform/install-cli) for installation instructions. Terraform 0.12 or higher is required.
+Check [Terraform official docs](https://learn.hashicorp.com/tutorials/terraform/install-cli) for installation instructions. Terraform 1.0.0 or higher is required.
 
 # Install provider
 
@@ -34,6 +34,10 @@ metadata:
   name: terraform
 spec:
   allow:
+    app_labels: # This gives Terraform an access to all apps in the cluster. You might want to restrict it.
+      '*': '*'
+    db_labels: # This gives Terraform an access to all apps in the cluster. You might want to restrict it.
+      '*': '*'
     rules:
       - resources:
         - user
@@ -47,7 +51,7 @@ spec:
         - cluster_networking_config
         - session_recording_config
         - app
-        - database
+        - db
         verbs: ['list','create','read','update','delete']
 version: v4
 ---

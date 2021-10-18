@@ -26,16 +26,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// dataSourceTeleportApp returns Teleport app
-func dataSourceTeleportApp() *schema.Resource {
+// dataSourceTeleportDatabase returns Teleport database
+func dataSourceTeleportDatabase() *schema.Resource {
 	return &schema.Resource{
-		ReadContext: dataSourceTeleportAppRead,
-		Schema:      tfschema.SchemaAppV3,
+		ReadContext: dataSourceTeleportDatabaseRead,
+		Schema:      tfschema.SchemaDatabaseV3,
 	}
 }
 
-// dataSourceTeleportAppRead reads Teleport app
-func dataSourceTeleportAppRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+// dataSourceTeleportDatabaseRead reads Teleport database
+func dataSourceTeleportDatabaseRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	c, err := getClient(m)
 	if err != nil {
 		return diagFromErr(err)
@@ -43,17 +43,17 @@ func dataSourceTeleportAppRead(ctx context.Context, d *schema.ResourceData, m in
 
 	id := d.Id()
 
-	g, err := c.GetApp(ctx, id)
+	g, err := c.GetDatabase(ctx, id)
 	if err != nil {
-		return diagFromErr(describeErr(err, "app"))
+		return diagFromErr(describeErr(err, "db"))
 	}
 
-	g3, ok := g.(*types.AppV3)
+	g3, ok := g.(*types.DatabaseV3)
 	if !ok {
-		return diagFromErr(trace.Errorf("can not convert %T to *types.AppV3", g))
+		return diagFromErr(trace.Errorf("can not convert %T to *types.DatabaseV3", g))
 	}
 
-	err = tfschema.ToTerraformAppV3(g3, d)
+	err = tfschema.ToTerraformDatabaseV3(g3, d)
 	if err != nil {
 		return diagFromErr(err)
 	}

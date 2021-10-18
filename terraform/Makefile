@@ -51,6 +51,7 @@ apply: install
 	-tctl rm oidc/example
 	-tctl rm saml/example
 	-tctl rm app/example
+	-tctl rm db/example
 	terraform -chdir=$(TFDIR) init -var-file="vars.tfvars" && terraform -chdir=$(TFDIR) apply -auto-approve -var-file="vars.tfvars"
 
 # Used for debugging

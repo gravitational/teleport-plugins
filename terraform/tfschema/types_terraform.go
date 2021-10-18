@@ -40,6 +40,10 @@ var _ = math.Inf
 var _ = time.Kitchen
 
 var (
+	// SchemaDatabaseV3 is schema for DatabaseV3 represents a single proxied database.
+	SchemaDatabaseV3 = GenSchemaDatabaseV3()
+	// SchemaMetaDatabaseV3 is schema metadata for DatabaseV3 represents a single proxied database.
+	SchemaMetaDatabaseV3 = GenSchemaMetaDatabaseV3()
 	// SchemaAppV3 is schema for AppV3 represents an app resource.
 	SchemaAppV3 = GenSchemaAppV3()
 	// SchemaMetaAppV3 is schema metadata for AppV3 represents an app resource.
@@ -103,6 +107,13 @@ func SuppressDurationChange(k string, old string, new string, d *schema.Resource
 	}
 
 	return o == n
+}
+func FromTerraformDatabaseV3(data *schema.ResourceData, obj *types.DatabaseV3) error {
+	return accessors.FromTerraform(obj, data, SchemaDatabaseV3, SchemaMetaDatabaseV3)
+}
+
+func ToTerraformDatabaseV3(obj *types.DatabaseV3, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaDatabaseV3, SchemaMetaDatabaseV3)
 }
 func FromTerraformAppV3(data *schema.ResourceData, obj *types.AppV3) error {
 	return accessors.FromTerraform(obj, data, SchemaAppV3, SchemaMetaAppV3)
@@ -187,6 +198,471 @@ func FromTerraformTrustedClusterV2(data *schema.ResourceData, obj *types.Trusted
 
 func ToTerraformTrustedClusterV2(obj *types.TrustedClusterV2, data *schema.ResourceData) error {
 	return accessors.ToTerraform(obj, data, SchemaTrustedClusterV2, SchemaMetaTrustedClusterV2)
+}
+
+// SchemaDatabaseV3 returns schema for DatabaseV3
+//
+// DatabaseV3 represents a single proxied database.
+func GenSchemaDatabaseV3() map[string]*schema.Schema {
+	return map[string]*schema.Schema{
+		// Kind is the database resource kind.
+		"kind": {
+			Type:        schema.TypeString,
+			Description: "Kind is the database resource kind.",
+			Optional:    true,
+			Computed:    true,
+		},
+		// SubKind is an optional resource subkind.
+		"sub_kind": {
+			Type:        schema.TypeString,
+			Description: "SubKind is an optional resource subkind.",
+			Optional:    true,
+		},
+		// Version is the resource version.
+		"version": {
+			Type:        schema.TypeString,
+			Description: "Version is the resource version.",
+			Optional:    true,
+			Computed:    true,
+		},
+		// Metadata is the database metadata.
+		"metadata": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "Metadata is resource metadata",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Name is an object name
+					"name": {
+						Type:        schema.TypeString,
+						Description: "Name is an object name",
+						Required:    true,
+						ForceNew:    true,
+					},
+					// Namespace is object namespace. The field should be called "namespace"
+					// when it returns in Teleport 2.4.
+					"namespace": {
+						Type:        schema.TypeString,
+						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
+						Optional:    true,
+						Computed:    true,
+					},
+					// Description is object description
+					"description": {
+						Type:        schema.TypeString,
+						Description: "Description is object description",
+						Optional:    true,
+					},
+					// Labels is a set of labels
+					"labels": {
+
+						Optional:    true,
+						Type:        schema.TypeMap,
+						Description: "Labels is a set of labels",
+						Elem: &schema.Schema{
+							Type: schema.TypeString,
+						},
+					},
+					// Expires is a global expiry time header can be set on any resource in the
+					// system.
+					"expires": {
+						Type:         schema.TypeString,
+						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
+						ValidateFunc: validation.IsRFC3339Time,
+						StateFunc:    TruncateMs,
+						Optional:     true,
+					},
+				},
+			},
+		},
+		// Spec is the database spec.
+		"spec": {
+			Type:        schema.TypeList,
+			MaxItems:    1,
+			Description: "DatabaseSpecV3 is the database spec.",
+
+			Optional: true,
+			Elem: &schema.Resource{
+				Schema: map[string]*schema.Schema{
+					// Protocol is the database protocol: postgres, mysql, mongodb, etc.
+					"protocol": {
+						Type:        schema.TypeString,
+						Description: "Protocol is the database protocol: postgres, mysql, mongodb, etc.",
+						Optional:    true,
+					},
+					// URI is the database connection endpoint.
+					"uri": {
+						Type:        schema.TypeString,
+						Description: "URI is the database connection endpoint.",
+						Optional:    true,
+					},
+					// CACert is the PEM-encoded database CA certificate.
+					"ca_cert": {
+						Type:        schema.TypeString,
+						Description: "CACert is the PEM-encoded database CA certificate.",
+						Optional:    true,
+					},
+					// DynamicLabels is the database dynamic labels.
+					"dynamic_labels": {
+
+						Optional:    true,
+						Type:        schema.TypeSet,
+						Description: "DynamicLabels is the database dynamic labels.",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								"key": {
+									Type:     schema.TypeString,
+									Required: true,
+								},
+								"value": {
+									Type:        schema.TypeList,
+									MaxItems:    1,
+									Description: "CommandLabelV2 is a label that has a value as a result of the  output generated by running command, e.g. hostname",
+
+									Optional: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Period is a time between command runs
+											"period": {
+												Type:             schema.TypeString,
+												Description:      "Period is a time between command runs",
+												DiffSuppressFunc: SuppressDurationChange,
+												Optional:         true,
+											},
+											// Command is a command to run
+											"command": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Command is a command to run",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Result captures standard output
+											"result": {
+												Type:        schema.TypeString,
+												Description: "Result captures standard output",
+												Optional:    true,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+					// AWS contains AWS specific settings for RDS/Aurora/Redshift databases.
+					"aws": {
+						Type:        schema.TypeList,
+						MaxItems:    1,
+						Description: "AWS contains AWS metadata about the database.",
+
+						Optional: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// Region is a AWS cloud region.
+								"region": {
+									Type:        schema.TypeString,
+									Description: "Region is a AWS cloud region.",
+									Optional:    true,
+								},
+								// Redshift contains Redshift specific metadata.
+								"redshift": {
+									Type:        schema.TypeList,
+									MaxItems:    1,
+									Description: "Redshift contains AWS Redshift specific database metadata.",
+
+									Optional: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// ClusterID is the Redshift cluster identifier.
+											"cluster_id": {
+												Type:        schema.TypeString,
+												Description: "ClusterID is the Redshift cluster identifier.",
+												Optional:    true,
+											},
+										},
+									},
+								},
+								// RDS contains RDS specific metadata.
+								"rds": {
+									Type:        schema.TypeList,
+									MaxItems:    1,
+									Description: "RDS contains AWS RDS specific database metadata.",
+
+									Optional: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// InstanceID is the RDS instance identifier.
+											"instance_id": {
+												Type:        schema.TypeString,
+												Description: "InstanceID is the RDS instance identifier.",
+												Optional:    true,
+											},
+											// ClusterID is the RDS cluster (Aurora) identifier.
+											"cluster_id": {
+												Type:        schema.TypeString,
+												Description: "ClusterID is the RDS cluster (Aurora) identifier.",
+												Optional:    true,
+											},
+											// ResourceID is the RDS instance resource identifier (db-xxx).
+											"resource_id": {
+												Type:        schema.TypeString,
+												Description: "ResourceID is the RDS instance resource identifier (db-xxx).",
+												Optional:    true,
+											},
+											// IAMAuth indicates whether database IAM authentication is enabled.
+											"iam_auth": {
+												Type:        schema.TypeBool,
+												Description: "IAMAuth indicates whether database IAM authentication is enabled.",
+												Optional:    true,
+											},
+										},
+									},
+								},
+								// AccountID is the AWS account ID this database belongs to.
+								"account_id": {
+									Type:        schema.TypeString,
+									Description: "AccountID is the AWS account ID this database belongs to.",
+									Optional:    true,
+								},
+							},
+						},
+					},
+					// GCP contains parameters specific to GCP Cloud SQL databases.
+					"gcp": {
+						Type:        schema.TypeList,
+						MaxItems:    1,
+						Description: "GCPCloudSQL contains parameters specific to GCP Cloud SQL databases.",
+
+						Optional: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// ProjectID is the GCP project ID the Cloud SQL instance resides in.
+								"project_id": {
+									Type:        schema.TypeString,
+									Description: "ProjectID is the GCP project ID the Cloud SQL instance resides in.",
+									Optional:    true,
+								},
+								// InstanceID is the Cloud SQL instance ID.
+								"instance_id": {
+									Type:        schema.TypeString,
+									Description: "InstanceID is the Cloud SQL instance ID.",
+									Optional:    true,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+// GenSchemaMetaDatabaseV3 returns schema for DatabaseV3
+//
+// DatabaseV3 represents a single proxied database.
+func GenSchemaMetaDatabaseV3() map[string]*accessors.SchemaMeta {
+	return map[string]*accessors.SchemaMeta{
+		// Kind is the database resource kind.
+		"kind": {
+			Name:       "Kind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// SubKind is an optional resource subkind.
+		"sub_kind": {
+			Name:       "SubKind",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Version is the resource version.
+		"version": {
+			Name:       "Version",
+			IsTime:     false,
+			IsDuration: false,
+		},
+		// Metadata is the database metadata.
+		"metadata": {
+			Name:       "Metadata",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Name is an object name
+				"name": {
+					Name:       "Name",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Namespace is object namespace. The field should be called "namespace"
+				// when it returns in Teleport 2.4.
+				"namespace": {
+					Name:       "Namespace",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Description is object description
+				"description": {
+					Name:       "Description",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Labels is a set of labels
+				"labels": {
+					Name:       "Labels",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// Expires is a global expiry time header can be set on any resource in the
+				// system.
+				"expires": {
+					Name:       "Expires",
+					IsTime:     true,
+					IsDuration: false,
+				},
+			},
+		},
+		// Spec is the database spec.
+		"spec": {
+			Name:       "Spec",
+			IsTime:     false,
+			IsDuration: false,
+			Nested: map[string]*accessors.SchemaMeta{
+				// Protocol is the database protocol: postgres, mysql, mongodb, etc.
+				"protocol": {
+					Name:       "Protocol",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// URI is the database connection endpoint.
+				"uri": {
+					Name:       "URI",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// CACert is the PEM-encoded database CA certificate.
+				"ca_cert": {
+					Name:       "CACert",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// DynamicLabels is the database dynamic labels.
+				"dynamic_labels": {
+					Name:       "DynamicLabels",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// Period is a time between command runs
+						"period": {
+							Name:       "Period",
+							IsTime:     false,
+							IsDuration: true,
+						},
+						// Command is a command to run
+						"command": {
+							Name:       "Command",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Result captures standard output
+						"result": {
+							Name:       "Result",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// AWS contains AWS specific settings for RDS/Aurora/Redshift databases.
+				"aws": {
+					Name:       "AWS",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// Region is a AWS cloud region.
+						"region": {
+							Name:       "Region",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Redshift contains Redshift specific metadata.
+						"redshift": {
+							Name:       "Redshift",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// ClusterID is the Redshift cluster identifier.
+								"cluster_id": {
+									Name:       "ClusterID",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
+						},
+						// RDS contains RDS specific metadata.
+						"rds": {
+							Name:       "RDS",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// InstanceID is the RDS instance identifier.
+								"instance_id": {
+									Name:       "InstanceID",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// ClusterID is the RDS cluster (Aurora) identifier.
+								"cluster_id": {
+									Name:       "ClusterID",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// ResourceID is the RDS instance resource identifier (db-xxx).
+								"resource_id": {
+									Name:       "ResourceID",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// IAMAuth indicates whether database IAM authentication is enabled.
+								"iam_auth": {
+									Name:       "IAMAuth",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
+						},
+						// AccountID is the AWS account ID this database belongs to.
+						"account_id": {
+							Name:       "AccountID",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// GCP contains parameters specific to GCP Cloud SQL databases.
+				"gcp": {
+					Name:       "GCP",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// ProjectID is the GCP project ID the Cloud SQL instance resides in.
+						"project_id": {
+							Name:       "ProjectID",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// InstanceID is the Cloud SQL instance ID.
+						"instance_id": {
+							Name:       "InstanceID",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 // SchemaAppV3 returns schema for AppV3
@@ -279,7 +755,7 @@ func GenSchemaAppV3() map[string]*schema.Schema {
 					"uri": {
 						Type:        schema.TypeString,
 						Description: "URI is the web app endpoint.",
-						Optional:    true,
+						Required:    true,
 					},
 					// PublicAddr is the public address the application is accessible at.
 					"public_addr": {

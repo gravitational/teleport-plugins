@@ -3,10 +3,6 @@ metadata:
   name: terraform
 spec:
   allow:
-    app_labels: # This gives Terraform an access to all apps in the cluster. You might want to restrict it.
-      '*': '*'
-    db_labels: # This gives Terraform an access to all apps in the cluster. You might want to restrict it.
-      '*': '*'
     rules:
       - resources:
         - user
