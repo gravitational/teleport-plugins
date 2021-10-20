@@ -81,8 +81,4 @@ in the channel specified under `slack.channel`.
 Select `Deny` and verify that the request was indeed denied using
 `tctl request ls`.
 
-## Security
 
-Currently, this Bot does not make any distinction about _who_ approves/denies a
-request. Any user with access to the specified channel will be able to manage
-requests. Therefore, it is important that access to the channel be limited.

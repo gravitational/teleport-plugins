@@ -134,9 +134,3 @@ make
 ./build/teleport-jira start
 ```
 
-## Security
-
-Currently, this Bot does not make any distinction about _who_ approves/denies a
-request. Any user with access to the Jira project, if not constrained by Jira
-workflows, can approve or deny Teleport requests. You can use Jira workflows to
-limit who can approve or deny the requests.
