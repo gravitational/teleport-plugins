@@ -17,7 +17,7 @@ limitations under the License.
 package integration
 
 import (
-	"time"
+	"context"
 
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/testing"
@@ -56,8 +56,8 @@ func (s *BaseSetup) Setup() {
 
 	// We set such a big timeout because integration.NewFromEnv could start
 	// downloading a Teleport *-bin.tar.gz file which can take a long time.
-	ctx := s.SetContextTimeout(5 * time.Minute)
-	integration, err := NewFromEnv(ctx)
+	//ctx := s.SetContextTimeout(5 * time.Minute)
+	integration, err := NewFromEnv(context.Background())
 	require.NoError(t, err)
 	t.Cleanup(integration.Close)
 	s.Integration = integration

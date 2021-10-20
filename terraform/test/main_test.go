@@ -1,3 +1,19 @@
+/*
+Copyright 2015-2021 Gravitational, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package test
 
 import (
@@ -11,6 +27,7 @@ import (
 	"github.com/gravitational/teleport-plugins/terraform/provider"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/teleport/api/utils"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -18,12 +35,18 @@ import (
 
 type TerraformSuite struct {
 	integration.AuthSetup
-	client            *integration.Client
-	teleportConfig    lib.TeleportConfig
-	teleportFeatures  *proto.Features
-	plugin            string
-	terraformConfig   string
-	terraformProvider *schema.Provider
+	// client represents plugin client
+	client *integration.Client
+	// teleportConfig represents Teleport configuration
+	teleportConfig lib.TeleportConfig
+	// teleportFeatures represents enabled Teleport feature flags
+	teleportFeatures *proto.Features
+	// plugin represents plugin user name
+	plugin string
+	// terraformConfig represents Terraform provider configuration
+	terraformConfig string
+	// terraformProviders represents an array of providers
+	terraformProviders map[string]*schema.Provider
 }
 
 func TestTerraform(t *testing.T) { suite.Run(t, &TerraformSuite{}) }
@@ -35,12 +58,12 @@ func (s *TerraformSuite) SetupSuite() {
 	logger.Init()
 	logger.Setup(logger.Config{Severity: "debug"})
 
-	s.AuthSetup.SetupSuite()
-	s.AuthSetup.Setup()
-
 	// We set such a big timeout because integration.NewFromEnv could start
 	// downloading a Teleport *-bin.tar.gz file which can take a long time.
 	ctx := s.SetContextTimeout(2 * time.Minute)
+
+	s.AuthSetup.SetupSuite()
+	s.AuthSetup.Setup()
 
 	me, err := user.Current()
 	require.NoError(t, err)
@@ -54,10 +77,23 @@ func (s *TerraformSuite) SetupSuite() {
 
 	var bootstrap integration.Bootstrap
 
+	unrestricted := []string{"list", "create", "read", "update", "delete"}
 	role, err := bootstrap.AddRole("terraform", types.RoleSpecV4{
 		Allow: types.RoleConditions{
+			DatabaseLabels: types.Labels(map[string]utils.Strings{"*": []string{"*"}}),
+			AppLabels:      types.Labels(map[string]utils.Strings{"*": []string{"*"}}),
 			Rules: []types.Rule{
-				types.NewRule("provision_token", []string{"list", "create", "read", "update", "delete"}),
+				types.NewRule("token", unrestricted),
+				types.NewRule("role", unrestricted),
+				types.NewRule("user", unrestricted),
+				types.NewRule("cluster_auth_preference", unrestricted),
+				types.NewRule("cluster_networking_config", unrestricted),
+				types.NewRule("session_recording_config", unrestricted),
+				types.NewRule("db", unrestricted),
+				types.NewRule("app", unrestricted),
+				types.NewRule("github", unrestricted),
+				types.NewRule("oidc", unrestricted),
+				types.NewRule("saml", unrestricted),
 			},
 			Logins: []string{me.Username},
 		},
@@ -87,67 +123,8 @@ func (s *TerraformSuite) SetupSuite() {
 			identity_file_path = "` + s.teleportConfig.Identity + `"
 		}
 	`
-	s.terraformProvider = provider.Provider()
+	s.terraformProviders = map[string]*schema.Provider{"teleport": provider.Provider()}
 }
 
 func (s *TerraformSuite) SetupTest() {
-	s.SetContextTimeout(5 * time.Minute)
 }
-
-func (s *TerraformSuite) TestOk() {
-
-}
-
-// func testAccExampleResource(name string) string {
-// 	return providerConfig + `
-// 		resource "teleport_provision_token" "example" {
-// 			metadata {
-// 				name = "test2"
-// 				expires = "2022-10-12T07:20:51.2Z"
-// 				description = "Example token"
-
-// 				labels = {
-// 					example = "yes"
-// 				}
-// 			}
-
-// 			spec {
-// 				roles = ["Node", "Auth"]
-// 			}
-// 		}
-// 	`
-// }
-
-// func testAccExampleResource_removedPolicy(name string) string {
-// 	return providerConfig + `
-// 	`
-// }
-
-// func testAccCheckExampleResourceExists(state *terraform.State) error {
-// 	return nil
-// }
-
-// func TestAccExampleWidget_basic(t *testing.T) {
-// 	//var widgetBefore, widgetAfter types.ProvisionTokenV2
-// 	rName := acctest.RandStringFromCharSet(10, acctest.CharSetAlphaNum)
-
-// 	resource.Test(t, resource.TestCase{
-// 		//PreCheck:     func() { testAccPreCheck(t) },
-// 		Providers: testAccProviders,
-// 		//CheckDestroy: testAccCheckExampleResourceDestroy,
-// 		Steps: []resource.TestStep{
-// 			{
-// 				Config: testAccExampleResource(rName),
-// 				Check: resource.ComposeTestCheckFunc(
-// 					testAccCheckExampleResourceExists,
-// 				),
-// 			},
-// 			{
-// 				Config: testAccExampleResource_removedPolicy(rName),
-// 				Check: resource.ComposeTestCheckFunc(
-// 					testAccCheckExampleResourceExists,
-// 				),
-// 			},
-// 		},
-// 	})
-// }
