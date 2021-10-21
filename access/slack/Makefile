@@ -16,6 +16,8 @@ RELEASE_MESSAGE := "Building with GOOS=$(OS) GOARCH=$(ARCH)."
 
 VERSRC = version.go gitref.go
 
+IMG ?= quay.io/gravitational/$(RELEASE_NAME):$(VERSION)
+
 export
 
 .PHONY: $(BINARY)
@@ -48,6 +50,15 @@ release: clean $(VERSRC) $(BINARY)
 	tar -czf $(RELEASE).tar.gz $(RELEASE_NAME)
 	rm -rf $(RELEASE_NAME)/
 	@echo "---> Created $(RELEASE).tar.gz."
+
+.PHONY: docker-build
+docker-build: ## Build docker image with the plugin.
+	docker build -t ${IMG} -f ./Dockerfile ../..
+
+.PHONY: docker-push
+docker-push: ## Push docker image with the plugin.
+	docker push ${IMG}
+
 
 # This rule triggers re-generation of version.go and gitref.go if Makefile changes
 $(VERSRC): Makefile
