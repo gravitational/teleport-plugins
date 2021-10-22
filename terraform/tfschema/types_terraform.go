@@ -277,6 +277,47 @@ func GenSchemaProvisionTokenV2() map[string]*schema.Schema {
 							Type: schema.TypeString,
 						},
 					},
+
+					"allow": {
+
+						Optional:    true,
+						Type:        schema.TypeList,
+						Description: "",
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+
+								"aws_account": {
+									Type:        schema.TypeString,
+									Description: "",
+									Optional:    true,
+								},
+
+								"aws_regions": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+
+								"aws_role": {
+									Type:        schema.TypeString,
+									Description: "",
+									Optional:    true,
+								},
+							},
+						},
+					},
+
+					"aws_iid_ttl": {
+						Type:             schema.TypeString,
+						Description:      "",
+						DiffSuppressFunc: SuppressDurationChange,
+						Optional:         true,
+						Computed:         true,
+					},
 				},
 			},
 		},
@@ -359,6 +400,38 @@ func GenSchemaMetaProvisionTokenV2() map[string]*accessors.SchemaMeta {
 					Name:       "Roles",
 					IsTime:     false,
 					IsDuration: false,
+				},
+
+				"allow": {
+					Name:       "Allow",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+
+						"aws_account": {
+							Name:       "AWSAccount",
+							IsTime:     false,
+							IsDuration: false,
+						},
+
+						"aws_regions": {
+							Name:       "AWSRegions",
+							IsTime:     false,
+							IsDuration: false,
+						},
+
+						"aws_role": {
+							Name:       "AWSRole",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+
+				"aws_iid_ttl": {
+					Name:       "AWSIIDTTL",
+					IsTime:     false,
+					IsDuration: true,
 				},
 			},
 		},

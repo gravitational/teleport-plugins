@@ -83,6 +83,7 @@ computed_fields:
     - "types.ProvisionTokenV2.Kind"
     - "types.ProvisionTokenV2.Version"
     - "types.ProvisionTokenV2.Metadata.Namespace"
+    - "types.ProvisionTokenV2.Spec.AWSIIDTTL"
 
     # Role
     - "types.RoleV4.Kind"

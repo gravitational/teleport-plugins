@@ -6,7 +6,7 @@ variable "addr" {}
 terraform {
   required_providers {
     teleport = {
-      version = "7.2.1"
+      version = "7.3.2"
       source  = "gravitational.com/teleport/teleport"
     }
   }
