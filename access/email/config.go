@@ -85,6 +85,7 @@ password = ""
 
 [users]
 sender = "noreply@example.com"    # From: email address
+[delivery]
 recipients = ["person@gmail.com"] # These recipients will receive all review requests
 
 [log]
