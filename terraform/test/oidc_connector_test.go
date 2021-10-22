@@ -85,8 +85,8 @@ func (s *TerraformSuite) TestOIDCConnector() {
 	name := res + ".test"
 
 	resource.Test(s.T(), resource.TestCase{
-		Providers:    s.terraformProviders,
-		CheckDestroy: checkOIDCConnectorDestroyed,
+		ProviderFactories: s.terraformProviders,
+		CheckDestroy:      checkOIDCConnectorDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: create,
@@ -118,4 +118,6 @@ func (s *TerraformSuite) TestOIDCConnector() {
 			},
 		},
 	})
+
+	s.closeClient()
 }

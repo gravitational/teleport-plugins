@@ -115,8 +115,8 @@ func (s *TerraformSuite) TestRole() {
 	name := res + ".test"
 
 	resource.Test(s.T(), resource.TestCase{
-		Providers:    s.terraformProviders,
-		CheckDestroy: checkRoleDestroyed,
+		ProviderFactories: s.terraformProviders,
+		CheckDestroy:      checkRoleDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: create,
@@ -159,4 +159,6 @@ func (s *TerraformSuite) TestRole() {
 			},
 		},
 	})
+
+	s.closeClient()
 }

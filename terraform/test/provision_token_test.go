@@ -64,8 +64,8 @@ func (s *TerraformSuite) TestToken() {
 	name := res + ".test"
 
 	resource.Test(s.T(), resource.TestCase{
-		Providers:    s.terraformProviders,
-		CheckDestroy: checkTokenDestroyed,
+		ProviderFactories: s.terraformProviders,
+		CheckDestroy:      checkTokenDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: create,
@@ -99,4 +99,6 @@ func (s *TerraformSuite) TestToken() {
 			},
 		},
 	})
+
+	s.closeClient()
 }

@@ -42,3 +42,9 @@ make gen-schema
 # Usage
 
 See `example/*.tf` for available configuration options. `make apply` to do an initial application of this configuration to your Terraform cluster.
+
+# Testing
+
+```
+TF_ACC=true go test test/*
+```

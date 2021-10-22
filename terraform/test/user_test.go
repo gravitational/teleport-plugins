@@ -103,8 +103,8 @@ func (s *TerraformSuite) TestUser() {
 	name := res + ".test"
 
 	resource.Test(s.T(), resource.TestCase{
-		Providers:    s.terraformProviders,
-		CheckDestroy: checkUserDestroyed,
+		ProviderFactories: s.terraformProviders,
+		CheckDestroy:      checkUserDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: create,
@@ -149,4 +149,6 @@ func (s *TerraformSuite) TestUser() {
 			},
 		},
 	})
+
+	s.closeClient()
 }

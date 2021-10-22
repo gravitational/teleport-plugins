@@ -53,7 +53,7 @@ func (s *TerraformSuite) TestSessionRecordingConfig() {
 	name := res + ".test"
 
 	resource.Test(s.T(), resource.TestCase{
-		Providers:                 s.terraformProviders,
+		ProviderFactories:         s.terraformProviders,
 		PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
@@ -80,4 +80,6 @@ func (s *TerraformSuite) TestSessionRecordingConfig() {
 			},
 		},
 	})
+
+	s.closeClient()
 }

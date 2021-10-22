@@ -21,8 +21,6 @@ import (
 )
 
 func (s *TerraformSuite) TestNetworkingConfig() {
-	return
-
 	res := "teleport_cluster_networking_config"
 
 	create := s.terraformConfig + `
@@ -55,7 +53,7 @@ func (s *TerraformSuite) TestNetworkingConfig() {
 	name := res + ".test"
 
 	resource.Test(s.T(), resource.TestCase{
-		Providers:                 s.terraformProviders,
+		ProviderFactories:         s.terraformProviders,
 		PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
@@ -84,4 +82,6 @@ func (s *TerraformSuite) TestNetworkingConfig() {
 			},
 		},
 	})
+
+	s.closeClient()
 }

@@ -83,8 +83,8 @@ func (s *TerraformSuite) TestGithubConnector() {
 	name := res + ".test"
 
 	resource.Test(s.T(), resource.TestCase{
-		Providers:    s.terraformProviders,
-		CheckDestroy: checkGithubConnectorDestroyed,
+		ProviderFactories: s.terraformProviders,
+		CheckDestroy:      checkGithubConnectorDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: create,
@@ -118,4 +118,6 @@ func (s *TerraformSuite) TestGithubConnector() {
 			},
 		},
 	})
+
+	s.closeClient()
 }

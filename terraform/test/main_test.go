@@ -25,6 +25,7 @@ import (
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
 	"github.com/gravitational/teleport-plugins/terraform/provider"
+	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/utils"
@@ -45,8 +46,10 @@ type TerraformSuite struct {
 	plugin string
 	// terraformConfig represents Terraform provider configuration
 	terraformConfig string
+	// terraformProvider represents an instance of a Terraform provider
+	terraformProvider *schema.Provider
 	// terraformProviders represents an array of providers
-	terraformProviders map[string]*schema.Provider
+	terraformProviders map[string]func() (*schema.Provider, error)
 }
 
 func TestTerraform(t *testing.T) { suite.Run(t, &TerraformSuite{}) }
@@ -123,8 +126,27 @@ func (s *TerraformSuite) SetupSuite() {
 			identity_file_path = "` + s.teleportConfig.Identity + `"
 		}
 	`
-	s.terraformProviders = map[string]*schema.Provider{"teleport": provider.Provider()}
+
+	s.terraformProvider = provider.Provider()
+	s.terraformProviders = make(map[string]func() (*schema.Provider, error))
+	s.terraformProviders["teleport"] = func() (*schema.Provider, error) {
+		// Terraform configures provider on every test step, but does not clean up previous one, which produces
+		// to "too many open files" at some point.
+		//
+		// With this statement we try to forcefully close previously opened client, which stays cached in
+		// the provider variable.
+		s.closeClient()
+		return s.terraformProvider, nil
+	}
 }
 
 func (s *TerraformSuite) SetupTest() {
+}
+
+func (s *TerraformSuite) closeClient() {
+	m := s.terraformProvider.Meta()
+	if m != nil {
+		c := m.(*client.Client)
+		require.NoError(s.T(), c.Close())
+	}
 }

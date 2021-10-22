@@ -53,7 +53,7 @@ func (s *TerraformSuite) TestAuthPreference() {
 	name := res + ".test"
 
 	resource.Test(s.T(), resource.TestCase{
-		Providers:                 s.terraformProviders,
+		ProviderFactories:         s.terraformProviders,
 		PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
@@ -82,4 +82,6 @@ func (s *TerraformSuite) TestAuthPreference() {
 			},
 		},
 	})
+
+	s.closeClient()
 }

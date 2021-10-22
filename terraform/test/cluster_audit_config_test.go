@@ -40,7 +40,7 @@ func (s *TerraformSuite) TestAuditConfig() {
 	`
 
 	resource.Test(s.T(), resource.TestCase{
-		Providers: s.terraformProviders,
+		ProviderFactories: s.terraformProviders,
 		Steps: []resource.TestStep{
 			{
 				Config:      create,
@@ -48,4 +48,6 @@ func (s *TerraformSuite) TestAuditConfig() {
 			},
 		},
 	})
+
+	s.closeClient()
 }
