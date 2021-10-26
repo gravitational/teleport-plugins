@@ -37,6 +37,7 @@ event-handler:
 # Run all tests
 .PHONY: test
 test:
+	@echo Testing plugins against Teleport $(TELEPORT_GET_VERSION)
 	go test -race -count 1 ./...
 
 # Individual releases
