@@ -3,12 +3,12 @@ steps:
     env:
       - TELEPORT_GET_VERSION=v7.1.1
     secretEnv:
-      - 'TELEPORT_ENTERPRISE_LICENSE'
+      - TELEPORT_ENTERPRISE_LICENSE
     entrypoint: /bin/bash
-    args: ['-c', 'make test']
+    args: ["-c", "make test"]
 availableSecrets:
   secretManager:
   - versionName: projects/771512790633/secrets/ci-enterprise-license/versions/1
     env: TELEPORT_ENTERPRISE_LICENSE
 options:
-  machineType: 'E2_HIGHCPU_8'
+  machineType: E2_HIGHCPU_8
