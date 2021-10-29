@@ -19,38 +19,9 @@ Automated bootstrap of Teleport data is not an easy task, especially when it's r
 
 For the task, the [Kubebuilder](https://kubebuilder.io/) framework should be used. It has great code generation capabilities and gives a complete setup to develop & deploy the manager.
 
-### Instance definitions
+### Teleport Auth server discovery and authentication
 
-To write something into Teleport, the manager needs to know what server to connect to and how. So it needs Teleport Auth/Proxy/Tunnel address and credentials to be recognized. 
-
-Instance definitions look like this:
-
-```yaml
-apiVersion: instances.goteleport.com/v7
-kind: Instance
-metadata:
-  name: some-teleport-instance
-  namespace: teleport
-spec:
-  addr: some-teleport.svc.cluster.local:3080
-  secretName: some-creds
-```
-
-Credentials are stored separately from the instance definition in a secret defined in `secretName` field. An instance's secret must reside in the same namespace as an instance resource itself.
-
-Credentials data contains some private keys, and it's a common practice to store such things in a Kubernetes secret. Such separation also plays nice with Kubernetes RBAC — one would want to give access to read an instances list and introspect their status but don't give access to their secrets.
-
-Then one can create a credentials secret with something like that:
-
-```bash
-tctl auth sign --user=kubernetes-manager --ttl=8760h --overwrite --format=file -o /tmp/kubernetes-manager-identity
-kubectl -n teleport create secret generic some-creds --from-file=identity=/tmp/kubernetes-manager-identity
-rm -f /tmp/kubernetes-manager-identity
-```
-
-Secret in Kubernetes is a key-value object, and the only supported key, for now, is `"identity"` that stores Teleport connection credentials.
-
-In the future, the process of identity derivation might be simplified by adding to `tctl auth sign` support of writing an identity directly to Kubernetes instead of a temporary file.
+To write something into Teleport, the manager needs to know what server to connect to and how. There're many options on how to discover Teleport instances in the cluster but for now, let's start with the simplest one - run manager as a sidecar container in the same pod as the Teleport auth server. Containers in the pod can share the volumes, so the manager container could have access to `/var/lib/teleport/proc` database, which contains administrator credentials. This is the same way how `tctl` utility works - it doesn't require any authentication when you run it on the same machine where Teleport is running.
 
 ### Resource definitions
 
@@ -84,11 +55,45 @@ The name of the Kubernetes custom resource is the name of the resource in Telepo
 
 Deletion of resources is being handled using [resource finalizers](https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/). Every acknowledged resource gets a finalizer named `"resources.goteleport.com/delete"` so when the deletion happens, Kubernetes doesn't actually delete it but sets a deletion timestamp. While the finalizer list is non-empty, the manager can still access the resource's fields, `instanceName` in particular. Deletion of the Kubernetes object leads to deletion of the associated resource in Teleport. Once a deletion in Teleport succeeds, the manager removes a finalizer from the Kubernetes object so it can be garbage-collected.
 
+### Identity definitions
+
+To run some plugin in the cluster, the credentials are required. Normally, one can get the credentials credentials using `tctl auth sign` command or using `tsh login`. To automate the credentials generation, the `Identity` resource is introduced. The identity definition looks like this:
+
+```yaml
+apiVersion: control.goteleport.com/v8
+kind: Identity
+metadata:
+  name: access-slack
+spec:
+  username: access-slack
+  secretName: access-slack-secret
+```
+
+Here, the `username` is a Teleport user name, and `secretName` is a name of a secret resource where the manager will write credentials. Once the `Identity` object is created in the Kubernetes, the secret object with credentials contents will be written in the same namespace where the identity object resides.
+
+### Limit the scope
+
+When running the manager as a sidecar container, the question arises: what objects is this particular instance of the manager responsible for and what objects not? There could be multiple Teleport deployments in the same cluster, and each deployment might have its manager sidecar container. So the question is how to limit the scope of objects observed.
+
+The first option is to limit by the namespace, and the second is to limit by label selectors. Both of them must be present in the manager to be very specific on what Kubernetes objects to watch.
+
+Configuration example:
+
+```yaml
+scope:
+  namespace: some-namespace
+  labelSelector:
+    matchExpressions:
+    - key: app
+      operator: In
+      values: ["my-teleport"]
+```
+
 ### API Groups and Versions
 
-`Instance` resource resides in an API group called `instances.goteleport.com`, and all the Teleport resources reside in a group called `resources.goteleport.com`. Two different groups are used for a reason:
+`Identity` resource resides in an API group called `control.goteleport.com`, and all the Teleport resources reside in a group called `resources.goteleport.com`. Two different groups are used for a reason:
 
-- API Versions of `instances.goteleport.com` start from `v7` because the Teleport version is 7.x at the moment of writing this document.
+- API Versions of `instances.goteleport.com` start from `v8` because the Teleport version is 8.x at the moment of writing this document.
 - API Versions of `resources.goteleport.com` are all different because they're tied to Teleport resource versions.
 
 ### Generating Custom Resource Definitions
