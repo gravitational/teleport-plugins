@@ -26,56 +26,27 @@ import (
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 )
-
-// session is the utility struct used for session ingestion
-type session struct {
-	// ID current ID
-	ID string
-
-	// Index current event index
-	Index int64
-}
 
 // App is the app structure
 type App struct {
-	// mainJob is the main poller loop
-	mainJob lib.ServiceJob
-
 	// fluentd is an instance of Fluentd client
-	fluentd *FluentdClient
-
+	Fluentd *FluentdClient
 	// teleport is an instance of Teleport client
-	teleport *TeleportEventsWatcher
-
+	Teleport *TeleportEventsWatcher
 	// state is current persisted state
-	state *State
-
+	State *State
 	// cmd is start command CLI config
-	config *StartCmdConfig
-
-	// semaphore limiter semaphore
-	semaphore chan struct{}
-
-	// sessionIDs id queue
-	sessions chan session
-
-	// sessionConsumerJob controls session ingestion
-	sessionConsumerJob lib.ServiceJob
-
+	Config *StartCmdConfig
+	// eventsJob represents main audit log event consumer job
+	eventsJob *EventsJob
+	// sessionEventsJob represents session events consumer job
+	sessionEventsJob *SessionEventsJob
 	// Process
 	*lib.Process
 }
 
 const (
-	// sessionBackoffBase is an initial (minimum) backoff value.
-	sessionBackoffBase = 3 * time.Second
-	// sessionBackoffMax is a backoff threshold
-	sessionBackoffMax = 2 * time.Minute
-	// sessionBackoffNumTries is the maximum number of backoff tries
-	sessionBackoffNumTries = 5
-
 	// sendBackoffBase is an initial (minimum) backoff value.
 	sendBackoffBase = 1 * time.Second
 	// sendBackoffMax is a backoff threshold
@@ -86,11 +57,10 @@ const (
 
 // NewApp creates new app instance
 func NewApp(c *StartCmdConfig) (*App, error) {
-	app := &App{config: c}
-	app.mainJob = lib.NewServiceJob(app.run)
-	app.sessionConsumerJob = lib.NewServiceJob(app.runSessionConsumer)
-	app.semaphore = make(chan struct{}, c.Concurrency)
-	app.sessions = make(chan session)
+	app := &App{Config: c}
+
+	app.eventsJob = NewEventsJob(app)
+	app.sessionEventsJob = NewSessionEventsJob(app)
 
 	return app, nil
 }
@@ -99,8 +69,13 @@ func NewApp(c *StartCmdConfig) (*App, error) {
 func (a *App) Run(ctx context.Context) error {
 	a.Process = lib.NewProcess(ctx)
 
-	a.SpawnCriticalJob(a.mainJob)
-	a.SpawnCriticalJob(a.sessionConsumerJob)
+	err := a.init(ctx)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	a.SpawnCriticalJob(a.eventsJob)
+	a.SpawnCriticalJob(a.sessionEventsJob)
 	<-a.Process.Done()
 
 	return a.Err()
@@ -108,17 +83,17 @@ func (a *App) Run(ctx context.Context) error {
 
 // Err returns the error app finished with.
 func (a *App) Err() error {
-	return trace.NewAggregate(a.mainJob.Err(), a.sessionConsumerJob.Err())
+	return trace.NewAggregate(a.eventsJob.Err(), a.sessionEventsJob.Err())
 }
 
 // WaitReady waits for http and watcher service to start up.
 func (a *App) WaitReady(ctx context.Context) (bool, error) {
-	mainReady, err := a.mainJob.WaitReady(ctx)
+	mainReady, err := a.eventsJob.WaitReady(ctx)
 	if err != nil {
 		return false, trace.Wrap(err)
 	}
 
-	sessionConsumerReady, err := a.sessionConsumerJob.WaitReady(ctx)
+	sessionConsumerReady, err := a.sessionEventsJob.WaitReady(ctx)
 	if err != nil {
 		return false, trace.Wrap(err)
 	}
@@ -126,276 +101,16 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 	return mainReady && sessionConsumerReady, nil
 }
 
-// consumeSession ingests session
-func (a *App) consumeSession(ctx context.Context, s session) (bool, error) {
+// SendEvent sends an event to fluentd. Shared method used by jobs.
+func (a *App) SendEvent(ctx context.Context, url string, e *TeleportEvent) error {
 	log := logger.Get(ctx)
 
-	url := a.config.FluentdSessionURL + "." + s.ID + ".log"
-	ctx = a.contextWithCancelOnTerminate(ctx)
-
-	log.WithField("id", s.ID).WithField("index", s.Index).Info("Started session events ingest")
-	chEvt, chErr := a.teleport.StreamSessionEvents(ctx, s.ID, s.Index)
-
-Loop:
-	for {
-		select {
-		case err := <-chErr:
-			return true, trace.Wrap(err)
-
-		case evt := <-chEvt:
-			if evt == nil {
-				log.WithField("id", s.ID).Info("Finished session events ingest")
-				break Loop // Break the main loop
-			}
-
-			e, err := NewTeleportEvent(evt, "")
-			if err != nil {
-				return false, trace.Wrap(err)
-			}
-
-			_, ok := a.config.SkipSessionTypes[e.Type]
-			if !ok {
-				err := a.sendEvent(ctx, url, &e)
-				if err != nil && trace.IsConnectionProblem(err) {
-					return true, trace.Wrap(err)
-				}
-				if err != nil {
-					return false, trace.Wrap(err)
-				}
-			}
-
-			// Set session index
-			err = a.state.SetSessionIndex(s.ID, e.Index)
-			if err != nil {
-				return true, trace.Wrap(err)
-			}
-		case <-ctx.Done():
-			if lib.IsCanceled(ctx.Err()) {
-				return false, nil
-			}
-
-			return false, trace.Wrap(ctx.Err())
-		}
-	}
-
-	// We finished ingestion and do not need session state anymore
-	err := a.state.RemoveSession(s.ID)
-	if err != nil {
-		return false, trace.Wrap(err)
-	}
-
-	return false, nil
-}
-
-// runSessionConsumer runs session consuming process
-func (a *App) runSessionConsumer(ctx context.Context) error {
-	log := logger.Get(ctx)
-
-	a.sessionConsumerJob.SetReady(true)
-
-	ctx = a.contextWithCancelOnTerminate(ctx)
-
-	for {
-		select {
-		case s := <-a.sessions:
-			a.takeSemaphore(ctx)
-
-			log.WithField("id", s.ID).WithField("index", s.Index).Info("Starting session ingest")
-
-			func(s session) {
-				a.SpawnCritical(func(ctx context.Context) error {
-					defer a.releaseSemaphore(ctx)
-
-					backoff := backoff.NewDecorr(sessionBackoffBase, sessionBackoffMax, clockwork.NewRealClock())
-					backoffCount := sessionBackoffNumTries
-					log := logger.Get(ctx).WithField("id", s.ID).WithField("index", s.Index)
-
-					for {
-						retry, err := a.consumeSession(ctx, s)
-
-						// If sessions needs to retry
-						if err != nil && retry {
-							log.WithField("err", err).WithField("n", backoffCount).Error("Session ingestion error, retrying")
-
-							// Sleep for required interval
-							err := backoff.Do(ctx)
-							if err != nil {
-								return trace.Wrap(err)
-							}
-
-							// Check if there are number of tries left
-							backoffCount--
-							if backoffCount < 0 {
-								log.WithField("err", err).Error("Session ingestion failed")
-								return nil
-							}
-							continue
-						}
-
-						if err != nil {
-							if !lib.IsCanceled(err) {
-								log.WithField("err", err).Error("Session ingestion failed")
-							}
-							return err
-						}
-
-						// No errors, we've finished with this session
-						return nil
-					}
-				})
-			}(s)
-		case <-ctx.Done():
-			if lib.IsCanceled(ctx.Err()) {
-				return nil
-			}
-			return ctx.Err()
-		}
-	}
-}
-
-// run is the main process
-func (a *App) run(ctx context.Context) error {
-	log := logger.Get(ctx)
-
-	log.WithField("version", Version).WithField("sha", Sha).Printf("Teleport event handler")
-
-	err := a.init(ctx)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	a.restartPausedSessions()
-
-	a.mainJob.SetReady(true)
-
-	ctx = a.contextWithCancelOnTerminate(ctx)
-
-	for {
-		err := a.poll(ctx)
-
-		switch {
-		case trace.IsConnectionProblem(err):
-			log.WithError(err).Error("Failed to connect to Teleport Auth server. Reconnecting...")
-		case trace.IsEOF(err):
-			log.WithError(err).Error("Watcher stream closed. Reconnecting...")
-		case lib.IsCanceled(err):
-			log.Debug("Watcher context is cancelled")
-			a.Terminate()
-			return nil
-		default:
-			a.Terminate()
-			if err == nil {
-				return nil
-			}
-			log.WithError(err).Error("Watcher event loop failed")
-			return trace.Wrap(err)
-		}
-	}
-}
-
-// restartPausedSessions restarts sessions saved in state
-func (a *App) restartPausedSessions() error {
-	sessions, err := a.state.GetSessions()
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	if len(sessions) == 0 {
-		return nil
-	}
-
-	for id, idx := range sessions {
-		func(id string, idx int64) {
-			a.SpawnCritical(func(ctx context.Context) error {
-				ctx = a.contextWithCancelOnTerminate(ctx)
-
-				log.WithField("id", id).WithField("index", idx).Info("Restarting session ingestion")
-
-				s := session{ID: id, Index: idx}
-
-				select {
-				case a.sessions <- s:
-					return nil
-				case <-ctx.Done():
-					if lib.IsCanceled(ctx.Err()) {
-						return nil
-					}
-
-					return ctx.Err()
-				}
-			})
-		}(id, idx)
-	}
-
-	return nil
-}
-
-// startSessionPoll starts session event ingestion
-func (a *App) startSessionPoll(ctx context.Context, e *TeleportEvent) error {
-	err := a.state.SetSessionIndex(e.SessionID, 0)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	s := session{ID: e.SessionID, Index: 0}
-
-	select {
-	case a.sessions <- s:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-// poll polls main audit log
-func (a *App) poll(ctx context.Context) error {
-	evtCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	chEvt, chErr := a.teleport.Events(evtCtx)
-
-	for {
-		select {
-		case err := <-chErr:
-			log.WithField("err", err).Error("Error ingesting Audit Log")
-			return trace.Wrap(err)
-
-		case evt := <-chEvt:
-			if evt == nil {
-				return nil
-			}
-
-			err := a.sendEvent(ctx, a.config.FluentdURL, evt)
-			if err != nil {
-				return trace.Wrap(err)
-			}
-
-			a.state.SetID(evt.ID)
-			a.state.SetCursor(evt.Cursor)
-
-			if evt.IsSessionEnd {
-				func(evt *TeleportEvent) {
-					a.SpawnCritical(func(ctx context.Context) error {
-						return a.startSessionPoll(ctx, evt)
-					})
-				}(evt)
-			}
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-}
-
-// sendEvent sends an event to fluentd
-func (a *App) sendEvent(ctx context.Context, url string, e *TeleportEvent) error {
-	log := logger.Get(ctx)
-
-	if !a.config.DryRun {
+	if !a.Config.DryRun {
 		backoff := backoff.NewDecorr(sendBackoffBase, sendBackoffMax, clockwork.NewRealClock())
 		backoffCount := sendBackoffNumTries
 
 		for {
-			err := a.fluentd.Send(ctx, url, e.Event)
+			err := a.Fluentd.Send(ctx, url, e.Event)
 			if err == nil {
 				break
 			}
@@ -432,9 +147,9 @@ func (a *App) sendEvent(ctx context.Context, url string, e *TeleportEvent) error
 func (a *App) init(ctx context.Context) error {
 	log := logger.Get(ctx)
 
-	a.config.Dump(ctx)
+	a.Config.Dump(ctx)
 
-	s, err := NewState(a.config)
+	s, err := NewState(a.Config)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -444,7 +159,7 @@ func (a *App) init(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	f, err := NewFluentdClient(&a.config.FluentdConfig)
+	f, err := NewFluentdClient(&a.Config.FluentdConfig)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -464,14 +179,14 @@ func (a *App) init(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	t, err := NewTeleportEventsWatcher(ctx, a.config, *startTime, latestCursor, latestID)
+	t, err := NewTeleportEventsWatcher(ctx, a.Config, *startTime, latestCursor, latestID)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	a.state = s
-	a.fluentd = f
-	a.teleport = t
+	a.State = s
+	a.Fluentd = f
+	a.Teleport = t
 
 	log.WithField("cursor", latestCursor).Info("Using initial cursor value")
 	log.WithField("id", latestID).Info("Using initial ID value")
@@ -490,9 +205,9 @@ func (a *App) setStartTime(ctx context.Context, s *State) error {
 	}
 
 	if prevStartTime == nil {
-		log.WithField("value", a.config.StartTime).Debug("Setting start time")
+		log.WithField("value", a.Config.StartTime).Debug("Setting start time")
 
-		t := a.config.StartTime
+		t := a.Config.StartTime
 		if t == nil {
 			now := time.Now().UTC().Truncate(time.Second)
 			t = &now
@@ -503,40 +218,14 @@ func (a *App) setStartTime(ctx context.Context, s *State) error {
 
 	// If there is a time saved in the state and this time does not equal to the time passed from CLI and a
 	// time was explicitly passed from CLI
-	if prevStartTime != nil && a.config.StartTime != nil && *prevStartTime != *a.config.StartTime {
-		return trace.Errorf("You can not change start time in the middle of ingestion. To restart the ingestion, rm -rf %v", a.config.StorageDir)
+	if prevStartTime != nil && a.Config.StartTime != nil && *prevStartTime != *a.Config.StartTime {
+		return trace.Errorf("You can not change start time in the middle of ingestion. To restart the ingestion, rm -rf %v", a.Config.StorageDir)
 	}
 
 	return nil
 }
 
-// contextWithCancelOnTerminate creates child context which is canceled when app receives onTerminate signal (graceful shutdown)
-func (a *App) contextWithCancelOnTerminate(ctx context.Context) context.Context {
-	process := lib.MustGetProcess(ctx)
-	ctx, cancel := context.WithCancel(ctx)
-	process.OnTerminate(func(_ context.Context) error {
-		cancel()
-		return nil
-	})
-	return ctx
-}
-
-// takeSemaphore obtains semaphore
-func (a *App) takeSemaphore(ctx context.Context) error {
-	select {
-	case a.semaphore <- struct{}{}:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
-}
-
-// releaseSemaphore releases semaphore
-func (a *App) releaseSemaphore(ctx context.Context) error {
-	select {
-	case <-a.semaphore:
-		return nil
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+// RegisterSession registers new session
+func (a *App) RegisterSession(ctx context.Context, e *TeleportEvent) {
+	a.sessionEventsJob.RegisterSession(ctx, e)
 }
