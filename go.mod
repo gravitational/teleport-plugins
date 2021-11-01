@@ -29,6 +29,7 @@ require (
 	github.com/pelletier/go-toml v1.8.0
 	github.com/peterbourgon/diskv/v3 v3.0.0
 	github.com/sergi/go-diff v1.2.0 // indirect
+	github.com/sethvargo/go-limiter v0.7.2
 	github.com/sirupsen/logrus v1.8.1-0.20210219125412-f104497f2b21
 	github.com/stretchr/testify v1.7.0
 	go.etcd.io/bbolt v1.3.5

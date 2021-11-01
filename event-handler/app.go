@@ -30,11 +30,11 @@ import (
 
 // App is the app structure
 type App struct {
-	// fluentd is an instance of Fluentd client
+	// Fluentd represents the instance of Fluentd client
 	Fluentd *FluentdClient
-	// teleport is an instance of Teleport client
-	Teleport *TeleportEventsWatcher
-	// state is current persisted state
+	// EventWatcher represents the instance of TeleportEventWatcher
+	EventWatcher *TeleportEventsWatcher
+	// State represents the instance of the persistent state
 	State *State
 	// cmd is start command CLI config
 	Config *StartCmdConfig
@@ -186,7 +186,7 @@ func (a *App) init(ctx context.Context) error {
 
 	a.State = s
 	a.Fluentd = f
-	a.Teleport = t
+	a.EventWatcher = t
 
 	log.WithField("cursor", latestCursor).Info("Using initial cursor value")
 	log.WithField("id", latestID).Info("Using initial ID value")

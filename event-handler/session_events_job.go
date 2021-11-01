@@ -168,7 +168,7 @@ func (j *SessionEventsJob) consumeSession(ctx context.Context, s session) (bool,
 	url := j.app.Config.FluentdSessionURL + "." + s.ID + ".log"
 
 	log.WithField("id", s.ID).WithField("index", s.Index).Info("Started session events ingest")
-	chEvt, chErr := j.app.Teleport.StreamSessionEvents(ctx, s.ID, s.Index)
+	chEvt, chErr := j.app.EventWatcher.StreamSessionEvents(ctx, s.ID, s.Index)
 
 Loop:
 	for {
@@ -189,7 +189,7 @@ Loop:
 
 			_, ok := j.app.Config.SkipSessionTypes[e.Type]
 			if !ok {
-				err := j.app.SendEvent(ctx, url, &e)
+				err := j.app.SendEvent(ctx, url, e)
 
 				if err != nil && trace.IsConnectionProblem(err) {
 					return true, trace.Wrap(err)

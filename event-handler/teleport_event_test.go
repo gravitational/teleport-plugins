@@ -61,4 +61,37 @@ func TestSessionEnd(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, event.ID)
 	assert.NotEmpty(t, event.SessionID)
+	assert.True(t, event.IsSessionEnd)
+}
+
+func TestFailedLogin(t *testing.T) {
+	e := &events.UserLogin{
+		Metadata: events.Metadata{
+			Type: "user.login",
+		},
+		Status: events.Status{
+			Success: false,
+		},
+	}
+
+	event, err := NewTeleportEvent(events.AuditEvent(e), "cursor")
+	require.NoError(t, err)
+	assert.NotEmpty(t, event.ID)
+	assert.True(t, event.IsFailedLogin)
+}
+
+func TestSuccessLogin(t *testing.T) {
+	e := &events.UserLogin{
+		Metadata: events.Metadata{
+			Type: "user.login",
+		},
+		Status: events.Status{
+			Success: true,
+		},
+	}
+
+	event, err := NewTeleportEvent(events.AuditEvent(e), "cursor")
+	require.NoError(t, err)
+	assert.NotEmpty(t, event.ID)
+	assert.False(t, event.IsFailedLogin)
 }

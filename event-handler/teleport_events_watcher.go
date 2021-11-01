@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib/logger"
@@ -28,10 +29,16 @@ import (
 	"golang.org/x/net/context"
 )
 
+const (
+	// lockMessage represents a message added to Lock when user is auto-locked
+	lockMessage = "User is locked due to too many failed login attempts"
+)
+
 // TeleportSearchEventsClient is an interface for client.Client, required for testing
 type TeleportSearchEventsClient interface {
 	SearchEvents(ctx context.Context, fromUTC, toUTC time.Time, namespace string, eventTypes []string, limit int, order types.EventOrder, startKey string) ([]events.AuditEvent, string, error)
 	StreamSessionEvents(ctx context.Context, sessionID string, startIndex int64) (chan events.AuditEvent, chan error)
+	UpsertLock(ctx context.Context, lock types.Lock) error
 	Close() error
 }
 
@@ -39,25 +46,18 @@ type TeleportSearchEventsClient interface {
 type TeleportEventsWatcher struct {
 	// client is an instance of GRPC Teleport client
 	client TeleportSearchEventsClient
-
 	// cursor current page cursor value
 	cursor string
-
 	// nextCursor next page cursor value
 	nextCursor string
-
 	// id latest event returned by Next()
 	id string
-
 	// pos current virtual cursor position within a batch
 	pos int
-
 	// batch current events batch
-	batch []TeleportEvent
-
+	batch []*TeleportEvent
 	// config is teleport config
 	config *StartCmdConfig
-
 	// startTime is event time frame start
 	startTime time.Time
 }
@@ -109,7 +109,7 @@ func (t *TeleportEventsWatcher) flipPage() bool {
 
 	t.cursor = t.nextCursor
 	t.pos = -1
-	t.batch = []TeleportEvent{}
+	t.batch = make([]*TeleportEvent, 0)
 
 	return true
 }
@@ -124,7 +124,7 @@ func (t *TeleportEventsWatcher) fetch(ctx context.Context) error {
 	}
 
 	// Zero batch
-	t.batch = make([]TeleportEvent, len(b))
+	t.batch = make([]*TeleportEvent, len(b))
 
 	// Save next cursor
 	t.nextCursor = nextCursor
@@ -267,7 +267,7 @@ func (t *TeleportEventsWatcher) Events(ctx context.Context) (chan *TeleportEvent
 			t.id = event.ID
 
 			select {
-			case ch <- &event:
+			case ch <- event:
 			case <-ctx.Done():
 				e <- ctx.Err()
 				return
@@ -281,4 +281,23 @@ func (t *TeleportEventsWatcher) Events(ctx context.Context) (chan *TeleportEvent
 // StreamSessionEvents returns session event stream, that's the simple delegate to an API function
 func (t *TeleportEventsWatcher) StreamSessionEvents(ctx context.Context, id string, index int64) (chan events.AuditEvent, chan error) {
 	return t.client.StreamSessionEvents(ctx, id, index)
+}
+
+// UpsertLock upserts user lock
+func (t *TeleportEventsWatcher) UpsertLock(ctx context.Context, user string, login string) error {
+	lock := &types.LockV2{
+		Metadata: types.Metadata{
+			Name: fmt.Sprintf("event-handler-auto-lock-%v-%v", user, login),
+		},
+		Spec: types.LockSpecV2{
+			Target: types.LockTarget{
+				Login: login,
+				User:  user,
+			},
+			Message: lockMessage,
+			Expires: nil,
+		},
+	}
+
+	return t.client.UpsertLock(ctx, lock)
 }
