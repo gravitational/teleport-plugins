@@ -79,7 +79,7 @@ private_key = "xoxb-11xx"                                      # Mailgun private
 # password = ""
 # password_file = "/var/lib/teleport/plugins/email/smtp_password"
 
-[users]
+[delivery]
 sender = "noreply@example.com"   # From: email address
 recipients = ["all@example.com"] # These recipients will receive all review requests
 

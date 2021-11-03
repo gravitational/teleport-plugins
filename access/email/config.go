@@ -83,7 +83,7 @@ username = "username@gmail.com"
 password = ""
 # password_file = "/var/lib/teleport/plugins/email/smtp_password"
 
-[users]
+[delivery]
 sender = "noreply@example.com"    # From: email address
 recipients = ["person@gmail.com"] # These recipients will receive all review requests
 
