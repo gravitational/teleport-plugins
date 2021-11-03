@@ -33,7 +33,6 @@ kind: Role
 metadata:
   name: folks
   namespace: teleport
-instanceName: some-instance
 spec:
   allow:
     request:
@@ -44,16 +43,15 @@ kind: User
 metadata:
   name: human-bean
   namespace: teleport
-instanceName: some-instance
 spec:
   roles: ["folks"]
 ```
 
-Manager process watches for custom resource events. Once a custom resource is created/updated, the manager's watcher acknowledges it and upserts a resource into Teleport. Every custom resource must have the `instanceName` field useful to look up an instance resource in order to know what address to connect to. Instance resource and its associated secret must reside in the same namespace as the custom resource.
+Manager process watches for custom resource events. Once a custom resource is created/updated, the manager's watcher acknowledges it and upserts a resource into Teleport.
 
 The name of the Kubernetes custom resource is the name of the resource in Teleport. Also, every Kubernetes custom resource must have a `spec` field that has the same schema as a `spec` field of a resource in Teleport.
 
-Deletion of resources is being handled using [resource finalizers](https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/). Every acknowledged resource gets a finalizer named `"resources.goteleport.com/delete"` so when the deletion happens, Kubernetes doesn't actually delete it but sets a deletion timestamp. While the finalizer list is non-empty, the manager can still access the resource's fields, `instanceName` in particular. Deletion of the Kubernetes object leads to deletion of the associated resource in Teleport. Once a deletion in Teleport succeeds, the manager removes a finalizer from the Kubernetes object so it can be garbage-collected.
+Deletion of resources is being handled using [resource finalizers](https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/). Every acknowledged resource gets a finalizer named `"resources.goteleport.com/delete"` so when the deletion happens, Kubernetes doesn't actually delete it but sets a deletion timestamp. While the finalizer list is non-empty, the manager can still access the resource's fields. Deletion of the Kubernetes object leads to deletion of the associated resource in Teleport. Once a deletion in Teleport succeeds, the manager removes a finalizer from the Kubernetes object so it can be garbage-collected.
 
 ### Identity definitions
 
