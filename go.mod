@@ -16,7 +16,7 @@ require (
 	github.com/google/go-querystring v1.0.0
 	github.com/google/uuid v1.2.0
 	github.com/gravitational/kingpin v2.1.11-0.20190130013101-742f2714c145+incompatible
-	github.com/gravitational/teleport/api v0.0.0-20210915192615-a8ca2d3f910e
+	github.com/gravitational/teleport/api v0.0.0-20211020013622-aa361fbc1fe1 // v7.3.2
 	github.com/gravitational/trace v1.1.16-0.20210609220119-4855e69c89fc
 	github.com/hashicorp/go-version v1.2.1
 	github.com/jonboulle/clockwork v0.2.2

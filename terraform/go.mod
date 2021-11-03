@@ -12,8 +12,8 @@ require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/gogo/protobuf v1.3.2
-	github.com/gravitational/protoc-gen-terraform v0.0.0-20211015105849-f3fa87b13c81
-	github.com/gravitational/teleport/api v0.0.0-20211020013622-aa361fbc1fe1
+	github.com/gravitational/protoc-gen-terraform v0.0.0-20211015105849-f3fa87b13c81 // https://github.com/gravitational/protoc-gen-terraform/pull/13
+	github.com/gravitational/teleport/api v0.0.0-20211020013622-aa361fbc1fe1 // v7.3.2
 	github.com/gravitational/trace v1.1.15
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-hclog v0.16.0 // indirect
