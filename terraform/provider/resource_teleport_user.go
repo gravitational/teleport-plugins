@@ -78,7 +78,7 @@ func resourceUserCreate(ctx context.Context, d *schema.ResourceData, m interface
 		return diagFromErr(fmt.Errorf("failed to convert created user to *types.UserV2 from %T", u))
 	}
 
-	err = tfschema.GetUserV2(u2, d)
+	err = tfschema.FromTerraformUserV2(d, u2)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -119,7 +119,7 @@ func resourceUserRead(ctx context.Context, d *schema.ResourceData, m interface{}
 		return diagFromErr(trace.Errorf("can not convert %T to *types.TrustedClusterV2", u))
 	}
 
-	err = tfschema.SetUserV2(u2, d)
+	err = tfschema.ToTerraformUserV2(u2, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -152,7 +152,7 @@ func resourceUserUpdate(ctx context.Context, d *schema.ResourceData, m interface
 		return diagFromErr(fmt.Errorf("failed to convert created user to types.UserV2 from %T", u))
 	}
 
-	err = tfschema.GetUserV2(u2, d)
+	err = tfschema.FromTerraformUserV2(d, u2)
 	if err != nil {
 		return diagFromErr(err)
 	}

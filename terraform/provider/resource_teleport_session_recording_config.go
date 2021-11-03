@@ -54,7 +54,7 @@ func resourceRecordingConfigCreate(ctx context.Context, d *schema.ResourceData, 
 
 	n := types.SessionRecordingConfigV2{}
 
-	err = tfschema.GetSessionRecordingConfigV2(&n, d)
+	err = tfschema.FromTerraformSessionRecordingConfigV2(d, &n)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -93,7 +93,7 @@ func resourceRecordingConfigRead(ctx context.Context, d *schema.ResourceData, m 
 
 	removeOriginLabel(n.Metadata.Labels)
 
-	err = tfschema.SetSessionRecordingConfigV2(n, d)
+	err = tfschema.ToTerraformSessionRecordingConfigV2(n, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -121,7 +121,7 @@ func resourceRecordingConfigUpdate(ctx context.Context, d *schema.ResourceData, 
 		return diagFromErr(fmt.Errorf("failed to convert created role to types.SessionRecordingConfigV2 from %T", n))
 	}
 
-	err = tfschema.GetSessionRecordingConfigV2(n, d)
+	err = tfschema.FromTerraformSessionRecordingConfigV2(d, n)
 	if err != nil {
 		return diagFromErr(err)
 	}

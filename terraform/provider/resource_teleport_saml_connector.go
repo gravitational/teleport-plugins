@@ -57,7 +57,7 @@ func resourceSAMLConnectorCreate(ctx context.Context, d *schema.ResourceData, m 
 		return diagFromErr(err)
 	}
 
-	_, err = c.GetSAMLConnector(ctx, n, false)
+	_, err = c.GetSAMLConnector(ctx, n, true)
 	if err == nil {
 		existErr := "SAML connector " + n + " exists in Teleport. Either remove it (tctl rm saml/" + n + ")" +
 			" or import it to the existing state (terraform import teleport_saml_connector." + n + " " + n + ")"
@@ -69,7 +69,7 @@ func resourceSAMLConnectorCreate(ctx context.Context, d *schema.ResourceData, m 
 	}
 
 	s := types.SAMLConnectorV2{Spec: types.SAMLConnectorSpecV2{AttributesToRoles: make([]types.AttributeMapping, 2)}}
-	err = tfschema.GetSAMLConnectorV2(&s, d)
+	err = tfschema.FromTerraformSAMLConnectorV2(d, &s)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -113,7 +113,7 @@ func resourceSAMLConnectorRead(ctx context.Context, d *schema.ResourceData, m in
 		return diagFromErr(fmt.Errorf("failed to convert created user to types.SAMLConnectorV2 from %T", s))
 	}
 
-	err = tfschema.SetSAMLConnectorV2(s2, d)
+	err = tfschema.ToTerraformSAMLConnectorV2(s2, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -130,7 +130,7 @@ func resourceSAMLConnectorUpdate(ctx context.Context, d *schema.ResourceData, m 
 
 	id := d.Id()
 
-	s, err := c.GetSAMLConnector(ctx, id, false)
+	s, err := c.GetSAMLConnector(ctx, id, true)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -140,7 +140,7 @@ func resourceSAMLConnectorUpdate(ctx context.Context, d *schema.ResourceData, m 
 		return diagFromErr(fmt.Errorf("failed to convert created saml to types.SAMLConnectorV2 from %T", s))
 	}
 
-	err = tfschema.GetSAMLConnectorV2(s2, d)
+	err = tfschema.FromTerraformSAMLConnectorV2(d, s2)
 	if err != nil {
 		return diagFromErr(err)
 	}

@@ -62,7 +62,7 @@ github.com/gorilla/mux
 # github.com/gravitational/kingpin v2.1.11-0.20190130013101-742f2714c145+incompatible
 ## explicit
 github.com/gravitational/kingpin
-# github.com/gravitational/teleport/api v0.0.0-20210915192615-a8ca2d3f910e
+# github.com/gravitational/teleport/api v0.0.0-20211020013622-aa361fbc1fe1
 ## explicit
 github.com/gravitational/teleport/api
 github.com/gravitational/teleport/api/client

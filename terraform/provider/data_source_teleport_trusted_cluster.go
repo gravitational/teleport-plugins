@@ -53,7 +53,7 @@ func dataSourceTeleportTrustedClusterRead(ctx context.Context, d *schema.Resourc
 		return diagFromErr(trace.Errorf("can not convert %T to *types.TrustedClusterV2", s))
 	}
 
-	err = tfschema.SetTrustedClusterV2(s2, d)
+	err = tfschema.ToTerraformTrustedClusterV2(s2, d)
 	if err != nil {
 		return diagFromErr(err)
 	}

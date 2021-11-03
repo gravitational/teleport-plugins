@@ -14,7 +14,7 @@ resource "teleport_trusted_cluster" "cluster" {
       remote = "test"
       local = ["admin"]
     }
-    proxy_address = "localhost:3080"
+    proxy_addr = "localhost:3080"
     token = "salami"
   }
 }

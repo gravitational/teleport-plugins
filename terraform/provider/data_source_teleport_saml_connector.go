@@ -53,7 +53,7 @@ func dataSourceTeleportSAMLConnectorRead(ctx context.Context, d *schema.Resource
 		return diagFromErr(trace.Errorf("can not convert %T to *types.SAMLConnectorV2", s))
 	}
 
-	err = tfschema.SetSAMLConnectorV2(s2, d)
+	err = tfschema.ToTerraformSAMLConnectorV2(s2, d)
 	if err != nil {
 		return diagFromErr(err)
 	}

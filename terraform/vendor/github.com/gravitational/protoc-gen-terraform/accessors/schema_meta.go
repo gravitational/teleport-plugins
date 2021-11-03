@@ -21,11 +21,11 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-// Getter is a function used to get custom value from ResourceData
-type Getter func(string, reflect.Value, *SchemaMeta, *schema.Schema, *schema.ResourceData) error
+// FromTerraformFn is a function used to read custom value from ResourceData
+type FromTerraformFn func(string, reflect.Value, *SchemaMeta, *schema.Schema, *schema.ResourceData) error
 
-// Setter is a function used to set custom value to ResearchData. Must return value to set.
-type Setter func(reflect.Value, *SchemaMeta, *schema.Schema) (interface{}, error)
+// ToTerraformFn is a function used to write custom value to ResearchData. Must return value to set or nil.
+type ToTerraformFn func(string, reflect.Value, *SchemaMeta, *schema.Schema, *schema.ResourceData) (interface{}, error)
 
 // SchemaMeta represents schema metadata struct
 type SchemaMeta struct {
@@ -38,11 +38,11 @@ type SchemaMeta struct {
 	// IsDuration is true if field contains duration
 	IsDuration bool
 
-	// Getter contains reference to getter function if value is a custom type
-	Getter Getter
+	// FromTerraform represents a reference to FromTerraform* function if value is a custom type
+	FromTerraform FromTerraformFn
 
-	// Setter contains reference to setter function if value is a custom type
-	Setter Setter
+	// ToTerraform represents a reference to ToTerraform* function if value is a custom type
+	ToTerraform ToTerraformFn
 
 	// Nested nested message definition
 	Nested map[string]*SchemaMeta
