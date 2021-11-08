@@ -4,3 +4,4 @@ example/storage
 cover.out
 tmp
 terraform-event-handler-*.tar.gz
+wasmer-go

@@ -5,26 +5,32 @@ ARCH ?= $(shell go env GOARCH)
 TERRAFORM_ARCH=$(OS)_$(ARCH)
 
 LOCALDIR := $(dir $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
-GENTERRAFORMPATH := $(shell go env GOPATH)/bin
-
 BUILDDIR ?= build
 
+CUSTOM_WASMER_RUNTIME_DIR ?=
 ADDFLAGS ?=
-BUILDFLAGS ?= $(ADDFLAGS) -ldflags "-w -s -X main.Sha=`git rev-parse HEAD` -X main.Version=$(VERSION)"
+BUILDFLAGS ?= $(ADDFLAGS) -ldflags "-w -s -X main.Sha=`git rev-parse HEAD` -X main.Version=$(VERSION)" 
 CGOFLAG ?= CGO_ENABLED=1
 
+# Custom wasmer runtime is required for Apple M1.
+#
+# git clone git@github.com:wasmerio/wasmer-go.git && cd wasmer-go && cargo build --release && cd ..
+# CUSTOM_WASMER_RUNTIME_DIR=wasmer-go make build
+ifneq ($(CUSTOM_WASMER_RUNTIME_DIR),)
+	CGO_CFLAGS ?= "-I$(CUSTOM_WASMER_RUNTIME_DIR)/wasmer/packaged/include/"
+	CGO_LDFLAGS ?= "-Wl,-rpath,$(CUSTOM_WASMER_RUNTIME_DIR)/target/release/ -L$(CUSTOM_WASMER_RUNTIME_DIR)/target/release/ -lwasmer_go"
+	TAGS ?= --tags custom_wasmer_runtime 
+endif
+
+# Args for make gen-example-mtls
 PASS ?= 1234
-
-KEYLEN = 1024
-
-CLOUD_ADDR=evilmartians.teleport.sh:443
-IDENTITY_FILE=example/keys/identity
+KEYLEN ?= 1024
 
 RELEASE = teleport-event-handler-v$(VERSION)-$(OS)-$(ARCH)-bin
 
 .PHONY: build
 build: clean
-	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/teleport-event-handler $(BUILDFLAGS)
+	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) CGO_CFLAGS=$(CGO_CFLAGS) CGO_LDFLAGS=$(CGO_LDFLAGS) go build -o $(BUILDDIR)/teleport-event-handler $(BUILDFLAGS) $(TAGS)
 
 .PHONY: release
 release: build
