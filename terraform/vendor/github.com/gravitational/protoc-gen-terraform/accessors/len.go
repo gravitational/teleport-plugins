@@ -24,14 +24,21 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
+const (
+	// listLenKeySuffix represents list and set collection length suffix
+	listLenKeySuffix = "#"
+	// mapLenKeySuffix represents map collection length suffix
+	mapLenKeySuffix = "%"
+)
+
 // GetListLen returns the length of a list
 func GetListLen(path string, data *schema.ResourceData) (int, error) {
-	return getLen(path, data, "#")
+	return getLen(path, data, listLenKeySuffix)
 }
 
 // GetMapLen returns the length of a map
 func GetMapLen(path string, data *schema.ResourceData) (int, error) {
-	return getLen(path, data, "%")
+	return getLen(path, data, mapLenKeySuffix)
 }
 
 // getLen returns List, Set or Map value length

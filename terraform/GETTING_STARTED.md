@@ -36,8 +36,10 @@ spec:
   allow:
     app_labels: # This gives Terraform access to all apps in the cluster. You might want to restrict it.
       '*': '*'
-    db_labels: # This gives Terraform access to all apps in the cluster. You might want to restrict it.
+    db_labels: # This gives Terraform access to all databases in the cluster. You might want to restrict it.
       '*': '*'
+    db_users: ['*']
+    db_names: ['*']
     rules:
       - resources:
         - user

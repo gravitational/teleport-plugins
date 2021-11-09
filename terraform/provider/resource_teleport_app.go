@@ -59,8 +59,8 @@ func resourceAppCreate(ctx context.Context, d *schema.ResourceData, m interface{
 
 	_, err = c.GetApp(ctx, n)
 	if err == nil {
-		existErr := fmt.Sprintf(`App %v exists in Teleport. Either remove it (tctl rm app/%v) or import it 
-to the existing state (terraform import teleport_app.%v %v")`, n, n, n, n)
+		existErr := fmt.Sprintf("App %v exists in Teleport. Either remove it (tctl rm app/%v)"+
+			" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n, n)
 
 		return diagFromErr(trace.Errorf(existErr))
 	}
