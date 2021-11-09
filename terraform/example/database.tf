@@ -7,7 +7,7 @@ resource "teleport_database" "example" {
     }
 
     spec {
-        protocol = "postgresql"
+        protocol = "postgres"
         uri = "localhost"
     }
 }

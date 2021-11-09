@@ -59,8 +59,8 @@ func resourceDatabaseCreate(ctx context.Context, d *schema.ResourceData, m inter
 
 	_, err = c.GetDatabase(ctx, n)
 	if err == nil {
-		existErr := fmt.Sprintf(`Database %v exists in Teleport. Either remove it (tctl rm db/%v)
-or import it to the existing state (terraform import teleport_database.%v %v)`, n, n, n, n)
+		existErr := fmt.Sprintf("Database %v exists in Teleport. Either remove it (tctl rm db/%v)"+
+			" or import it to the existing state (terraform import teleport_database.%v %v)", n, n, n, n)
 
 		return diagFromErr(trace.Errorf(existErr))
 	}

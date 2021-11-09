@@ -235,6 +235,7 @@ func setList(source reflect.Value, meta *SchemaMeta, sch *schema.Schema, path st
 
 // setMap converts source value to map
 func setMap(source reflect.Value, meta *SchemaMeta, sch *schema.Schema, path string, data *schema.ResourceData) (interface{}, error) {
+	// We must not construct new maps in the state. That would cause state drift.
 	l, err := GetMapLen(path, data)
 	if err != nil {
 		return nil, err
@@ -271,6 +272,7 @@ func setMap(source reflect.Value, meta *SchemaMeta, sch *schema.Schema, path str
 
 // setSet converts source value to set
 func setSet(source reflect.Value, meta *SchemaMeta, sch *schema.Schema, path string, data *schema.ResourceData) (interface{}, error) {
+	// We must not construct new maps in the state. That would cause state drift.
 	l, err := GetListLen(path, data)
 	if err != nil {
 		return nil, err
