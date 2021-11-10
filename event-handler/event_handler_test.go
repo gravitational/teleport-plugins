@@ -58,7 +58,7 @@ func (s *EventHandlerSuite) SetupSuite() {
 	t := s.T()
 
 	s.SSHSetup.SetupSuite()
-	s.SSHSetup.Setup()
+	s.SSHSetup.SetupService()
 
 	me, err := user.Current()
 	require.NoError(t, err)

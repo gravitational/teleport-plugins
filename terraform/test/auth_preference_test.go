@@ -82,6 +82,4 @@ func (s *TerraformSuite) TestAuthPreference() {
 			},
 		},
 	})
-
-	s.closeClient()
 }

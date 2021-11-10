@@ -39,6 +39,10 @@ func (s *TerraformSuite) TestAuditConfig() {
 		}
 	`
 
+	// Set is not implemented in the API: https://github.com/gravitational/teleport/blob/1944e62cc55d74d26b337945000b192528674ef3/api/client/client.go#L1776
+	//
+	// https://github.com/gravitational/teleport/pull/7465
+
 	resource.Test(s.T(), resource.TestCase{
 		ProviderFactories: s.terraformProviders,
 		Steps: []resource.TestStep{
@@ -48,6 +52,4 @@ func (s *TerraformSuite) TestAuditConfig() {
 			},
 		},
 	})
-
-	s.closeClient()
 }

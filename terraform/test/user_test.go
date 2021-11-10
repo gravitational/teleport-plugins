@@ -149,6 +149,4 @@ func (s *TerraformSuite) TestUser() {
 			},
 		},
 	})
-
-	s.closeClient()
 }

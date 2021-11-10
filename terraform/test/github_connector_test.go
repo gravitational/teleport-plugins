@@ -118,6 +118,4 @@ func (s *TerraformSuite) TestGithubConnector() {
 			},
 		},
 	})
-
-	s.closeClient()
 }

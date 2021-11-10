@@ -16,8 +16,8 @@ require (
 	github.com/google/go-querystring v1.0.0
 	github.com/google/uuid v1.2.0
 	github.com/gravitational/kingpin v2.1.11-0.20190130013101-742f2714c145+incompatible
-	github.com/gravitational/protoc-gen-terraform v0.0.0-20211018182625-e0d3a22872b2
-	github.com/gravitational/teleport/api v0.0.0-20211004174255-0897a31ee27a
+	github.com/gravitational/protoc-gen-terraform v0.0.0-20211108170245-3b37ff28d21e // protoc-gen-terraform master (#13)
+	github.com/gravitational/teleport/api v0.0.0-20211110023606-aabae26c36b2 // tag v8.0.0rc1 TODO: Replace with 8.0.0 once it's released
 	github.com/gravitational/trace v1.1.16-0.20210609220119-4855e69c89fc
 	github.com/hashicorp/go-version v1.3.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.8.0

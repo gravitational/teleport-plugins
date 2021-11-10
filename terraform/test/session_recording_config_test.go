@@ -80,6 +80,4 @@ func (s *TerraformSuite) TestSessionRecordingConfig() {
 			},
 		},
 	})
-
-	s.closeClient()
 }

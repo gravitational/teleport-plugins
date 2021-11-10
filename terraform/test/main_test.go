@@ -19,10 +19,8 @@ package test
 import (
 	"os/user"
 	"testing"
-	"time"
 
 	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
 	"github.com/gravitational/teleport-plugins/terraform/provider"
 	"github.com/gravitational/teleport/api/client"
@@ -48,7 +46,7 @@ type TerraformSuite struct {
 	terraformConfig string
 	// terraformProvider represents an instance of a Terraform provider
 	terraformProvider *schema.Provider
-	// terraformProviders represents an array of providers
+	// terraformProviders represents an array of provider factories that Terraform will use to instantiate the provider(s) under test.
 	terraformProviders map[string]func() (*schema.Provider, error)
 }
 
@@ -58,15 +56,10 @@ func (s *TerraformSuite) SetupSuite() {
 	var err error
 	t := s.T()
 
-	logger.Init()
-	logger.Setup(logger.Config{Severity: "debug"})
-
-	// We set such a big timeout because integration.NewFromEnv could start
-	// downloading a Teleport *-bin.tar.gz file which can take a long time.
-	ctx := s.SetContextTimeout(2 * time.Minute)
-
 	s.AuthSetup.SetupSuite()
-	s.AuthSetup.Setup()
+	s.AuthSetup.SetupService()
+
+	ctx := s.Context()
 
 	me, err := user.Current()
 	require.NoError(t, err)
@@ -138,6 +131,10 @@ func (s *TerraformSuite) SetupSuite() {
 		s.closeClient()
 		return s.terraformProvider, nil
 	}
+}
+
+func (s *TerraformSuite) AfterTest(suiteName, testName string) {
+	s.closeClient()
 }
 
 func (s *TerraformSuite) SetupTest() {

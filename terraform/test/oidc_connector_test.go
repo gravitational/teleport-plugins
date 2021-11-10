@@ -24,7 +24,7 @@ import (
 
 func (s *TerraformSuite) TestOIDCConnector() {
 	if !s.teleportFeatures.AdvancedAccessWorkflows {
-		return
+		s.T().Skip("AdvancedAccessWorkflows are disabled")
 	}
 
 	res := "teleport_oidc_connector"
@@ -118,6 +118,4 @@ func (s *TerraformSuite) TestOIDCConnector() {
 			},
 		},
 	})
-
-	s.closeClient()
 }

@@ -3,11 +3,7 @@
 package api
 
 const (
-<<<<<<< HEAD
-	Version = "7.3.2"
-=======
-	Version = "8.0.0-dev"
->>>>>>> 60c3d18e (Removed go.mod in Terraform folder)
+	Version = "8.0.0-rc.1"
 )
 
 // Gitref variable is automatically set to the output of git-describe

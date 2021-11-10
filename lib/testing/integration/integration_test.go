@@ -33,7 +33,7 @@ type IntegrationSuite struct {
 func TestIntegration(t *testing.T) { suite.Run(t, &IntegrationSuite{}) }
 
 func (s *IntegrationSuite) SetupTest() {
-	s.BaseSetup.Setup()
+	s.BaseSetup.SetupService()
 }
 
 func (s *IntegrationSuite) TestVersion() {

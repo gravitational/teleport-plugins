@@ -34,7 +34,7 @@ type IntegrationSSHSuite struct {
 func TestIntegrationSSH(t *testing.T) { suite.Run(t, &IntegrationSSHSuite{}) }
 
 func (s *IntegrationSSHSuite) SetupTest() {
-	s.SSHSetup.Setup()
+	s.SSHSetup.SetupService()
 }
 
 func (s *IntegrationSSHSuite) TestBench() {

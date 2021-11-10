@@ -24,7 +24,7 @@ import (
 
 func (s *TerraformSuite) TestSAMLConnector() {
 	if !s.teleportFeatures.AdvancedAccessWorkflows {
-		return
+		s.T().Skip("AdvancedAccessWorkflows are disabled")
 	}
 
 	res := "teleport_saml_connector"
@@ -150,6 +150,4 @@ EOT
 			},
 		},
 	})
-
-	s.closeClient()
 }

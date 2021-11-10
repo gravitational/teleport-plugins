@@ -82,6 +82,4 @@ func (s *TerraformSuite) TestNetworkingConfig() {
 			},
 		},
 	})
-
-	s.closeClient()
 }

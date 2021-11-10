@@ -39,12 +39,18 @@ go install github.com/gravitational/protoc-gen-terraform
 make gen-schema
 ```
 
+Please note that `ProvisionTokenV2.Allow` field is defined lowercase in `.proto` file (`repeated TokenRule allow = 2 [ (gogoproto.jsontag) = "allow,omitempty" ];`). You need to manually patch `types_tfschema.go`, set `Name: "Allow"` in provision token metadata struct (`GenSchemaMetaProvisionTokenV2()`) until it is fixed.
+
 # Usage
 
 See `example/*.tf` for available configuration options. `make apply` to do an initial application of this configuration to your Terraform cluster.
 
 # Testing
 
+`TF_ACC=true` is required to switch Terraform to acceptance test mode. Terraform 1.0.0+ needs to be available on the host machine.
+
 ```
 TF_ACC=true go test test/*
 ```
+
+Use '-v' flag to see logs.

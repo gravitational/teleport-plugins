@@ -26,8 +26,6 @@ github.com/alecthomas/template/parse
 # github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15
 ## explicit
 github.com/alecthomas/units
-# github.com/apparentlymart/go-cidr v1.0.1
-github.com/apparentlymart/go-cidr/cidr
 # github.com/apparentlymart/go-textseg v1.0.0
 github.com/apparentlymart/go-textseg/textseg
 # github.com/apparentlymart/go-textseg/v13 v13.0.0
@@ -129,14 +127,10 @@ github.com/gorilla/mux
 # github.com/gravitational/kingpin v2.1.11-0.20190130013101-742f2714c145+incompatible
 ## explicit
 github.com/gravitational/kingpin
-<<<<<<< HEAD
-# github.com/gravitational/teleport/api v0.0.0-20211020013622-aa361fbc1fe1
-=======
-# github.com/gravitational/protoc-gen-terraform v0.0.0-20211018182625-e0d3a22872b2
+# github.com/gravitational/protoc-gen-terraform v0.0.0-20211108170245-3b37ff28d21e
 ## explicit
 github.com/gravitational/protoc-gen-terraform/accessors
-# github.com/gravitational/teleport/api v0.0.0-20211004174255-0897a31ee27a
->>>>>>> 60c3d18e (Removed go.mod in Terraform folder)
+# github.com/gravitational/teleport/api v0.0.0-20211110023606-aabae26c36b2
 ## explicit
 github.com/gravitational/teleport/api
 github.com/gravitational/teleport/api/client
@@ -217,7 +211,6 @@ github.com/hashicorp/terraform-plugin-go/tftypes
 # github.com/hashicorp/terraform-plugin-sdk/v2 v2.8.0
 ## explicit
 github.com/hashicorp/terraform-plugin-sdk/v2/diag
-github.com/hashicorp/terraform-plugin-sdk/v2/helper/acctest
 github.com/hashicorp/terraform-plugin-sdk/v2/helper/logging
 github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource
 github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema

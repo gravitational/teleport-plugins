@@ -99,6 +99,4 @@ func (s *TerraformSuite) TestToken() {
 			},
 		},
 	})
-
-	s.closeClient()
 }

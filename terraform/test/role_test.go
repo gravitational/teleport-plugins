@@ -159,6 +159,4 @@ func (s *TerraformSuite) TestRole() {
 			},
 		},
 	})
-
-	s.closeClient()
 }
