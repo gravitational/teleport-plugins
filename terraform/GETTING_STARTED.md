@@ -4,7 +4,7 @@ We assume you have docker and Teleport installed on your system.
 
 # Install Terraform
 
-Check [Terraform official docs](https://learn.hashicorp.com/tutorials/terraform/install-cli) for installation instructions. Terraform 0.12 or higher is required.
+Check [Terraform official docs](https://learn.hashicorp.com/tutorials/terraform/install-cli) for installation instructions. Terraform 1.0.0 or higher is required.
 
 # Install provider
 
@@ -26,19 +26,36 @@ mkdir ~/terraform-cluster && cd ~/terraform-cluster
 
 # Create Terraform user in Teleport
 
-Put the following content into terraform.yaml:
+Put the following content into `terraform.yaml`:
 
 ```
-// terraform.yaml
 kind: role
 metadata:
   name: terraform
 spec:
   allow:
+    app_labels: # This gives Terraform access to all apps in the cluster. You might want to restrict it.
+      '*': '*'
+    db_labels: # This gives Terraform access to all databases in the cluster. You might want to restrict it.
+      '*': '*'
+    db_users: ['*']
+    db_names: ['*']
     rules:
-      - resources: ['user', 'role', 'token', 'trusted_cluster', 'github', 'oidc', 'saml']
+      - resources:
+        - user
+        - role
+        - token
+        - trusted_cluster
+        - github
+        - oidc
+        - saml
+        - cluster_auth_preference
+        - cluster_networking_config
+        - session_recording_config
+        - app
+        - db
         verbs: ['list','create','read','update','delete']
-version: v3
+version: v4
 ---
 kind: user
 metadata:

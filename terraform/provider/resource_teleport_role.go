@@ -29,11 +29,6 @@ import (
 	"github.com/gravitational/teleport/api/types"
 )
 
-var (
-	// default value for BPF field
-	defaultBPF = []string{"command", "network"}
-)
-
 // resourceTeleportRole returns Teleport role resource definition
 func resourceTeleportRole() *schema.Resource {
 	return &schema.Resource{

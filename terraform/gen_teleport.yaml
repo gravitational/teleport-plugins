@@ -8,9 +8,11 @@ use_json_tag: true
 
 # Top-level type names to export
 types:
+    - "types.AppV3"
     - "types.AuthPreferenceV2"
     - "types.ClusterAuditConfigV2"
     - "types.ClusterNetworkingConfigV2"
+    - "types.DatabaseV3"
     - "types.GithubConnectorV3"
     - "types.OIDCConnectorV2"
     - "types.ProvisionTokenV2"    
@@ -47,8 +49,21 @@ exclude_fields:
     - "types.UserSpecV2.CreatedBy"
     - "types.UserSpecV2.Status"
 
+    # Status
+    - "types.DatabaseV3.Status"
+
 # These fields will be marked as Computed: true
 computed_fields:
+    # App
+    - "types.AppV3.Version"
+    - "types.AppV3.Kind"
+    - "types.AppV3.Metadata.Namespace"
+
+    # Database
+    - "types.DatabaseV3.Version"
+    - "types.DatabaseV3.Kind"
+    - "types.DatabaseV3.Metadata.Namespace"
+
     # Auth preference
     - "types.AuthPreferenceV2.Version"
     - "types.AuthPreferenceV2.Kind"
@@ -128,6 +143,9 @@ required_fields:
     # Metadata
     - "types.Metadata.Name"
 
+    # App
+    - "types.AppV3.Spec"
+
     # Auth preference
     - "types.AuthPreferenceV2.Spec"
 
@@ -136,6 +154,11 @@ required_fields:
 
     # Networking config
     - "types.ClusterNetworkingConfigV2.Spec"
+
+    # Database
+    - "types.AppV3.Spec"
+    - "types.AppV3.Spec.Protocol"    
+    - "types.AppV3.Spec.URI"        
 
     # Github connector
     - "types.GithubConnectorV3.Spec"
