@@ -131,9 +131,9 @@ func (j *EventsJob) sendEvent(ctx context.Context, evt *TeleportEvent) error {
 	return j.app.SendEvent(ctx, j.app.Config.FluentdURL, evt)
 }
 
-// TryLockUser locks user if he exceeded failed attempts
+// TryLockUser locks user if they exceeded failed attempts
 func (j *EventsJob) TryLockUser(ctx context.Context, evt *TeleportEvent) error {
-	if !j.app.Config.LockEnabled {
+	if !j.app.Config.LockEnabled || j.app.Config.DryRun {
 		return nil
 	}
 
@@ -147,7 +147,7 @@ func (j *EventsJob) TryLockUser(ctx context.Context, evt *TeleportEvent) error {
 		return nil
 	}
 
-	err = j.app.EventWatcher.UpsertLock(ctx, evt.FailedLoginData.User, evt.FailedLoginData.Login)
+	err = j.app.EventWatcher.UpsertLock(ctx, evt.FailedLoginData.User, evt.FailedLoginData.Login, j.app.Config.LockFor)
 	if err != nil {
 		return trace.Wrap(err)
 	}

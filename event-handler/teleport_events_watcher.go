@@ -90,6 +90,7 @@ func NewTeleportEventsWatcher(
 		pos:       -1,
 		cursor:    cursor,
 		config:    c,
+		id:        id,
 		startTime: startTime,
 	}
 
@@ -284,7 +285,15 @@ func (t *TeleportEventsWatcher) StreamSessionEvents(ctx context.Context, id stri
 }
 
 // UpsertLock upserts user lock
-func (t *TeleportEventsWatcher) UpsertLock(ctx context.Context, user string, login string) error {
+func (t *TeleportEventsWatcher) UpsertLock(ctx context.Context, user string, login string, period time.Duration) error {
+	var expires *time.Time
+
+	if period > 0 {
+		t := time.Now()
+		t.Add(period)
+		expires = &t
+	}
+
 	lock := &types.LockV2{
 		Metadata: types.Metadata{
 			Name: fmt.Sprintf("event-handler-auto-lock-%v-%v", user, login),
@@ -295,7 +304,7 @@ func (t *TeleportEventsWatcher) UpsertLock(ctx context.Context, user string, log
 				User:  user,
 			},
 			Message: lockMessage,
-			Expires: nil,
+			Expires: expires,
 		},
 	}
 

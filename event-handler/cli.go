@@ -100,12 +100,14 @@ type IngestConfig struct {
 
 // LockConfig represents locking configuration
 type LockConfig struct {
-	// Enabled represents locking enabled flag
+	// LockEnabled represents locking enabled flag
 	LockEnabled bool `help:"Enable user auto-locking" name:"lock-enabled" default:"false" env:"FDFWD_LOCKING_ENABLED"`
-	// FailedAttemptsCount number of failed attempts which triggers locking
-	LockFailedAttemptsCount int `help:"Number of failed attempts which triggers locking" name:"lock-failed-attempts-count" default:"3" env:"FDFWD_LOCKING_FAILED_ATTEMPTS"`
-	// Period represents rate limiting period
-	LockPeriod time.Duration `help:"Failed attempts must happen within time peiod to trigger locking" name:"lock-period" default:"1m" env:"FDFWD_LOCKING_PERIOD"`
+	// LockFailedAttemptsCount number of failed attempts which triggers locking
+	LockFailedAttemptsCount int `help:"Number of failed attempts in lock-period which triggers locking" name:"lock-failed-attempts-count" default:"3" env:"FDFWD_LOCKING_FAILED_ATTEMPTS"`
+	// LockPeriod represents rate limiting period
+	LockPeriod time.Duration `help:"Time period where lock-failed-attempts-count failed attempts will trigger locking" name:"lock-period" default:"1m" env:"FDFWD_LOCKING_PERIOD"`
+	// LockFor represents the duration of the new lock
+	LockFor time.Duration `help:"Time period for which user gets lock" name:"lock-for" env:"FDFWD_LOCKING_FOR"`
 }
 
 // StartCmdConfig is start command description
