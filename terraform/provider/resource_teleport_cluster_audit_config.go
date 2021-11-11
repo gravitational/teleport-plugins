@@ -28,6 +28,10 @@ import (
 	"github.com/gravitational/teleport/api/types"
 )
 
+// Set is not implemented in the API: https://github.com/gravitational/teleport/blob/1944e62cc55d74d26b337945000b192528674ef3/api/client/client.go#L1776
+//
+// https://github.com/gravitational/teleport/pull/7465
+
 // resourceTeleportClusterAuditConfig returns Teleport cluster audit resource definition
 func resourceTeleportClusterAuditConfig() *schema.Resource {
 	return &schema.Resource{
@@ -59,8 +63,9 @@ func resourceAuditConfigCreate(ctx context.Context, d *schema.ResourceData, m in
 		return diagFromErr(err)
 	}
 
-	err = c.SetClusterAuditConfig(ctx, &n)
-	if err != nil {
+	// Linter generates false positive here because the API always returns error (see comment above)
+	err = c.SetClusterAuditConfig(ctx, &n) //nolint
+	if err != nil {                        //nolint
 		return diagFromErr(describeErr(err, types.KindClusterAuditConfig))
 	}
 
@@ -126,8 +131,8 @@ func resourceAuditConfigUpdate(ctx context.Context, d *schema.ResourceData, m in
 		return diagFromErr(err)
 	}
 
-	err = c.SetClusterAuditConfig(ctx, n)
-	if err != nil {
+	err = c.SetClusterAuditConfig(ctx, n) //nolint
+	if err != nil {                       //nolint
 		return diagFromErr(describeErr(err, types.KindClusterAuditConfig))
 	}
 
@@ -141,8 +146,8 @@ func resourceAuditConfigDelete(ctx context.Context, d *schema.ResourceData, m in
 		return diagFromErr(err)
 	}
 
-	err = c.DeleteClusterAuditConfig(ctx)
-	if err != nil {
+	err = c.DeleteClusterAuditConfig(ctx) //nolint
+	if err != nil {                       //nolint
 		return diagFromErr(describeErr(err, types.KindClusterAuditConfig))
 	}
 
