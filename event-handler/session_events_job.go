@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	ehlib "github.com/gravitational/teleport-plugins/event-handler/lib"
+	"golang.org/x/sync/semaphore"
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/backoff"
@@ -36,14 +36,14 @@ type SessionEventsJob struct {
 	lib.ServiceJob
 	app       *App
 	sessions  chan session
-	semaphore ehlib.Semaphore
+	semaphore *semaphore.Weighted
 }
 
 // NewSessionEventsJob creates new EventsJob structure
 func NewSessionEventsJob(app *App) *SessionEventsJob {
 	j := &SessionEventsJob{
 		app:       app,
-		semaphore: ehlib.NewSemaphore(app.Config.Concurrency),
+		semaphore: semaphore.NewWeighted(int64(app.Config.Concurrency)),
 		sessions:  make(chan session),
 	}
 
@@ -71,13 +71,13 @@ func (j *SessionEventsJob) run(ctx context.Context) error {
 	for {
 		select {
 		case s := <-j.sessions:
-			j.semaphore.Acquire(ctx)
+			j.semaphore.Acquire(ctx, 1)
 
 			log.WithField("id", s.ID).WithField("index", s.Index).Info("Starting session ingest")
 
 			func(s session) {
 				j.app.SpawnCritical(func(ctx context.Context) error {
-					defer j.semaphore.Release(ctx)
+					defer j.semaphore.Release(1)
 
 					backoff := backoff.NewDecorr(sessionBackoffBase, sessionBackoffMax, clockwork.NewRealClock())
 					backoffCount := sessionBackoffNumTries
