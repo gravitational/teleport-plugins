@@ -13,7 +13,7 @@ require (
 	github.com/fatih/color v1.10.0 // indirect
 	github.com/gogo/protobuf v1.3.2
 	github.com/gravitational/protoc-gen-terraform v0.0.0-20211108170245-3b37ff28d21e // master
-	github.com/gravitational/teleport/api v0.0.0-20211004174255-0897a31ee27a // 8.0.0: TODO: Replace with correct version before release
+	github.com/gravitational/teleport/api v0.0.0-20211110023606-aabae26c36b2 // 8.0.0: TODO: Replace with correct version before release
 	github.com/gravitational/trace v1.1.15
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-hclog v0.16.0 // indirect
