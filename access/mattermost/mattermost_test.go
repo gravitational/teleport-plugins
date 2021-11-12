@@ -622,7 +622,7 @@ func (s *MattermostSuite) TestRace() {
 
 				directChannel, ok := s.fakeMattermost.GetDirectChannel(post.ChannelID)
 				if !ok {
-					return setRaceErr(trace.Errorf("direct channel %q not found", post.ChannelID))
+					return setRaceErr(trace.Errorf("direct channel %s not found", post.ChannelID))
 				}
 
 				var userID string
@@ -633,7 +633,7 @@ func (s *MattermostSuite) TestRace() {
 				}
 				user, ok := s.fakeMattermost.GetUser(userID)
 				if !ok {
-					return setRaceErr(trace.Errorf("user %q not found", userID))
+					return setRaceErr(trace.Errorf("user %s not found", userID))
 				}
 
 				if err = s.clients[user.Email].SubmitAccessRequestReview(ctx, reqID, types.AccessReview{
@@ -702,7 +702,7 @@ func parsePostField(post Post, field string) (string, error) {
 	text := post.Message
 	matches := msgFieldRegexp.FindAllStringSubmatch(text, -1)
 	if matches == nil {
-		return "", trace.Errorf("cannot parse fields from text %q", text)
+		return "", trace.Errorf("cannot parse fields from text %s", text)
 	}
 	var fields []string
 	for _, match := range matches {
@@ -711,5 +711,5 @@ func parsePostField(post Post, field string) (string, error) {
 		}
 		fields = append(fields, match[1])
 	}
-	return "", trace.Errorf("cannot find field %q in %v", field, fields)
+	return "", trace.Errorf("cannot find field %s in %v", field, fields)
 }

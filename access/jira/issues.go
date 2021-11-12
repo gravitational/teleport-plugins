@@ -32,7 +32,7 @@ type IssueUpdate struct {
 func GetRequestID(issue Issue) (string, error) {
 	reqID, ok := issue.Properties[RequestIDPropertyKey].(string)
 	if !ok {
-		return "", trace.Errorf("got non-string %q field", RequestIDPropertyKey)
+		return "", trace.Errorf("got non-string %s field", RequestIDPropertyKey)
 	}
 	return reqID, nil
 }
@@ -60,7 +60,7 @@ func GetLastUpdate(issue Issue, status string) (IssueUpdate, error) {
 		}
 	}
 	if update == nil {
-		return IssueUpdate{}, trace.Errorf("cannot find a %q status update in changelog", status)
+		return IssueUpdate{}, trace.Errorf("cannot find a %s status update in changelog", status)
 	}
 	return *update, nil
 }
@@ -72,5 +72,5 @@ func GetTransition(issue Issue, status string) (IssueTransition, error) {
 			return transition, nil
 		}
 	}
-	return IssueTransition{}, trace.Errorf("cannot find a %q status among possible transitions", status)
+	return IssueTransition{}, trace.Errorf("cannot find a %s status among possible transitions", status)
 }

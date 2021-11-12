@@ -206,7 +206,7 @@ func (b Bot) UpdateMessages(ctx context.Context, reqID string, reqData RequestDa
 		if err != nil {
 			switch err.Error() {
 			case "message_not_found":
-				err = trace.Wrap(err, "cannot find message with timestamp %q in channel %q", msg.Timestamp, msg.ChannelID)
+				err = trace.Wrap(err, "cannot find message with timestamp %s in channel %s", msg.Timestamp, msg.ChannelID)
 			default:
 				err = trace.Wrap(err)
 			}
@@ -241,7 +241,7 @@ func (b Bot) Respond(ctx context.Context, reqID string, reqData RequestData, res
 	}
 
 	if !resp.IsSuccess() {
-		return trace.Errorf("unexpected http status %q", resp.Status())
+		return trace.Errorf("unexpected http status %s", resp.Status())
 	}
 
 	if !result.Ok {

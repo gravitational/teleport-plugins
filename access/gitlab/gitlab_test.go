@@ -882,7 +882,7 @@ func (s *GitlabSuite) TestRace() {
 				return setRaceErr(trace.Errorf("wrong labels size. expected %v, obtained %v", expected, obtained))
 			}
 			if obtained, expected := LabelName(issue.Labels[0]).Reduced(), "pending"; obtained != expected {
-				return setRaceErr(trace.Errorf("wrong label. expected %q, obtained %q", expected, obtained))
+				return setRaceErr(trace.Errorf("wrong label. expected %s, obtained %s", expected, obtained))
 			}
 
 			oldIssue := issue
@@ -917,7 +917,7 @@ func (s *GitlabSuite) TestRace() {
 				return setRaceErr(err)
 			}
 			if obtained, expected := issue.State, "closed"; obtained != expected {
-				return setRaceErr(trace.Errorf("wrong issue state. expected %q, obtained %q", expected, obtained))
+				return setRaceErr(trace.Errorf("wrong issue state. expected %s, obtained %s", expected, obtained))
 			}
 			return nil
 		})
