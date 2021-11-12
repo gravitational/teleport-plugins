@@ -254,7 +254,7 @@ func (p Pagerduty) FindUserByEmail(ctx context.Context, userEmail string) (User,
 		logger.Get(ctx).Warningf("PagerDuty returned too many results when querying by email %q", userEmail)
 	}
 
-	return User{}, trace.NotFound("failed to find pagerduty user by email %q", userEmail)
+	return User{}, trace.NotFound("failed to find pagerduty user by email %s", userEmail)
 }
 
 // FindServiceByName finds a service by its name (case-insensitive).
@@ -281,7 +281,7 @@ func (p Pagerduty) FindServiceByName(ctx context.Context, serviceName string) (S
 		}
 	}
 
-	return Service{}, trace.NotFound("failed to find pagerduty service by name %q", serviceName)
+	return Service{}, trace.NotFound("failed to find pagerduty service by name %s", serviceName)
 }
 
 // FindServicesByNames finds a bunch of services by its names making a query for each service.
