@@ -238,8 +238,9 @@ func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) err
 	}
 
 	var (
-		resultErr error
-		data      PagerdutyData
+		notifyErr  error
+		approveErr error
+		data       PagerdutyData
 	)
 
 	shouldTryApprove := true
@@ -251,21 +252,24 @@ func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) err
 			// To minimize the count of auto-approval tries, lets attempt it only when we just created an incident.
 			shouldTryApprove = isNew
 		} else {
-			resultErr = trace.Wrap(err)
+			notifyErr = trace.Wrap(err)
 			// If there's an error, we can't really know is the incident new or not so lets just try.
 			shouldTryApprove = true
 		}
 	} else {
-		logger.Get(ctx).Debugf("Failed to determine a notification service info: %s", err.Error())
+		logger.Get(ctx).Debugf("Skipping the notification: %s", err)
 	}
-
 	if !shouldTryApprove {
-		return resultErr
+		return notifyErr
 	}
 
 	// Then, try to approve the request if user is currently on-call.
-	err := a.tryApproveRequest(ctx, req, data.IncidentID)
-	return trace.NewAggregate(resultErr, trace.Wrap(err))
+	if serviceNames, err := a.getOnCallServiceNames(req); err == nil {
+		approveErr = trace.Wrap(a.tryApproveRequest(ctx, req, serviceNames, data.IncidentID))
+	} else {
+		logger.Get(ctx).Debugf("Skipping the approval: %s", err)
+	}
+	return trace.NewAggregate(notifyErr, approveErr)
 }
 
 func (a *App) onResolvedRequest(ctx context.Context, req types.AccessRequest) error {
@@ -300,9 +304,21 @@ func (a *App) getNotifyServiceName(req types.AccessRequest) (string, error) {
 		serviceName = slice[0]
 	}
 	if serviceName == "" {
-		return "", trace.Errorf("request annotation %s is empty", annotationKey)
+		return "", trace.Errorf("request annotation %s is present but empty", annotationKey)
 	}
 	return serviceName, nil
+}
+
+func (a *App) getOnCallServiceNames(req types.AccessRequest) ([]string, error) {
+	annotationKey := a.conf.Pagerduty.RequestAnnotations.Services
+	serviceNames, ok := req.GetSystemAnnotations()[annotationKey]
+	if !ok {
+		return nil, trace.Errorf("request annotation %s is missing", annotationKey)
+	}
+	if len(serviceNames) == 0 {
+		return nil, trace.Errorf("request annotation %s is present but empty", annotationKey)
+	}
+	return serviceNames, nil
 }
 
 func (a *App) tryNotifyService(ctx context.Context, req types.AccessRequest, serviceName string) (PagerdutyData, bool, error) {
@@ -420,30 +436,19 @@ func (a *App) postReviewNotes(ctx context.Context, reqID string, reqReviews []ty
 // tryApproveRequest attempts to submit an approval if the following conditions are met:
 //   1. Requesting user must be on-call in one of the services provided in request annotation.
 //   2. User must have an active incident in such service.
-func (a *App) tryApproveRequest(ctx context.Context, req types.AccessRequest, notifyServiceID string) error {
+func (a *App) tryApproveRequest(ctx context.Context, req types.AccessRequest, serviceNames []string, notifyServiceID string) error {
 	log := logger.Get(ctx)
-
-	annotationKey := a.conf.Pagerduty.RequestAnnotations.Services
-	serviceNames, ok := req.GetSystemAnnotations()[annotationKey]
-	if !ok {
-		logger.Get(ctx).Debugf("Failed to submit approval: request annotation %q is missing", annotationKey)
-		return nil
-	}
-	if len(serviceNames) == 0 {
-		log.Warningf("Failed to find any service name: request annotation %q is empty", annotationKey)
-		return nil
-	}
 
 	userName := req.GetUser()
 	if !lib.IsEmail(userName) {
-		logger.Get(ctx).Warningf("Failed to submit approval: %q does not look like a valid email", userName)
+		logger.Get(ctx).Warningf("Skipping the approval: %q does not look like a valid email", userName)
 		return nil
 	}
 
 	user, err := a.pagerduty.FindUserByEmail(ctx, userName)
 	if err != nil {
 		if trace.IsNotFound(err) {
-			log.WithError(err).Debugf("Failed to submit approval: %q email is not found", userName)
+			log.WithError(err).WithField("pd_user_email", userName).Debug("Failed to submit approval: email is not found")
 			return nil
 		}
 		return trace.Wrap(err)
@@ -491,7 +496,7 @@ func (a *App) tryApproveRequest(ctx context.Context, req types.AccessRequest, no
 		return trace.Wrap(err)
 	}
 	if len(escalationPolicyIDs) == 0 {
-		log.Debug("Failed to submit approval: user is not on call")
+		log.Debug("Skipping the approval: user is not on call")
 		return nil
 	}
 
@@ -507,12 +512,12 @@ func (a *App) tryApproveRequest(ctx context.Context, req types.AccessRequest, no
 		return nil
 	}
 
-	ok, err = a.pagerduty.HasAssignedIncidents(ctx, user.ID, serviceIDs)
+	ok, err := a.pagerduty.HasAssignedIncidents(ctx, user.ID, serviceIDs)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 	if !ok {
-		log.Debug("Failed to submit approval: user has no incidents assigned")
+		log.Debug("Skipping the approval: user has no incidents assigned")
 		return nil
 	}
 
