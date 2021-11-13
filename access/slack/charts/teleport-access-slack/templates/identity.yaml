@@ -1,0 +1,11 @@
+apiVersion: auth.teleport.dev/v8
+kind: Identity
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  username: {{ .Release.Name }}
+  secretName: {{ .Release.Name }}-identity
+  ttl: 1h

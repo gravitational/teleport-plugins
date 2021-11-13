@@ -1,0 +1,25 @@
+apiVersion: resources.teleport.dev/v4
+kind: Role
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  allow:
+    rules:
+    - resources: ["access_request"]
+      verbs: ["list", "read"]
+    - resources: ["access_plugin_data"]
+      verbs: ["update"]
+---
+apiVersion: resources.teleport.dev/v2
+kind: User
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+spec:
+  roles:
+  - {{ .Release.Name }}

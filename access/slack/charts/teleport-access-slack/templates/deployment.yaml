@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ .Release.Name }}
+  {{- if .Values.annotations.deployment }}
+  annotations:
+    {{- toYaml .Values.annotations.deployment | nindent 4 }}
+  {{- end }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}
+  template:
+    metadata:
+      annotations:
+        # ConfigMap checksum, to recreate the pod on config changes.
+        checksum/config: {{ include (print $.Template.BasePath "/config.yaml") . | sha256sum }}
+{{- if .Values.annotations.pod }}
+  {{- toYaml .Values.annotations.pod | nindent 8 }}
+{{- end }}
+      labels:
+        app: {{ .Release.Name }}
+    spec:
+      containers:
+      - name: "plugin"
+        image: "{{ .Values.image }}:{{ if .Values.pluginVersionOverride }}{{ .Values.pluginVersionOverride }}{{ else }}{{ .Chart.Version }}{{ end }}"
+        imagePullPolicy: {{ .Values.imagePullPolicy }}
+        args:
+        - start
+        - --config
+        - /etc/teleport/teleport-slack.toml
+{{- if .Values.resources }}
+        resources:
+  {{- toYaml .Values.resources | nindent 10 }}
+{{- end }}
+        volumeMounts:
+        - mountPath: /etc/teleport
+          name: "config"
+          readOnly: true
+        - mountPath: /var/lib/plugin-token
+          name: "token"
+          readOnly: true
+        - mountPath: /var/lib/plugin-identity
+          name: "identity"
+          readOnly: true
+      volumes:
+      - name: "config"
+        configMap:
+          name: {{ .Release.Name }}
+      - name: "identity"
+        secret:
+          secretName: {{ .Release.Name }}-identity
+      - name: "token"
+        secret:
+          secretName: {{ .Release.Name }}
+      serviceAccountName: {{ .Release.Name }}

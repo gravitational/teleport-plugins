@@ -1,0 +1,54 @@
+##################################################
+# Values that must always be provided by the user.
+##################################################
+
+# The name of Kubernetes service of Teleport.
+# Must be in the same namespace as the plugin.
+teleportService: ""
+
+##################################################
+# Values that you may need to change.
+##################################################
+
+# Version of plugin image, if different from chart version in Chart.yaml.
+pluginVersionOverride: ""
+
+##################################################
+# Values that you shouldn't need to change.
+##################################################
+
+# Container image for the plugin.
+image: quay.io/gravitational/teleport-access-slack
+# Log level for the plugin process.
+# Available log levels are: DEBUG, INFO, WARNING, ERROR.
+# The default is INFO, which is recommended in production.
+# DEBUG is useful during first-time setup or to see more detailed logs for debugging.
+logLevel: INFO
+# The port open on Kubernetes service of Teleport.
+# The simplest is to use reverse tunnel port which is 3024.
+teleportPort: 3024
+
+##################################
+# Extra Kubernetes configuration #
+##################################
+
+# Affinity for pod assignment
+# https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity
+affinity: {}
+
+# Kubernetes annotations to apply
+# https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+annotations:
+  # Annotations for the ConfigMap (note: these will not be applied in 'custom' mode)
+  config: {}
+  # Annotations for the Deployment
+  deployment: {}
+  # Annotations for each Pod in the Deployment
+  pod: {}
+  # Annotations for the Service object
+  service: {}
+  # Annotations for the ServiceAccount object
+  serviceAccount: {}
+
+imagePullPolicy: IfNotPresent
+resources: {}

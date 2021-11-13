@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}
+  {{- if .Values.annotations.config }}
+  annotations:
+    {{- toYaml .Values.annotations.config | nindent 4 }}
+  {{- end }}
+data:
+  teleport-slack.toml: |
+    [teleport]
+    addr = '{{ required "teleportService is required in chart values" .Values.teleportService }}.{{ .Release.Namespace }}.svc.cluster.local:{{ required "teleportPort is required in chart values" .Values.teleportPort }}'
+    identity = "/var/lib/plugin-identity/identity"
+
+    [slack]
+    token = "/var/lib/plugin-token/token"
+
+    [log]
+    severity = '{{ .Values.logLevel }}'
+    output = "stderr"
+
+

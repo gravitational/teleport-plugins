@@ -17,7 +17,7 @@ RUN make -C access/slack
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/base:4f25af540d54
+FROM gcr.io/distroless/base:latest
 COPY --from=builder /workspace/access/slack/build/teleport-slack /usr/local/bin/
 
 ENTRYPOINT ["/usr/local/bin/teleport-slack"]
