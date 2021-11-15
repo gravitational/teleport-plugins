@@ -61,6 +61,7 @@ type PagerdutySuite struct {
 		reviewer2 string
 		requestor string
 		approver  string
+		overlap   string
 		racer1    string
 		racer2    string
 		plugin    string
@@ -175,6 +176,25 @@ func (s *PagerdutySuite) SetupSuite() {
 		require.NoError(t, err)
 		s.userNames.approver = user.GetName()
 
+		// This is the role where "pagerduty_notify_service" and "pagerduty_services" annotations are equal.
+		// We don't recommend these annotations to overlap but we need to make sure it doesn't make a conflict.
+		role, err = bootstrap.AddRole("foo-overlap", types.RoleSpecV4{
+			Allow: types.RoleConditions{
+				Request: &types.AccessRequestConditions{
+					Roles: []string{"admin"},
+					Annotations: wrappers.Traits{
+						NotifyServiceDefaultAnnotation: []string{NotifyServiceName},
+						ServicesDefaultAnnotation:      []string{NotifyServiceName},
+					},
+				},
+			},
+		})
+		require.NoError(t, err)
+
+		user, err = bootstrap.AddUserWithRoles(me.Username+"-overlap@example.com", role.GetName())
+		require.NoError(t, err)
+		s.userNames.overlap = user.GetName()
+
 		// This is the role with a maximum possible setup: both "pagerduty_notify_service" and
 		// "pagerduty_services" annotations and threshold.
 		role, err = bootstrap.AddRole("foo-bar", types.RoleSpecV4{
@@ -242,6 +262,10 @@ func (s *PagerdutySuite) SetupSuite() {
 		client, err = teleport.NewClient(ctx, auth, s.userNames.reviewer2)
 		require.NoError(t, err)
 		s.clients[s.userNames.reviewer2] = client
+
+		client, err = teleport.NewClient(ctx, auth, s.userNames.overlap)
+		require.NoError(t, err)
+		s.clients[s.userNames.overlap] = client
 
 		client, err = teleport.NewClient(ctx, auth, s.userNames.racer1)
 		require.NoError(t, err)
@@ -775,6 +799,27 @@ func (s *PagerdutySuite) TestAutoApprovalWhenActiveIncidentOnAnotherPolicy() {
 	})
 	s.startApp()
 	s.assertReviewSubmitted()
+}
+
+func (s *PagerdutySuite) TestAutoApprovalWhenServicesOverlap() {
+	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
+	s.currentRequestor = s.userNames.overlap
+	pdUser := s.fakePagerduty.StoreUser(User{
+		Name:  "Test User",
+		Email: s.currentRequestor,
+	})
+	s.fakePagerduty.StoreOnCall(OnCall{
+		User:             Reference{Type: "user_reference", ID: pdUser.ID},
+		EscalationPolicy: Reference{Type: "escalation_policy_reference", ID: EscalationPolicyID1},
+	})
+
+	s.startApp()
+	s.assertNoReviewSubmitted()
 }
 
 func (s *PagerdutySuite) TestExpiration() {

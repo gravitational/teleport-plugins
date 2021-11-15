@@ -363,9 +363,11 @@ func (p Pagerduty) FilterOnCallPolicies(ctx context.Context, userID string, esca
 }
 
 // HasAssignedIncidents determines if user has any incidents assigned in a give set of services.
-func (p Pagerduty) HasAssignedIncidents(ctx context.Context, userID string, serviceIDs []string) (bool, error) {
+func (p Pagerduty) HasAssignedIncidents(ctx context.Context, userID string, serviceIDs []string, ignoreIncidentIDs []string) (bool, error) {
+	ignoreIncidentIDSet := stringset.New(ignoreIncidentIDs...)
+	limit := uint(1 + len(ignoreIncidentIDSet)) // Request enough entries to get at least one non-ignored incident.
 	query, err := query.Values(ListIncidentsQuery{
-		PaginationQuery: PaginationQuery{Limit: 1},
+		PaginationQuery: PaginationQuery{Limit: limit},
 		UserIDs:         []string{userID},
 		ServiceIDs:      serviceIDs,
 	})
@@ -382,7 +384,16 @@ func (p Pagerduty) HasAssignedIncidents(ctx context.Context, userID string, serv
 		return false, trace.Wrap(err)
 	}
 
+	serviceIDSet := stringset.New(serviceIDs...)
 	for _, incident := range result.Incidents {
+		if ignoreIncidentIDSet.Contains(incident.ID) {
+			continue
+		}
+
+		if !(incident.Service.Type == "service_reference" && serviceIDSet.Contains(incident.Service.ID)) {
+			continue
+		}
+
 		var userOk bool
 		for _, assignment := range incident.Assignments {
 			if assignment.Assignee.Type == "user_reference" && assignment.Assignee.ID == userID {
@@ -390,13 +401,8 @@ func (p Pagerduty) HasAssignedIncidents(ctx context.Context, userID string, serv
 				break
 			}
 		}
-		if !userOk {
-			continue
-		}
-		for _, id := range serviceIDs {
-			if incident.Service.Type == "service_reference" && incident.Service.ID == id {
-				return true, nil
-			}
+		if userOk {
+			return true, nil
 		}
 	}
 

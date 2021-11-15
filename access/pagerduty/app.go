@@ -265,7 +265,7 @@ func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) err
 
 	// Then, try to approve the request if user is currently on-call.
 	if serviceNames, err := a.getOnCallServiceNames(req); err == nil {
-		approveErr = trace.Wrap(a.tryApproveRequest(ctx, req, serviceNames, data.IncidentID))
+		approveErr = trace.Wrap(a.tryApproveRequest(ctx, req, serviceNames, data))
 	} else {
 		logger.Get(ctx).Debugf("Skipping the approval: %s", err)
 	}
@@ -436,7 +436,7 @@ func (a *App) postReviewNotes(ctx context.Context, reqID string, reqReviews []ty
 // tryApproveRequest attempts to submit an approval if the following conditions are met:
 //   1. Requesting user must be on-call in one of the services provided in request annotation.
 //   2. User must have an active incident in such service.
-func (a *App) tryApproveRequest(ctx context.Context, req types.AccessRequest, serviceNames []string, notifyServiceID string) error {
+func (a *App) tryApproveRequest(ctx context.Context, req types.AccessRequest, serviceNames []string, data PagerdutyData) error {
 	log := logger.Get(ctx)
 
 	userName := req.GetUser()
@@ -468,18 +468,12 @@ func (a *App) tryApproveRequest(ctx context.Context, req types.AccessRequest, se
 		return nil
 	}
 
-	if notifyServiceID != "" {
-		filteredServices := make([]Service, 0, len(services))
+	if notifyServiceID := data.ServiceID; notifyServiceID != "" {
 		for _, service := range services {
 			if service.ID == notifyServiceID {
 				log.WithField("pd_service_name", service.Name).Warn("Notification service and approval services should not overlap")
-				continue
+				break
 			}
-			filteredServices = append(filteredServices, service)
-		}
-		services = filteredServices
-		if len(services) == 0 {
-			return nil
 		}
 	}
 
@@ -512,12 +506,16 @@ func (a *App) tryApproveRequest(ctx context.Context, req types.AccessRequest, se
 		return nil
 	}
 
-	ok, err := a.pagerduty.HasAssignedIncidents(ctx, user.ID, serviceIDs)
+	var ignoreIncidentIDs []string
+	if data.IncidentID != "" {
+		ignoreIncidentIDs = append(ignoreIncidentIDs, data.IncidentID)
+	}
+	ok, err := a.pagerduty.HasAssignedIncidents(ctx, user.ID, serviceIDs, ignoreIncidentIDs)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 	if !ok {
-		log.Debug("Skipping the approval: user has no incidents assigned")
+		log.Debug("Skipping the approval: user has no active incidents assigned")
 		return nil
 	}
 
