@@ -889,14 +889,14 @@ func (s *PagerdutySuite) TestRace() {
 				return setRaceErr(trace.Wrap(err))
 			}
 			if obtained, expected := incident.Status, "triggered"; obtained != expected {
-				return setRaceErr(trace.Errorf("wrong incident status. expected %q, obtained %q", expected, obtained))
+				return setRaceErr(trace.Errorf("wrong incident status. expected %s, obtained %s", expected, obtained))
 			}
 			reqID, err := getIncidentRequestID(incident)
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
 			if _, loaded := incidentIDs.LoadOrStore(incident.ID, struct{}{}); loaded {
-				return setRaceErr(trace.Errorf("incident %q has already been stored", incident.ID))
+				return setRaceErr(trace.Errorf("incident %s has already been stored", incident.ID))
 			}
 			atomic.AddInt32(&incidentsCount, 1)
 			req, err := s.ruler().GetAccessRequest(ctx, reqID)
@@ -933,7 +933,7 @@ func (s *PagerdutySuite) TestRace() {
 				return setRaceErr(err)
 			}
 			if obtained, expected := incident.Status, "resolved"; obtained != expected {
-				return setRaceErr(trace.Errorf("wrong incident status. expected %q, obtained %q", expected, obtained))
+				return setRaceErr(trace.Errorf("wrong incident status. expected %s, obtained %s", expected, obtained))
 			}
 			return nil
 		})
@@ -1005,7 +1005,7 @@ func (s *PagerdutySuite) TestRace() {
 func getIncidentRequestID(incident Incident) (string, error) {
 	prefix := pdIncidentKeyPrefix + "/"
 	if !strings.HasPrefix(incident.IncidentKey, prefix) {
-		return "", trace.Errorf("failed to parse incident_key %q", incident.IncidentKey)
+		return "", trace.Errorf("failed to parse incident_key %s", incident.IncidentKey)
 	}
 	return incident.IncidentKey[len(prefix):], nil
 }

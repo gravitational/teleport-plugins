@@ -143,7 +143,7 @@ func (g Gitlab) HealthCheck(ctx context.Context, projectIDOrPath string) (IntID,
 	}
 	if resp.IsError() {
 		if contentType := resp.Header().Get("Content-Type"); contentType != "application/json" {
-			return 0, trace.Errorf("wrong content_type=%q", contentType)
+			return 0, trace.Errorf("wrong content type %s", contentType)
 		}
 		if code := resp.StatusCode(); code == http.StatusUnauthorized {
 			return 0, trace.Errorf("got %v from API endpoint, perhaps GitLab credentials are not configured well", code)

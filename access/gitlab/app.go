@@ -262,7 +262,7 @@ func (a *App) setup(ctx context.Context, projectID IntID) error {
 
 func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
 	if kind := event.Resource.GetKind(); kind != types.KindAccessRequest {
-		return trace.Errorf("unexpected kind %q", kind)
+		return trace.Errorf("unexpected kind %s", kind)
 	}
 	op := event.Type
 	reqID := event.Resource.GetName()
@@ -434,7 +434,7 @@ func (a *App) onWebhookEvent(ctx context.Context, hook Webhook) error {
 	case state.IsDenied():
 		resolution.Tag = ResolvedDenied
 	default:
-		return trace.BadParameter("unknown request state %v (%q)", state, state)
+		return trace.BadParameter("unknown request state %v (%s)", state, state)
 	}
 
 	return trace.Wrap(a.resolveIssue(ctx, reqID, resolution))

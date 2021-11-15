@@ -639,7 +639,7 @@ func (s *SlackSuite) TestRace() {
 
 				user, ok := s.fakeSlack.GetUser(msg.Channel)
 				if !ok {
-					return setRaceErr(trace.Errorf("user %q is not found", msg.Channel))
+					return setRaceErr(trace.Errorf("user %s is not found", msg.Channel))
 				}
 
 				reqID, err := parseMessageField(msg, "ID")
@@ -723,7 +723,7 @@ func parseMessageField(msg Msg, field string) (string, error) {
 	text := sectionBlock.Text.GetText()
 	matches := msgFieldRegexp.FindAllStringSubmatch(text, -1)
 	if matches == nil {
-		return "", trace.Errorf("cannot parse fields from text %q", text)
+		return "", trace.Errorf("cannot parse fields from text %s", text)
 	}
 	var fields []string
 	for _, match := range matches {
@@ -732,7 +732,7 @@ func parseMessageField(msg Msg, field string) (string, error) {
 		}
 		fields = append(fields, match[1])
 	}
-	return "", trace.Errorf("cannot find field %q in %v", field, fields)
+	return "", trace.Errorf("cannot find field %s in %v", field, fields)
 }
 
 func getStatusLine(msg Msg) (string, error) {
