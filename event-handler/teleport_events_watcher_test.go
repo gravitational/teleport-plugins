@@ -44,6 +44,11 @@ func (c *mockTeleportEventWatcher) StreamSessionEvents(ctx context.Context, sess
 	return nil, nil
 }
 
+// UsertLock is mock UpsertLock method
+func (c *mockTeleportEventWatcher) UpsertLock(ctx context.Context, lock types.Lock) error {
+	return nil
+}
+
 // Close is mock close method
 func (c *mockTeleportEventWatcher) Close() error {
 	return nil
@@ -98,7 +103,7 @@ func TestNext(t *testing.T) {
 		require.NoError(t, err)
 	case e := <-chEvt:
 		require.NotNil(t, e.Event)
-		require.Equal(t, e.ID, "081ca05eea09ac0cd06e2d2acd06bec424146b254aa500de37bdc2c2b0a4dd0f")
+		require.Equal(t, "081ca05eea09ac0cd06e2d2acd06bec424146b254aa500de37bdc2c2b0a4dd0f", e.ID)
 	case <-time.After(time.Second):
 		require.Fail(t, "No events were sent")
 	}

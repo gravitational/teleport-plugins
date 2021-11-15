@@ -31,6 +31,8 @@ const (
 	sessionEndType = "session.upload"
 	// printType represents type name for print event
 	printType = "print"
+	// loginType represents type name for user login event
+	loginType = "user.login"
 )
 
 // TeleportEvent represents helper struct around main audit log event
@@ -49,10 +51,19 @@ type TeleportEvent struct {
 	Index int64
 	// IsSessionEnd is true when this event is session.end
 	IsSessionEnd bool
-	// IsPrint is true when this event is print
-	IsPrint bool
 	// SessionID is the session ID this event belongs to
 	SessionID string
+	// IsFailedLogin is true when this event is the failed login event
+	IsFailedLogin bool
+	// FailedLoginData represents failed login user data
+	FailedLoginData struct {
+		// Login represents user login
+		Login string
+		// Login represents user name
+		User string
+		// Login represents cluster name
+		ClusterName string
+	}
 }
 
 // printEvent represents an artificial print event struct which adds json-serialisable data field
@@ -70,54 +81,94 @@ type printEvent struct {
 }
 
 // NewTeleportEvent creates TeleportEvent using AuditEvent as a source
-func NewTeleportEvent(e events.AuditEvent, cursor string) (TeleportEvent, error) {
-	var sid string
+func NewTeleportEvent(e events.AuditEvent, cursor string) (*TeleportEvent, error) {
+	evt := &TeleportEvent{
+		Cursor: cursor,
+		Type:   e.GetType(),
+		Time:   e.GetTime(),
+		Index:  e.GetIndex(),
+	}
 
-	id := e.GetID()
+	err := evt.setID(e)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	evt.setSessionID(e)
+	evt.setEvent(e)
+	evt.setLoginData(e)
+
+	return evt, nil
+}
+
+// setID sets or generates TeleportEvent id
+func (e *TeleportEvent) setID(evt events.AuditEvent) error {
+	id := evt.GetID()
+
 	if id == "" {
-		data, err := lib.FastMarshal(e)
+		data, err := lib.FastMarshal(evt)
 		if err != nil {
-			return TeleportEvent{}, trace.Wrap(err)
+			return trace.Wrap(err)
 		}
 
 		hash := sha256.Sum256(data)
 		id = hex.EncodeToString(hash[:])
-		e.SetID(id)
 	}
 
-	var i interface{} = e
+	e.ID = id
 
-	t := e.GetType()
-	isSessionEnd := t == sessionEndType
-	if isSessionEnd {
-		sid = events.MustToOneOf(e).GetSessionUpload().SessionID
+	return nil
+}
+
+// setEvent sets TeleportEvent.Event
+func (e *TeleportEvent) setEvent(evt events.AuditEvent) {
+	if e.Type != printType {
+		e.Event = evt
+		return
 	}
 
-	if t == printType {
-		p := events.MustToOneOf(e).GetSessionPrint()
+	p := events.MustToOneOf(evt).GetSessionPrint()
 
-		i = &printEvent{
-			EI:          p.GetIndex(),
-			Event:       printType,
-			Data:        p.Data,
-			Time:        p.Time,
-			ClusterName: p.ClusterName,
-			CI:          p.ChunkIndex,
-			Bytes:       p.Bytes,
-			MS:          p.DelayMilliseconds,
-			Offset:      p.Offset,
-			UID:         id,
-		}
+	e.Event = &printEvent{
+		EI:          p.GetIndex(),
+		Event:       printType,
+		Data:        p.Data,
+		Time:        p.Time,
+		ClusterName: p.ClusterName,
+		CI:          p.ChunkIndex,
+		Bytes:       p.Bytes,
+		MS:          p.DelayMilliseconds,
+		Offset:      p.Offset,
+		UID:         e.ID,
+	}
+}
+
+// setSessionID sets session id for session end event
+func (e *TeleportEvent) setSessionID(evt events.AuditEvent) {
+	if e.Type != sessionEndType {
+		return
 	}
 
-	return TeleportEvent{
-		Event:        i,
-		ID:           id,
-		Cursor:       cursor,
-		Type:         t,
-		Time:         e.GetTime(),
-		Index:        e.GetIndex(),
-		IsSessionEnd: isSessionEnd,
-		SessionID:    sid,
-	}, nil
+	sid := events.MustToOneOf(evt).GetSessionUpload().SessionID
+
+	e.IsSessionEnd = true
+	e.SessionID = sid
+
+}
+
+// setLoginValues sets values related to login event
+func (e *TeleportEvent) setLoginData(evt events.AuditEvent) {
+	if e.Type != loginType {
+		return
+	}
+
+	l := events.MustToOneOf(evt).GetUserLogin()
+	if l.Success {
+		return
+	}
+
+	e.IsFailedLogin = true
+	e.FailedLoginData.Login = l.Login
+	e.FailedLoginData.User = l.User
+	e.FailedLoginData.ClusterName = l.ClusterName
 }
