@@ -29,10 +29,12 @@ require (
 	github.com/manifoldco/promptui v0.8.0
 	github.com/pelletier/go-toml v1.8.0
 	github.com/peterbourgon/diskv/v3 v3.0.0
+	github.com/sethvargo/go-limiter v0.7.2
 	github.com/sirupsen/logrus v1.8.1-0.20210219125412-f104497f2b21
 	github.com/stretchr/testify v1.7.0
 	go.etcd.io/bbolt v1.3.5
 	golang.org/x/net v0.0.0-20210326060303-6b1517762897
+	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
 	google.golang.org/genproto v0.0.0-20210223151946-22b48be4551b // indirect
 	google.golang.org/grpc v1.32.0

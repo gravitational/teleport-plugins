@@ -301,6 +301,11 @@ github.com/peterbourgon/diskv/v3
 github.com/pkg/errors
 # github.com/pmezard/go-difflib v1.0.0
 github.com/pmezard/go-difflib/difflib
+# github.com/sethvargo/go-limiter v0.7.2
+## explicit
+github.com/sethvargo/go-limiter
+github.com/sethvargo/go-limiter/internal/fasttime
+github.com/sethvargo/go-limiter/memorystore
 # github.com/sirupsen/logrus v1.8.1-0.20210219125412-f104497f2b21
 ## explicit
 github.com/sirupsen/logrus
@@ -387,6 +392,9 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
+# golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
+## explicit
+golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20210502180810-71e4cd670f79
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
