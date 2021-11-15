@@ -29,11 +29,13 @@ require (
 	github.com/pelletier/go-toml v1.8.0
 	github.com/peterbourgon/diskv/v3 v3.0.0
 	github.com/sergi/go-diff v1.2.0 // indirect
+	github.com/sethvargo/go-limiter v0.7.2
 	github.com/sirupsen/logrus v1.8.1-0.20210219125412-f104497f2b21
 	github.com/stretchr/testify v1.7.0
 	go.etcd.io/bbolt v1.3.5
 	golang.org/x/crypto v0.0.0-20210220033148-5ea612d1eb83 // indirect
 	golang.org/x/net v0.0.0-20210222171744-9060382bd457
+	golang.org/x/sync v0.0.0-20190423024810-112230192c58
 	golang.org/x/sys v0.0.0-20210223095934-7937bea0104d // indirect
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
 	golang.org/x/text v0.3.5 // indirect
