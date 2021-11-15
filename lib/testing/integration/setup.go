@@ -50,7 +50,7 @@ func (s *BaseSetup) SetupSuite() {
 	logger.Setup(logger.Config{Severity: "debug"})
 }
 
-func (s *BaseSetup) Setup() {
+func (s *BaseSetup) SetupService() {
 	t := s.T()
 	var err error
 
@@ -67,8 +67,8 @@ func (s *AuthSetup) SetupSuite() {
 	s.BaseSetup.SetupSuite()
 }
 
-func (s *AuthSetup) Setup() {
-	s.BaseSetup.Setup()
+func (s *AuthSetup) SetupService() {
+	s.BaseSetup.SetupService()
 	t := s.T()
 	auth, err := s.Integration.NewAuthService()
 	require.NoError(t, err)
@@ -84,8 +84,8 @@ func (s *ProxySetup) SetupSuite() {
 	s.AuthSetup.SetupSuite()
 }
 
-func (s *ProxySetup) Setup() {
-	s.AuthSetup.Setup()
+func (s *ProxySetup) SetupService() {
+	s.AuthSetup.SetupService()
 	t := s.T()
 	proxy, err := s.Integration.NewProxyService(s.Auth)
 	require.NoError(t, err)
@@ -97,8 +97,8 @@ func (s *SSHSetup) SetupSuite() {
 	s.ProxySetup.SetupSuite()
 }
 
-func (s *SSHSetup) Setup() {
-	s.ProxySetup.Setup()
+func (s *SSHSetup) SetupService() {
+	s.ProxySetup.SetupService()
 	t := s.T()
 	ssh, err := s.Integration.NewSSHService(s.Auth)
 	require.NoError(t, err)
