@@ -30,7 +30,7 @@ type IntegrationProxySuite struct {
 func TestIntegrationProxy(t *testing.T) { suite.Run(t, &IntegrationProxySuite{}) }
 
 func (s *IntegrationProxySuite) SetupTest() {
-	s.ProxySetup.Setup()
+	s.ProxySetup.SetupService()
 }
 
 func (s *IntegrationProxySuite) TestPing() {

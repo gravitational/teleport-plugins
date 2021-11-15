@@ -23,10 +23,6 @@ resource "teleport_github_connector" "github" {
        organization = "evilmartians"
        team = "devs"
        logins = ["example"]
-
-       # Please, provide this values explicitly, event if empty 
-       kubernetes_groups = []
-       kubernetes_users = []
     }
   }
 }
