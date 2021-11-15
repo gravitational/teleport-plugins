@@ -138,6 +138,11 @@ github.com/pkg/errors
 github.com/pmezard/go-difflib/difflib
 # github.com/sergi/go-diff v1.2.0
 ## explicit
+# github.com/sethvargo/go-limiter v0.7.2
+## explicit
+github.com/sethvargo/go-limiter
+github.com/sethvargo/go-limiter/internal/fasttime
+github.com/sethvargo/go-limiter/memorystore
 # github.com/sirupsen/logrus v1.8.1-0.20210219125412-f104497f2b21
 ## explicit
 github.com/sirupsen/logrus
@@ -172,6 +177,9 @@ golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
 golang.org/x/net/publicsuffix
 golang.org/x/net/trace
+# golang.org/x/sync v0.0.0-20190423024810-112230192c58
+## explicit
+golang.org/x/sync/semaphore
 # golang.org/x/sys v0.0.0-20210223095934-7937bea0104d
 ## explicit
 golang.org/x/sys/cpu

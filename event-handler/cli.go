@@ -98,11 +98,24 @@ type IngestConfig struct {
 	Concurrency int `help:"Number of concurrent sessions" default:"5"`
 }
 
+// LockConfig represents locking configuration
+type LockConfig struct {
+	// LockEnabled represents locking enabled flag
+	LockEnabled bool `help:"Enable user auto-locking" name:"lock-enabled" default:"false" env:"FDFWD_LOCKING_ENABLED"`
+	// LockFailedAttemptsCount number of failed attempts which triggers locking
+	LockFailedAttemptsCount int `help:"Number of failed attempts in lock-period which triggers locking" name:"lock-failed-attempts-count" default:"3" env:"FDFWD_LOCKING_FAILED_ATTEMPTS"`
+	// LockPeriod represents rate limiting period
+	LockPeriod time.Duration `help:"Time period where lock-failed-attempts-count failed attempts will trigger locking" name:"lock-period" default:"1m" env:"FDFWD_LOCKING_PERIOD"`
+	// LockFor represents the duration of the new lock
+	LockFor time.Duration `help:"Time period for which user gets lock" name:"lock-for" env:"FDFWD_LOCKING_FOR"`
+}
+
 // StartCmdConfig is start command description
 type StartCmdConfig struct {
 	FluentdConfig
 	TeleportConfig
 	IngestConfig
+	LockConfig
 }
 
 // ConfigureCmdConfig holds CLI options for teleport-event-handler configure
@@ -197,6 +210,10 @@ func (c *StartCmdConfig) Dump(ctx context.Context) {
 		log.WithField("ca", c.TeleportCA).Info("Using Teleport CA")
 		log.WithField("cert", c.TeleportCert).Info("Using Teleport cert")
 		log.WithField("key", c.TeleportKey).Info("Using Teleport key")
+	}
+
+	if c.LockEnabled {
+		log.WithField("count", c.LockFailedAttemptsCount).WithField("period", c.LockPeriod).Info("Auto-locking enabled")
 	}
 
 	if c.DryRun {
