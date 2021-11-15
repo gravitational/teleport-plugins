@@ -184,7 +184,7 @@ func (a *App) checkTeleportVersion(ctx context.Context) (proto.PingResponse, err
 
 func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
 	if kind := event.Resource.GetKind(); kind != types.KindAccessRequest {
-		return trace.Errorf("unexpected kind %q", kind)
+		return trace.Errorf("unexpected kind %s", kind)
 	}
 	op := event.Type
 	reqID := event.Resource.GetName()
@@ -293,14 +293,14 @@ func (a *App) getNotifyServiceName(req types.AccessRequest) (string, error) {
 	annotationKey := a.conf.Pagerduty.RequestAnnotations.NotifyService
 	slice, ok := req.GetSystemAnnotations()[annotationKey]
 	if !ok {
-		return "", trace.Errorf("request annotation %q is missing", annotationKey)
+		return "", trace.Errorf("request annotation %s is missing", annotationKey)
 	}
 	var serviceName string
 	if len(slice) > 0 {
 		serviceName = slice[0]
 	}
 	if serviceName == "" {
-		return "", trace.Errorf("request annotation %q is empty", annotationKey)
+		return "", trace.Errorf("request annotation %s is empty", annotationKey)
 	}
 	return serviceName, nil
 }

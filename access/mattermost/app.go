@@ -168,7 +168,7 @@ func (a *App) checkTeleportVersion(ctx context.Context) (proto.PingResponse, err
 
 func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
 	if kind := event.Resource.GetKind(); kind != types.KindAccessRequest {
-		return trace.Errorf("unexpected kind %q", kind)
+		return trace.Errorf("unexpected kind %s", kind)
 	}
 	op := event.Type
 	reqID := event.Resource.GetName()

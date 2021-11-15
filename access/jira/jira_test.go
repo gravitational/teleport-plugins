@@ -741,7 +741,7 @@ func (s *JiraSuite) TestRace() {
 				return setRaceErr(err)
 			}
 			if obtained, expected := issue.Fields.Status.Name, "Pending"; obtained != expected {
-				return setRaceErr(trace.Errorf("wrong issue status. expected %q, obtained %q", expected, obtained))
+				return setRaceErr(trace.Errorf("wrong issue status. expected %s, obtained %s", expected, obtained))
 			}
 			s.fakeJira.TransitionIssue(issue, "Approved")
 
