@@ -23,6 +23,10 @@ For the task, the [Kubebuilder](https://kubebuilder.io/) framework should be use
 
 To write something into Teleport, the manager needs to know what server to connect to and how. There're many options on how to discover Teleport instances in the cluster but for now, let's start with the simplest one - run manager as a sidecar container in the same pod as the Teleport auth server. Containers in the pod can share the volumes, so the manager container could have access to `/var/lib/teleport/proc` database, which contains administrator credentials. This is the same way how `tctl` utility works - it doesn't require any authentication when you run it on the same machine where Teleport is running.
 
+### High Availability mode
+
+One could deploy Teleport in High Availability mode, i.e. with `replicas` number greater than one and some highly available storage like DynamoDB or Firestore. When the Teleport pod is replicated, there're multiple sidecar containers as well. It's good to have a manager being highly available too, but we need to avoid a dispatch of the same event multiple times. To limit the concurrency a built-in Kubernetes leader election API should be used.
+
 ### Resource definitions
 
 Custom resource definitions of Teleport resource look like this:
@@ -55,7 +59,7 @@ Deletion of resources is being handled using [resource finalizers](https://kuber
 
 ### Identity definitions
 
-To run some plugin in the cluster, the credentials are required. Normally, one can get the credentials credentials using `tctl auth sign` command or using `tsh login`. To automate the credentials generation, the `Identity` resource is introduced. The identity definition looks like this:
+To run some plugin in the cluster, the credentials are required. Normally, one can get the credentials using `tctl auth sign` command or using `tsh login`. To automate the credentials generation, the `Identity` resource is introduced. The identity definition looks like this:
 
 ```yaml
 apiVersion: control.goteleport.com/v8
@@ -73,18 +77,13 @@ Here, the `username` is a Teleport user name, and `secretName` is a name of a se
 
 When running the manager as a sidecar container, the question arises: what objects is this particular instance of the manager responsible for and what objects not? There could be multiple Teleport deployments in the same cluster, and each deployment might have its manager sidecar container. So the question is how to limit the scope of objects observed.
 
-The first option is to limit by the namespace, and the second is to limit by label selectors. Both of them must be present in the manager to be very specific on what Kubernetes objects to watch.
+Typically, multiple deployments in Kubernetes are separated by namespaces. So let's have a configuration setting that limits the scope of resources being observed by the manager by namespace.
 
-Configuration example:
+Example:
 
 ```yaml
 scope:
   namespace: some-namespace
-  labelSelector:
-    matchExpressions:
-    - key: app
-      operator: In
-      values: ["my-teleport"]
 ```
 
 ### API Groups and Versions
