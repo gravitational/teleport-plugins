@@ -7,7 +7,7 @@ state: draft
 
 ## What
 
-Teleport Kubernetes Manager is a [controller for Kubernetes](https://kubernetes.io/docs/concepts/architecture/controller/) serving Teleport resources defined as [Kubernetes custom resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
+Teleport Kubernetes Manager is a [set of controllers for Kubernetes](https://kubernetes.io/docs/concepts/architecture/controller/) serving Teleport resources defined as [Kubernetes custom resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
 
 ## Why
 
