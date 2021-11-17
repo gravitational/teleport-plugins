@@ -104,7 +104,7 @@ scope:
 
 `Identity` resource resides in an API group called `control.goteleport.com`, and all the Teleport resources reside in a group called `resources.goteleport.com`. Two different groups are used for a reason:
 
-- API Versions of `instances.goteleport.com` start from `v8` because the Teleport version is 8.x at the moment of writing this document.
+- API Versions of `control.goteleport.com` start from `v8` because the Teleport version is 8.x at the moment of writing this document.
 - API Versions of `resources.goteleport.com` are all different because they're tied to Teleport resource versions.
 
 ### Generating Custom Resource Definitions
