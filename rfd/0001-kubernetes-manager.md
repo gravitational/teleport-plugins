@@ -73,6 +73,20 @@ spec:
 
 Here, the `username` is a Teleport user name, and `secretName` is a name of a secret resource where the manager will write credentials. Once the `Identity` object is created in the Kubernetes, the secret object with credentials contents will be written in the same namespace where the identity object resides.
 
+Once an identity is removed, any secret data it had generated should remain untouched. However, if the user wants the identity secret to being deleted as well, there should be a configuration option for this:
+
+
+```yaml
+identities:
+  ownerRefEnabled: true
+```
+
+When `ownerRefEnabled` is true, the manager sets a [metadata.ownerReferences](https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/) of a `Secret` object referenced by `secretName` of some `Identity`. Once an `Identity` resource is removed, Kubernetes will automatically clean up the referenced secret object.
+
+By default, `ownerRefEnabled` should be turned off because if the user suddenly deleted the `Identity` object it can break the deployment.
+
+If the secret referenced by `secretName` has been removed or its secret data has been overwritten, it's the manager's responsibility to re-generate the identity and to write it back.
+
 ### Limit the scope
 
 When running the manager as a sidecar container, the question arises: what objects is this particular instance of the manager responsible for and what objects not? There could be multiple Teleport deployments in the same cluster, and each deployment might have its manager sidecar container. So the question is how to limit the scope of objects observed.
