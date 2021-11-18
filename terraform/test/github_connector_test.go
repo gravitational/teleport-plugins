@@ -42,7 +42,7 @@ func (s *TerraformSuite) TestGithubConnector() {
 			    teams_to_logins {
 					organization = "evilmartians"
 					team = "devs"
-					logins = ["admin"]
+					logins = ["terraform"]
 			    }
 			}
 		}
@@ -65,7 +65,7 @@ func (s *TerraformSuite) TestGithubConnector() {
 			    teams_to_logins {
 					organization = "gravitational"
 					team = "devs"
-					logins = ["admin"]
+					logins = ["terraform"]
 			    }
 			}
 		}
@@ -94,7 +94,7 @@ func (s *TerraformSuite) TestGithubConnector() {
 					resource.TestCheckResourceAttr(name, "spec.0.client_id", "Iv1.3386eee92ff932a4"),
 					resource.TestCheckResourceAttr(name, "spec.0.teams_to_logins.0.organization", "evilmartians"),
 					resource.TestCheckResourceAttr(name, "spec.0.teams_to_logins.0.team", "devs"),
-					resource.TestCheckResourceAttr(name, "spec.0.teams_to_logins.0.logins.0", "admin"),
+					resource.TestCheckResourceAttr(name, "spec.0.teams_to_logins.0.logins.0", "terraform"),
 				),
 			},
 			{
@@ -109,7 +109,7 @@ func (s *TerraformSuite) TestGithubConnector() {
 					resource.TestCheckResourceAttr(name, "spec.0.client_id", "Iv1.3386eee92ff932a4"),
 					resource.TestCheckResourceAttr(name, "spec.0.teams_to_logins.0.organization", "gravitational"),
 					resource.TestCheckResourceAttr(name, "spec.0.teams_to_logins.0.team", "devs"),
-					resource.TestCheckResourceAttr(name, "spec.0.teams_to_logins.0.logins.0", "admin"),
+					resource.TestCheckResourceAttr(name, "spec.0.teams_to_logins.0.logins.0", "terraform"),
 				),
 			},
 			{

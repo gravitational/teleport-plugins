@@ -257,7 +257,7 @@ func GenSchemaDatabaseV3() map[string]*schema.Schema {
 					},
 					// Labels is a set of labels
 					"labels": {
-
+						Computed:    true,
 						Optional:    true,
 						Type:        schema.TypeMap,
 						Description: "Labels is a set of labels",
