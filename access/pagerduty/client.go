@@ -362,53 +362,6 @@ func (p Pagerduty) FilterOnCallPolicies(ctx context.Context, userID string, esca
 	return filteredIDSet.ToSlice(), nil
 }
 
-// HasAssignedIncidents determines if user has any incidents assigned in a give set of services.
-func (p Pagerduty) HasAssignedIncidents(ctx context.Context, userID string, serviceIDs []string, ignoreIncidentIDs []string) (bool, error) {
-	ignoreIncidentIDSet := stringset.New(ignoreIncidentIDs...)
-	limit := uint(1 + len(ignoreIncidentIDSet)) // Request enough entries to get at least one non-ignored incident.
-	query, err := query.Values(ListIncidentsQuery{
-		PaginationQuery: PaginationQuery{Limit: limit},
-		UserIDs:         []string{userID},
-		ServiceIDs:      serviceIDs,
-	})
-	if err != nil {
-		return false, trace.Wrap(err)
-	}
-	var result ListIncidentsResult
-	_, err = p.client.NewRequest().
-		SetContext(ctx).
-		SetQueryParamsFromValues(query).
-		SetResult(&result).
-		Get("incidents")
-	if err != nil {
-		return false, trace.Wrap(err)
-	}
-
-	serviceIDSet := stringset.New(serviceIDs...)
-	for _, incident := range result.Incidents {
-		if ignoreIncidentIDSet.Contains(incident.ID) {
-			continue
-		}
-
-		if !(incident.Service.Type == "service_reference" && serviceIDSet.Contains(incident.Service.ID)) {
-			continue
-		}
-
-		var userOk bool
-		for _, assignment := range incident.Assignments {
-			if assignment.Assignee.Type == "user_reference" && assignment.Assignee.ID == userID {
-				userOk = true
-				break
-			}
-		}
-		if userOk {
-			return true, nil
-		}
-	}
-
-	return false, nil
-}
-
 func (p Pagerduty) buildIncidentBody(reqID string, reqData RequestData) (string, error) {
 	var requestLink string
 	if p.webProxyURL != nil {

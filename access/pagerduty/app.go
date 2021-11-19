@@ -433,9 +433,7 @@ func (a *App) postReviewNotes(ctx context.Context, reqID string, reqReviews []ty
 	return data, trace.NewAggregate(errors...)
 }
 
-// tryApproveRequest attempts to submit an approval if the following conditions are met:
-//   1. Requesting user must be on-call in one of the services provided in request annotation.
-//   2. User must have an active incident in such service.
+// tryApproveRequest attempts to submit an approval if the requesting user is on-call in one of the services provided in request annotation.
 func (a *App) tryApproveRequest(ctx context.Context, req types.AccessRequest, serviceNames []string, data PagerdutyData) error {
 	log := logger.Get(ctx)
 
@@ -468,15 +466,6 @@ func (a *App) tryApproveRequest(ctx context.Context, req types.AccessRequest, se
 		return nil
 	}
 
-	if notifyServiceID := data.ServiceID; notifyServiceID != "" {
-		for _, service := range services {
-			if service.ID == notifyServiceID {
-				log.WithField("pd_service_name", service.Name).Warn("Notification service and approval services should not overlap")
-				break
-			}
-		}
-	}
-
 	escalationPolicyMapping := make(map[string][]Service)
 	for _, service := range services {
 		escalationPolicyMapping[service.EscalationPolicy.ID] = append(escalationPolicyMapping[service.EscalationPolicy.ID], service)
@@ -495,35 +484,17 @@ func (a *App) tryApproveRequest(ctx context.Context, req types.AccessRequest, se
 	}
 
 	serviceNames = make([]string, 0, len(services))
-	serviceIDs := make([]string, 0, len(services))
 	for _, policyID := range escalationPolicyIDs {
 		for _, service := range escalationPolicyMapping[policyID] {
-			serviceIDs = append(serviceIDs, service.ID)
 			serviceNames = append(serviceNames, service.Name)
 		}
-	}
-	if len(serviceIDs) == 0 {
-		return nil
-	}
-
-	var ignoreIncidentIDs []string
-	if data.IncidentID != "" {
-		ignoreIncidentIDs = append(ignoreIncidentIDs, data.IncidentID)
-	}
-	ok, err := a.pagerduty.HasAssignedIncidents(ctx, user.ID, serviceIDs, ignoreIncidentIDs)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-	if !ok {
-		log.Debug("Skipping the approval: user has no active incidents assigned")
-		return nil
 	}
 
 	if _, err := a.apiClient.SubmitAccessReview(ctx, types.AccessReviewSubmission{
 		RequestID: req.GetName(),
 		Review: types.AccessReview{
 			ProposedState: types.RequestState_APPROVED,
-			Reason: fmt.Sprintf("Access requested by user %s (%s) which is on call in service(s) %s and has some active incidents assigned",
+			Reason: fmt.Sprintf("Access requested by user %s (%s) which is on call in service(s) %s",
 				user.Name,
 				user.Email,
 				strings.Join(serviceNames, ","),

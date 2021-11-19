@@ -75,7 +75,6 @@ func (q QueryValues) GetAsSet(name string) stringset.StringSet {
 
 type fakeServiceByNameKey string
 type fakeUserByEmailKey string
-type fakeOnCallsByPolicyKey string
 
 type FakeIncidentNote struct {
 	IncidentID string
