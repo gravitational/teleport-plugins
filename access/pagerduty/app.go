@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -52,6 +53,9 @@ const (
 	// modifyPluginDataBackoffMax is a backoff threshold
 	modifyPluginDataBackoffMax = time.Second
 )
+
+// Special kind of error that can be ignored.
+var errSkip = errors.New("")
 
 // App contains global application state.
 type App struct {
@@ -237,44 +241,28 @@ func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) err
 		return nil
 	}
 
-	var (
-		notifyErr  error
-		approveErr error
-		data       PagerdutyData
-	)
-
-	shouldTryApprove := true
-
 	// First, try to create a notification incident.
-	if serviceName, err := a.getNotifyServiceName(req); err == nil {
-		var isNew bool
-		if data, isNew, err = a.tryNotifyService(ctx, req, serviceName); err == nil {
-			// To minimize the count of auto-approval tries, lets attempt it only when we just created an incident.
-			shouldTryApprove = isNew
-		} else {
-			notifyErr = trace.Wrap(err)
-			// If there's an error, we can't really know is the incident new or not so lets just try.
-			shouldTryApprove = true
-		}
-	} else {
-		logger.Get(ctx).Debugf("Skipping the notification: %s", err)
+	isNew, notifyErr := a.tryNotifyService(ctx, req)
+	notifyErr = trace.Wrap(notifyErr)
+
+	// To minimize the count of auto-approval tries, lets attempt it only when we just created an incident.
+	// But if there's an error, we can't really know is the incident new or not so lets just try.
+	if !isNew && notifyErr == nil {
+		return nil
 	}
-	if !shouldTryApprove {
-		return notifyErr
+	// Don't show the error if the annotation is just missing.
+	if trace.Unwrap(notifyErr) == errSkip {
+		notifyErr = nil
 	}
 
 	// Then, try to approve the request if user is currently on-call.
-	if serviceNames, err := a.getOnCallServiceNames(req); err == nil {
-		approveErr = trace.Wrap(a.tryApproveRequest(ctx, req, serviceNames, data))
-	} else {
-		logger.Get(ctx).Debugf("Skipping the approval: %s", err)
-	}
+	approveErr := trace.Wrap(a.tryApproveRequest(ctx, req))
 	return trace.NewAggregate(notifyErr, approveErr)
 }
 
 func (a *App) onResolvedRequest(ctx context.Context, req types.AccessRequest) error {
 	var notifyErr error
-	if _, err := a.postReviewNotes(ctx, req.GetName(), req.GetReviews()); err != nil {
+	if err := a.postReviewNotes(ctx, req.GetName(), req.GetReviews()); err != nil {
 		notifyErr = trace.Wrap(err)
 	}
 
@@ -321,11 +309,17 @@ func (a *App) getOnCallServiceNames(req types.AccessRequest) ([]string, error) {
 	return serviceNames, nil
 }
 
-func (a *App) tryNotifyService(ctx context.Context, req types.AccessRequest, serviceName string) (PagerdutyData, bool, error) {
+func (a *App) tryNotifyService(ctx context.Context, req types.AccessRequest) (bool, error) {
+	serviceName, err := a.getNotifyServiceName(req)
+	if err != nil {
+		logger.Get(ctx).Debugf("Skipping the notification: %s", err)
+		return false, trace.Wrap(errSkip)
+	}
+
 	ctx, _ = logger.WithField(ctx, "pd_service_name", serviceName)
 	service, err := a.pagerduty.FindServiceByName(ctx, serviceName)
 	if err != nil {
-		return PagerdutyData{}, false, trace.Wrap(err)
+		return false, trace.Wrap(err)
 	}
 
 	reqID := req.GetName()
@@ -344,30 +338,29 @@ func (a *App) tryNotifyService(ctx context.Context, req types.AccessRequest, ser
 		return PluginData{RequestData: reqData}, true
 	})
 	if err != nil {
-		return PagerdutyData{}, isNew, trace.Wrap(err)
+		return isNew, trace.Wrap(err)
 	}
 
-	var data PagerdutyData
 	if isNew {
-		if data, err = a.createIncident(ctx, service.ID, reqID, reqData); err != nil {
-			return data, isNew, trace.Wrap(err)
+		if err = a.createIncident(ctx, service.ID, reqID, reqData); err != nil {
+			return isNew, trace.Wrap(err)
 		}
 	}
 
 	if reqReviews := req.GetReviews(); len(reqReviews) > 0 {
-		if data, err = a.postReviewNotes(ctx, reqID, reqReviews); err != nil {
-			return data, isNew, trace.Wrap(err)
+		if err = a.postReviewNotes(ctx, reqID, reqReviews); err != nil {
+			return isNew, trace.Wrap(err)
 		}
 	}
 
-	return data, isNew, nil
+	return isNew, nil
 }
 
 // createIncident posts an incident with request information.
-func (a *App) createIncident(ctx context.Context, serviceID, reqID string, reqData RequestData) (PagerdutyData, error) {
+func (a *App) createIncident(ctx context.Context, serviceID, reqID string, reqData RequestData) error {
 	data, err := a.pagerduty.CreateIncident(ctx, serviceID, reqID, reqData)
 	if err != nil {
-		return PagerdutyData{}, trace.Wrap(err)
+		return trace.Wrap(err)
 	}
 	ctx, log := logger.WithField(ctx, "pd_incident_id", data.IncidentID)
 	log.Info("Successfully created PagerDuty incident")
@@ -384,11 +377,11 @@ func (a *App) createIncident(ctx context.Context, serviceID, reqID string, reqDa
 		pluginData.PagerdutyData = data
 		return pluginData, true
 	})
-	return data, trace.Wrap(err)
+	return trace.Wrap(err)
 }
 
 // postReviewNotes posts incident notes about new reviews appeared for request.
-func (a *App) postReviewNotes(ctx context.Context, reqID string, reqReviews []types.AccessReview) (PagerdutyData, error) {
+func (a *App) postReviewNotes(ctx context.Context, reqID string, reqReviews []types.AccessReview) error {
 	var oldCount int
 	var data PagerdutyData
 
@@ -411,17 +404,17 @@ func (a *App) postReviewNotes(ctx context.Context, reqID string, reqReviews []ty
 		return pluginData, true
 	})
 	if err != nil {
-		return data, trace.Wrap(err)
+		return trace.Wrap(err)
 	}
 	if !ok {
 		logger.Get(ctx).Debug("Failed to post the note: plugin data is missing")
-		return data, nil
+		return nil
 	}
 	ctx, _ = logger.WithField(ctx, "pd_incident_id", data.IncidentID)
 
 	slice := reqReviews[oldCount:]
 	if len(slice) == 0 {
-		return data, nil
+		return nil
 	}
 
 	errors := make([]error, 0, len(slice))
@@ -430,12 +423,18 @@ func (a *App) postReviewNotes(ctx context.Context, reqID string, reqReviews []ty
 			errors = append(errors, err)
 		}
 	}
-	return data, trace.NewAggregate(errors...)
+	return trace.NewAggregate(errors...)
 }
 
 // tryApproveRequest attempts to submit an approval if the requesting user is on-call in one of the services provided in request annotation.
-func (a *App) tryApproveRequest(ctx context.Context, req types.AccessRequest, serviceNames []string, data PagerdutyData) error {
+func (a *App) tryApproveRequest(ctx context.Context, req types.AccessRequest) error {
 	log := logger.Get(ctx)
+
+	serviceNames, err := a.getOnCallServiceNames(req)
+	if err != nil {
+		logger.Get(ctx).Debugf("Skipping the approval: %s", err)
+		return nil
+	}
 
 	userName := req.GetUser()
 	if !lib.IsEmail(userName) {
@@ -446,7 +445,7 @@ func (a *App) tryApproveRequest(ctx context.Context, req types.AccessRequest, se
 	user, err := a.pagerduty.FindUserByEmail(ctx, userName)
 	if err != nil {
 		if trace.IsNotFound(err) {
-			log.WithError(err).WithField("pd_user_email", userName).Debug("Failed to submit approval: email is not found")
+			log.WithError(err).WithField("pd_user_email", userName).Debug("Skipping the approval: email is not found")
 			return nil
 		}
 		return trace.Wrap(err)
