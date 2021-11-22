@@ -194,6 +194,7 @@ func getConfig(d *schema.ResourceData) (*client.Config, error) {
 	_, okKey := d.GetOk(keyPathKey)
 	_, okIdentity := d.GetOk(identityFile)
 	_, okIdentityPath := d.GetOk(identityFilePath)
+	_, okProfile := d.GetOk(profileName)
 
 	if okKey {
 		log.Debug("Certificate files provided")
@@ -228,14 +229,16 @@ func getConfig(d *schema.ResourceData) (*client.Config, error) {
 		creds = append(creds, c)
 	}
 
-	log.Debug("Using profile as the default auth method")
+	if okProfile || len(creds) == 0 {
+		log.Debug("Using profile as the default auth method")
 
-	c, err := getConfigFromProfile(d)
-	if err != nil {
-		return nil, trace.Wrap(err)
+		c, err := getConfigFromProfile(d)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		creds = append(creds, c)
 	}
-
-	creds = append(creds, c)
 
 	return &client.Config{
 		Addrs:       []string{addr},
