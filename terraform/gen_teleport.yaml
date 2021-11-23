@@ -58,11 +58,13 @@ computed_fields:
     - "types.AppV3.Version"
     - "types.AppV3.Kind"
     - "types.AppV3.Metadata.Namespace"
+    - "types.AppV3.Metadata.Labels"
 
     # Database
     - "types.DatabaseV3.Version"
     - "types.DatabaseV3.Kind"
     - "types.DatabaseV3.Metadata.Namespace"
+    - "types.DatabaseV3.Metadata.Labels"
 
     # Auth preference
     - "types.AuthPreferenceV2.Version"
