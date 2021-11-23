@@ -16,4 +16,87 @@ limitations under the License.
 
 package test
 
-// TODO: Make it test for App when 8.0.0 gets merged, test framework can't use v8.0.0 on the CI yet
+import (
+	"github.com/gravitational/trace"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+)
+
+func (s *TerraformSuite) TestApp() {
+	res := "teleport_app"
+
+	create := s.terraformConfig + `
+		resource "` + res + `" "test" {
+            metadata {
+                name = "example"
+                description = "Test app"
+                labels  = {
+                    example = "yes"
+                    "teleport.dev/origin" = "dynamic"
+                }    
+            }
+        
+            spec {
+                uri = "localhost:3000"
+            }
+        }
+
+	`
+
+	update := s.terraformConfig + `
+		resource "` + res + `" "test" {
+            metadata {
+                name = "example"
+                description = "Test app"
+                labels  = {
+                    example = "yes"
+                    "teleport.dev/origin" = "dynamic"
+                }    
+            }
+        
+            spec {
+                uri = "localhost:3000"
+            }
+		}
+	`
+
+	checkAppDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetApp(s.Context(), "test")
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := res + ".test"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProviderFactories: s.terraformProviders,
+		CheckDestroy:      checkAppDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: create,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "app"),
+					resource.TestCheckResourceAttr(name, "spec.0.uri", "localhost:3000"),
+				),
+			},
+			{
+				Config:   create, // Check that there is no state drift
+				PlanOnly: true,
+			},
+			{
+				Config: update,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "app"),
+					resource.TestCheckResourceAttr(name, "spec.0.uri", "localhost:3000"),
+				),
+			},
+			{
+				Config:   update, // Check that there is no state drift
+				PlanOnly: true,
+			},
+		},
+	})
+}

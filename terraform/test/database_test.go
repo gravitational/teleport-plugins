@@ -16,92 +16,92 @@ limitations under the License.
 
 package test
 
-// TODO: Uncomment when 8.0.0 gets merged, test framework can't use v8.0.0 internally yet
+import (
+	"github.com/gravitational/trace"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+)
 
-// import (
-// 	"github.com/gravitational/trace"
-// 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-// 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-// )
+func (s *TerraformSuite) TestDatabase() {
+	res := "teleport_database"
 
-// func (s *TerraformSuite) TestDatabase() {
-// 	res := "teleport_database"
+	create := s.terraformConfig + `
+		resource "` + res + `" "test" {
+			metadata {
+				name    = "test"
+				expires = "2022-10-12T07:20:50.3Z"
+				labels  = {					
+				  	example = "yes"
+					"teleport.dev/origin" = "dynamic"
+				}
+			}
 
-// 	create := s.terraformConfig + `
-// 		resource "` + res + `" "test" {
-// 			metadata {
-// 				name    = "test"
-// 				expires = "2022-10-12T07:20:50.3Z"
-// 				labels  = {
-// 				  	example = "yes"
-// 				}
-// 			}
+			spec {
+				protocol = "postgres"
+				uri = "localhost"
+			}
+		}
+	`
 
-// 			spec {
-// 				protocol = "postgresql"
-// 				uri = "localhost"
-// 			}
-// 		}
-// 	`
+	update := s.terraformConfig + `
+		resource "` + res + `" "test" {
+			metadata {
+				name    = "test"
+				expires = "2022-10-12T07:20:50.3Z"
+				labels  = {
+                    "teleport.dev/origin" = "dynamic"
+					example = "yes"
+				}
+			}
 
-// 	update := s.terraformConfig + `
-// 		resource "` + res + `" "test" {
-// 			metadata {
-// 				name    = "test"
-// 				expires = "2022-10-12T07:20:50.3Z"
-// 				labels  = {
-// 					example = "yes"
-// 				}
-// 			}
+			spec {
+				protocol = "postgres"
+				uri = "example.com"
+			}
+		}
+	`
 
-// 			spec {
-// 				protocol = "postgresql"
-// 				uri = "example.com"
-// 			}
-// 		}
-// 	`
+	checkDatabaseDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetDatabase(s.Context(), "test")
+		if trace.IsNotFound(err) {
+			return nil
+		}
 
-// 	checkDatabaseDestroyed := func(state *terraform.State) error {
-// 		_, err := s.client.GetUser("test", false)
-// 		if trace.IsNotFound(err) {
-// 			return nil
-// 		}
+		return err
+	}
 
-// 		return err
-// 	}
+	name := res + ".test"
 
-// 	name := res + ".test"
-
-// 	resource.Test(s.T(), resource.TestCase{
-// 		Providers:    s.terraformProviders,
-// 		CheckDestroy: checkDatabaseDestroyed,
-// 		Steps: []resource.TestStep{
-// 			{
-// 				Config: create,
-// 				Check: resource.ComposeTestCheckFunc(
-// 					resource.TestCheckResourceAttr(name, "kind", "db"),
-// 					resource.TestCheckResourceAttr(name, "metadata.0.expires", "2022-10-12T07:20:50.3Z"),
-// 					resource.TestCheckResourceAttr(name, "spec.0.protocol", "postgresql"),
-// 					resource.TestCheckResourceAttr(name, "spec.0.uri", "localhost"),
-// 				),
-// 			},
-// 			{
-// 				Config:   create, // Check that there is no state drift
-// 				PlanOnly: true,
-// 			},
-// 			{
-// 				Config: update,
-// 				Check: resource.ComposeTestCheckFunc(
-// 					resource.TestCheckResourceAttr(name, "kind", "db"),
-// 					resource.TestCheckResourceAttr(name, "metadata.0.expires", "2022-10-12T07:20:50.3Z"),
-// 					resource.TestCheckResourceAttr(name, "spec.0.protocol", "postgresql"),
-// 					resource.TestCheckResourceAttr(name, "spec.0.uri", "example.com"),
-// 				),
-// 			},
-// 			{
-// 				Config:   update, // Check that there is no state drift
-// 				PlanOnly: true,
-// 			},
-// 		},
-// 	})
-// }
+	resource.Test(s.T(), resource.TestCase{
+		ProviderFactories: s.terraformProviders,
+		CheckDestroy:      checkDatabaseDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: create,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "db"),
+					resource.TestCheckResourceAttr(name, "metadata.0.expires", "2022-10-12T07:20:50.3Z"),
+					resource.TestCheckResourceAttr(name, "spec.0.protocol", "postgres"),
+					resource.TestCheckResourceAttr(name, "spec.0.uri", "localhost"),
+				),
+			},
+			{
+				Config:   create, // Check that there is no state drift
+				PlanOnly: true,
+			},
+			{
+				Config: update,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "db"),
+					resource.TestCheckResourceAttr(name, "metadata.0.expires", "2022-10-12T07:20:50.3Z"),
+					resource.TestCheckResourceAttr(name, "spec.0.protocol", "postgres"),
+					resource.TestCheckResourceAttr(name, "spec.0.uri", "example.com"),
+				),
+			},
+			{
+				Config:   update, // Check that there is no state drift
+				PlanOnly: true,
+			},
+		},
+	})
+}
