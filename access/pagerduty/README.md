@@ -115,7 +115,7 @@ spec:
 
 ### Setting up auto-approval behavior
 
-If given sufficient permissions, Pagerduty plugin can auto-approve new access requests if they come from a user who is currently on-call and has at least one active incident assigned to her. More specifically, it works like this:
+If given sufficient permissions, Pagerduty plugin can auto-approve new access requests if they come from a user who is currently on-call. More specifically, it works like this:
 
 - Access plugin has an access to submit access reviews:
 ```yaml
@@ -145,11 +145,8 @@ spec:
 - There's a Teleport user with name `alice@example.com` and role `challenger`.
 - There's also a Pagerduty user with e-mail `alice@example.com`
 - That user is currently on-call in a service "service 1" or "service 2" or in both of them.
-- There's at least one active incident assigned to `alice@example.com` in a service where she's currently on-call.
 - `alice@example.com` requests a role `champion`.
 - Then pagerduty plugin **submits an approval** of Alice's request.
-
-*NOTE* that `pagerduty_services` and `pagerduty_notify_service` annotations should not overlap. You cannot use the same service to post notifications in and be on-call in that service. If `pagerduty_services` and `pagerduty_notify_service` overlap then there'll always be an active incident assigned to user - the notification itself is an incident. So the plugin will auto-approve an access every time which is not actually desired.
 
 ## Install
 

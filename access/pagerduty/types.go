@@ -138,13 +138,6 @@ type IncidentResult struct {
 	Incident Incident `json:"incident"`
 }
 
-type ListIncidentsQuery struct {
-	PaginationQuery
-	UserIDs    []string `url:"user_ids,omitempty,brackets"`
-	Statuses   []string `url:"statuses,omitempty,brackets"`
-	ServiceIDs []string `url:"service_ids,omitempty,brackets"`
-}
-
 type ListIncidentsResult struct {
 	PaginationResult
 	Incidents []Incident `json:"incidents"`

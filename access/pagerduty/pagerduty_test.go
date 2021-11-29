@@ -45,6 +45,7 @@ import (
 const (
 	EscalationPolicyID1 = "escalation_policy-1"
 	EscalationPolicyID2 = "escalation_policy-2"
+	EscalationPolicyID3 = "escalation_policy-3"
 	NotifyServiceName   = "Teleport Notifications"
 	ServiceName1        = "Service 1"
 	ServiceName2        = "Service 2"
@@ -164,7 +165,7 @@ func (s *PagerdutySuite) SetupSuite() {
 				Request: &types.AccessRequestConditions{
 					Roles: []string{"admin"},
 					Annotations: wrappers.Traits{
-						ServicesDefaultAnnotation: []string{ServiceName1, ServiceName2, ServiceName3},
+						ServicesDefaultAnnotation: []string{ServiceName1, ServiceName2},
 					},
 				},
 			},
@@ -183,7 +184,7 @@ func (s *PagerdutySuite) SetupSuite() {
 					Roles: []string{"admin"},
 					Annotations: wrappers.Traits{
 						NotifyServiceDefaultAnnotation: []string{NotifyServiceName},
-						ServicesDefaultAnnotation:      []string{ServiceName1, ServiceName2, ServiceName3},
+						ServicesDefaultAnnotation:      []string{ServiceName1, ServiceName2},
 					},
 					Thresholds: []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}},
 				},
@@ -270,8 +271,7 @@ func (s *PagerdutySuite) SetupTest() {
 	s.fakePagerduty = fakePagerduty
 
 	s.pdNotifyService = s.fakePagerduty.StoreService(Service{
-		Name:             NotifyServiceName,
-		EscalationPolicy: Reference{Type: "escalation_policy_reference", ID: EscalationPolicyID1},
+		Name: NotifyServiceName,
 	})
 	s.pdService1 = s.fakePagerduty.StoreService(Service{
 		Name:             ServiceName1,
@@ -279,11 +279,11 @@ func (s *PagerdutySuite) SetupTest() {
 	})
 	s.pdService2 = s.fakePagerduty.StoreService(Service{
 		Name:             ServiceName2,
-		EscalationPolicy: Reference{Type: "escalation_policy_reference", ID: EscalationPolicyID1},
+		EscalationPolicy: Reference{Type: "escalation_policy_reference", ID: EscalationPolicyID2},
 	})
 	s.pdService3 = s.fakePagerduty.StoreService(Service{
 		Name:             ServiceName3,
-		EscalationPolicy: Reference{Type: "escalation_policy_reference", ID: EscalationPolicyID2},
+		EscalationPolicy: Reference{Type: "escalation_policy_reference", ID: EscalationPolicyID3},
 	})
 
 	var conf Config
@@ -673,7 +673,7 @@ func (s *PagerdutySuite) assertNoReviewSubmitted() {
 	assert.Len(t, request.GetReviews(), 0)
 }
 
-func (s *PagerdutySuite) TestAutoApprovalWhenNoActiveIncidents() {
+func (s *PagerdutySuite) TestAutoApprovalWhenNotOnCall() {
 	t := s.T()
 
 	if !s.teleportFeatures.AdvancedAccessWorkflows {
@@ -681,19 +681,15 @@ func (s *PagerdutySuite) TestAutoApprovalWhenNoActiveIncidents() {
 	}
 
 	s.currentRequestor = s.userNames.approver
-	pdUser := s.fakePagerduty.StoreUser(User{
+	s.fakePagerduty.StoreUser(User{
 		Name:  "Test User",
 		Email: s.currentRequestor,
-	})
-	s.fakePagerduty.StoreOnCall(OnCall{
-		User:             Reference{Type: "user_reference", ID: pdUser.ID},
-		EscalationPolicy: Reference{Type: "escalation_policy_reference", ID: EscalationPolicyID1},
 	})
 	s.startApp()
 	s.assertNoReviewSubmitted()
 }
 
-func (s *PagerdutySuite) TestAutoApprovalWhenActiveIncident() {
+func (s *PagerdutySuite) TestAutoApprovalWhenOnCall() {
 	t := s.T()
 
 	if !s.teleportFeatures.AdvancedAccessWorkflows {
@@ -709,47 +705,11 @@ func (s *PagerdutySuite) TestAutoApprovalWhenActiveIncident() {
 		User:             Reference{Type: "user_reference", ID: pdUser.ID},
 		EscalationPolicy: Reference{Type: "escalation_policy_reference", ID: EscalationPolicyID1},
 	})
-	s.fakePagerduty.StoreIncident(Incident{
-		Title:   "Maintenance - linux kernel upgrade",
-		Status:  "triggered",
-		Service: Reference{Type: "service_reference", ID: s.pdService1.ID},
-		Assignments: []IncidentAssignment{
-			{Assignee: Reference{Type: "user_reference", ID: pdUser.ID}},
-		},
-	})
 	s.startApp()
 	s.assertReviewSubmitted()
 }
 
-func (s *PagerdutySuite) TestAutoApprovalWhenActiveIncidentInAnotherService() {
-	t := s.T()
-
-	if !s.teleportFeatures.AdvancedAccessWorkflows {
-		t.Skip("Doesn't work in OSS version")
-	}
-
-	s.currentRequestor = s.userNames.approver
-	pdUser := s.fakePagerduty.StoreUser(User{
-		Name:  "Test User",
-		Email: s.currentRequestor,
-	})
-	s.fakePagerduty.StoreOnCall(OnCall{
-		User:             Reference{Type: "user_reference", ID: pdUser.ID},
-		EscalationPolicy: Reference{Type: "escalation_policy_reference", ID: EscalationPolicyID1},
-	})
-	s.fakePagerduty.StoreIncident(Incident{
-		Title:   "Maintenance - linux kernel upgrade",
-		Status:  "triggered",
-		Service: Reference{Type: "service_reference", ID: s.pdService2.ID},
-		Assignments: []IncidentAssignment{
-			{Assignee: Reference{Type: "user_reference", ID: pdUser.ID}},
-		},
-	})
-	s.startApp()
-	s.assertReviewSubmitted()
-}
-
-func (s *PagerdutySuite) TestAutoApprovalWhenActiveIncidentOnAnotherPolicy() {
+func (s *PagerdutySuite) TestAutoApprovalWhenOnCallInSecondPolicy() {
 	t := s.T()
 
 	if !s.teleportFeatures.AdvancedAccessWorkflows {
@@ -765,16 +725,28 @@ func (s *PagerdutySuite) TestAutoApprovalWhenActiveIncidentOnAnotherPolicy() {
 		User:             Reference{Type: "user_reference", ID: pdUser.ID},
 		EscalationPolicy: Reference{Type: "escalation_policy_reference", ID: EscalationPolicyID2},
 	})
-	s.fakePagerduty.StoreIncident(Incident{
-		Title:   "Maintenance - linux kernel upgrade",
-		Status:  "triggered",
-		Service: Reference{Type: "service_reference", ID: s.pdService3.ID},
-		Assignments: []IncidentAssignment{
-			{Assignee: Reference{Type: "user_reference", ID: pdUser.ID}},
-		},
-	})
 	s.startApp()
 	s.assertReviewSubmitted()
+}
+
+func (s *PagerdutySuite) TestAutoApprovalWhenOnCallInSomeOtherPolicy() {
+	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
+	s.currentRequestor = s.userNames.approver
+	pdUser := s.fakePagerduty.StoreUser(User{
+		Name:  "Test User",
+		Email: s.currentRequestor,
+	})
+	s.fakePagerduty.StoreOnCall(OnCall{
+		User:             Reference{Type: "user_reference", ID: pdUser.ID},
+		EscalationPolicy: Reference{Type: "escalation_policy_reference", ID: EscalationPolicyID3},
+	})
+	s.startApp()
+	s.assertNoReviewSubmitted()
 }
 
 func (s *PagerdutySuite) TestExpiration() {
@@ -844,14 +816,6 @@ func (s *PagerdutySuite) TestRace() {
 	s.fakePagerduty.StoreOnCall(OnCall{
 		User:             Reference{Type: "user_reference", ID: racer2.ID},
 		EscalationPolicy: Reference{Type: "escalation_policy_reference", ID: EscalationPolicyID1},
-	})
-	s.fakePagerduty.StoreIncident(Incident{
-		Title:   "Maintenance - linux kernel upgrade",
-		Status:  "triggered",
-		Service: Reference{Type: "service_reference", ID: s.pdService1.ID},
-		Assignments: []IncidentAssignment{
-			{Assignee: Reference{Type: "user_reference", ID: racer2.ID}},
-		},
 	})
 
 	watcher, err := s.ruler().NewWatcher(s.Context(), types.Watch{

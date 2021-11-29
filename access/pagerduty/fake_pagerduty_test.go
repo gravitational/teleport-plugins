@@ -291,11 +291,25 @@ func NewFakePagerduty(concurrency int) *FakePagerduty {
 		err := json.NewDecoder(r.Body).Decode(&body)
 		panicIf(err)
 
+		service, found := pagerduty.GetService(body.Incident.Service.ID)
+		if !found {
+			rw.WriteHeader(http.StatusNotFound)
+			err := json.NewEncoder(rw).Encode(&ErrorResult{Message: "Service not found"})
+			panicIf(err)
+			return
+		}
+
+		var assignments []IncidentAssignment
+		for _, onCall := range pagerduty.GetOnCallsByEscalationPolicy(service.EscalationPolicy.ID) {
+			assignments = append(assignments, IncidentAssignment{Assignee: onCall.User})
+		}
+
 		incident := pagerduty.StoreIncident(Incident{
 			IncidentKey: body.Incident.IncidentKey,
 			Title:       body.Incident.Title,
 			Status:      "triggered",
 			Service:     body.Incident.Service,
+			Assignments: assignments,
 			Body:        body.Incident.Body,
 		})
 		pagerduty.newIncidents <- incident
@@ -490,6 +504,24 @@ func (s *FakePagerduty) StoreOnCall(onCall OnCall) OnCall {
 	id := fmt.Sprintf("oncall-%v", atomic.AddUint64(&s.onCallIDCounter, 1))
 	s.objects.Store(id, onCall)
 	return onCall
+}
+
+func (s *FakePagerduty) GetOnCallsByEscalationPolicy(policyID string) []OnCall {
+	var result []OnCall
+	s.objects.Range(func(key, value interface{}) bool {
+		if key, ok := key.(string); !ok || !strings.HasPrefix(key, "oncall-") {
+			return true
+		}
+		onCall, ok := value.(OnCall)
+		if !ok {
+			return true
+		}
+		if onCall.EscalationPolicy.ID == policyID {
+			result = append(result, onCall)
+		}
+		return true
+	})
+	return result
 }
 
 func (s *FakePagerduty) CheckNewExtension(ctx context.Context) (Extension, error) {
