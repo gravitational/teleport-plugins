@@ -10,7 +10,6 @@ trigger:
   event:
     include:
       - push
-      - pull_request
   repo:
     include:
       - gravitational/*
@@ -53,7 +52,6 @@ trigger:
   event:
     include:
       - push
-      - pull_request
   repo:
     include:
       - gravitational/*
@@ -415,6 +413,6 @@ steps:
 
 ---
 kind: signature
-hmac: 7d92a4296bbb567054d4b181fe7f0309c98201336772d7f7d8c780d4a4fbc99d
+hmac: 4f25cf95faaad6e50bdcf7b22fc9db79ef8adaa97e1bb765f770cdecd2eee196
 
 ...
