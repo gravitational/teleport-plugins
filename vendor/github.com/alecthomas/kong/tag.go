@@ -1,6 +1,7 @@
 package kong
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -28,9 +29,10 @@ type Tag struct {
 	MapSep      rune
 	Enum        string
 	Group       string
-	Xor         string
+	Xor         []string
 	Vars        Vars
 	Prefix      string // Optional prefix on anonymous structs. All sub-flags will have this prefix.
+	EnvPrefix   string
 	Embed       bool
 	Aliases     []string
 	Negatable   bool
@@ -47,7 +49,7 @@ type tagChars struct {
 var kongChars = tagChars{sep: ',', quote: '\'', assign: '='}
 var bareChars = tagChars{sep: ' ', quote: '"', assign: ':'}
 
-func parseTagItems(tagString string, chr tagChars) map[string][]string {
+func parseTagItems(tagString string, chr tagChars) (map[string][]string, error) {
 	d := map[string][]string{}
 	key := []rune{}
 	value := []rune{}
@@ -90,11 +92,10 @@ func parseTagItems(tagString string, chr tagChars) map[string][]string {
 				if next == chr.sep || eof {
 					continue
 				}
-				fail("%v has an unexpected char at pos %v", tagString, idx)
-			} else {
-				quotes = true
-				continue
+				return nil, fmt.Errorf("%v has an unexpected char at pos %v", tagString, idx)
 			}
+			quotes = true
+			continue
 		}
 		if inKey {
 			key = append(key, r)
@@ -103,12 +104,12 @@ func parseTagItems(tagString string, chr tagChars) map[string][]string {
 		}
 	}
 	if quotes {
-		fail("%v is not quoted properly", tagString)
+		return nil, fmt.Errorf("%v is not quoted properly", tagString)
 	}
 
 	add()
 
-	return d
+	return d, nil
 }
 
 func getTagInfo(ft reflect.StructField) (string, tagChars) {
@@ -124,21 +125,53 @@ func newEmptyTag() *Tag {
 	return &Tag{items: map[string][]string{}}
 }
 
-func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
+func tagSplitFn(r rune) bool {
+	return r == ',' || r == ' '
+}
+
+func parseTagString(s string) (*Tag, error) {
+	items, err := parseTagItems(s, bareChars)
+	if err != nil {
+		return nil, err
+	}
+	t := &Tag{
+		items: items,
+	}
+	err = hydrateTag(t, "", false)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %s", s, err)
+	}
+	return t, nil
+}
+
+func parseTag(parent reflect.Value, ft reflect.StructField) (*Tag, error) {
 	if ft.Tag.Get("kong") == "-" {
 		t := newEmptyTag()
 		t.Ignored = true
-		return t
+		return t, nil
+	}
+	items, err := parseTagItems(getTagInfo(ft))
+	if err != nil {
+		return nil, err
 	}
 	t := &Tag{
-		items: parseTagItems(getTagInfo(ft)),
+		items: items,
 	}
+	err = hydrateTag(t, ft.Type.Name(), ft.Type.Kind() == reflect.Bool)
+	if err != nil {
+		return nil, failField(parent, ft, "%s", err)
+	}
+	return t, nil
+}
+
+func hydrateTag(t *Tag, typeName string, isBool bool) error {
+	var err error
 	t.Cmd = t.Has("cmd")
 	t.Arg = t.Has("arg")
 	required := t.Has("required")
 	optional := t.Has("optional")
 	if required && optional {
-		fail("can't specify both required and optional")
+		return fmt.Errorf("can't specify both required and optional")
 	}
 	t.Required = required
 	t.Optional = optional
@@ -151,46 +184,52 @@ func parseTag(fv reflect.Value, ft reflect.StructField) *Tag {
 	t.Help = t.Get("help")
 	t.Type = t.Get("type")
 	t.Env = t.Get("env")
-	t.Short, _ = t.GetRune("short")
+	t.Short, err = t.GetRune("short")
+	if err != nil && t.Get("short") != "" {
+		return fmt.Errorf("invalid short flag name %q: %s", t.Get("short"), err)
+	}
 	t.Hidden = t.Has("hidden")
 	t.Format = t.Get("format")
 	t.Sep, _ = t.GetSep("sep", ',')
 	t.MapSep, _ = t.GetSep("mapsep", ';')
 	t.Group = t.Get("group")
-	t.Xor = t.Get("xor")
+	for _, xor := range t.GetAll("xor") {
+		t.Xor = append(t.Xor, strings.FieldsFunc(xor, tagSplitFn)...)
+	}
 	t.Prefix = t.Get("prefix")
+	t.EnvPrefix = t.Get("envprefix")
 	t.Embed = t.Has("embed")
 	negatable := t.Has("negatable")
-	if negatable && ft.Type.Kind() != reflect.Bool {
-		fail("negatable can only be set on booleans")
+	if negatable && !isBool {
+		return fmt.Errorf("negatable can only be set on booleans")
 	}
 	t.Negatable = negatable
-	splitFn := func(r rune) bool {
-		return r == ',' || r == ' '
-	}
 	aliases := t.Get("aliases")
 	if len(aliases) > 0 {
-		t.Aliases = append(t.Aliases, strings.FieldsFunc(aliases, splitFn)...)
+		t.Aliases = append(t.Aliases, strings.FieldsFunc(aliases, tagSplitFn)...)
 	}
 	t.Vars = Vars{}
 	for _, set := range t.GetAll("set") {
 		parts := strings.SplitN(set, "=", 2)
 		if len(parts) == 0 {
-			fail("set should be in the form key=value but got %q", set)
+			return fmt.Errorf("set should be in the form key=value but got %q", set)
 		}
 		t.Vars[parts[0]] = parts[1]
 	}
 	t.PlaceHolder = t.Get("placeholder")
 	if t.PlaceHolder == "" {
-		t.PlaceHolder = strings.ToUpper(dashedString(fv.Type().Name()))
+		t.PlaceHolder = strings.ToUpper(dashedString(typeName))
 	}
 	t.Enum = t.Get("enum")
+	if t.Enum != "" && !(t.Required || t.Default != "") {
+		return fmt.Errorf("enum value is only valid if it is either required or has a valid default value")
+	}
 	passthrough := t.Has("passthrough")
 	if passthrough && !t.Arg {
-		fail("passthrough only makes sense for positional arguments")
+		return fmt.Errorf("passthrough only makes sense for positional arguments")
 	}
 	t.Passthrough = passthrough
-	return t
+	return nil
 }
 
 // Has returns true if the tag contained the given key.
@@ -232,9 +271,10 @@ func (t *Tag) GetInt(k string) (int64, error) {
 
 // GetRune parses the given tag as a rune.
 func (t *Tag) GetRune(k string) (rune, error) {
-	r, _ := utf8.DecodeRuneInString(t.Get(k))
-	if r == utf8.RuneError {
-		return 0, fmt.Errorf("%v has a rune error", t.Get(k))
+	value := t.Get(k)
+	r, size := utf8.DecodeRuneInString(value)
+	if r == utf8.RuneError || size < len(value) {
+		return 0, errors.New("invalid rune")
 	}
 	return r, nil
 }

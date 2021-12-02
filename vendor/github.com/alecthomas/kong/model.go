@@ -51,6 +51,7 @@ type Node struct {
 	Flags      []*Flag
 	Positional []*Positional
 	Children   []*Node
+	DefaultCmd *Node
 	Target     reflect.Value // Pointer to the value in the grammar that this Node is associated with.
 	Tag        *Tag
 	Aliases    []string
@@ -203,8 +204,12 @@ func (n *Node) Path() (out string) {
 	switch n.Type {
 	case CommandNode:
 		out += " " + n.Name
+		if len(n.Aliases) > 0 {
+			out += fmt.Sprintf(" (%s)", strings.Join(n.Aliases, ","))
+		}
 	case ArgumentNode:
 		out += " " + "<" + n.Name + ">"
+	default:
 	}
 	return strings.TrimSpace(out)
 }
@@ -312,16 +317,6 @@ func (v *Value) IsCounter() bool {
 
 // Parse tokens into value, parse, and validate, but do not write to the field.
 func (v *Value) Parse(scan *Scanner, target reflect.Value) (err error) {
-	defer func() {
-		if rerr := recover(); rerr != nil {
-			switch rerr := rerr.(type) {
-			case Error:
-				err = errors.Wrap(rerr, v.ShortSummary())
-			default:
-				panic(fmt.Sprintf("mapper %T failed to apply to %s: %s", v.Mapper, v.Summary(), rerr))
-			}
-		}
-	}()
 	err = v.Mapper.Decode(&DecodeContext{Value: v, Scan: scan}, target)
 	if err != nil {
 		return errors.Wrap(err, v.ShortSummary())
@@ -376,7 +371,7 @@ type Positional = Value
 type Flag struct {
 	*Value
 	Group       *Group // Logical grouping when displaying. May also be used by configuration loaders to group options logically.
-	Xor         string
+	Xor         []string
 	PlaceHolder string
 	Env         string
 	Short       rune

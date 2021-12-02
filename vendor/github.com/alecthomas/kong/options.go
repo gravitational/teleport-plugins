@@ -6,6 +6,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -19,7 +20,7 @@ type Option interface {
 // OptionFunc is function that adheres to the Option interface.
 type OptionFunc func(k *Kong) error
 
-func (o OptionFunc) Apply(k *Kong) error { return o(k) } // nolint: golint
+func (o OptionFunc) Apply(k *Kong) error { return o(k) } // nolint: revive
 
 // Vars sets the variables to use for interpolation into help strings and default values.
 //
@@ -58,19 +59,23 @@ type dynamicCommand struct {
 	name  string
 	help  string
 	group string
+	tags  []string
 	cmd   interface{}
 }
 
 // DynamicCommand registers a dynamically constructed command with the root of the CLI.
 //
 // This is useful for command-line structures that are extensible via user-provided plugins.
-func DynamicCommand(name, help, group string, cmd interface{}) Option {
+//
+// "tags" is a list of extra tag strings to parse, in the form <key>:"<value>".
+func DynamicCommand(name, help, group string, cmd interface{}, tags ...string) Option {
 	return OptionFunc(func(k *Kong) error {
 		k.dynamicCommands = append(k.dynamicCommands, &dynamicCommand{
 			name:  name,
 			help:  help,
 			group: group,
 			cmd:   cmd,
+			tags:  tags,
 		})
 		return nil
 	})
@@ -175,8 +180,7 @@ func Bind(args ...interface{}) Option {
 // 		BindTo(impl, (*iface)(nil))
 func BindTo(impl, iface interface{}) Option {
 	return OptionFunc(func(k *Kong) error {
-		valueOf := reflect.ValueOf(impl)
-		k.bindings[reflect.TypeOf(iface).Elem()] = func() (reflect.Value, error) { return valueOf, nil }
+		k.bindings.addTo(impl, iface)
 		return nil
 	})
 }
@@ -187,22 +191,7 @@ func BindTo(impl, iface interface{}) Option {
 // not all be initialisable from the main() function.
 func BindToProvider(provider interface{}) Option {
 	return OptionFunc(func(k *Kong) error {
-		pv := reflect.ValueOf(provider)
-		t := pv.Type()
-		if t.Kind() != reflect.Func || t.NumIn() != 0 || t.NumOut() != 2 || t.Out(1) != reflect.TypeOf((*error)(nil)).Elem() {
-			return errors.Errorf("%T must be a function with the signature func()(T, error)", provider)
-		}
-		rt := pv.Type().Out(0)
-		k.bindings[rt] = func() (reflect.Value, error) {
-			out := pv.Call(nil)
-			errv := out[1]
-			var err error
-			if !errv.IsNil() {
-				err = errv.Interface().(error)
-			}
-			return out[0], err
-		}
-		return nil
+		return k.bindings.addProvider(provider)
 	})
 }
 
@@ -254,7 +243,7 @@ func ConfigureHelp(options HelpOptions) Option {
 // See also ExplicitGroups for a more structured alternative.
 type Groups map[string]string
 
-func (g Groups) Apply(k *Kong) error { // nolint: golint
+func (g Groups) Apply(k *Kong) error { // nolint: revive
 	for key, info := range g {
 		lines := strings.Split(info, "\n")
 		title := strings.TrimSpace(lines[0])
@@ -315,6 +304,31 @@ func Resolvers(resolvers ...Resolver) Option {
 	})
 }
 
+// IgnoreFields will cause kong.New() to skip field names that match any
+// of the provided regex patterns. This is useful if you are not able to add a
+// kong="-" struct tag to a struct/element before the call to New.
+//
+// Example: When referencing protoc generated structs, you will likely want to
+// ignore/skip XXX_* fields.
+func IgnoreFields(regexes ...string) Option {
+	return OptionFunc(func(k *Kong) error {
+		for _, r := range regexes {
+			if r == "" {
+				return errors.New("regex input cannot be empty")
+			}
+
+			re, err := regexp.Compile(r)
+			if err != nil {
+				return errors.Wrap(err, "unable to compile regex")
+			}
+
+			k.ignoreFields = append(k.ignoreFields, re)
+		}
+
+		return nil
+	})
+}
+
 // ConfigurationLoader is a function that builds a resolver from a file.
 type ConfigurationLoader func(r io.Reader) (Resolver, error)
 
@@ -370,4 +384,57 @@ func ExpandPath(path string) string {
 		return path
 	}
 	return abspath
+}
+
+func siftStrings(ss []string, filter func(s string) bool) []string {
+	i := 0
+	ss = append([]string(nil), ss...)
+	for _, s := range ss {
+		if filter(s) {
+			ss[i] = s
+			i++
+		}
+	}
+	return ss[0:i]
+}
+
+// DefaultEnvars option inits environment names for flags.
+// The name will not generate if tag "env" is "-".
+// Predefined environment variables are skipped.
+//
+// For example:
+//   --some.value -> PREFIX_SOME_VALUE
+func DefaultEnvars(prefix string) Option {
+	processFlag := func(flag *Flag) {
+		switch env := flag.Env; {
+		case flag.Name == "help":
+			return
+		case env == "-":
+			flag.Env = ""
+			return
+		case env != "":
+			return
+		}
+		replacer := strings.NewReplacer("-", "_", ".", "_")
+		names := append([]string{prefix}, camelCase(replacer.Replace(flag.Name))...)
+		names = siftStrings(names, func(s string) bool { return !(s == "_" || strings.TrimSpace(s) == "") })
+		name := strings.ToUpper(strings.Join(names, "_"))
+		flag.Env = name
+		flag.Value.Tag.Env = name
+	}
+
+	var processNode func(node *Node)
+	processNode = func(node *Node) {
+		for _, flag := range node.Flags {
+			processFlag(flag)
+		}
+		for _, node := range node.Children {
+			processNode(node)
+		}
+	}
+
+	return PostBuild(func(k *Kong) error {
+		processNode(k.Model.Node)
+		return nil
+	})
 }

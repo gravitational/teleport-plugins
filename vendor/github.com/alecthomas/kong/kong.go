@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 )
 
@@ -13,13 +14,12 @@ var (
 	callbackReturnSignature = reflect.TypeOf((*error)(nil)).Elem()
 )
 
-// Error reported by Kong.
-type Error struct{ msg string }
-
-func (e Error) Error() string { return e.msg }
-
-func fail(format string, args ...interface{}) {
-	panic(Error{msg: fmt.Sprintf(format, args...)})
+func failField(parent reflect.Value, field reflect.StructField, format string, args ...interface{}) error {
+	name := parent.Type().Name()
+	if name == "" {
+		name = "<anonymous struct>"
+	}
+	return fmt.Errorf("%s.%s: %s", name, field.Name, fmt.Sprintf(format, args...))
 }
 
 // Must creates a new Parser or panics if there is an error.
@@ -49,10 +49,11 @@ type Kong struct {
 	Stdout io.Writer
 	Stderr io.Writer
 
-	bindings  bindings
-	loader    ConfigurationLoader
-	resolvers []Resolver
-	registry  *Registry
+	bindings     bindings
+	loader       ConfigurationLoader
+	resolvers    []Resolver
+	registry     *Registry
+	ignoreFields []*regexp.Regexp
 
 	noDefaultHelp bool
 	usageOnError  usageOnError
@@ -81,6 +82,7 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 		vars:          Vars{},
 		bindings:      bindings{},
 		helpFormatter: DefaultHelpValueFormatter,
+		ignoreFields:  make([]*regexp.Regexp, 0),
 	}
 
 	options = append(options, Bind(k))
@@ -109,16 +111,22 @@ func New(grammar interface{}, options ...Option) (*Kong, error) {
 
 	// Synthesise command nodes.
 	for _, dcmd := range k.dynamicCommands {
-		tag := newEmptyTag()
+		tag, terr := parseTagString(strings.Join(dcmd.tags, " "))
+		if terr != nil {
+			return nil, terr
+		}
 		tag.Name = dcmd.name
 		tag.Help = dcmd.help
 		tag.Group = dcmd.group
 		tag.Cmd = true
 		v := reflect.Indirect(reflect.ValueOf(dcmd.cmd))
-		buildChild(k, k.Model.Node, CommandNode, reflect.Value{}, reflect.StructField{
+		err = buildChild(k, k.Model.Node, CommandNode, reflect.Value{}, reflect.StructField{
 			Name: dcmd.name,
 			Type: v.Type(),
 		}, v, tag, dcmd.name, map[string]bool{})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	for _, option := range k.postBuildOptions {
@@ -175,6 +183,9 @@ func (k *Kong) interpolateValue(value *Value, vars Vars) (err error) {
 	if len(value.Tag.Vars) > 0 {
 		vars = vars.CloneWith(value.Tag.Vars)
 	}
+	if varsContributor, ok := value.Mapper.(VarsContributor); ok {
+		vars = vars.CloneWith(varsContributor.Vars(value))
+	}
 	if value.Default, err = interpolate(value.Default, vars, nil); err != nil {
 		return fmt.Errorf("default value for %s: %s", value.Summary(), err)
 	}
@@ -222,7 +233,6 @@ func (k *Kong) extraFlags() []*Flag {
 // Will return a ParseError if a *semantically* invalid command-line is encountered (as opposed to a syntactically
 // invalid one, which will report a normal error).
 func (k *Kong) Parse(args []string) (ctx *Context, err error) {
-	defer catch(&err)
 	ctx, err = Trace(k, args)
 	if err != nil {
 		return nil, err
@@ -385,16 +395,7 @@ func (k *Kong) LoadConfig(path string) (Resolver, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
+	defer r.Close() // nolint: gosec
 
 	return k.loader(r)
-}
-
-func catch(err *error) {
-	msg := recover()
-	if test, ok := msg.(Error); ok {
-		*err = test
-	} else if msg != nil {
-		panic(msg)
-	}
 }

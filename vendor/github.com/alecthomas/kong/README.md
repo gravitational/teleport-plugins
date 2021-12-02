@@ -25,6 +25,7 @@
 - [Custom decoders mappers](#custom-decoders-mappers)
 - [Supported tags](#supported-tags)
 - [Plugins](#plugins)
+- [Dynamic Commands](#dynamic-commands)
 - [Variable interpolation](#variable-interpolation)
 - [Validation](#validation)
 - [Modifying Kong's behaviour](#modifying-kongs-behaviour)
@@ -61,12 +62,12 @@ var CLI struct {
     Force     bool `help:"Force removal."`
     Recursive bool `help:"Recursively remove files."`
 
-    Paths []string `arg name:"path" help:"Paths to remove." type:"path"`
-  } `cmd help:"Remove files."`
+    Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
+  } `cmd:"" help:"Remove files."`
 
   Ls struct {
-    Paths []string `arg optional name:"path" help:"Paths to list." type:"path"`
-  } `cmd help:"List paths."`
+    Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
+  } `cmd:"" help:"List paths."`
 }
 
 func main() {
@@ -154,12 +155,12 @@ var CLI struct {
     Force     bool `help:"Force removal."`
     Recursive bool `help:"Recursively remove files."`
 
-    Paths []string `arg name:"path" help:"Paths to remove." type:"path"`
-  } `cmd help:"Remove files."`
+    Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
+  } `cmd:"" help:"Remove files."`
 
   Ls struct {
-    Paths []string `arg optional name:"path" help:"Paths to list." type:"path"`
-  } `cmd help:"List paths."`
+    Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
+  } `cmd:"" help:"List paths."`
 }
 
 func main() {
@@ -207,7 +208,7 @@ type RmCmd struct {
   Force     bool `help:"Force removal."`
   Recursive bool `help:"Recursively remove files."`
 
-  Paths []string `arg name:"path" help:"Paths to remove." type:"path"`
+  Paths []string `arg:"" name:"path" help:"Paths to remove." type:"path"`
 }
 
 func (r *RmCmd) Run(ctx *Context) error {
@@ -216,7 +217,7 @@ func (r *RmCmd) Run(ctx *Context) error {
 }
 
 type LsCmd struct {
-  Paths []string `arg optional name:"path" help:"Paths to list." type:"path"`
+  Paths []string `arg:"" optional:"" name:"path" help:"Paths to list." type:"path"`
 }
 
 func (l *LsCmd) Run(ctx *Context) error {
@@ -227,8 +228,8 @@ func (l *LsCmd) Run(ctx *Context) error {
 var cli struct {
   Debug bool `help:"Enable debug mode."`
 
-  Rm RmCmd `cmd help:"Remove files."`
-  Ls LsCmd `cmd help:"List paths."`
+  Rm RmCmd `cmd:"" help:"Remove files."`
+  Ls LsCmd `cmd:"" help:"List paths."`
 }
 
 func main() {
@@ -302,7 +303,7 @@ type CLI struct {
 }
 ```
 
-If a sub-command is tagged with `default:"1"` it will be selected if there are no further arguments.
+If a sub-command is tagged with `default:"1"` it will be selected if there are no further arguments. If a sub-command is tagged with `default:"withargs"` it will be selected even if there are further arguments or flags and those arguments or flags are valid for the sub-command. This allows the user to omit the sub-command name on the CLI if its arguments/flags are not ambiguous with the sibling commands or flags.
 
 ## Branching positional arguments
 
@@ -350,7 +351,7 @@ You would use the following:
 ```go
 var CLI struct {
   Ls struct {
-    Files []string `arg type:"existingfile"`
+    Files []string `arg:"" type:"existingfile"`
   } `cmd`
 }
 ```
@@ -369,7 +370,7 @@ You would use the following:
 var CLI struct {
   Config struct {
     Set struct {
-      Config map[string]float64 `arg type:"file:"`
+      Config map[string]float64 `arg:"" type:"file:"`
     } `cmd`
   } `cmd`
 }
@@ -435,6 +436,7 @@ Tag                    | Description
 `placeholder:"X"`      | Placeholder text.
 `default:"X"`          | Default value.
 `default:"1"`          | On a command, make it the default.
+`default:"withargs"`   | On a command, make it the default and allow args/flags from that command
 `short:"X"`            | Short name, if flag.
 `aliases:"X,Y"`        | One or more aliases (for cmd).
 `required:""`          | If present, flag/arg is required.
@@ -444,10 +446,11 @@ Tag                    | Description
 `format:"X"`           | Format for parsing input, if supported.
 `sep:"X"`              | Separator for sequences (defaults to ","). May be `none` to disable splitting.
 `mapsep:"X"`           | Separator for maps (defaults to ";"). May be `none` to disable splitting.
-`enum:"X,Y,..."`       | Set of valid values allowed for this flag.
+`enum:"X,Y,..."`       | Set of valid values allowed for this flag. An enum field must be `required` or have a valid `default`.
 `group:"X"`            | Logical group for a flag or command.
-`xor:"X"`              | Exclusive OR group for flags. Only one flag in the group can be used which is restricted within the same command.
+`xor:"X,Y,..."`        | Exclusive OR groups for flags. Only one flag in the group can be used which is restricted within the same command. When combined with `required`, at least one of the `xor` group will be required.
 `prefix:"X"`           | Prefix for all sub-flags.
+`envprefix:"X"`        | Envar prefix for all sub-flags.
 `set:"K=V"`            | Set a variable for expansion by child elements. Multiples can occur.
 `embed:""`             | If present, this field's children will be embedded in the parent. Useful for composition.
 `passthrough:""`       | If present, this positional argument stops flag parsing when encountered, as if `--` was processed before. Useful for external command wrappers, like `exec`.
@@ -472,6 +475,11 @@ cli.Plugins = kong.Plugins{&pluginOne, &pluginTwo}
 ```
 
 Additionally if an interface type is embedded, it can also be populated with a Kong annotated struct.
+
+## Dynamic Commands
+
+While plugins give complete control over extending command-line interfaces, Kong
+also supports dynamically adding commands via `kong.DynamicCommand()`.
 
 ## Variable interpolation
 

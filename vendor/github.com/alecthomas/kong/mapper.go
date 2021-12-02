@@ -115,6 +115,11 @@ type Mapper interface {
 	Decode(ctx *DecodeContext, target reflect.Value) error
 }
 
+// VarsContributor can be implemented by a Mapper to contribute Vars during interpolation.
+type VarsContributor interface {
+	Vars(ctx *Value) Vars
+}
+
 // A BoolMapper is a Mapper to a value that is a boolean.
 //
 // This is used solely for formatting help.
@@ -125,7 +130,7 @@ type BoolMapper interface {
 // A MapperFunc is a single function that complies with the Mapper interface.
 type MapperFunc func(ctx *DecodeContext, target reflect.Value) error
 
-func (m MapperFunc) Decode(ctx *DecodeContext, target reflect.Value) error { // nolint: golint
+func (m MapperFunc) Decode(ctx *DecodeContext, target reflect.Value) error { // nolint: revive
 	return m(ctx, target)
 }
 
@@ -308,15 +313,23 @@ func (boolMapper) IsBool() bool { return true }
 
 func durationDecoder() MapperFunc {
 	return func(ctx *DecodeContext, target reflect.Value) error {
-		var value string
-		if err := ctx.Scan.PopValueInto("duration", &value); err != nil {
+		t, err := ctx.Scan.PopValue("duration")
+		if err != nil {
 			return err
 		}
-		r, err := time.ParseDuration(value)
-		if err != nil {
-			return errors.Errorf("expected duration but got %q: %s", value, err)
+		var d time.Duration
+		switch v := t.Value.(type) {
+		case string:
+			d, err = time.ParseDuration(v)
+			if err != nil {
+				return errors.Errorf("expected duration but got %q: %s", v, err)
+			}
+		case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64:
+			d = reflect.ValueOf(v).Convert(reflect.TypeOf(time.Duration(0))).Interface().(time.Duration) // nolint: forcetypeassert
+		default:
+			return errors.Errorf("expected duration but got %q", v)
 		}
-		target.Set(reflect.ValueOf(r))
+		target.Set(reflect.ValueOf(d))
 		return nil
 	}
 }
@@ -737,7 +750,7 @@ func SplitEscaped(s string, sep rune) (out []string) {
 func JoinEscaped(s []string, sep rune) string {
 	escaped := []string{}
 	for _, e := range s {
-		escaped = append(escaped, strings.Replace(e, string(sep), `\`+string(sep), -1))
+		escaped = append(escaped, strings.ReplaceAll(e, string(sep), `\`+string(sep)))
 	}
 	return strings.Join(escaped, string(sep))
 }
@@ -748,7 +761,7 @@ type NamedFileContentFlag struct {
 	Contents []byte
 }
 
-func (f *NamedFileContentFlag) Decode(ctx *DecodeContext) error { // nolint: golint
+func (f *NamedFileContentFlag) Decode(ctx *DecodeContext) error { // nolint: revive
 	var filename string
 	err := ctx.Scan.PopValueInto("filename", &filename)
 	if err != nil {
@@ -772,7 +785,7 @@ func (f *NamedFileContentFlag) Decode(ctx *DecodeContext) error { // nolint: gol
 // FileContentFlag is a flag value that loads a file's contents into its value.
 type FileContentFlag []byte
 
-func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: golint
+func (f *FileContentFlag) Decode(ctx *DecodeContext) error { // nolint: revive
 	var filename string
 	err := ctx.Scan.PopValueInto("filename", &filename)
 	if err != nil {

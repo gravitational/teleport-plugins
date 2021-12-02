@@ -113,8 +113,15 @@ func (c *Context) Bind(args ...interface{}) {
 //
 //    BindTo(impl, (*MyInterface)(nil))
 func (c *Context) BindTo(impl, iface interface{}) {
-	valueOf := reflect.ValueOf(impl)
-	c.bindings[reflect.TypeOf(iface).Elem()] = func() (reflect.Value, error) { return valueOf, nil }
+	c.bindings.addTo(impl, iface)
+}
+
+// BindToProvider allows binding of provider functions.
+//
+// This is useful when the Run() function of different commands require different values that may
+// not all be initialisable from the main() function.
+func (c *Context) BindToProvider(provider interface{}) error {
+	return c.bindings.addProvider(provider)
 }
 
 // Value returns the value for a particular path element.
@@ -343,7 +350,14 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 	positional := 0
 
 	flags := []*Flag{}
-	for _, group := range node.AllFlags(false) {
+	flagNode := node
+	if node.DefaultCmd != nil && node.DefaultCmd.Tag.Default == "withargs" {
+		// Add flags of the default command if the current node has one
+		// and that default command allows args / flags without explicitly
+		// naming the command on the CLI.
+		flagNode = node.DefaultCmd
+	}
+	for _, group := range flagNode.AllFlags(false) {
 		flags = append(flags, group...)
 	}
 
@@ -483,6 +497,17 @@ func (c *Context) trace(node *Node) (err error) { // nolint: gocyclo
 				}
 			}
 
+			// If there is a default command that allows args and nothing else
+			// matches, take the branch of the default command
+			if node.DefaultCmd != nil && node.DefaultCmd.Tag.Default == "withargs" {
+				c.Path = append(c.Path, &Path{
+					Parent:  node,
+					Command: node.DefaultCmd,
+					Flags:   node.DefaultCmd.Flags,
+				})
+				return c.trace(node.DefaultCmd)
+			}
+
 			return findPotentialCandidates(token.String(), candidates, "unexpected argument %s", token)
 		default:
 			return fmt.Errorf("unexpected token %s", token)
@@ -499,21 +524,12 @@ func (c *Context) maybeSelectDefault(flags []*Flag, node *Node) error {
 			return nil
 		}
 	}
-	var defaultNode *Path
-	for _, child := range node.Children {
-		if child.Type == CommandNode && child.Tag.Default != "" {
-			if defaultNode != nil {
-				return fmt.Errorf("can't have more than one default command under %s", node.Summary())
-			}
-			defaultNode = &Path{
-				Parent:  child,
-				Command: child,
-				Flags:   child.Flags,
-			}
-		}
-	}
-	if defaultNode != nil {
-		c.Path = append(c.Path, defaultNode)
+	if node.DefaultCmd != nil {
+		c.Path = append(c.Path, &Path{
+			Parent:  node.DefaultCmd,
+			Command: node.DefaultCmd,
+			Flags:   node.DefaultCmd.Flags,
+		})
 	}
 	return nil
 }
@@ -585,6 +601,7 @@ func (c *Context) getValue(value *Value) reflect.Value {
 			v.Set(reflect.MakeSlice(v.Type(), 0, 0))
 		case reflect.Map:
 			v.Set(reflect.MakeMap(v.Type()))
+		default:
 		}
 		c.values[value] = v
 	}
@@ -643,7 +660,6 @@ func (c *Context) Apply() (string, error) {
 }
 
 func (c *Context) parseFlag(flags []*Flag, match string) (err error) {
-	defer catch(&err)
 	candidates := []string{}
 	for _, flag := range flags {
 		long := "--" + flag.Name
@@ -724,9 +740,17 @@ func (c *Context) RunNode(node *Node, binds ...interface{}) (err error) {
 // Any passed values will be bindable to arguments of the target Run() method. Additionally,
 // all parent nodes in the command structure will be bound.
 func (c *Context) Run(binds ...interface{}) (err error) {
-	defer catch(&err)
 	node := c.Selected()
 	if node == nil {
+		if len(c.Path) > 0 {
+			selected := c.Path[0].Node()
+			if selected.Type == ApplicationNode {
+				method := getMethod(selected.Target, "Run")
+				if method.IsValid() {
+					return c.RunNode(selected, binds...)
+				}
+			}
+		}
 		return fmt.Errorf("no command selected")
 	}
 	return c.RunNode(node, binds...)
@@ -742,16 +766,40 @@ func (c *Context) PrintUsage(summary bool) error {
 }
 
 func checkMissingFlags(flags []*Flag) error {
+	xorGroupSet := map[string]bool{}
+	xorGroup := map[string][]string{}
 	missing := []string{}
 	for _, flag := range flags {
+		if flag.Set {
+			for _, xor := range flag.Xor {
+				xorGroupSet[xor] = true
+			}
+		}
 		if !flag.Required || flag.Set {
 			continue
 		}
-		missing = append(missing, flag.Summary())
+		if len(flag.Xor) > 0 {
+			for _, xor := range flag.Xor {
+				if xorGroupSet[xor] {
+					continue
+				}
+				xorGroup[xor] = append(xorGroup[xor], flag.Summary())
+			}
+		} else {
+			missing = append(missing, flag.Summary())
+		}
 	}
+	for _, flags := range xorGroup {
+		if len(flags) > 1 {
+			missing = append(missing, strings.Join(flags, " or "))
+		}
+	}
+
 	if len(missing) == 0 {
 		return nil
 	}
+
+	sort.Strings(missing)
 
 	return fmt.Errorf("missing flags: %s", strings.Join(missing, ", "))
 }
@@ -769,7 +817,6 @@ func checkMissingChildren(node *Node) error {
 		missing = append(missing, strconv.Quote(strings.Join(missingArgs, " ")))
 	}
 
-	haveDefault := 0
 	for _, child := range node.Children {
 		if child.Hidden {
 			continue
@@ -780,19 +827,10 @@ func checkMissingChildren(node *Node) error {
 			}
 			missing = append(missing, strconv.Quote(child.Summary()))
 		} else {
-			if child.Tag.Default != "" {
-				if len(child.Children) > 0 {
-					return fmt.Errorf("default command %s must not have subcommands or arguments", child.Summary())
-				}
-				haveDefault++
-			}
 			missing = append(missing, strconv.Quote(child.Name))
 		}
 	}
-	if haveDefault > 1 {
-		return fmt.Errorf("more than one default command found under %s", node.Summary())
-	}
-	if len(missing) == 0 || haveDefault > 0 {
+	if len(missing) == 0 {
 		return nil
 	}
 
@@ -819,7 +857,18 @@ func checkMissingPositionals(positional int, values []*Value) error {
 
 	missing := []string{}
 	for ; positional < len(values); positional++ {
-		missing = append(missing, "<"+values[positional].Name+">")
+		arg := values[positional]
+		// TODO(aat): Fix hardcoding of these env checks all over the place :\
+		if arg.Tag.Env != "" {
+			_, ok := os.LookupEnv(arg.Tag.Env)
+			if ok {
+				continue
+			}
+		}
+		missing = append(missing, "<"+arg.Name+">")
+	}
+	if len(missing) == 0 {
+		return nil
 	}
 	return fmt.Errorf("missing positional arguments %s", strings.Join(missing, " "))
 }
@@ -859,13 +908,12 @@ func checkXorDuplicates(paths []*Path) error {
 			if !flag.Set {
 				continue
 			}
-			if flag.Xor == "" {
-				continue
+			for _, xor := range flag.Xor {
+				if seen[xor] != nil {
+					return fmt.Errorf("--%s and --%s can't be used together", seen[xor].Name, flag.Name)
+				}
+				seen[xor] = flag
 			}
-			if seen[flag.Xor] != nil {
-				return fmt.Errorf("--%s and --%s can't be used together", seen[flag.Xor].Name, flag.Name)
-			}
-			seen[flag.Xor] = flag
 		}
 	}
 	return nil
