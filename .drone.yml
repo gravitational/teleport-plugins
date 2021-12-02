@@ -3,7 +3,17 @@ kind: pipeline
 type: kubernetes
 name: test-linux
 
-trigger: []
+trigger:
+  branch:
+    - master
+    - branch/*
+  event:
+    include:
+      - push
+      - pull_request
+  repo:
+    include:
+      - gravitational/*
 
 workspace:
   path: /go/src/github.com/gravitational/teleport-plugins
@@ -36,7 +46,17 @@ platform:
   os: darwin
   arch: amd64
 
-trigger: []
+trigger:
+  branch:
+    - master
+    - branch/*
+  event:
+    include:
+      - push
+      - pull_request
+  repo:
+    include:
+      - gravitational/*
 
 workspace:
   path: /tmp/teleport-plugins/test-darwin
@@ -395,6 +415,6 @@ steps:
 
 ---
 kind: signature
-hmac: 10a3ed9358eec5f73f8d4b679d5a98d77da74ba28fb8ddd79198822d5aa3e31b
+hmac: 7d92a4296bbb567054d4b181fe7f0309c98201336772d7f7d8c780d4a4fbc99d
 
 ...
