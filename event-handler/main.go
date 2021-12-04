@@ -31,6 +31,7 @@ import (
 
 // cli is CLI configuration
 var cli CLI
+var counter int32 = 0
 
 const (
 	// pluginName is the plugin name

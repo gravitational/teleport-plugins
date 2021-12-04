@@ -322,6 +322,14 @@ github.com/ulikunitz/xz/lzma
 # github.com/vmihailenco/msgpack v4.0.4+incompatible
 github.com/vmihailenco/msgpack
 github.com/vmihailenco/msgpack/codes
+# github.com/wasmerio/wasmer-go v1.0.4
+## explicit
+github.com/wasmerio/wasmer-go/wasmer
+github.com/wasmerio/wasmer-go/wasmer/packaged/include
+github.com/wasmerio/wasmer-go/wasmer/packaged/lib
+github.com/wasmerio/wasmer-go/wasmer/packaged/lib/darwin-amd64
+github.com/wasmerio/wasmer-go/wasmer/packaged/lib/linux-aarch64
+github.com/wasmerio/wasmer-go/wasmer/packaged/lib/linux-amd64
 # github.com/zclconf/go-cty v1.8.4
 github.com/zclconf/go-cty/cty
 github.com/zclconf/go-cty/cty/convert

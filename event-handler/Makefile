@@ -15,7 +15,7 @@ CGOFLAG ?= CGO_ENABLED=1
 # Custom wasmer runtime is required for Apple M1.
 #
 # git clone git@github.com:wasmerio/wasmer-go.git && cd wasmer-go && cargo build --release && cd ..
-# CUSTOM_WASMER_RUNTIME_DIR=wasmer-go make build
+# CUSTOM_WASMER_RUNTIME_DIR=$(pwd)/wasmer-go make build
 ifneq ($(CUSTOM_WASMER_RUNTIME_DIR),)
 	CGO_CFLAGS ?= "-I$(CUSTOM_WASMER_RUNTIME_DIR)/wasmer/packaged/include/"
 	CGO_LDFLAGS ?= "-Wl,-rpath,$(CUSTOM_WASMER_RUNTIME_DIR)/target/release/ -L$(CUSTOM_WASMER_RUNTIME_DIR)/target/release/ -lwasmer_go"

@@ -32,6 +32,7 @@ require (
 	github.com/sethvargo/go-limiter v0.7.2
 	github.com/sirupsen/logrus v1.8.1-0.20210219125412-f104497f2b21
 	github.com/stretchr/testify v1.7.0
+	github.com/wasmerio/wasmer-go v1.0.4
 	go.etcd.io/bbolt v1.3.5
 	golang.org/x/net v0.0.0-20210326060303-6b1517762897
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9

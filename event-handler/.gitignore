@@ -5,3 +5,4 @@ cover.out
 tmp
 terraform-event-handler-*.tar.gz
 wasmer-go
+*.wasm

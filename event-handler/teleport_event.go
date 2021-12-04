@@ -39,9 +39,11 @@ const (
 type TeleportEvent struct {
 	// event is the event
 	Event interface{}
-	// cursor is the event ID (real/generated when empty)
+	// AuditEvent original event without tranformations
+	AuditEvent events.AuditEvent
+	// Event ID (real/generated when empty)
 	ID string
-	// cursor is the current cursor value
+	// Cursor is the current cursor value
 	Cursor string
 	// Type is an event type
 	Type string
@@ -83,10 +85,11 @@ type printEvent struct {
 // NewTeleportEvent creates TeleportEvent using AuditEvent as a source
 func NewTeleportEvent(e events.AuditEvent, cursor string) (*TeleportEvent, error) {
 	evt := &TeleportEvent{
-		Cursor: cursor,
-		Type:   e.GetType(),
-		Time:   e.GetTime(),
-		Index:  e.GetIndex(),
+		Cursor:     cursor,
+		AuditEvent: e,
+		Type:       e.GetType(),
+		Time:       e.GetTime(),
+		Index:      e.GetIndex(),
 	}
 
 	err := evt.setID(e)

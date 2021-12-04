@@ -96,6 +96,9 @@ type IngestConfig struct {
 
 	// Concurrency sets the number of concurrent sessions to ingest
 	Concurrency int `help:"Number of concurrent sessions" default:"5"`
+
+	// Plugin name
+	Plugin string `help:"WASM plugin name"`
 }
 
 // LockConfig represents locking configuration

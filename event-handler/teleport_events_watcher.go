@@ -18,14 +18,17 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"time"
 
+	"github.com/gravitational/teleport-plugins/event-handler/wasm"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
+	"github.com/wasmerio/wasmer-go/wasmer"
 	"golang.org/x/net/context"
 )
 
@@ -60,6 +63,12 @@ type TeleportEventsWatcher struct {
 	config *StartCmdConfig
 	// startTime is event time frame start
 	startTime time.Time
+	// wasmer instance
+	wasmerInstance *wasmer.Instance
+	// pluginHandleEventFn handleEvent function
+	pluginHandleEventFn func(...interface{}) (interface{}, error)
+	pluginNewFn         func(...interface{}) (interface{}, error)
+	pluginSetFn         func(...interface{}) (interface{}, error)
 }
 
 // NewTeleportEventsWatcher builds Teleport client instance
@@ -71,6 +80,11 @@ func NewTeleportEventsWatcher(
 	id string,
 ) (*TeleportEventsWatcher, error) {
 	var err error
+	var instance *wasmer.Instance
+
+	var pluginHandleEventFn func(...interface{}) (interface{}, error)
+	var pluginNewFn func(...interface{}) (interface{}, error)
+	var pluginSetFn func(...interface{}) (interface{}, error)
 
 	config := client.Config{
 		Addrs: []string{c.TeleportAddr},
@@ -85,13 +99,50 @@ func NewTeleportEventsWatcher(
 		return nil, trace.Wrap(err)
 	}
 
+	if c.Plugin != "" {
+		instance, err = wasm.Init(c.Plugin)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		log.WithField("plugin", c.Plugin).Info("Using WASM plugin")
+
+		pluginHandleEventFn, err = instance.Exports.GetFunction("handleEvent")
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		if pluginHandleEventFn == nil {
+			return nil, trace.BadParameter("handleEvent not found")
+		}
+
+		pluginNewFn, err = instance.Exports.GetFunction("__new")
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		if pluginNewFn == nil {
+			return nil, trace.BadParameter("__new not found")
+		}
+
+		pluginSetFn, err = instance.Exports.GetFunction("__set")
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		if pluginSetFn == nil {
+			return nil, trace.BadParameter("__set not found")
+		}
+	}
+
 	tc := TeleportEventsWatcher{
-		client:    client,
-		pos:       -1,
-		cursor:    cursor,
-		config:    c,
-		id:        id,
-		startTime: startTime,
+		client:              client,
+		pos:                 -1,
+		cursor:              cursor,
+		config:              c,
+		id:                  id,
+		startTime:           startTime,
+		wasmerInstance:      instance,
+		pluginHandleEventFn: pluginHandleEventFn,
+		pluginNewFn:         pluginNewFn,
+		pluginSetFn:         pluginSetFn,
 	}
 
 	return &tc, nil
@@ -266,6 +317,50 @@ func (t *TeleportEventsWatcher) Events(ctx context.Context) (chan *TeleportEvent
 			event := t.batch[t.pos]
 			t.pos++
 			t.id = event.ID
+
+			if t.pluginHandleEventFn != nil {
+				log.Info("Calling plugin handle function")
+
+				oneOf, err := events.ToOneOf(event.AuditEvent)
+				if err != nil {
+					e <- err
+					return
+				}
+
+				var data []byte = make([]byte, oneOf.Size())
+				n, err := oneOf.MarshalTo(data)
+				if err != nil {
+					e <- err
+					return
+				}
+
+				if n > 0 {
+					addr, err := t.pluginNewFn(n, 0)
+					if err != nil {
+						e <- err
+						return
+					}
+
+					for i := 0; i < n; i++ {
+						t.pluginSetFn(addr, i, data[i])
+					}
+
+					mem, err := t.wasmerInstance.Exports.GetMemory("memory")
+					if err != nil {
+						e <- err
+						return
+					}
+
+					for i := 0; i < n; i++ {
+						x := addr.(int32) + int32(i)
+						if data[i] != mem.Data()[x] {
+							log.Println("INVALID MEM")
+							os.Exit(-1)
+						}
+					}
+					t.pluginHandleEventFn(addr, n)
+				}
+			}
 
 			select {
 			case ch <- event:
