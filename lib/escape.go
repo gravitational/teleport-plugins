@@ -8,10 +8,10 @@ import "strings"
 // runes for the purpose of the truncation.
 func MarkdownEscape(t string, n int) string {
 	var b strings.Builder
-	b.WriteString("```")
+	b.WriteString("```\n")
 	for i, r := range t {
 		if i >= n {
-			b.WriteString("``` (truncated)")
+			b.WriteString("\n``` (truncated)")
 			return b.String()
 		}
 		b.WriteRune(r)
