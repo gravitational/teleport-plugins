@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -95,11 +96,18 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 	ctx, log := logger.WithField(ctx, "jira_http_id", httpRequestID)
 
 	var webhook Webhook
-	body, err := ioutil.ReadAll(r.Body)
+	// as per
+	// https://developer.atlassian.com/cloud/jira/platform/webhooks/#known-issues,
+	// the webhook payload size is limited to 25MB
+	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 30*1024*1024))
 	if err != nil {
 		log.WithError(err).Error("Failed to read webhook payload")
 		http.Error(rw, "", http.StatusInternalServerError)
 		return
+	}
+	if len(body) >= 30*1024*1024 {
+		log.WithError(err).Error("Got payload bigger than 30MB")
+		http.Error(rw, "", http.StatusRequestEntityTooLarge)
 	}
 	if err = json.Unmarshal(body, &webhook); err != nil {
 		log.WithError(err).Error("Failed to parse webhook payload")

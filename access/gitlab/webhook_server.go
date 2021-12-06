@@ -21,6 +21,7 @@ import (
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -95,11 +96,17 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	// as per https://docs.gitlab.com/ee/user/gitlab_com/index.html#webhooks,
+	// the webhook payload size is limited to 25MB
+	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 30*1024*1024))
 	if err != nil {
 		log.WithError(err).Error("Failed to read webhook payload")
 		http.Error(rw, "", http.StatusInternalServerError)
 		return
+	}
+	if len(body) >= 30*1024*1024 {
+		log.WithError(err).Error("Got payload bigger than 30MB")
+		http.Error(rw, "", http.StatusRequestEntityTooLarge)
 	}
 
 	var event interface{}
