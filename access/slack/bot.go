@@ -268,13 +268,11 @@ func (b Bot) msgSections(reqID string, reqData RequestData) []BlockItem {
 		msgFieldToBuilder(&builder, "Role(s)", strings.Join(reqData.Roles, ","))
 	}
 	if reqData.RequestReason != "" {
-		// as per https://api.slack.com/methods/chat.postMessage#formatting the
-		// whole message /should/ be around 4000 characters at most, so we give
-		// 1000 to the request reason and 1000 to the resolution reason, to have
-		// some headroom for the rest of the message; it's unclear if the limit
-		// is in bytes, codepoints or grapheme clusters, but as the hard limit
-		// is actually 40000 we should be fine
-		msgFieldToBuilder(&builder, "Reason", markdownEscape(reqData.RequestReason, 1500))
+		// Slack has a 4000 character recommendation (with a more generous 40000
+		// hard limit), Mattermost has either 4000 or 16k depending on the
+		// version; let's just be very conservative and limit request reason and
+		// resolution reason to 500 each
+		msgFieldToBuilder(&builder, "Reason", lib.MarkdownEscape(reqData.RequestReason, 500))
 	}
 	if b.webProxyURL != nil {
 		reqURL := *b.webProxyURL
@@ -304,7 +302,7 @@ func (b Bot) msgSections(reqID string, reqData RequestData) []BlockItem {
 	statusText := fmt.Sprintf("*Status:* %s %s", statusEmoji, status)
 	if resolution.Reason != "" {
 		// see above for the limit reasoning
-		statusText += fmt.Sprintf("\n*Resolution reason*: %s", markdownEscape(resolution.Reason, 1500))
+		statusText += fmt.Sprintf("\n*Resolution reason*: %s", lib.MarkdownEscape(resolution.Reason, 500))
 	}
 
 	sections := []BlockItem{
@@ -330,26 +328,4 @@ func msgFieldToBuilder(b *strings.Builder, field, value string) {
 	b.WriteString("*: ")
 	b.WriteString(value)
 	b.WriteString("\n")
-}
-
-// markdownEscape wraps some text `t` in triple backticks (escaping any backtick
-// inside the message), limiting the length of the message to `n` runes.
-func markdownEscape(t string, n int) string {
-	var b strings.Builder
-	b.WriteString("```")
-	for i, r := range t {
-		if i >= n {
-			b.WriteString("``` (truncated)")
-			return b.String()
-		}
-		b.WriteRune(r)
-		if r == '`' {
-			// byte order mark, as a zero width no-break space; seems to result
-			// in escaped backticks with no spurious characters in the message
-			b.WriteRune('\ufeff')
-			n -= 1
-		}
-	}
-	b.WriteString("```")
-	return b.String()
 }

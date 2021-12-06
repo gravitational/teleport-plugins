@@ -333,6 +333,17 @@ func (b Bot) UpdatePosts(ctx context.Context, reqID string, reqData RequestData,
 func (b Bot) buildPostText(reqID string, reqData RequestData) (string, error) {
 	resolutionTag := reqData.Resolution.Tag
 
+	// Slack has a 4000 character recommendation (with a more generous 40000
+	// hard limit), Mattermost has either 4000 or 16k depending on the version;
+	// let's just be very conservative and limit request reason and resolution
+	// reason to 500 each
+	if reqData.RequestReason != "" {
+		reqData.RequestReason = lib.MarkdownEscape(reqData.RequestReason, 500)
+	}
+	if reqData.Resolution.Reason != "" {
+		reqData.Resolution.Reason = lib.MarkdownEscape(reqData.RequestReason, 500)
+	}
+
 	var statusEmoji string
 	status := string(resolutionTag)
 	switch resolutionTag {
