@@ -27,7 +27,7 @@ var postTextTemplate = template.Must(template.New("description").Parse(
 **User**: {{.User}}
 **Roles**: {{range $index, $element := .Roles}}{{if $index}}, {{end}}{{ . }}{{end}}
 **Request ID**: {{.ID}}
-**Reason**: {{.RequestReason}}
+{{if .RequestReason}}**Reason**: {{.RequestReason}}{{end}}
 **Status**: {{.StatusEmoji}} {{.Status}}
 {{if .Resolution.Reason}}**Resolution reason**: {{.Resolution.Reason}}{{end}}
 {{if .RequestLink}}**Link**: [{{.RequestLink}}]({{.RequestLink}})
