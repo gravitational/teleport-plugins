@@ -28,7 +28,8 @@ var postTextTemplate = template.Must(template.New("description").Parse(
 **Roles**: {{range $index, $element := .Roles}}{{if $index}}, {{end}}{{ . }}{{end}}
 **Request ID**: {{.ID}}
 **Reason**: {{.RequestReason}}
-**Status**: {{.StatusEmoji}} {{.Status}}{{if .Resolution.Reason}} ({{.Resolution.Reason}}){{end}}
+**Status**: {{.StatusEmoji}} {{.Status}}
+{{if .Resolution.Reason}}**Resolution reason**: {{.Resolution.Reason}}{{end}}
 {{if .RequestLink}}**Link**: [{{.RequestLink}}]({{.RequestLink}})
 {{else if eq .Status "PENDING"}}**Approve**: ` + "`tsh request review --approve {{.ID}}`" + `
 **Deny**: ` + "`tsh request review --deny {{.ID}}`" + `{{end}}`,
@@ -213,6 +214,11 @@ func (b Bot) Broadcast(ctx context.Context, channels []string, reqID string, req
 }
 
 func (b Bot) PostReviewComment(ctx context.Context, channelID, rootID string, review types.AccessReview) error {
+	// see reasoning in buildPostText
+	if review.Reason != "" {
+		review.Reason = lib.MarkdownEscape(review.Reason, 500)
+	}
+
 	var proposedStateEmoji string
 	switch review.ProposedState {
 	case types.RequestState_APPROVED:

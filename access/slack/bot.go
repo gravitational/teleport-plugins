@@ -141,6 +141,11 @@ func (b Bot) Broadcast(ctx context.Context, channels []string, reqID string, req
 }
 
 func (b Bot) PostReviewReply(ctx context.Context, channelID, timestamp string, review types.AccessReview) error {
+	// see reasoning in msgSections
+	if review.Reason != "" {
+		review.Reason = lib.MarkdownEscape(review.Reason, 500)
+	}
+
 	var proposedStateEmoji string
 	switch review.ProposedState {
 	case types.RequestState_APPROVED:
