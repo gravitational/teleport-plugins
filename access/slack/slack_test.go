@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -27,6 +28,7 @@ import (
 )
 
 var msgFieldRegexp = regexp.MustCompile(`(?im)^\*([a-zA-Z ]+)\*: (.+)$`)
+var requestReasonRegexp = regexp.MustCompile(`(?im)^\*Reason\*:\ ` + "```\\n" + `(.*?)` + "```" + `(.*?)$`)
 
 type SlackSuite struct {
 	Suite
@@ -213,7 +215,7 @@ func (s *SlackSuite) newAccessRequest(reviewers []User) types.AccessRequest {
 
 	req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "editor")
 	require.NoError(t, err)
-	req.SetRequestReason("because of")
+	req.SetRequestReason("because of " + strings.Repeat("A", 5000))
 	var suggestedReviewers []string
 	for _, user := range reviewers {
 		suggestedReviewers = append(suggestedReviewers, user.Profile.Email)
@@ -281,9 +283,14 @@ func (s *SlackSuite) TestMessagePosting() {
 	require.NoError(t, err)
 	assert.Equal(t, s.userNames.requestor, msgUser)
 
-	msgReason, err := parseMessageField(messages[0], "Reason")
-	require.NoError(t, err)
-	assert.Equal(t, "because of", msgReason)
+	block, ok := messages[0].BlockItems[1].Block.(SectionBlock)
+	require.True(t, ok)
+	t.Logf("%q", block.Text.GetText())
+	matches := requestReasonRegexp.FindAllStringSubmatch(block.Text.GetText(), -1)
+	require.Equal(t, 1, len(matches))
+	require.Equal(t, 3, len(matches[0]))
+	assert.Equal(t, "because of "+strings.Repeat("A", 489), matches[0][1])
+	assert.Equal(t, " (truncated)", matches[0][2])
 
 	statusLine, err := getStatusLine(messages[0])
 	require.NoError(t, err)
@@ -353,7 +360,7 @@ func (s *SlackSuite) TestApproval() {
 
 	statusLine, err := getStatusLine(msgUpdate)
 	require.NoError(t, err)
-	assert.Equal(t, "*Status:* ✅ APPROVED (okay)", statusLine)
+	assert.Equal(t, "*Status:* ✅ APPROVED\n*Resolution reason*: ```\nokay```", statusLine)
 }
 
 func (s *SlackSuite) TestDenial() {
@@ -368,7 +375,7 @@ func (s *SlackSuite) TestDenial() {
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msg.Channel)
 
-	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay")
+	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay "+strings.Repeat("A", 10000))
 
 	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Context())
 	require.NoError(t, err)
@@ -377,7 +384,7 @@ func (s *SlackSuite) TestDenial() {
 
 	statusLine, err := getStatusLine(msgUpdate)
 	require.NoError(t, err)
-	assert.Equal(t, "*Status:* ❌ DENIED (not okay)", statusLine)
+	assert.Equal(t, "*Status:* ❌ DENIED\n*Resolution reason*: ```\nnot okay "+strings.Repeat("A", 491)+"``` (truncated)", statusLine)
 }
 
 func (s *SlackSuite) TestReviewReplies() {
@@ -414,7 +421,7 @@ func (s *SlackSuite) TestReviewReplies() {
 	assert.Equal(t, msg.Timestamp, reply.ThreadTs)
 	assert.Contains(t, reply.Text, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
 	assert.Contains(t, reply.Text, "Resolution: ✅ APPROVED", "reply must contain a proposed state")
-	assert.Contains(t, reply.Text, "Reason: okay", "reply must contain a reason")
+	assert.Contains(t, reply.Text, "Reason: ```\nokay```", "reply must contain a reason")
 
 	err = s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
@@ -430,7 +437,7 @@ func (s *SlackSuite) TestReviewReplies() {
 	assert.Equal(t, msg.Timestamp, reply.ThreadTs)
 	assert.Contains(t, reply.Text, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
 	assert.Contains(t, reply.Text, "Resolution: ❌ DENIED", "reply must contain a proposed state")
-	assert.Contains(t, reply.Text, "Reason: not okay", "reply must contain a reason")
+	assert.Contains(t, reply.Text, "Reason: ```\nnot okay```", "reply must contain a reason")
 }
 
 func (s *SlackSuite) TestApprovalByReview() {
@@ -484,7 +491,7 @@ func (s *SlackSuite) TestApprovalByReview() {
 
 	statusLine, err := getStatusLine(msgUpdate)
 	require.NoError(t, err)
-	assert.Equal(t, "*Status:* ✅ APPROVED (finally okay)", statusLine)
+	assert.Equal(t, "*Status:* ✅ APPROVED\n*Resolution reason*: ```\nfinally okay```", statusLine)
 }
 
 func (s *SlackSuite) TestDenialByReview() {
@@ -538,7 +545,7 @@ func (s *SlackSuite) TestDenialByReview() {
 
 	statusLine, err := getStatusLine(msgUpdate)
 	require.NoError(t, err)
-	assert.Equal(t, "*Status:* ❌ DENIED (finally not okay)", statusLine)
+	assert.Equal(t, "*Status:* ❌ DENIED\n*Resolution reason*: ```\nfinally not okay```", statusLine)
 }
 
 func (s *SlackSuite) TestExpiration() {
