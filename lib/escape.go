@@ -19,7 +19,7 @@ func MarkdownEscape(t string, n int) string {
 			// byte order mark, as a zero width no-break space; seems to result
 			// in escaped backticks with no spurious characters in the message
 			b.WriteRune('\ufeff')
-			n -= 1
+			n--
 		}
 	}
 	b.WriteString("```")
