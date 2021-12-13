@@ -347,7 +347,7 @@ func (b Bot) buildPostText(reqID string, reqData RequestData) (string, error) {
 		reqData.RequestReason = lib.MarkdownEscape(reqData.RequestReason, 500)
 	}
 	if reqData.Resolution.Reason != "" {
-		reqData.Resolution.Reason = lib.MarkdownEscape(reqData.RequestReason, 500)
+		reqData.Resolution.Reason = lib.MarkdownEscape(reqData.Resolution.Reason, 500)
 	}
 
 	var statusEmoji string
