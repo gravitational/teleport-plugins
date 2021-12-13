@@ -164,6 +164,11 @@ func NewFakeMattermost(botUser User, concurrency int) *FakeMattermost {
 		err := json.NewDecoder(r.Body).Decode(&post)
 		panicIf(err)
 
+		if len(post.Message) > 4000 {
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		post = mattermost.StorePost(post)
 		mattermost.newPosts <- post
 

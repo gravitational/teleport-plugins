@@ -11,7 +11,7 @@ func MarkdownEscape(t string, n int) string {
 	b.WriteString("```\n")
 	for i, r := range t {
 		if i >= n {
-			b.WriteString("\n``` (truncated)")
+			b.WriteString("``` (truncated)")
 			return b.String()
 		}
 		b.WriteRune(r)
