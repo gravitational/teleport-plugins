@@ -114,3 +114,22 @@ To understand a custom resource, Kubernetes needs [its definition & OpenAPI v3.0
 In standard scenarios, the Kubebuilder can generate CRDs right from the Go type definitions. However, the generator breaks when something like `types.UserSpecV2` or `types.RoleSpecV5` is used as a `Spec` field. Type definitions from `types.pb.go` are initially written for Protobuf and can't be directly re-used to generate [OpenAPI V3.0 schema](https://swagger.io/specification/).
 
 To generate all the `resources.teleport.dev` APIs, one should implement a generator similar to the one done for [Terraform provider](https://github.com/gravitational/teleport-plugins/tree/master/terraform).
+
+### Installation & Upgrade of Custom Resource Definitions
+
+To run the operator, one needs to make sure that CRDs are properly installed in the system. At some point, this could be problematic if the user runs multiple versions of Teleport or just performs the downgrade.
+
+It's no problem when a major version of Teleport is updated because CRD versions are updated along with it. But the changes in resource schemas could happen even in minor releases if only the change is backward-compatible. In this case, we need to make sure that we never overwrite the newer version with the older one.
+
+It seems the CRD installation process should be managed by the operator's binary instead of delegating this task to a user e.g. by asking them to execute `kubectl apply`.
+
+The following schema is proposed:
+
+- The operator should always have an up-to-date `github.com/gravitational/teleport/api` client package with an exact version. Moreover, the versions of the operator and the client library must match.
+- Every CRD should have an annotation to track the version of the operator that performed the upgrade the last time.
+- If, for example, the CRD installer wants to update a CRD named `foo.teleport.dev/bar` by adding a version `vN` of the custom resource, two cases are possible:
+  - CRD does already have a `vN` entry in a version array `spec.versions`. Then, consider the value of the CRD annotation named `vN.teleport-operator-version`. If the value in the annotation is less or equal to the version of the operator's binary, then update that `spec.versions` entry with the operator's version of the resource. Otherwise, do nothing.
+  - CRD does not have a version `vN` yet. Then just add the operator's version of the resource to `spec.versions`.
+- Whenever it was decided to update or insert some `spec.versions` entry of CRD, then set the `vN.teleport-operator-version` CRD annotation equal to the operator's binary version.
+
+Following this schema, the CRD installer would never overwrite the newer data with the older but it's also capable of performing the downgrade gracefully if some older version of CRD is needed.
