@@ -28,8 +28,8 @@ import (
 )
 
 var msgFieldRegexp = regexp.MustCompile(`(?im)^\*\*([a-zA-Z ]+)\*\*:\ +(.+)$`)
-var requestReasonRegexp = regexp.MustCompile(`(?im)^\*\*Reason\*\*:\ ` + "```\\n" + `(.*?)` + "```" + `(.*?)$`)
-var resolutionReasonRegexp = regexp.MustCompile(`(?im)^\*\*Resolution reason\*\*:\ ` + "```\\n" + `(.*?)` + "```" + `(.*?)$`)
+var requestReasonRegexp = regexp.MustCompile("(?im)^\\*\\*Reason\\*\\*:\\ ```\\n(.*?)```(.*?)$")
+var resolutionReasonRegexp = regexp.MustCompile("(?im)^\\*\\*Resolution reason\\*\\*:\\ ```\\n(.*?)```(.*?)$")
 
 type MattermostSuite struct {
 	Suite

@@ -164,6 +164,9 @@ func NewFakeMattermost(botUser User, concurrency int) *FakeMattermost {
 		err := json.NewDecoder(r.Body).Decode(&post)
 		panicIf(err)
 
+		// message size limit as per
+		// https://github.com/mattermost/mattermost-server/blob/3d412b14af49701d842e72ef208f0ec0a35ce063/model/post.go#L54
+		// (current master at time of writing)
 		if len(post.Message) > 4000 {
 			rw.WriteHeader(http.StatusBadRequest)
 			return

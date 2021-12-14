@@ -40,6 +40,15 @@ Resolution: {{.ProposedStateEmoji}} {{.ProposedState}}.
 {{if .Reason}}Reason: {{.Reason}}.{{end}}`,
 ))
 
+// Mattermost has a 4000 or 16k character limit for posts (depending on the
+// configuration) so we truncate all reasons to a generous but conservative
+// limit
+const (
+	requestReasonLimit = 500
+	resolutionReasonLimit
+	reviewReasonLimit
+)
+
 // Bot is a Mattermost client that works with access.Request.
 type Bot struct {
 	client      *resty.Client
@@ -214,9 +223,8 @@ func (b Bot) Broadcast(ctx context.Context, channels []string, reqID string, req
 }
 
 func (b Bot) PostReviewComment(ctx context.Context, channelID, rootID string, review types.AccessReview) error {
-	// see reasoning in buildPostText
 	if review.Reason != "" {
-		review.Reason = lib.MarkdownEscape(review.Reason, 500)
+		review.Reason = lib.MarkdownEscape(review.Reason, reviewReasonLimit)
 	}
 
 	var proposedStateEmoji string
@@ -339,15 +347,11 @@ func (b Bot) UpdatePosts(ctx context.Context, reqID string, reqData RequestData,
 func (b Bot) buildPostText(reqID string, reqData RequestData) (string, error) {
 	resolutionTag := reqData.Resolution.Tag
 
-	// Slack has a 4000 character recommendation (with a more generous 40000
-	// hard limit), Mattermost has either 4000 or 16k depending on the version;
-	// let's just be very conservative and limit request reason and resolution
-	// reason to 500 each
 	if reqData.RequestReason != "" {
-		reqData.RequestReason = lib.MarkdownEscape(reqData.RequestReason, 500)
+		reqData.RequestReason = lib.MarkdownEscape(reqData.RequestReason, requestReasonLimit)
 	}
 	if reqData.Resolution.Reason != "" {
-		reqData.Resolution.Reason = lib.MarkdownEscape(reqData.Resolution.Reason, 500)
+		reqData.Resolution.Reason = lib.MarkdownEscape(reqData.Resolution.Reason, resolutionReasonLimit)
 	}
 
 	var statusEmoji string

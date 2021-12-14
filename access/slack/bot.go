@@ -26,6 +26,15 @@ Resolution: {{.ProposedStateEmoji}} {{.ProposedState}}.
 {{if .Reason}}Reason: {{.Reason}}.{{end}}`,
 ))
 
+// Slack has a 4000 character limit for message texts and 3000 character limit
+// for message section texts so we truncate all reasons to a generous but
+// conservative limit
+const (
+	requestReasonLimit = 500
+	resolutionReasonLimit
+	reviewReasonLimit
+)
+
 // Bot is a slack client that works with access.Request.
 // It's responsible for formatting and posting a message on Slack when an
 // action occurs with an access request: a new request popped up, or a
@@ -141,9 +150,8 @@ func (b Bot) Broadcast(ctx context.Context, channels []string, reqID string, req
 }
 
 func (b Bot) PostReviewReply(ctx context.Context, channelID, timestamp string, review types.AccessReview) error {
-	// see reasoning in msgSections
 	if review.Reason != "" {
-		review.Reason = lib.MarkdownEscape(review.Reason, 500)
+		review.Reason = lib.MarkdownEscape(review.Reason, reviewReasonLimit)
 	}
 
 	var proposedStateEmoji string
@@ -273,11 +281,7 @@ func (b Bot) msgSections(reqID string, reqData RequestData) []BlockItem {
 		msgFieldToBuilder(&builder, "Role(s)", strings.Join(reqData.Roles, ","))
 	}
 	if reqData.RequestReason != "" {
-		// Slack has a 4000 character recommendation (with a more generous 40000
-		// hard limit), Mattermost has either 4000 or 16k depending on the
-		// version; let's just be very conservative and limit request reason and
-		// resolution reason to 500 each
-		msgFieldToBuilder(&builder, "Reason", lib.MarkdownEscape(reqData.RequestReason, 500))
+		msgFieldToBuilder(&builder, "Reason", lib.MarkdownEscape(reqData.RequestReason, requestReasonLimit))
 	}
 	if b.webProxyURL != nil {
 		reqURL := *b.webProxyURL
@@ -306,8 +310,7 @@ func (b Bot) msgSections(reqID string, reqData RequestData) []BlockItem {
 
 	statusText := fmt.Sprintf("*Status:* %s %s", statusEmoji, status)
 	if resolution.Reason != "" {
-		// see above for the limit reasoning
-		statusText += fmt.Sprintf("\n*Resolution reason*: %s", lib.MarkdownEscape(resolution.Reason, 500))
+		statusText += fmt.Sprintf("\n*Resolution reason*: %s", lib.MarkdownEscape(resolution.Reason, resolutionReasonLimit))
 	}
 
 	sections := []BlockItem{

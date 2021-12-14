@@ -28,7 +28,7 @@ import (
 )
 
 var msgFieldRegexp = regexp.MustCompile(`(?im)^\*([a-zA-Z ]+)\*: (.+)$`)
-var requestReasonRegexp = regexp.MustCompile(`(?im)^\*Reason\*:\ ` + "```\\n" + `(.*?)` + "```" + `(.*?)$`)
+var requestReasonRegexp = regexp.MustCompile("(?im)^\\*Reason\\*:\\ ```\\n(.*?)```(.*?)$")
 
 type SlackSuite struct {
 	Suite
