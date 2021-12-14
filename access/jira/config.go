@@ -94,6 +94,12 @@ func LoadConfig(filepath string) (*Config, error) {
 	if err := t.Unmarshal(conf); err != nil {
 		return nil, trace.Wrap(err)
 	}
+	if strings.HasPrefix(conf.Jira.APIToken, "/") {
+		conf.Jira.APIToken, err = lib.ReadPassword(conf.Jira.APIToken)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+	}
 	if err := conf.CheckAndSetDefaults(); err != nil {
 		return nil, trace.Wrap(err)
 	}
