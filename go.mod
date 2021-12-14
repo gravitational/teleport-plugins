@@ -8,7 +8,6 @@ require (
 	github.com/alecthomas/kong v0.2.18
 	github.com/alecthomas/repr v0.0.0-20200325044227-4184120f674c // indirect
 	github.com/alecthomas/units v0.0.0-20210208195552-ff826a37aa15 // indirect
-	github.com/ghodss/yaml v1.0.0
 	github.com/go-resty/resty/v2 v2.3.0
 	github.com/gobuffalo/flect v0.2.4
 	github.com/gogo/protobuf v1.3.2
