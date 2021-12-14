@@ -17,6 +17,8 @@ limitations under the License.
 package main
 
 import (
+	"strings"
+
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
@@ -77,6 +79,12 @@ func LoadConfig(filepath string) (*Config, error) {
 	conf := &Config{}
 	if err := t.Unmarshal(conf); err != nil {
 		return nil, trace.Wrap(err)
+	}
+	if strings.HasPrefix(conf.Pagerduty.APIKey, "/") {
+		conf.Pagerduty.APIKey, err = lib.ReadPassword(conf.Pagerduty.APIKey)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
 	}
 	if err := conf.CheckAndSetDefaults(); err != nil {
 		return nil, trace.Wrap(err)
