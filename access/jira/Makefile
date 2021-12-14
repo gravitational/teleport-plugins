@@ -1,4 +1,4 @@
-VERSION=8.0.0
+VERSION=8.0.5
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-jira
