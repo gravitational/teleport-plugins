@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -87,7 +88,8 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 		http.Error(rw, "", http.StatusBadRequest)
 		return
 	}
-	if r.Header.Get("X-Gitlab-Token") != s.secret {
+	// the length of the secret token is not particularly confidential, so it's ok to leak it here
+	if subtle.ConstantTimeCompare([]byte(r.Header.Get("X-Gitlab-Token")), []byte(s.secret)) == 0 {
 		log.Error(`Invalid webhook secret provided`)
 		http.Error(rw, "", http.StatusUnauthorized)
 		return
