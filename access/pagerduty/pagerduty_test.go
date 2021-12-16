@@ -119,11 +119,11 @@ func (s *PagerdutySuite) SetupSuite() {
 
 	var bootstrap integration.Bootstrap
 
-	// Set up user who can request the access to role "admin".
+	// Set up user who can request the access to role "editor".
 
 	conditions := types.RoleConditions{
 		Request: &types.AccessRequestConditions{
-			Roles: []string{"admin"},
+			Roles: []string{"editor"},
 			Annotations: wrappers.Traits{
 				NotifyServiceDefaultAnnotation: []string{NotifyServiceName},
 			},
@@ -141,11 +141,11 @@ func (s *PagerdutySuite) SetupSuite() {
 	s.userNames.requestor = user.GetName()
 
 	if teleportFeatures.AdvancedAccessWorkflows {
-		// Set up TWO users who can review access requests to role "admin".
+		// Set up TWO users who can review access requests to role "editor".
 
 		role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV4{
 			Allow: types.RoleConditions{
-				ReviewRequests: &types.AccessReviewConditions{Roles: []string{"admin"}},
+				ReviewRequests: &types.AccessReviewConditions{Roles: []string{"editor"}},
 			},
 		})
 		require.NoError(t, err)
@@ -163,7 +163,7 @@ func (s *PagerdutySuite) SetupSuite() {
 		role, err = bootstrap.AddRole("bar", types.RoleSpecV4{
 			Allow: types.RoleConditions{
 				Request: &types.AccessRequestConditions{
-					Roles: []string{"admin"},
+					Roles: []string{"editor"},
 					Annotations: wrappers.Traits{
 						ServicesDefaultAnnotation: []string{ServiceName1, ServiceName2},
 					},
@@ -181,7 +181,7 @@ func (s *PagerdutySuite) SetupSuite() {
 		role, err = bootstrap.AddRole("foo-bar", types.RoleSpecV4{
 			Allow: types.RoleConditions{
 				Request: &types.AccessRequestConditions{
-					Roles: []string{"admin"},
+					Roles: []string{"editor"},
 					Annotations: wrappers.Traits{
 						NotifyServiceDefaultAnnotation: []string{NotifyServiceName},
 						ServicesDefaultAnnotation:      []string{ServiceName1, ServiceName2},
@@ -208,7 +208,7 @@ func (s *PagerdutySuite) SetupSuite() {
 		},
 	}
 	if teleportFeatures.AdvancedAccessWorkflows {
-		conditions.ReviewRequests = &types.AccessReviewConditions{Roles: []string{"admin"}}
+		conditions.ReviewRequests = &types.AccessReviewConditions{Roles: []string{"editor"}}
 	}
 
 	// Set up plugin user.
@@ -328,7 +328,7 @@ func (s *PagerdutySuite) newAccessRequest() types.AccessRequest {
 	t := s.T()
 	t.Helper()
 
-	req, err := types.NewAccessRequest(uuid.New().String(), s.currentRequestor, "admin")
+	req, err := types.NewAccessRequest(uuid.New().String(), s.currentRequestor, "editor")
 	require.NoError(s.T(), err)
 	return req
 }
@@ -837,7 +837,7 @@ func (s *PagerdutySuite) TestRace() {
 			proposedState = types.RequestState_DENIED
 		}
 		process.SpawnCritical(func(ctx context.Context) error {
-			req, err := types.NewAccessRequest(uuid.New().String(), userName, "admin")
+			req, err := types.NewAccessRequest(uuid.New().String(), userName, "editor")
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
