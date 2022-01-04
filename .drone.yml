@@ -24,11 +24,11 @@ steps:
       - make lint
 
   - name: Run tests
-    image: golang:1.16.2
+    image: golang:1.17.5
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v7.1.1
+      TELEPORT_GET_VERSION: v8.0.5
     commands:
       - echo Testing plugins against Teleport $TELEPORT_GET_VERSION
       - make test
@@ -72,7 +72,7 @@ steps:
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v7.1.1
+      TELEPORT_GET_VERSION: v8.0.5
       GOPATH: /tmp/teleport-plugins/test-darwin/go
       GOCACHE: /tmp/teleport-plugins/test-darwin/go/cache
     commands:
@@ -103,7 +103,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.16.2
+    image: golang:1.17.5
     commands:
       - make build-all
 
@@ -177,7 +177,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.16.2
+    image: golang:1.17.5
     commands:
       - mkdir -p build/
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
@@ -218,7 +218,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.16.2
+    image: golang:1.17.5
     commands:
       - mkdir -p build/
       - make release/terraform
@@ -300,7 +300,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.16.2
+    image: golang:1.17.5
     commands:
       - mkdir -p build/
       - make release/event-handler
@@ -413,6 +413,6 @@ steps:
 
 ---
 kind: signature
-hmac: 4f25cf95faaad6e50bdcf7b22fc9db79ef8adaa97e1bb765f770cdecd2eee196
+hmac: c427752b53eaa9eb47bf95e1c3aed04b4c8273f930ba4ab83c67f12052d37821
 
 ...

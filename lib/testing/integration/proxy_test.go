@@ -37,7 +37,7 @@ func (s *IntegrationProxySuite) TestPing() {
 	t := s.T()
 
 	var bootstrap Bootstrap
-	user, err := bootstrap.AddUserWithRoles("vladimir", "admin")
+	user, err := bootstrap.AddUserWithRoles("vladimir", "editor")
 	require.NoError(t, err)
 	err = s.Integration.Bootstrap(s.Context(), s.Auth, bootstrap.Resources())
 	require.NoError(t, err)

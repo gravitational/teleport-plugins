@@ -56,6 +56,25 @@ func NewFakeSlack(botUser User, concurrency int) *FakeSlack {
 		err := json.NewDecoder(r.Body).Decode(&payload)
 		panicIf(err)
 
+		// text limit and block text limit as per
+		// https://api.slack.com/methods/chat.postMessage and
+		// https://api.slack.com/reference/block-kit/blocks#section
+		if len(payload.Text) > 4000 || func() bool {
+			for _, block := range payload.BlockItems {
+				sectionBlock, ok := block.Block.(SectionBlock)
+				if !ok {
+					continue
+				}
+				if len(sectionBlock.Text.GetText()) > 3000 {
+					return true
+				}
+			}
+			return false
+		}() {
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		msg := s.StoreMessage(Msg{
 			Type:       "message",
 			Channel:    payload.Channel,

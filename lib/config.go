@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"io"
 	"os"
 	"strings"
 
@@ -96,13 +97,18 @@ func (cfg TeleportConfig) Credentials() []client.Credentials {
 
 // ReadPassword reads password from file or env var, trims and returns
 func ReadPassword(filename string) (string, error) {
-	p, err := os.ReadFile(filename)
+	f, err := os.Open(filename)
 	if os.IsNotExist(err) {
 		return "", trace.BadParameter("Error reading password from %v", filename)
 	}
 	if err != nil {
 		return "", trace.Wrap(err)
 	}
-
-	return strings.TrimSpace(string(p)), nil
+	pass := make([]byte, 2000)
+	l, err := f.Read(pass)
+	if err != nil && err != io.EOF {
+		return "", err
+	}
+	pass = pass[:l] // truncate \0
+	return strings.TrimSpace(string(pass)), nil
 }

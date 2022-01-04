@@ -1,7 +1,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"strings"
 
 	"github.com/gravitational/teleport-plugins/lib"
@@ -65,11 +64,10 @@ func LoadConfig(filepath string) (*Config, error) {
 		return nil, trace.Wrap(err)
 	}
 	if strings.HasPrefix(conf.Slack.Token, "/") {
-		tokenBytes, err := ioutil.ReadFile(conf.Slack.Token)
+		conf.Slack.Token, err = lib.ReadPassword(conf.Slack.Token)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
-		conf.Slack.Token = string(tokenBytes)
 	}
 	if err := conf.CheckAndSetDefaults(); err != nil {
 		return nil, trace.Wrap(err)

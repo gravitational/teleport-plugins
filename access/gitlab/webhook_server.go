@@ -18,8 +18,10 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -35,6 +37,10 @@ import (
 
 const (
 	gitlabWebhookPath = "/webhook"
+
+	// as per https://docs.gitlab.com/ee/user/gitlab_com/index.html#webhooks,
+	// the webhook payload size is limited to 25MB
+	gitlabWebhookPayloadLimit = 25 * 1024 * 1024
 )
 
 type WebhookServer struct {
@@ -87,17 +93,22 @@ func (s *WebhookServer) processWebhook(rw http.ResponseWriter, r *http.Request, 
 		http.Error(rw, "", http.StatusBadRequest)
 		return
 	}
-	if r.Header.Get("X-Gitlab-Token") != s.secret {
+	// the length of the secret token is not particularly confidential, so it's ok to leak it here
+	if subtle.ConstantTimeCompare([]byte(r.Header.Get("X-Gitlab-Token")), []byte(s.secret)) == 0 {
 		log.Error(`Invalid webhook secret provided`)
 		http.Error(rw, "", http.StatusUnauthorized)
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := ioutil.ReadAll(io.LimitReader(r.Body, gitlabWebhookPayloadLimit+1))
 	if err != nil {
 		log.WithError(err).Error("Failed to read webhook payload")
 		http.Error(rw, "", http.StatusInternalServerError)
 		return
+	}
+	if len(body) > gitlabWebhookPayloadLimit {
+		log.Error("Received a webhook larger than %d bytes", gitlabWebhookPayloadLimit)
+		http.Error(rw, "", http.StatusRequestEntityTooLarge)
 	}
 
 	var event interface{}

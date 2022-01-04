@@ -1,4 +1,4 @@
-VERSION=8.0.0
+VERSION=8.0.7
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-pagerduty

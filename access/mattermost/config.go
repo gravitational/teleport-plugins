@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
@@ -54,6 +56,12 @@ func LoadConfig(filepath string) (*Config, error) {
 	conf := &Config{}
 	if err := t.Unmarshal(conf); err != nil {
 		return nil, trace.Wrap(err)
+	}
+	if strings.HasPrefix(conf.Mattermost.Token, "/") {
+		conf.Mattermost.Token, err = lib.ReadPassword(conf.Mattermost.Token)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
 	}
 	if err := conf.CheckAndSetDefaults(); err != nil {
 		return nil, trace.Wrap(err)

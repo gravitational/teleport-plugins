@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -27,6 +28,8 @@ import (
 )
 
 var msgFieldRegexp = regexp.MustCompile(`(?im)^\*\*([a-zA-Z ]+)\*\*:\ +(.+)$`)
+var requestReasonRegexp = regexp.MustCompile("(?im)^\\*\\*Reason\\*\\*:\\ ```\\n(.*?)```(.*?)$")
+var resolutionReasonRegexp = regexp.MustCompile("(?im)^\\*\\*Resolution reason\\*\\*:\\ ```\\n(.*?)```(.*?)$")
 
 type MattermostSuite struct {
 	Suite
@@ -88,9 +91,9 @@ func (s *MattermostSuite) SetupSuite() {
 
 	var bootstrap integration.Bootstrap
 
-	// Set up user who can request the access to role "admin".
+	// Set up user who can request the access to role "editor".
 
-	conditions := types.RoleConditions{Request: &types.AccessRequestConditions{Roles: []string{"admin"}}}
+	conditions := types.RoleConditions{Request: &types.AccessRequestConditions{Roles: []string{"editor"}}}
 	if teleportFeatures.AdvancedAccessWorkflows {
 		conditions.Request.Thresholds = []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}}
 	}
@@ -101,11 +104,11 @@ func (s *MattermostSuite) SetupSuite() {
 	require.NoError(t, err)
 	s.userNames.requestor = user.GetName()
 
-	// Set up TWO users who can review access requests to role "admin".
+	// Set up TWO users who can review access requests to role "editor".
 
 	conditions = types.RoleConditions{}
 	if teleportFeatures.AdvancedAccessWorkflows {
-		conditions.ReviewRequests = &types.AccessReviewConditions{Roles: []string{"admin"}}
+		conditions.ReviewRequests = &types.AccessReviewConditions{Roles: []string{"editor"}}
 	}
 	role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV4{Allow: conditions})
 	require.NoError(t, err)
@@ -217,9 +220,9 @@ func (s *MattermostSuite) newAccessRequest(reviewers []User) types.AccessRequest
 	t := s.T()
 	t.Helper()
 
-	req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
+	req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "editor")
 	require.NoError(t, err)
-	req.SetRequestReason("because of")
+	req.SetRequestReason("because of " + strings.Repeat("A", 5000))
 	var suggestedReviewers []string
 	for _, user := range reviewers {
 		suggestedReviewers = append(suggestedReviewers, user.Email)
@@ -294,9 +297,11 @@ func (s *MattermostSuite) TestMattermostMessagePosting() {
 	require.NoError(t, err)
 	assert.Equal(t, s.userNames.requestor, username)
 
-	reason, err := parsePostField(post, "Reason")
-	require.NoError(t, err)
-	assert.Equal(t, "because of", reason)
+	matches := requestReasonRegexp.FindAllStringSubmatch(post.Message, -1)
+	require.Equal(t, 1, len(matches))
+	require.Equal(t, 3, len(matches[0]))
+	assert.Equal(t, "because of "+strings.Repeat("A", 489), matches[0][1])
+	assert.Equal(t, " (truncated)", matches[0][2])
 
 	statusLine, err := parsePostField(post, "Status")
 	require.NoError(t, err)
@@ -325,7 +330,13 @@ func (s *MattermostSuite) TestApproval() {
 
 	statusLine, err := parsePostField(postUpdate, "Status")
 	require.NoError(t, err)
-	assert.Equal(t, "✅ APPROVED (okay)", statusLine)
+	assert.Equal(t, "✅ APPROVED", statusLine)
+
+	matches := resolutionReasonRegexp.FindAllStringSubmatch(postUpdate.Message, -1)
+	require.Equal(t, 1, len(matches))
+	require.Equal(t, 3, len(matches[0]))
+	assert.Equal(t, "okay", matches[0][1])
+	assert.Equal(t, "", matches[0][2])
 }
 
 func (s *MattermostSuite) TestDenial() {
@@ -341,7 +352,7 @@ func (s *MattermostSuite) TestDenial() {
 	directChannelID := s.fakeMattermost.GetDirectChannelFor(s.fakeMattermost.GetBotUser(), reviewer).ID
 	assert.Equal(t, directChannelID, post.ChannelID)
 
-	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay")
+	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay "+strings.Repeat("A", 10000))
 
 	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.Context())
 	require.NoError(t, err, "no messages updated")
@@ -350,7 +361,13 @@ func (s *MattermostSuite) TestDenial() {
 
 	statusLine, err := parsePostField(postUpdate, "Status")
 	require.NoError(t, err)
-	assert.Equal(t, "❌ DENIED (not okay)", statusLine)
+	assert.Equal(t, "❌ DENIED", statusLine)
+
+	matches := resolutionReasonRegexp.FindAllStringSubmatch(postUpdate.Message, -1)
+	require.Equal(t, 1, len(matches))
+	require.Equal(t, 3, len(matches[0]))
+	assert.Equal(t, "not okay "+strings.Repeat("A", 491), matches[0][1])
+	assert.Equal(t, " (truncated)", matches[0][2])
 }
 
 func (s *MattermostSuite) TestReviewComments() {
@@ -388,7 +405,7 @@ func (s *MattermostSuite) TestReviewComments() {
 	assert.Equal(t, post.ID, comment.RootID)
 	assert.Contains(t, comment.Message, s.userNames.reviewer1+" reviewed the request", "comment must contain a review author")
 	assert.Contains(t, comment.Message, "Resolution: ✅ APPROVED", "comment must contain a proposed state")
-	assert.Contains(t, comment.Message, "Reason: okay", "comment must contain a reason")
+	assert.Contains(t, comment.Message, "Reason: ```\nokay```", "comment must contain a reason")
 
 	err = s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
@@ -404,7 +421,7 @@ func (s *MattermostSuite) TestReviewComments() {
 	assert.Equal(t, post.ID, comment.RootID)
 	assert.Contains(t, comment.Message, s.userNames.reviewer2+" reviewed the request", "comment must contain a review author")
 	assert.Contains(t, comment.Message, "Resolution: ❌ DENIED", "comment must contain a proposed state")
-	assert.Contains(t, comment.Message, "Reason: not okay", "comment must contain a reason")
+	assert.Contains(t, comment.Message, "Reason: ```\nnot okay```", "comment must contain a reason")
 }
 
 func (s *MattermostSuite) TestApprovalByReview() {
@@ -459,7 +476,13 @@ func (s *MattermostSuite) TestApprovalByReview() {
 
 	statusLine, err := parsePostField(postUpdate, "Status")
 	require.NoError(t, err)
-	assert.Equal(t, "✅ APPROVED (finally okay)", statusLine)
+	assert.Equal(t, "✅ APPROVED", statusLine)
+
+	matches := resolutionReasonRegexp.FindAllStringSubmatch(postUpdate.Message, -1)
+	require.Equal(t, 1, len(matches))
+	require.Equal(t, 3, len(matches[0]))
+	assert.Equal(t, "finally okay", matches[0][1])
+	assert.Equal(t, "", matches[0][2])
 }
 
 func (s *MattermostSuite) TestDenialByReview() {
@@ -514,7 +537,13 @@ func (s *MattermostSuite) TestDenialByReview() {
 
 	statusLine, err := parsePostField(postUpdate, "Status")
 	require.NoError(t, err)
-	assert.Equal(t, "❌ DENIED (finally not okay)", statusLine)
+	assert.Equal(t, "❌ DENIED", statusLine)
+
+	matches := resolutionReasonRegexp.FindAllStringSubmatch(postUpdate.Message, -1)
+	require.Equal(t, 1, len(matches))
+	require.Equal(t, 3, len(matches[0]))
+	assert.Equal(t, "finally not okay", matches[0][1])
+	assert.Equal(t, "", matches[0][2])
 }
 
 func (s *MattermostSuite) TestExpiration() {
@@ -581,7 +610,7 @@ func (s *MattermostSuite) TestRace() {
 	process := lib.NewProcess(s.Context())
 	for i := 0; i < s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
+			req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "editor")
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
