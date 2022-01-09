@@ -1,0 +1,35 @@
+domain: teleport.dev
+layout:
+- go.kubebuilder.io/v3
+multigroup: true
+projectName: kubernetes
+repo: github.com/gravitational/teleport-plugins/kubernetes
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: teleport.dev
+  group: resources
+  kind: User
+  path: github.com/gravitational/teleport-plugins/kubernetes/apis/resources
+  version: v2
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: teleport.dev
+  group: resources
+  kind: Role
+  path: github.com/gravitational/teleport-plugins/kubernetes/apis/resources
+  version: v4
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: teleport.dev
+  group: auth
+  kind: Identity
+  path: github.com/gravitational/teleport-plugins/kubernetes/apis/auth/v8
+  version: v8
+version: "3"

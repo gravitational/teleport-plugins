@@ -19,6 +19,7 @@ package integration
 import (
 	"testing"
 
+	"github.com/gravitational/teleport/api/client"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -45,7 +46,7 @@ func (s *IntegrationProxySuite) TestPing() {
 	identity, err := s.Integration.Sign(s.Context(), s.Auth, user.GetName())
 	require.NoError(t, err)
 
-	client, err := s.Integration.NewSignedClient(s.Context(), s.Proxy, identity, user.GetName())
+	client, err := s.Integration.NewSignedClient(s.Context(), s.Proxy, user.GetName(), []client.Credentials{client.LoadIdentityFile(identity)})
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = client.Close() })
 	_, err = client.Ping(s.Context())

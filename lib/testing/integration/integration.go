@@ -360,7 +360,7 @@ func (integration *Integration) NewSSHService(auth Auth) (*SSHService, error) {
 }
 
 func (integration *Integration) Bootstrap(ctx context.Context, auth *AuthService, resources []types.Resource) error {
-	return integration.tctl(auth).Create(ctx, resources)
+	return integration.Tctl(auth).Create(ctx, resources, true)
 }
 
 // NewClient builds an API client for a given user.
@@ -369,15 +369,15 @@ func (integration *Integration) NewClient(ctx context.Context, auth *AuthService
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	return integration.NewSignedClient(ctx, auth, outPath, userName)
+	return integration.NewSignedClient(ctx, auth, userName, []client.Credentials{client.LoadIdentityFile(outPath)})
 }
 
 // NewSignedClient builds a client for a given user given the identity file.
-func (integration *Integration) NewSignedClient(ctx context.Context, auth Auth, identityPath, userName string) (*Client, error) {
+func (integration *Integration) NewSignedClient(ctx context.Context, auth Auth, userName string, creds []client.Credentials) (*Client, error) {
 	apiClient, err := client.New(ctx, client.Config{
 		InsecureAddressDiscovery: true,
 		Addrs:                    []string{auth.AuthAddr().String()},
-		Credentials:              []client.Credentials{client.LoadIdentityFile(identityPath)},
+		Credentials:              creds,
 	})
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -420,7 +420,7 @@ func (integration *Integration) Sign(ctx context.Context, auth *AuthService, use
 		return "", trace.Wrap(err)
 	}
 	outPath := outFile.Name()
-	if err := integration.tctl(auth).Sign(ctx, userName, outPath); err != nil {
+	if err := integration.Tctl(auth).Sign(ctx, userName, 0, outPath); err != nil {
 		return "", trace.Wrap(err)
 	}
 	return outPath, nil
@@ -438,7 +438,7 @@ func (integration *Integration) SetCAPin(ctx context.Context, auth *AuthService)
 		return trace.Wrap(auth.Err())
 	}
 
-	caPin, err := integration.tctl(auth).GetCAPin(ctx)
+	caPin, err := integration.Tctl(auth).GetCAPin(ctx)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -477,7 +477,7 @@ func getBinaryVersion(ctx context.Context, binaryPath string) (Version, error) {
 	return Version{Version: version, IsEnterprise: submatch[1] != ""}, nil
 }
 
-func (integration *Integration) tctl(auth *AuthService) tctl.Tctl {
+func (integration *Integration) Tctl(auth *AuthService) tctl.Tctl {
 	return tctl.Tctl{
 		Path:       integration.paths.Tctl,
 		AuthServer: auth.AuthAddr().String(),
