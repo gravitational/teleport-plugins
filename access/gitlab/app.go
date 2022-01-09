@@ -93,6 +93,19 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 	return a.mainJob.WaitReady(ctx)
 }
 
+// Shutdown signals an app to terminate.
+func (a *App) Shutdown(ctx context.Context) error {
+	log := logger.Get(ctx)
+	log.Info("Attempting graceful shutdown...")
+
+	if err := a.Process.Shutdown(ctx); err != nil {
+		return trace.Wrap(err)
+	}
+
+	log.Info("Successfully shut down")
+	return nil
+}
+
 // PublicURL returns a webhook base URL.
 func (a *App) PublicURL() *url.URL {
 	if !a.mainJob.IsReady() {
@@ -158,6 +171,13 @@ func (a *App) run(ctx context.Context) error {
 func (a *App) init(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, initTimeout)
 	defer cancel()
+
+	// React to termination signal.
+	a.OnTerminate(func(ctx context.Context) error {
+		cancel()
+		return nil
+	})
+
 	log := logger.Get(ctx)
 
 	var (

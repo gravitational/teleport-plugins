@@ -93,6 +93,19 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 	return a.mainJob.WaitReady(ctx)
 }
 
+// Shutdown signals an app to terminate.
+func (a *App) Shutdown(ctx context.Context) error {
+	log := logger.Get(ctx)
+	log.Info("Attempting graceful shutdown...")
+
+	if err := a.Process.Shutdown(ctx); err != nil {
+		return trace.Wrap(err)
+	}
+
+	log.Info("Successfully shut down")
+	return nil
+}
+
 func (a *App) run(ctx context.Context) error {
 	var err error
 
@@ -133,6 +146,12 @@ func (a *App) init(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, initTimeout)
 	defer cancel()
 	log := logger.Get(ctx)
+
+	// React to termination signal.
+	a.OnTerminate(func(ctx context.Context) error {
+		cancel()
+		return nil
+	})
 
 	var (
 		err  error

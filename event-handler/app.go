@@ -101,6 +101,19 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 	return mainReady && sessionConsumerReady, nil
 }
 
+// Shutdown signals an app to terminate.
+func (a *App) Shutdown(ctx context.Context) error {
+	log := logger.Get(ctx)
+	log.Info("Attempting graceful shutdown...")
+
+	if err := a.Process.Shutdown(ctx); err != nil {
+		return trace.Wrap(err)
+	}
+
+	log.Info("Successfully shut down")
+	return nil
+}
+
 // SendEvent sends an event to fluentd. Shared method used by jobs.
 func (a *App) SendEvent(ctx context.Context, url string, e *TeleportEvent) error {
 	log := logger.Get(ctx)

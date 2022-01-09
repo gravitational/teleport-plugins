@@ -58,8 +58,6 @@ func main() {
 	case "start":
 		if err := run(*path, *debug); err != nil {
 			lib.Bail(err)
-		} else {
-			logger.Standard().Info("Successfully shut down")
 		}
 	}
 }

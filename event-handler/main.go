@@ -76,8 +76,6 @@ func main() {
 
 		if err != nil {
 			lib.Bail(err)
-		} else {
-			logger.Standard().Info("Successfully shut down")
 		}
 	}
 }
