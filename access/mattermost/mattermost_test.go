@@ -91,9 +91,9 @@ func (s *MattermostSuite) SetupSuite() {
 
 	var bootstrap integration.Bootstrap
 
-	// Set up user who can request the access to role "editor".
+	// Set up user who can request the access to role "admin".
 
-	conditions := types.RoleConditions{Request: &types.AccessRequestConditions{Roles: []string{"editor"}}}
+	conditions := types.RoleConditions{Request: &types.AccessRequestConditions{Roles: []string{"admin"}}}
 	if teleportFeatures.AdvancedAccessWorkflows {
 		conditions.Request.Thresholds = []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}}
 	}
@@ -104,11 +104,11 @@ func (s *MattermostSuite) SetupSuite() {
 	require.NoError(t, err)
 	s.userNames.requestor = user.GetName()
 
-	// Set up TWO users who can review access requests to role "editor".
+	// Set up TWO users who can review access requests to role "admin".
 
 	conditions = types.RoleConditions{}
 	if teleportFeatures.AdvancedAccessWorkflows {
-		conditions.ReviewRequests = &types.AccessReviewConditions{Roles: []string{"editor"}}
+		conditions.ReviewRequests = &types.AccessReviewConditions{Roles: []string{"admin"}}
 	}
 	role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV4{Allow: conditions})
 	require.NoError(t, err)
@@ -220,7 +220,7 @@ func (s *MattermostSuite) newAccessRequest(reviewers []User) types.AccessRequest
 	t := s.T()
 	t.Helper()
 
-	req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "editor")
+	req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 	require.NoError(t, err)
 	req.SetRequestReason("because of " + strings.Repeat("A", 5000))
 	var suggestedReviewers []string
@@ -610,7 +610,7 @@ func (s *MattermostSuite) TestRace() {
 	process := lib.NewProcess(s.Context())
 	for i := 0; i < s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "editor")
+			req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}

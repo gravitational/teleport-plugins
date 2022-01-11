@@ -113,9 +113,9 @@ func (s *GitlabSuite) SetupSuite() {
 
 	var bootstrap integration.Bootstrap
 
-	// Set up user who can request the access to role "editor".
+	// Set up user who can request the access to role "admin".
 
-	conditions := types.RoleConditions{Request: &types.AccessRequestConditions{Roles: []string{"editor"}}}
+	conditions := types.RoleConditions{Request: &types.AccessRequestConditions{Roles: []string{"admin"}}}
 	if teleportFeatures.AdvancedAccessWorkflows {
 		conditions.Request.Thresholds = []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}}
 	}
@@ -127,11 +127,11 @@ func (s *GitlabSuite) SetupSuite() {
 	s.userNames.requestor = user.GetName()
 
 	if teleportFeatures.AdvancedAccessWorkflows {
-		// Set up TWO users who can review access requests to role "editor".
+		// Set up TWO users who can review access requests to role "admin".
 
 		role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV4{
 			Allow: types.RoleConditions{
-				ReviewRequests: &types.AccessReviewConditions{Roles: []string{"editor"}},
+				ReviewRequests: &types.AccessReviewConditions{Roles: []string{"admin"}},
 			},
 		})
 		require.NoError(t, err)
@@ -246,7 +246,7 @@ func (s *GitlabSuite) newAccessRequest() types.AccessRequest {
 	t := s.T()
 	t.Helper()
 
-	req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "editor")
+	req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 	require.NoError(t, err)
 	return req
 }
@@ -864,7 +864,7 @@ func (s *GitlabSuite) TestRace() {
 	process := lib.NewProcess(s.Context())
 	for i := 0; i < s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
-			req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "editor")
+			req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "admin")
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
