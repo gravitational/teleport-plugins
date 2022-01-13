@@ -1,4 +1,8 @@
 ---
+# The test-linux pipeline is no longer used by CI (and should *not* respond
+# to the `pull_request` target). However, it is still used as a pre-requisite 
+# by the full, post-merge builds on the master and release branches, which is 
+# why it still exists here.
 kind: pipeline
 type: kubernetes
 name: test-linux
@@ -34,6 +38,10 @@ steps:
       - make test
 
 ---
+# The test-darwin pipeline is no longer used by CI (and should *not* respond
+# to the `pull_request` target). However, it is still used as a pre-requisite 
+# by the full, post-merge builds on the master and release branches, which is 
+# why it still exists here.
 kind: pipeline
 type: exec
 name: test-darwin
@@ -413,6 +421,6 @@ steps:
 
 ---
 kind: signature
-hmac: 4f25cf95faaad6e50bdcf7b22fc9db79ef8adaa97e1bb765f770cdecd2eee196
+hmac: 69d1bada3191302461b1959256ff81c6dc4f5901971ebce909a23e1acbe3c7b6
 
 ...
