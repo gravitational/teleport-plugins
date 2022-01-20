@@ -255,6 +255,8 @@ github.com/gravitational/protoc-gen-terraform v0.0.0-20211108170245-3b37ff28d21e
 github.com/gravitational/protoc-gen-terraform v0.0.0-20211108170245-3b37ff28d21e/go.mod h1:joQIhLuq9Ofk7i7zLuPfUrPJE0NfsEMrQUEGSmg/HS8=
 github.com/gravitational/teleport/api v0.0.0-20211213214838-0e304c323c49 h1:Sw/9WVS8FCqNii4WVH5YnkJCQ7tFzbf/mEkGCHCiLow=
 github.com/gravitational/teleport/api v0.0.0-20211213214838-0e304c323c49/go.mod h1:o7AX31/8Wv6bnXLr+ke32HYuXGKzhH0kChfEu5Iv/yA=
+github.com/gravitational/teleport/api v0.0.0-20220110180007-3dc269bef5ea h1:i5MGAnQGzjPS5QmNJA3M0OZoSozV7BFMTEgmE66aJX8=
+github.com/gravitational/teleport/api v0.0.0-20220110180007-3dc269bef5ea/go.mod h1:o7AX31/8Wv6bnXLr+ke32HYuXGKzhH0kChfEu5Iv/yA=
 github.com/gravitational/trace v1.1.14/go.mod h1:RvdOUHE4SHqR3oXlFFKnGzms8a5dugHygGw1bqDstYI=
 github.com/gravitational/trace v1.1.15/go.mod h1:RvdOUHE4SHqR3oXlFFKnGzms8a5dugHygGw1bqDstYI=
 github.com/gravitational/trace v1.1.16-0.20210609220119-4855e69c89fc h1:WirIpaGWhwmNkPEvhF5h51UyxhKxAnl6KvPqz8ozhNI=
