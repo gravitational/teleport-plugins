@@ -1,4 +1,6 @@
 name: teleport-plugin-slack
+env:
+  ECR_REPO_LINK: 900876714356.dkr.ecr.us-east-2.amazonaws.com/teleport-slackbot-iac
 
 on: push
 
@@ -18,26 +20,26 @@ jobs:
       security-events: none
       statuses: none
 
-    name: Build, Sign, and Push Concourse Worker Image
+    name: Build, Sign, and Push Teleport Slackbot Worker Image
     steps:
       - uses: actions/checkout@master
         with:
           fetch-depth: 1
 
-      # - name: Configure AWS credentials
-      #   uses: aws-actions/configure-aws-credentials@v1
-      #   with:
-      #     aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      #     aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      #     aws-region: us-east-2
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
 
-      # - name: Login to Amazon ECR
-      #   id: login-ecr
-      #   uses: aws-actions/amazon-ecr-login@v1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
 
-      # - name: Install Cosign
-      #   uses: sigstore/cosign-installer@main
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@main
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
@@ -51,46 +53,46 @@ jobs:
           context: ./
           file: ./access/slack/Dockerfile
           platforms: linux/amd64
-          push: false
-          # tags: |
-          #   695247912844.dkr.ecr.us-east-2.amazonaws.com/concourse:${{ github.sha }}
-      # - name: Sign image
-      #   run: |
-      #     cosign sign -key awskms:///${{ secrets.COSIGN_KEY }} 695247912844.dkr.ecr.us-east-2.amazonaws.com/concourse:${{ github.sha }}
+          push: true
+          tags: |
+            ${{ env.ECR_REPO_LINK }}:${{ github.sha }}
+      - name: Sign image
+        run: |
+          cosign sign -key awskms:///${{ secrets.COSIGN_KEY }} ${{ env.ECR_REPO_LINK }}:${{ github.sha }}
   
 
-  # verify_cosign_action:
-  #   needs: build_push_and_cosign_action
-  #   runs-on: ubuntu-latest
+  verify_cosign_action:
+    needs: build_push_and_cosign_action
+    runs-on: ubuntu-latest
 
-  #   permissions:
-  #     actions: none
-  #     checks: none
-  #     contents: read
-  #     deployments: none
-  #     issues: none
-  #     packages: none
-  #     pull-requests: none
-  #     repository-projects: none
-  #     security-events: none
-  #     statuses: none
+    permissions:
+      actions: none
+      checks: none
+      contents: read
+      deployments: none
+      issues: none
+      packages: none
+      pull-requests: none
+      repository-projects: none
+      security-events: none
+      statuses: none
 
-  #   name: Verify Signed Concourse Worker Image
-  #   steps:
-  #     - name: Configure AWS credentials
-  #       uses: aws-actions/configure-aws-credentials@v1
-  #       with:
-  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-  #         aws-region: us-east-2
+    name: Verify Signed Teleport Slackbot Worker Image
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-2
 
-  #     - name: Login to Amazon ECR
-  #       id: login-ecr
-  #       uses: aws-actions/amazon-ecr-login@v1
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
 
-      # - name: Install Cosign
-      #   uses: sigstore/cosign-installer@main
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@main
 
-      # - name: Verify image
-      #   run: |
-      #     cosign verify -key awskms:///${{ secrets.COSIGN_KEY }} 695247912844.dkr.ecr.us-east-2.amazonaws.com/concourse:${{ github.sha }}
+      - name: Verify image
+        run: |
+          cosign verify -key awskms:///${{ secrets.COSIGN_KEY }} ${{ env.ECR_REPO_LINK }}:${{ github.sha }}
