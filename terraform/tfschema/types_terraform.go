@@ -4541,6 +4541,7 @@ func GenSchemaOIDCConnectorV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "ClientSecret is used to authenticate the client.",
 						Optional:    true,
+						Sensitive: true,
 					},
 					// RedirectURL is a URL that will redirect the client's browser
 					// back to the identity provider after successful authentication.
@@ -4630,6 +4631,7 @@ func GenSchemaOIDCConnectorV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "GoogleServiceAccount is a string containing google service account credentials.",
 						Optional:    true,
+						Sensitive:   true,
 					},
 					// GoogleAdminEmail is the email of a google admin to impersonate.
 					"google_admin_email": {
