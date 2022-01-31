@@ -216,7 +216,8 @@ sensitive:
     - "types.SAMLConnectorV2.Spec.EncryptionKeyPair.PrivateKey"
     - "types.SAMLConnectorV2.Spec.EntityDescriptor"    
     - "types.GithubConnectorV3.Spec.ClientSecret"
-    - "types.OIDCConnectorSpecV2.Spec.ClientSecret"
+    - "types.OIDCConnectorV2.Spec.ClientSecret"
+    - "types.OIDCConnectorV2.Spec.GoogleServiceAccount"
 
 # These funcs will be used as a state funcs for a fields
 state_func:
