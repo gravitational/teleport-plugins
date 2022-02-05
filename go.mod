@@ -12,6 +12,7 @@ require (
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-resty/resty/v2 v2.3.0
 	github.com/gogo/protobuf v1.3.2
+	github.com/golang/protobuf v1.4.3
 	github.com/google/btree v1.0.1 // indirect
 	github.com/google/go-querystring v1.0.0
 	github.com/google/uuid v1.2.0
@@ -38,7 +39,6 @@ require (
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
 	google.golang.org/genproto v0.0.0-20210223151946-22b48be4551b // indirect
 	google.golang.org/grpc v1.32.0
-	google.golang.org/protobuf v1.25.0
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/mail.v2 v2.3.1
 	gopkg.in/resty.v1 v1.12.0

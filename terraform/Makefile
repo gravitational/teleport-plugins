@@ -62,9 +62,9 @@ reapply:
 # Regenerates types_terraform.go
 gen-schema:
 	@protoc \
-		-I$(LOCALDIR)/vendor/github.com/gravitational/teleport/api/types \
-		-I$(LOCALDIR)/vendor/github.com/gogo/protobuf \
-		-I$(LOCALDIR)/vendor \
+		-I$(LOCALDIR)/../vendor/github.com/gravitational/teleport/api/types \
+		-I$(LOCALDIR)/../vendor/github.com/gogo/protobuf \
+		-I$(LOCALDIR)/../vendor \
 		--plugin=$(GENTERRAFORMPATH)/protoc-gen-terraform \
 		--terraform_out=config=gen_teleport.yaml:./tfschema \
 		types.proto

@@ -26,11 +26,11 @@ import (
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
+	_ "github.com/golang/protobuf/ptypes/timestamp"
 	accessors "github.com/gravitational/protoc-gen-terraform/accessors"
 	types "github.com/gravitational/teleport/api/types"
 	schema "github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	validation "github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
-	_ "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -257,8 +257,9 @@ func GenSchemaDatabaseV3() map[string]*schema.Schema {
 					},
 					// Labels is a set of labels
 					"labels": {
-						Computed:    true,
+
 						Optional:    true,
+						Computed:    true,
 						Type:        schema.TypeMap,
 						Description: "Labels is a set of labels",
 						Elem: &schema.Schema{
@@ -299,9 +300,10 @@ func GenSchemaDatabaseV3() map[string]*schema.Schema {
 						Optional:    true,
 					},
 					// CACert is the PEM-encoded database CA certificate.
+					// DEPRECATED: Moved to TLS.CACert. DELETE IN 10.0.
 					"ca_cert": {
 						Type:        schema.TypeString,
-						Description: "CACert is the PEM-encoded database CA certificate.",
+						Description: "CACert is the PEM-encoded database CA certificate.   DEPRECATED: Moved to TLS.CACert. DELETE IN 10.0.",
 						Optional:    true,
 					},
 					// DynamicLabels is the database dynamic labels.
@@ -455,6 +457,57 @@ func GenSchemaDatabaseV3() map[string]*schema.Schema {
 							},
 						},
 					},
+					// Azure contains Azure specific database metadata.
+					"azure": {
+						Type:        schema.TypeList,
+						MaxItems:    1,
+						Description: "Azure contains Azure specific database metadata.",
+
+						Optional: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// Name is the Azure database server name.
+								"name": {
+									Type:        schema.TypeString,
+									Description: "Name is the Azure database server name.",
+									Optional:    true,
+								},
+							},
+						},
+					},
+					// TLS is the TLS configuration used when establishing connection to target database.
+					// Allows to provide custom CA cert or override server name.
+					"tls": {
+						Type:        schema.TypeList,
+						MaxItems:    1,
+						Description: "DatabaseTLS contains TLS configuration options.",
+
+						Optional: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// Mode is a TLS connection mode. See DatabaseTLSMode for details.
+								"mode": {
+									Type:        schema.TypeString,
+									Description: "Mode is a TLS connection mode. See DatabaseTLSMode for details.",
+									Optional:    true,
+								},
+								// CACert is an optional user provided CA certificate used for verifying
+								// database TLS connection.
+								"ca_cert": {
+									Type:        schema.TypeString,
+									Description: "CACert is an optional user provided CA certificate used for verifying  database TLS connection.",
+									Optional:    true,
+								},
+								// ServerName allows to provide custom hostname. This value will override the
+								// servername/hostname on a certificate during validation.
+								"server_name": {
+									Type:        schema.TypeString,
+									Description: "ServerName allows to provide custom hostname. This value will override the  servername/hostname on a certificate during validation.",
+									Optional:    true,
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -543,6 +596,7 @@ func GenSchemaMetaDatabaseV3() map[string]*accessors.SchemaMeta {
 					IsDuration: false,
 				},
 				// CACert is the PEM-encoded database CA certificate.
+				// DEPRECATED: Moved to TLS.CACert. DELETE IN 10.0.
 				"ca_cert": {
 					Name:       "CACert",
 					IsTime:     false,
@@ -660,6 +714,49 @@ func GenSchemaMetaDatabaseV3() map[string]*accessors.SchemaMeta {
 						},
 					},
 				},
+				// Azure contains Azure specific database metadata.
+				"azure": {
+					Name:       "Azure",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// Name is the Azure database server name.
+						"name": {
+							Name:       "Name",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// TLS is the TLS configuration used when establishing connection to target database.
+				// Allows to provide custom CA cert or override server name.
+				"tls": {
+					Name:       "TLS",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// Mode is a TLS connection mode. See DatabaseTLSMode for details.
+						"mode": {
+							Name:       "Mode",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// CACert is an optional user provided CA certificate used for verifying
+						// database TLS connection.
+						"ca_cert": {
+							Name:       "CACert",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// ServerName allows to provide custom hostname. This value will override the
+						// servername/hostname on a certificate during validation.
+						"server_name": {
+							Name:       "ServerName",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
 			},
 		},
 	}
@@ -724,6 +821,7 @@ func GenSchemaAppV3() map[string]*schema.Schema {
 					"labels": {
 
 						Optional:    true,
+						Computed:    true,
 						Type:        schema.TypeMap,
 						Description: "Labels is a set of labels",
 						Elem: &schema.Schema{
@@ -1433,6 +1531,13 @@ func GenSchemaClusterAuditConfigV2() map[string]*schema.Schema {
 						Description: "WriteTargetValue is the ratio of consumed write to provisioned capacity.",
 						Optional:    true,
 					},
+					// RetentionPeriod is the retention period for audit events.
+					"audit_retention_period": {
+						Type:             schema.TypeString,
+						Description:      "RetentionPeriod is the retention period for audit events.",
+						DiffSuppressFunc: SuppressDurationChange,
+						Optional:         true,
+					},
 				},
 			},
 		},
@@ -1577,6 +1682,12 @@ func GenSchemaMetaClusterAuditConfigV2() map[string]*accessors.SchemaMeta {
 					IsTime:     false,
 					IsDuration: false,
 				},
+				// RetentionPeriod is the retention period for audit events.
+				"audit_retention_period": {
+					Name:       "RetentionPeriod",
+					IsTime:     false,
+					IsDuration: true,
+				},
 			},
 		},
 	}
@@ -1669,11 +1780,11 @@ func GenSchemaClusterNetworkingConfigV2() map[string]*schema.Schema {
 						DiffSuppressFunc: SuppressDurationChange,
 						Optional:         true,
 					},
-					// KeepAliveInterval is the interval at which the server sends keep-alive messsages
+					// KeepAliveInterval is the interval at which the server sends keep-alive messages
 					// to the client.
 					"keep_alive_interval": {
 						Type:             schema.TypeString,
-						Description:      "KeepAliveInterval is the interval at which the server sends keep-alive messsages  to the client.",
+						Description:      "KeepAliveInterval is the interval at which the server sends keep-alive messages  to the client.",
 						DiffSuppressFunc: SuppressDurationChange,
 						Optional:         true,
 						Computed:         true,
@@ -1708,6 +1819,18 @@ func GenSchemaClusterNetworkingConfigV2() map[string]*schema.Schema {
 						Description:      "WebIdleTimeout sets global cluster default setting for the web UI idle  timeouts.",
 						DiffSuppressFunc: SuppressDurationChange,
 						Optional:         true,
+					},
+					// ProxyListenerMode is proxy listener mode used by Teleport Proxies.
+					"proxy_listener_mode": {
+						Type:        schema.TypeString,
+						Description: "ProxyListenerMode is proxy listener mode used by Teleport Proxies.",
+						Optional:    true,
+					},
+					// RoutingStrategy determines the strategy used to route to nodes.
+					"routing_strategy": {
+						Type:        schema.TypeString,
+						Description: "RoutingStrategy determines the strategy used to route to nodes.",
+						Optional:    true,
 					},
 				},
 			},
@@ -1785,7 +1908,7 @@ func GenSchemaMetaClusterNetworkingConfigV2() map[string]*accessors.SchemaMeta {
 					IsTime:     false,
 					IsDuration: true,
 				},
-				// KeepAliveInterval is the interval at which the server sends keep-alive messsages
+				// KeepAliveInterval is the interval at which the server sends keep-alive messages
 				// to the client.
 				"keep_alive_interval": {
 					Name:       "KeepAliveInterval",
@@ -1819,6 +1942,18 @@ func GenSchemaMetaClusterNetworkingConfigV2() map[string]*accessors.SchemaMeta {
 					Name:       "WebIdleTimeout",
 					IsTime:     false,
 					IsDuration: true,
+				},
+				// ProxyListenerMode is proxy listener mode used by Teleport Proxies.
+				"proxy_listener_mode": {
+					Name:       "ProxyListenerMode",
+					IsTime:     false,
+					IsDuration: false,
+				},
+				// RoutingStrategy determines the strategy used to route to nodes.
+				"routing_strategy": {
+					Name:       "RoutingStrategy",
+					IsTime:     false,
+					IsDuration: false,
 				},
 			},
 		},
@@ -2991,6 +3126,18 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 										Type: schema.TypeString,
 									},
 								},
+								// WindowsDesktopLogins is a list of desktop login names allowed/denied for Windows desktops.
+								"windows_desktop_logins": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "WindowsDesktopLogins is a list of desktop login names allowed/denied for Windows desktops.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// WindowsDesktopLabels are used in the RBAC system to allow/deny access to Windows desktops.
+								"windows_desktop_labels": SchemaLabels(),
 							},
 						},
 					},
@@ -3338,6 +3485,18 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 										Type: schema.TypeString,
 									},
 								},
+								// WindowsDesktopLogins is a list of desktop login names allowed/denied for Windows desktops.
+								"windows_desktop_logins": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "WindowsDesktopLogins is a list of desktop login names allowed/denied for Windows desktops.",
+									Elem: &schema.Schema{
+										Type: schema.TypeString,
+									},
+								},
+								// WindowsDesktopLabels are used in the RBAC system to allow/deny access to Windows desktops.
+								"windows_desktop_labels": SchemaLabels(),
 							},
 						},
 					},
@@ -3809,6 +3968,20 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 							IsTime:     false,
 							IsDuration: false,
 						},
+						// WindowsDesktopLogins is a list of desktop login names allowed/denied for Windows desktops.
+						"windows_desktop_logins": {
+							Name:       "WindowsDesktopLogins",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// WindowsDesktopLabels are used in the RBAC system to allow/deny access to Windows desktops.
+						"windows_desktop_labels": {
+							Name:          "WindowsDesktopLabels",
+							IsTime:        false,
+							IsDuration:    false,
+							FromTerraform: FromTerraformLabels,
+							ToTerraform:   ToTerraformLabels,
+						},
 					},
 				},
 				// Deny is the set of conditions evaluated to deny access. Deny takes priority
@@ -4099,6 +4272,20 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 							Name:       "AWSRoleARNs",
 							IsTime:     false,
 							IsDuration: false,
+						},
+						// WindowsDesktopLogins is a list of desktop login names allowed/denied for Windows desktops.
+						"windows_desktop_logins": {
+							Name:       "WindowsDesktopLogins",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// WindowsDesktopLabels are used in the RBAC system to allow/deny access to Windows desktops.
+						"windows_desktop_labels": {
+							Name:          "WindowsDesktopLabels",
+							IsTime:        false,
+							IsDuration:    false,
+							FromTerraform: FromTerraformLabels,
+							ToTerraform:   ToTerraformLabels,
 						},
 					},
 				},
@@ -4541,6 +4728,7 @@ func GenSchemaOIDCConnectorV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "ClientSecret is used to authenticate the client.",
 						Optional:    true,
+						Sensitive:   true,
 					},
 					// RedirectURL is a URL that will redirect the client's browser
 					// back to the identity provider after successful authentication.
@@ -4630,6 +4818,7 @@ func GenSchemaOIDCConnectorV2() map[string]*schema.Schema {
 						Type:        schema.TypeString,
 						Description: "GoogleServiceAccount is a string containing google service account credentials.",
 						Optional:    true,
+						Sensitive:   true,
 					},
 					// GoogleAdminEmail is the email of a google admin to impersonate.
 					"google_admin_email": {
