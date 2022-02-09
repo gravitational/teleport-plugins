@@ -1348,7 +1348,7 @@ func GenSchemaMetaProvisionTokenV2() map[string]*accessors.SchemaMeta {
 				},
 
 				"allow": {
-					Name:       "Allow",
+					Name:       "allow",
 					IsTime:     false,
 					IsDuration: false,
 					Nested: map[string]*accessors.SchemaMeta{
