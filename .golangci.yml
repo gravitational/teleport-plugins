@@ -29,6 +29,6 @@ output:
 
 run:
   skip-dirs:
-    - go/pkg/mod
+    - pkg/mod
   skip-dirs-use-default: false
   timeout: 5m
