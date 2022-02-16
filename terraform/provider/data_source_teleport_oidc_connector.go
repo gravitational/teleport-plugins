@@ -30,7 +30,7 @@ import (
 func dataSourceTeleportOIDCConnector() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceTeleportOIDCConnectorRead,
-		Schema:      tfschema.SchemaOIDCConnectorV2,
+		Schema:      tfschema.SchemaOIDCConnectorV3,
 	}
 }
 
@@ -48,12 +48,12 @@ func dataSourceTeleportOIDCConnectorRead(ctx context.Context, d *schema.Resource
 		return diagFromErr(describeErr(err, "oidc"))
 	}
 
-	o2, ok := o.(*types.OIDCConnectorV2)
+	o2, ok := o.(*types.OIDCConnectorV3)
 	if !ok {
-		return diagFromErr(trace.Errorf("can not convert %T to *types.OIDCConnectorV2", o))
+		return diagFromErr(trace.Errorf("can not convert %T to *types.OIDCConnectorV3", o))
 	}
 
-	err = tfschema.ToTerraformOIDCConnectorV2(o2, d)
+	err = tfschema.ToTerraformOIDCConnectorV3(o2, d)
 	if err != nil {
 		return diagFromErr(err)
 	}

@@ -76,10 +76,10 @@ var (
 	SchemaUserV2 = GenSchemaUserV2()
 	// SchemaMetaUserV2 is schema metadata for UserV2 is version 2 resource spec of the user
 	SchemaMetaUserV2 = GenSchemaMetaUserV2()
-	// SchemaOIDCConnectorV2 is schema for OIDCConnectorV2 represents an OIDC connector.
-	SchemaOIDCConnectorV2 = GenSchemaOIDCConnectorV2()
-	// SchemaMetaOIDCConnectorV2 is schema metadata for OIDCConnectorV2 represents an OIDC connector.
-	SchemaMetaOIDCConnectorV2 = GenSchemaMetaOIDCConnectorV2()
+	// SchemaOIDCConnectorV3 is schema for OIDCConnectorV3 represents an OIDC connector.
+	SchemaOIDCConnectorV3 = GenSchemaOIDCConnectorV3()
+	// SchemaMetaOIDCConnectorV3 is schema metadata for OIDCConnectorV3 represents an OIDC connector.
+	SchemaMetaOIDCConnectorV3 = GenSchemaMetaOIDCConnectorV3()
 	// SchemaSAMLConnectorV2 is schema for SAMLConnectorV2 represents a SAML connector.
 	SchemaSAMLConnectorV2 = GenSchemaSAMLConnectorV2()
 	// SchemaMetaSAMLConnectorV2 is schema metadata for SAMLConnectorV2 represents a SAML connector.
@@ -171,12 +171,12 @@ func FromTerraformUserV2(data *schema.ResourceData, obj *types.UserV2) error {
 func ToTerraformUserV2(obj *types.UserV2, data *schema.ResourceData) error {
 	return accessors.ToTerraform(obj, data, SchemaUserV2, SchemaMetaUserV2)
 }
-func FromTerraformOIDCConnectorV2(data *schema.ResourceData, obj *types.OIDCConnectorV2) error {
-	return accessors.FromTerraform(obj, data, SchemaOIDCConnectorV2, SchemaMetaOIDCConnectorV2)
+func FromTerraformOIDCConnectorV3(data *schema.ResourceData, obj *types.OIDCConnectorV3) error {
+	return accessors.FromTerraform(obj, data, SchemaOIDCConnectorV3, SchemaMetaOIDCConnectorV3)
 }
 
-func ToTerraformOIDCConnectorV2(obj *types.OIDCConnectorV2, data *schema.ResourceData) error {
-	return accessors.ToTerraform(obj, data, SchemaOIDCConnectorV2, SchemaMetaOIDCConnectorV2)
+func ToTerraformOIDCConnectorV3(obj *types.OIDCConnectorV3, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaOIDCConnectorV3, SchemaMetaOIDCConnectorV3)
 }
 func FromTerraformSAMLConnectorV2(data *schema.ResourceData, obj *types.SAMLConnectorV2) error {
 	return accessors.FromTerraform(obj, data, SchemaSAMLConnectorV2, SchemaMetaSAMLConnectorV2)
@@ -1222,46 +1222,64 @@ func GenSchemaProvisionTokenV2() map[string]*schema.Schema {
 							Type: schema.TypeString,
 						},
 					},
-
+					// Allow is a list of TokenRules, nodes using this token must match one
+					// allow rule to use this token.
 					"allow": {
 
 						Optional:    true,
 						Type:        schema.TypeList,
-						Description: "",
+						Description: "Allow is a list of TokenRules, nodes using this token must match one  allow rule to use this token.",
 						Elem: &schema.Resource{
 							Schema: map[string]*schema.Schema{
-
+								// AWSAccount is the AWS account ID.
 								"aws_account": {
 									Type:        schema.TypeString,
-									Description: "",
+									Description: "AWSAccount is the AWS account ID.",
 									Optional:    true,
 								},
-
+								// AWSRegions is used for the EC2 join method and is a list of AWS regions a
+								// node is allowed to join from.
 								"aws_regions": {
 
 									Optional:    true,
 									Type:        schema.TypeList,
-									Description: "",
+									Description: "AWSRegions is used for the EC2 join method and is a list of AWS regions a  node is allowed to join from.",
 									Elem: &schema.Schema{
 										Type: schema.TypeString,
 									},
 								},
-
+								// AWSRole is used for the EC2 join method and is the the ARN of the AWS
+								// role that the auth server will assume in order to call the ec2 API.
 								"aws_role": {
 									Type:        schema.TypeString,
-									Description: "",
+									Description: "AWSRole is used for the EC2 join method and is the the ARN of the AWS  role that the auth server will assume in order to call the ec2 API.",
+									Optional:    true,
+								},
+								// AWSARN is used for the IAM join method, the AWS identity of joining nodes
+								// must match this ARN. Supports wildcards "*" and "?".
+								"aws_arn": {
+									Type:        schema.TypeString,
+									Description: "AWSARN is used for the IAM join method, the AWS identity of joining nodes  must match this ARN. Supports wildcards \"*\" and \"?\".",
 									Optional:    true,
 								},
 							},
 						},
 					},
-
+					// AWSIIDTTL is the TTL to use for AWS EC2 Instance Identity Documents used
+					// to join the cluster with this token.
 					"aws_iid_ttl": {
 						Type:             schema.TypeString,
-						Description:      "",
+						Description:      "AWSIIDTTL is the TTL to use for AWS EC2 Instance Identity Documents used  to join the cluster with this token.",
 						DiffSuppressFunc: SuppressDurationChange,
 						Optional:         true,
 						Computed:         true,
+					},
+					// JoinMethod is the joining method required in order to use this token.
+					// Supported joining methods include "token", "ec2", and "iam".
+					"join_method": {
+						Type:        schema.TypeString,
+						Description: "JoinMethod is the joining method required in order to use this token.  Supported joining methods include \"token\", \"ec2\", and \"iam\".",
+						Optional:    true,
 					},
 				},
 			},
@@ -1346,37 +1364,55 @@ func GenSchemaMetaProvisionTokenV2() map[string]*accessors.SchemaMeta {
 					IsTime:     false,
 					IsDuration: false,
 				},
-
+				// Allow is a list of TokenRules, nodes using this token must match one
+				// allow rule to use this token.
 				"allow": {
-					Name:       "allow",
+					Name:       "Allow",
 					IsTime:     false,
 					IsDuration: false,
 					Nested: map[string]*accessors.SchemaMeta{
-
+						// AWSAccount is the AWS account ID.
 						"aws_account": {
 							Name:       "AWSAccount",
 							IsTime:     false,
 							IsDuration: false,
 						},
-
+						// AWSRegions is used for the EC2 join method and is a list of AWS regions a
+						// node is allowed to join from.
 						"aws_regions": {
 							Name:       "AWSRegions",
 							IsTime:     false,
 							IsDuration: false,
 						},
-
+						// AWSRole is used for the EC2 join method and is the the ARN of the AWS
+						// role that the auth server will assume in order to call the ec2 API.
 						"aws_role": {
 							Name:       "AWSRole",
 							IsTime:     false,
 							IsDuration: false,
 						},
+						// AWSARN is used for the IAM join method, the AWS identity of joining nodes
+						// must match this ARN. Supports wildcards "*" and "?".
+						"aws_arn": {
+							Name:       "AWSARN",
+							IsTime:     false,
+							IsDuration: false,
+						},
 					},
 				},
-
+				// AWSIIDTTL is the TTL to use for AWS EC2 Instance Identity Documents used
+				// to join the cluster with this token.
 				"aws_iid_ttl": {
 					Name:       "AWSIIDTTL",
 					IsTime:     false,
 					IsDuration: true,
+				},
+				// JoinMethod is the joining method required in order to use this token.
+				// Supported joining methods include "token", "ec2", and "iam".
+				"join_method": {
+					Name:       "JoinMethod",
+					IsTime:     false,
+					IsDuration: false,
 				},
 			},
 		},
@@ -4625,10 +4661,10 @@ func GenSchemaMetaUserV2() map[string]*accessors.SchemaMeta {
 	}
 }
 
-// SchemaOIDCConnectorV2 returns schema for OIDCConnectorV2
+// SchemaOIDCConnectorV3 returns schema for OIDCConnectorV3
 //
-// OIDCConnectorV2 represents an OIDC connector.
-func GenSchemaOIDCConnectorV2() map[string]*schema.Schema {
+// OIDCConnectorV3 represents an OIDC connector.
+func GenSchemaOIDCConnectorV3() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		// Kind is a resource kind.
 		"kind": {
@@ -4706,7 +4742,7 @@ func GenSchemaOIDCConnectorV2() map[string]*schema.Schema {
 		"spec": {
 			Type:        schema.TypeList,
 			MaxItems:    1,
-			Description: "OIDCConnectorSpecV2 is an OIDC connector specification.   It specifies configuration for Open ID Connect compatible external  identity provider: https://openid.net/specs/openid-connect-core-1_0.html",
+			Description: "OIDCConnectorSpecV3 is an OIDC connector specification.   It specifies configuration for Open ID Connect compatible external  identity provider: https://openid.net/specs/openid-connect-core-1_0.html",
 
 			Required: true,
 			Elem: &schema.Resource{
@@ -4832,10 +4868,10 @@ func GenSchemaOIDCConnectorV2() map[string]*schema.Schema {
 	}
 }
 
-// GenSchemaMetaOIDCConnectorV2 returns schema for OIDCConnectorV2
+// GenSchemaMetaOIDCConnectorV3 returns schema for OIDCConnectorV3
 //
-// OIDCConnectorV2 represents an OIDC connector.
-func GenSchemaMetaOIDCConnectorV2() map[string]*accessors.SchemaMeta {
+// OIDCConnectorV3 represents an OIDC connector.
+func GenSchemaMetaOIDCConnectorV3() map[string]*accessors.SchemaMeta {
 	return map[string]*accessors.SchemaMeta{
 		// Kind is a resource kind.
 		"kind": {

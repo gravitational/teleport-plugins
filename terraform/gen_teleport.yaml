@@ -14,7 +14,7 @@ types:
     - "types.ClusterNetworkingConfigV2"
     - "types.DatabaseV3"
     - "types.GithubConnectorV3"
-    - "types.OIDCConnectorV2"
+    - "types.OIDCConnectorV3"
     - "types.ProvisionTokenV2"    
     - "types.RoleV4"
     - "types.SAMLConnectorV2"
@@ -92,9 +92,9 @@ computed_fields:
     - "types.GithubConnectorV3.Metadata.Namespace"
 
     # OIDC connector
-    - "types.OIDCConnectorV2.Version"
-    - "types.OIDCConnectorV2.Kind"
-    - "types.OIDCConnectorV2.Metadata.Namespace"
+    - "types.OIDCConnectorV3.Version"
+    - "types.OIDCConnectorV3.Kind"
+    - "types.OIDCConnectorV3.Metadata.Namespace"
 
     # Provision Token
     - "types.ProvisionTokenV2.Kind"
@@ -171,7 +171,7 @@ required_fields:
     - "types.GithubConnectorV3.Spec.TeamsToLogins.Logins"
 
     # OIDC connector
-    - "types.OIDCConnectorV2.Spec"
+    - "types.OIDCConnectorV3.Spec"
 
     # Provision token
     - "types.ProvisionTokenV2.Spec"
@@ -216,8 +216,8 @@ sensitive:
     - "types.SAMLConnectorV2.Spec.EncryptionKeyPair.PrivateKey"
     - "types.SAMLConnectorV2.Spec.EntityDescriptor"    
     - "types.GithubConnectorV3.Spec.ClientSecret"
-    - "types.OIDCConnectorV2.Spec.ClientSecret"
-    - "types.OIDCConnectorV2.Spec.GoogleServiceAccount"
+    - "types.OIDCConnectorV3.Spec.ClientSecret"
+    - "types.OIDCConnectorV3.Spec.GoogleServiceAccount"
 
 # These funcs will be used as a state funcs for a fields
 state_func:
