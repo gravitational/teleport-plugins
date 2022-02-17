@@ -1,4 +1,4 @@
-VERSION=8.3.0
+VERSION=8.3.1
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-email
