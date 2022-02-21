@@ -1,0 +1,5 @@
+# Change this path to an actual identity file path on your machine
+identity_file_path = "/etc/teleport-plugins/terraform-identity"
+addr = "localhost:3025" # "yourtenant.teleport.sh:443" for Teleport Cloud
+saml_entity_descriptor = "" # SAML entity descriptor
+github_secret = "" # Github app secreet

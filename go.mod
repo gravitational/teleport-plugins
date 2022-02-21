@@ -21,7 +21,10 @@ require (
 	github.com/gravitational/teleport/api v0.0.0-20220110180007-3dc269bef5ea // tag v8.1.0
 	github.com/gravitational/trace v1.1.16-0.20210609220119-4855e69c89fc
 	github.com/hashicorp/go-version v1.3.0
-	github.com/hashicorp/terraform-plugin-sdk/v2 v2.8.0
+	github.com/hashicorp/terraform-plugin-framework v0.0.0-00010101000000-000000000000
+	github.com/hashicorp/terraform-plugin-go v0.7.0
+	github.com/hashicorp/terraform-plugin-log v0.2.1 // indirect
+	github.com/hashicorp/terraform-plugin-sdk/v2 v2.10.1
 	github.com/jonboulle/clockwork v0.2.2
 	github.com/json-iterator/go v1.1.10
 	github.com/julienschmidt/httprouter v1.3.0
@@ -38,7 +41,8 @@ require (
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
 	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
 	google.golang.org/genproto v0.0.0-20210223151946-22b48be4551b // indirect
-	google.golang.org/grpc v1.32.0
+	google.golang.org/grpc v1.43.0
+	google.golang.org/protobuf v1.25.0
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/mail.v2 v2.3.1
 	gopkg.in/resty.v1 v1.12.0
@@ -47,5 +51,6 @@ require (
 
 replace (
 	github.com/gogo/protobuf => github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf
+	github.com/hashicorp/terraform-plugin-framework => github.com/gzigzigzeo/terraform-plugin-framework v0.4.3-0.20220207220146-5ffb5ae831a5
 	github.com/julienschmidt/httprouter => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 )

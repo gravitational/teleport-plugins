@@ -8,6 +8,6 @@ build/*
 
 example/vars.tfvars
 
-tf
-
 tmp
+
+*.log
