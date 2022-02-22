@@ -1,26 +1,60 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/pelletier/go-toml"
 )
 
 // Config stores the full configuration for the teleport-slack plugin to run.
 type Config struct {
-	Teleport lib.TeleportConfig `toml:"teleport"`
-	Slack    SlackConfig        `toml:"slack"`
-	Log      logger.Config      `toml:"log"`
+	Teleport      lib.TeleportConfig
+	Slack         SlackConfig
+	RecipientsMap RecipientsMap `toml:"recipients_map"`
+	Log           logger.Config
 }
 
 // SlackConfig holds Slack-specific configuration options.
 type SlackConfig struct {
-	Token      string   `toml:"token"`
-	Recipients []string `toml:"recipients"`
+	Token      string
+	Recipients []string
 	APIURL     string
+}
+
+// RecipientsMap is a mapping of roles to recipient(s) of access requests for that role.
+type RecipientsMap map[string][]string
+
+func (r *RecipientsMap) UnmarshalTOML(in interface{}) error {
+	*r = make(RecipientsMap)
+
+	recipientsMap, ok := in.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("unexpected type for recipients %T", in)
+	}
+
+	for k, v := range recipientsMap {
+		switch val := v.(type) {
+		case string:
+			(*r)[k] = []string{val}
+		case []interface{}:
+			for _, str := range val {
+				str, ok := str.(string)
+				if !ok {
+					return fmt.Errorf("unexpected type for recipients value %T", v)
+				}
+				(*r)[k] = append((*r)[k], str)
+			}
+		default:
+			return fmt.Errorf("unexpected type for recipients value %T", v)
+		}
+	}
+
+	return nil
 }
 
 const exampleConfig = `# Example slack plugin configuration TOML file
@@ -59,16 +93,19 @@ func LoadConfig(filepath string) (*Config, error) {
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
+
 	conf := &Config{}
 	if err := t.Unmarshal(conf); err != nil {
 		return nil, trace.Wrap(err)
 	}
+
 	if strings.HasPrefix(conf.Slack.Token, "/") {
 		conf.Slack.Token, err = lib.ReadPassword(conf.Slack.Token)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
 	}
+
 	if err := conf.CheckAndSetDefaults(); err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -91,5 +128,22 @@ func (c *Config) CheckAndSetDefaults() error {
 	if c.Log.Severity == "" {
 		c.Log.Severity = "info"
 	}
+
+	if c.Slack.Recipients != nil {
+		if c.RecipientsMap != nil {
+			return trace.BadParameter("provide either slack.recipients or recipients_map, not both.")
+		}
+
+		c.RecipientsMap = RecipientsMap{
+			types.Wildcard: c.Slack.Recipients,
+		}
+	}
+
+	if c.RecipientsMap == nil {
+		return trace.BadParameter("missing required value recipients_map.")
+	} else if c.RecipientsMap[types.Wildcard] == nil {
+		return trace.BadParameter("missing required value recipients_map[%q].", types.Wildcard)
+	}
+
 	return nil
 }

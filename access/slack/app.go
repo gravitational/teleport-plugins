@@ -231,7 +231,7 @@ func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) err
 	}
 
 	if isNew {
-		if channels := a.getMessageRecipients(ctx, req.GetSuggestedReviewers()); len(channels) > 0 {
+		if channels := a.getMessageRecipients(ctx, req); len(channels) > 0 {
 			if err := a.broadcastMessages(ctx, channels, reqID, reqData); err != nil {
 				return trace.Wrap(err)
 			}
@@ -362,36 +362,40 @@ func (a *App) tryLookupDirectChannelByEmail(ctx context.Context, userEmail strin
 	return channel
 }
 
-func (a *App) getMessageRecipients(ctx context.Context, suggestedReviewers []string) []string {
+func (a *App) getMessageRecipients(ctx context.Context, req types.AccessRequest) []string {
 	log := logger.Get(ctx)
 
-	channelSet := stringset.NewWithCap(len(suggestedReviewers) + len(a.conf.Slack.Recipients))
+	baseRecipients, ok := a.conf.RecipientsMap[req.GetName()]
+	if !ok {
+		// If there is no recipients map entry for the given role, default to wildcard.
+		baseRecipients = a.conf.RecipientsMap[types.Wildcard]
+	}
 
-	for _, recipient := range suggestedReviewers {
+	channelSet := stringset.NewWithCap(len(req.GetSuggestedReviewers()) + len(baseRecipients))
+
+	for _, recipient := range req.GetSuggestedReviewers() {
 		// We require SuggestedReviewers to contain email-like data. Anything else is not supported.
 		if !lib.IsEmail(recipient) {
 			log.Warningf("Failed to notify a suggested reviewer: %q does not look like a valid email", recipient)
 			continue
 		}
+
 		channel := a.tryLookupDirectChannelByEmail(ctx, recipient)
-		if channel == "" {
-			continue
+		if channel != "" {
+			channelSet.Add(channel)
 		}
-		channelSet.Add(channel)
 	}
 
-	for _, recipient := range a.conf.Slack.Recipients {
-		var channel string
+	for _, recipient := range baseRecipients {
 		// Recipients from config file could contain either email or channel name or channel ID. It's up to user what format to use.
+		channel := recipient
 		if lib.IsEmail(recipient) {
 			channel = a.tryLookupDirectChannelByEmail(ctx, recipient)
-		} else {
-			channel = recipient
 		}
-		if channel == "" {
-			continue
+
+		if channel != "" {
+			channelSet.Add(channel)
 		}
-		channelSet.Add(channel)
 	}
 
 	return channelSet.ToSlice()
