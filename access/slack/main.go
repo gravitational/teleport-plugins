@@ -30,6 +30,9 @@ import (
 	"github.com/gravitational/trace"
 )
 
+//go:embed example_config.toml
+var exampleConfig string
+
 func main() {
 	logger.Init()
 	app := kingpin.New("teleport-slack", "Teleport plugin for access requests approval via Slack.")

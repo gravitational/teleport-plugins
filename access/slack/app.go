@@ -365,10 +365,10 @@ func (a *App) tryLookupDirectChannelByEmail(ctx context.Context, userEmail strin
 func (a *App) getMessageRecipients(ctx context.Context, req types.AccessRequest) []string {
 	log := logger.Get(ctx)
 
-	baseRecipients, ok := a.conf.RecipientsMap[req.GetName()]
+	baseRecipients, ok := a.conf.Recipients[req.GetName()]
 	if !ok {
 		// If there is no recipients map entry for the given role, default to wildcard.
-		baseRecipients = a.conf.RecipientsMap[types.Wildcard]
+		baseRecipients = a.conf.Recipients[types.Wildcard]
 	}
 
 	channelSet := stringset.NewWithCap(len(req.GetSuggestedReviewers()) + len(baseRecipients))

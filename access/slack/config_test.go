@@ -29,12 +29,12 @@ func TestRecipients(t *testing.T) {
 			},
 		},
 		{
-			desc: "test recipients_map",
+			desc: "test roles_to_recipients",
 			in: `
 			[slack]
 			token = "token"
 
-			[recipients_map]
+			[roles_to_recipients]
 			"dev" = ["dev-channel","admin-channel"]
 			"*" = "admin-channel"
 			`,
@@ -44,7 +44,7 @@ func TestRecipients(t *testing.T) {
 			},
 		},
 		{
-			desc: "test no recipients or recipients_map",
+			desc: "test no recipients or roles_to_recipients",
 			in: `
 			[slack]
 			token = "token"
@@ -55,13 +55,13 @@ func TestRecipients(t *testing.T) {
 			},
 		},
 		{
-			desc: "test recipients and recipients_map",
+			desc: "test recipients and roles_to_recipients",
 			in: `
 			[slack]
 			token = "token"
 			recipients = ["dev-channel","admin-channel"]
 
-			[recipients_map]
+			[roles_to_recipients]
 			"dev" = ["dev-channel","admin-channel"]
 			"*" = "admin-channel"
 			`,
@@ -85,7 +85,7 @@ func TestRecipients(t *testing.T) {
 			}
 
 			require.NoError(t, err)
-			require.Equal(t, tc.expectRecipients, c.RecipientsMap)
+			require.Equal(t, tc.expectRecipients, c.Recipients)
 		})
 	}
 }

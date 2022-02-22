@@ -13,20 +13,21 @@ import (
 
 // Config stores the full configuration for the teleport-slack plugin to run.
 type Config struct {
-	Teleport      lib.TeleportConfig
-	Slack         SlackConfig
-	RecipientsMap RecipientsMap `toml:"recipients_map"`
-	Log           logger.Config
+	Teleport   lib.TeleportConfig
+	Slack      SlackConfig
+	Recipients RecipientsMap `toml:"roles_to_recipients"`
+	Log        logger.Config
 }
 
 // SlackConfig holds Slack-specific configuration options.
 type SlackConfig struct {
-	Token      string
+	Token string
+	// DELETE IN 10.0.0 (Joerger) - use "roles_to_recipients["*"]" instead
 	Recipients []string
 	APIURL     string
 }
 
-// RecipientsMap is a mapping of roles to recipient(s) of access requests for that role.
+// RecipientsMap is a mapping of roles to recipient(s).
 type RecipientsMap map[string][]string
 
 func (r *RecipientsMap) UnmarshalTOML(in interface{}) error {
@@ -56,35 +57,6 @@ func (r *RecipientsMap) UnmarshalTOML(in interface{}) error {
 
 	return nil
 }
-
-const exampleConfig = `# Example slack plugin configuration TOML file
-
-[teleport]
-# Teleport Auth/Proxy Server address.
-#
-# Should be port 3025 for Auth Server and 3080 or 443 for Proxy.
-# For Teleport Cloud, should be in the form "your-account.teleport.sh:443".
-addr = "example.com:3025"
-
-# Credentials.
-#
-# When using --format=file:
-# identity = "/var/lib/teleport/plugins/slack/auth_id"    # Identity file
-#
-# When using --format=tls:
-# client_key = "/var/lib/teleport/plugins/slack/auth.key" # Teleport TLS secret key
-# client_crt = "/var/lib/teleport/plugins/slack/auth.crt" # Teleport TLS certificate
-# root_cas = "/var/lib/teleport/plugins/slack/auth.cas"   # Teleport CA certs
-
-[slack]
-token = "xoxb-11xx"                                 # Slack Bot OAuth token
-# recipients = ["person@email.com","YYYYYYY"]       # Optional Slack Rooms 
-                                                    # Can also set suggested_reviewers for each role
-
-[log]
-output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/slack.log"
-severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
-`
 
 // LoadConfig reads the config file, initializes a new Config struct object, and returns it.
 // Optionally returns an error if the file is not readable, or if file format is invalid.
@@ -130,19 +102,19 @@ func (c *Config) CheckAndSetDefaults() error {
 	}
 
 	if c.Slack.Recipients != nil {
-		if c.RecipientsMap != nil {
-			return trace.BadParameter("provide either slack.recipients or recipients_map, not both.")
+		if c.Recipients != nil {
+			return trace.BadParameter("provide either slack.recipients or roles_to_recipients, not both.")
 		}
 
-		c.RecipientsMap = RecipientsMap{
+		c.Recipients = RecipientsMap{
 			types.Wildcard: c.Slack.Recipients,
 		}
 	}
 
-	if c.RecipientsMap == nil {
-		return trace.BadParameter("missing required value recipients_map.")
-	} else if c.RecipientsMap[types.Wildcard] == nil {
-		return trace.BadParameter("missing required value recipients_map[%q].", types.Wildcard)
+	if c.Recipients == nil {
+		return trace.BadParameter("missing required value roles_to_recipients.")
+	} else if c.Recipients[types.Wildcard] == nil {
+		return trace.BadParameter("missing required value roles_to_recipients[%q].", types.Wildcard)
 	}
 
 	return nil
