@@ -15,9 +15,9 @@ For this quickstart, we assume you've already setup a [Teleport cluster](https:/
 
 ### Authorization
 
-The Teleport Slack Plugin uses the Teleport API *Add link* to connect to a
-Teleport Auth Server. In order to have its requests authorized, we need to
-create a new User and Role for the plugin.
+The Teleport Slack Plugin uses the [Teleport Auth API](https://goteleport.com/docs/api/introduction/) 
+to connect to a Teleport Auth Server. In order to have its requests
+authorized, we need to create a new User and Role for the plugin.
 
 #### Create User and Role
 
@@ -65,8 +65,8 @@ $ tctl auth sign --format=file --user=access-plugin --out=access-plugin-identity
 ```
 
 The above execution should result in a single identity file named
-`access-plugin-identity`. We'll reference this file later when
-[configuring Teleport-Plugins](#configuration-file).
+`access-plugin-identity`. We'll reference this file later when we
+update the [configuration file](#configuration-file).
 
 _Note: by default, tctl auth sign produces certificates with a relatively short
 lifetime. For production deployments, the --ttl flag can be used to ensure a

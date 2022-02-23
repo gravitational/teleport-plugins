@@ -114,7 +114,7 @@ func (c *Config) CheckAndSetDefaults() error {
 	if c.Recipients == nil {
 		return trace.BadParameter("missing required value role_to_recipients.")
 	} else if c.Recipients[types.Wildcard] == nil {
-		return trace.BadParameter("missing required value role_to_recipients[%q].", types.Wildcard)
+		return trace.BadParameter("missing required value role_to_recipients[%v].", types.Wildcard)
 	}
 
 	return nil
