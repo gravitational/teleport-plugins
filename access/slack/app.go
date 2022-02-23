@@ -365,13 +365,17 @@ func (a *App) tryLookupDirectChannelByEmail(ctx context.Context, userEmail strin
 func (a *App) getMessageRecipients(ctx context.Context, req types.AccessRequest) []string {
 	log := logger.Get(ctx)
 
-	baseRecipients, ok := a.conf.Recipients[req.GetName()]
-	if !ok {
-		// If there is no recipients map entry for the given role, default to wildcard.
-		baseRecipients = a.conf.Recipients[types.Wildcard]
+	var recipients []string
+	for _, role := range req.GetRoles() {
+		recipients = append(recipients, a.conf.Recipients[role]...)
 	}
 
-	channelSet := stringset.NewWithCap(len(req.GetSuggestedReviewers()) + len(baseRecipients))
+	// If there are no recipient map entries for the requested roles, default to wildcard.
+	if len(recipients) == 0 {
+		recipients = a.conf.Recipients[types.Wildcard]
+	}
+
+	channelSet := stringset.NewWithCap(len(req.GetSuggestedReviewers()) + len(recipients))
 
 	for _, recipient := range req.GetSuggestedReviewers() {
 		// We require SuggestedReviewers to contain email-like data. Anything else is not supported.
@@ -386,7 +390,7 @@ func (a *App) getMessageRecipients(ctx context.Context, req types.AccessRequest)
 		}
 	}
 
-	for _, recipient := range baseRecipients {
+	for _, recipient := range recipients {
 		// Recipients from config file could contain either email or channel name or channel ID. It's up to user what format to use.
 		channel := recipient
 		if lib.IsEmail(recipient) {

@@ -23,7 +23,7 @@
 # Slack Bot OAuth token
 token = "xoxb-11xx"
 
-[roles_to_recipients]
+[role_to_recipients]
 # Map roles to recipients.
 #
 # Provide slack user_email/channel recipients for access requests for specific roles. 

@@ -29,12 +29,12 @@ func TestRecipients(t *testing.T) {
 			},
 		},
 		{
-			desc: "test roles_to_recipients",
+			desc: "test role_to_recipients",
 			in: `
 			[slack]
 			token = "token"
 
-			[roles_to_recipients]
+			[role_to_recipients]
 			"dev" = ["dev-channel","admin-channel"]
 			"*" = "admin-channel"
 			`,
@@ -44,7 +44,7 @@ func TestRecipients(t *testing.T) {
 			},
 		},
 		{
-			desc: "test no recipients or roles_to_recipients",
+			desc: "test no recipients or role_to_recipients",
 			in: `
 			[slack]
 			token = "token"
@@ -55,13 +55,13 @@ func TestRecipients(t *testing.T) {
 			},
 		},
 		{
-			desc: "test recipients and roles_to_recipients",
+			desc: "test recipients and role_to_recipients",
 			in: `
 			[slack]
 			token = "token"
 			recipients = ["dev-channel","admin-channel"]
 
-			[roles_to_recipients]
+			[role_to_recipients]
 			"dev" = ["dev-channel","admin-channel"]
 			"*" = "admin-channel"
 			`,

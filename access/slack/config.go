@@ -15,14 +15,14 @@ import (
 type Config struct {
 	Teleport   lib.TeleportConfig
 	Slack      SlackConfig
-	Recipients RecipientsMap `toml:"roles_to_recipients"`
+	Recipients RecipientsMap `toml:"role_to_recipients"`
 	Log        logger.Config
 }
 
 // SlackConfig holds Slack-specific configuration options.
 type SlackConfig struct {
 	Token string
-	// DELETE IN 10.0.0 (Joerger) - use "roles_to_recipients["*"]" instead
+	// DELETE IN 10.0.0 (Joerger) - use "role_to_recipients["*"]" instead
 	Recipients []string
 	APIURL     string
 }
@@ -103,7 +103,7 @@ func (c *Config) CheckAndSetDefaults() error {
 
 	if c.Slack.Recipients != nil {
 		if c.Recipients != nil {
-			return trace.BadParameter("provide either slack.recipients or roles_to_recipients, not both.")
+			return trace.BadParameter("provide either slack.recipients or role_to_recipients, not both.")
 		}
 
 		c.Recipients = RecipientsMap{
@@ -112,9 +112,9 @@ func (c *Config) CheckAndSetDefaults() error {
 	}
 
 	if c.Recipients == nil {
-		return trace.BadParameter("missing required value roles_to_recipients.")
+		return trace.BadParameter("missing required value role_to_recipients.")
 	} else if c.Recipients[types.Wildcard] == nil {
-		return trace.BadParameter("missing required value roles_to_recipients[%q].", types.Wildcard)
+		return trace.BadParameter("missing required value role_to_recipients[%q].", types.Wildcard)
 	}
 
 	return nil

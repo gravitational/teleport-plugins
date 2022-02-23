@@ -148,7 +148,7 @@ This section is used to connect to your Slack workspace.
 
 `token`: set this to the token found in the [Obtain OAuth Token](#obtain-oauth-token) section
 
-#### [roles_to_recipients]
+#### [role_to_recipients]
 
 This section is used to configure where the plugin will send access requests
 in the Slack workspace.
@@ -156,7 +156,7 @@ in the Slack workspace.
 Provide one or more mappings from a role to recipient(s). Each recipient must be
 a slack email or channel. Example:
 ```toml
-[roles_to_recipients]
+[role_to_recipients]
 "*" = ["admin@email.com", "admin-slack-channel"]
 "dev" = "dev-slack-channel"
 ```
