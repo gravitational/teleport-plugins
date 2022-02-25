@@ -13,7 +13,7 @@ You must have Go version 1.15 or higher to build.
 Run `make access-slack` from the repository root to build the slack plugin. Then
 you can find it in `./access/slack/build/teleport-slack`.
 
-Detailed install steps are provided within the [install instructions](INSTALL.md).
+Detailed install steps are provided in our [docs](https://goteleport.com/docs/enterprise/workflow/ssh-approval-slack/).
 
 ## Usage
 
@@ -24,5 +24,3 @@ in the channel specified under `slack.channel`.
 
 Select `Deny` and verify that the request was indeed denied using
 `tctl request ls`.
-
-
