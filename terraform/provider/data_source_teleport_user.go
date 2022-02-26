@@ -34,7 +34,7 @@ type dataSourceTeleportUserType struct{}
 
 // dataSourceTeleportUser is the resource
 type dataSourceTeleportUser struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the data source schema
@@ -45,7 +45,7 @@ func (r dataSourceTeleportUserType) GetSchema(ctx context.Context) (tfsdk.Schema
 // NewDataSource creates the empty data source
 func (r dataSourceTeleportUserType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
 	return dataSourceTeleportUser{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 
@@ -58,7 +58,7 @@ func (r dataSourceTeleportUser) Read(ctx context.Context, req tfsdk.ReadDataSour
 		return
 	}
 
-	userI, err := r.p.Client.GetUser(id.Value, true)
+	userI, err := r.p.Client.GetUser(id.Value, false)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading User", err.Error())
 		return

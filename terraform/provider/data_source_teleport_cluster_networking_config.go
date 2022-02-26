@@ -33,7 +33,7 @@ type dataSourceTeleportClusterNetworkingConfigType struct{}
 
 // dataSourceTeleportClusterNetworkingConfig is the resource
 type dataSourceTeleportClusterNetworkingConfig struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the data source schema
@@ -44,7 +44,7 @@ func (r dataSourceTeleportClusterNetworkingConfigType) GetSchema(ctx context.Con
 // NewDataSource creates the empty data source
 func (r dataSourceTeleportClusterNetworkingConfigType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
 	return dataSourceTeleportClusterNetworkingConfig{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

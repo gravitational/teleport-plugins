@@ -34,7 +34,7 @@ type dataSourceTeleportAppType struct{}
 
 // dataSourceTeleportApp is the resource
 type dataSourceTeleportApp struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the data source schema
@@ -45,7 +45,7 @@ func (r dataSourceTeleportAppType) GetSchema(ctx context.Context) (tfsdk.Schema,
 // NewDataSource creates the empty data source
 func (r dataSourceTeleportAppType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
 	return dataSourceTeleportApp{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

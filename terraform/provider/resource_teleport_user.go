@@ -35,7 +35,7 @@ type resourceTeleportUserType struct{}
 
 // resourceTeleportUser is the resource
 type resourceTeleportUser struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the resource schema
@@ -46,7 +46,7 @@ func (r resourceTeleportUserType) GetSchema(ctx context.Context) (tfsdk.Schema, 
 // NewResource creates the empty resource
 func (r resourceTeleportUserType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
 	return resourceTeleportUser{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 
@@ -83,7 +83,7 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 	}
 
 	id := user.Metadata.Name
-	userI, err := r.p.Client.GetUser(id, true)
+	userI, err := r.p.Client.GetUser(id, false)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading User", err.Error())
 		return
@@ -124,7 +124,7 @@ func (r resourceTeleportUser) Read(ctx context.Context, req tfsdk.ReadResourceRe
 		return
 	}
 
-	userI, err := r.p.Client.GetUser(id.Value, true)
+	userI, err := r.p.Client.GetUser(id.Value, false)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading User", err.Error())
 		return
@@ -179,7 +179,7 @@ func (r resourceTeleportUser) Update(ctx context.Context, req tfsdk.UpdateResour
 		return
 	}
 
-	userI, err := r.p.Client.GetUser(name, true)
+	userI, err := r.p.Client.GetUser(name, false)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading User", err.Error())
 		return
@@ -219,7 +219,7 @@ func (r resourceTeleportUser) Delete(ctx context.Context, req tfsdk.DeleteResour
 
 // ImportState imports User state
 func (r resourceTeleportUser) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	userI, err := r.p.Client.GetUser(req.ID, true)
+	userI, err := r.p.Client.GetUser(req.ID, false)
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading User", err.Error())
 		return

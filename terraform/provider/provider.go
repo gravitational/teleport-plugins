@@ -40,8 +40,8 @@ const (
 	minServerVersion = "6.1.0-beta.1"
 )
 
-// provider Teleport provider
-type provider struct {
+// Provider Teleport Provider
+type Provider struct {
 	configured bool
 	Client     *client.Client
 }
@@ -68,11 +68,11 @@ type providerData struct {
 
 // New returns an empty provider struct
 func New() tfsdk.Provider {
-	return &provider{}
+	return &Provider{}
 }
 
 // GetSchema returns the Terraform provider schema
-func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
+func (p *Provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Attributes: map[string]tfsdk.Attribute{
 			"addr": {
@@ -121,7 +121,7 @@ func (p *provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics)
 }
 
 // IsConfigured checks if provider is configured, adds diagnostics if not
-func (p *provider) IsConfigured(diags diag.Diagnostics) bool {
+func (p *Provider) IsConfigured(diags diag.Diagnostics) bool {
 	if !p.configured {
 		diags.AddError(
 			"Provider not configured",
@@ -133,7 +133,7 @@ func (p *provider) IsConfigured(diags diag.Diagnostics) bool {
 }
 
 // Configure configures the Teleport client
-func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderRequest, resp *tfsdk.ConfigureProviderResponse) {
+func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderRequest, resp *tfsdk.ConfigureProviderResponse) {
 	var creds []client.Credentials
 
 	p.configureLog()
@@ -217,7 +217,7 @@ func (p *provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 }
 
 // checkTeleportVersion ensures that Teleport version is at least minServerVersion
-func (p *provider) checkTeleportVersion(ctx context.Context, client *client.Client, resp *tfsdk.ConfigureProviderResponse) bool {
+func (p *Provider) checkTeleportVersion(ctx context.Context, client *client.Client, resp *tfsdk.ConfigureProviderResponse) bool {
 	log.Debug("Checking Teleport server version")
 	pong, err := client.WithCallOptions(grpc.WaitForReady(true)).Ping(ctx)
 	if err != nil {
@@ -242,7 +242,7 @@ func (p *provider) checkTeleportVersion(ctx context.Context, client *client.Clie
 }
 
 // stringFromConfigOrEnv returns value from config or from env var if config value is empty, default otherwise
-func (p *provider) stringFromConfigOrEnv(value types.String, env string, def string) string {
+func (p *Provider) stringFromConfigOrEnv(value types.String, env string, def string) string {
 	if value.Unknown || value.Null {
 		value := os.Getenv(env)
 		if value != "" {
@@ -258,7 +258,7 @@ func (p *provider) stringFromConfigOrEnv(value types.String, env string, def str
 }
 
 // validateAddr validates passed addr
-func (p *provider) validateAddr(addr string, resp *tfsdk.ConfigureProviderResponse) bool {
+func (p *Provider) validateAddr(addr string, resp *tfsdk.ConfigureProviderResponse) bool {
 	if addr == "" {
 		resp.Diagnostics.AddError(
 			"Teleport address is empty",
@@ -280,7 +280,7 @@ func (p *provider) validateAddr(addr string, resp *tfsdk.ConfigureProviderRespon
 }
 
 // getCredentialsFromKeyPair returns client.Credentials built from path to key files
-func (p *provider) getCredentialsFromKeyPair(certPath string, keyPath string, caPath string, resp *tfsdk.ConfigureProviderResponse) (client.Credentials, bool) {
+func (p *Provider) getCredentialsFromKeyPair(certPath string, keyPath string, caPath string, resp *tfsdk.ConfigureProviderResponse) (client.Credentials, bool) {
 	if !p.fileExists(certPath) {
 		resp.Diagnostics.AddError(
 			"Certificate file not found",
@@ -318,7 +318,7 @@ func (p *provider) getCredentialsFromKeyPair(certPath string, keyPath string, ca
 }
 
 // fileExists returns true if file exists
-func (p *provider) fileExists(path string) bool {
+func (p *Provider) fileExists(path string) bool {
 	_, err := os.Stat(path)
 	if os.IsNotExist(err) {
 		return false
@@ -330,7 +330,7 @@ func (p *provider) fileExists(path string) bool {
 }
 
 // configureLog configures logging
-func (p *provider) configureLog() {
+func (p *Provider) configureLog() {
 	// Get Terraform log level
 	level, err := log.ParseLevel(os.Getenv("TF_LOG"))
 	if err != nil {
@@ -349,7 +349,7 @@ func (p *provider) configureLog() {
 }
 
 // GetResources returns the map of provider resources
-func (p *provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceType, diag.Diagnostics) {
+func (p *Provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceType, diag.Diagnostics) {
 	return map[string]tfsdk.ResourceType{
 		"teleport_app":                       resourceTeleportAppType{},
 		"teleport_auth_preference":           resourceTeleportAuthPreferenceType{},
@@ -367,7 +367,7 @@ func (p *provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceTyp
 }
 
 // GetDataSources returns the map of provider data sources
-func (p *provider) GetDataSources(_ context.Context) (map[string]tfsdk.DataSourceType, diag.Diagnostics) {
+func (p *Provider) GetDataSources(_ context.Context) (map[string]tfsdk.DataSourceType, diag.Diagnostics) {
 	return map[string]tfsdk.DataSourceType{
 		"teleport_app":                       dataSourceTeleportAppType{},
 		"teleport_auth_preference":           dataSourceTeleportAuthPreferenceType{},

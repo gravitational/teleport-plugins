@@ -34,7 +34,7 @@ type dataSourceTeleportProvisionTokenType struct{}
 
 // dataSourceTeleportProvisionToken is the resource
 type dataSourceTeleportProvisionToken struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the data source schema
@@ -45,7 +45,7 @@ func (r dataSourceTeleportProvisionTokenType) GetSchema(ctx context.Context) (tf
 // NewDataSource creates the empty data source
 func (r dataSourceTeleportProvisionTokenType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
 	return dataSourceTeleportProvisionToken{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

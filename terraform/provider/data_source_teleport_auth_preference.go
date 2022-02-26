@@ -33,7 +33,7 @@ type dataSourceTeleportAuthPreferenceType struct{}
 
 // dataSourceTeleportAuthPreference is the resource
 type dataSourceTeleportAuthPreference struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the data source schema
@@ -44,7 +44,7 @@ func (r dataSourceTeleportAuthPreferenceType) GetSchema(ctx context.Context) (tf
 // NewDataSource creates the empty data source
 func (r dataSourceTeleportAuthPreferenceType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
 	return dataSourceTeleportAuthPreference{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

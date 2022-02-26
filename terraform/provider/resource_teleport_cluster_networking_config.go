@@ -34,7 +34,7 @@ type resourceTeleportClusterNetworkingConfigType struct{}
 
 // resourceTeleportClusterNetworkingConfig is the resource
 type resourceTeleportClusterNetworkingConfig struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the resource schema
@@ -45,7 +45,7 @@ func (r resourceTeleportClusterNetworkingConfigType) GetSchema(ctx context.Conte
 // NewResource creates the empty resource
 func (r resourceTeleportClusterNetworkingConfigType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
 	return resourceTeleportClusterNetworkingConfig{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

@@ -28,14 +28,20 @@ injected_fields:
       computed: true
       plan_modifiers:
         - UseMetadataNameValue()
-  # NOTE: In question till tests aren't ready, possibly we need constant here or just nil
-  # AuthPreferenceV2:
-  #   -
-  #     name: id
-  #     type: github.com/hashicorp/terraform-plugin-framework/types.StringType
-  #     computed: true
-  #     plan_modifiers:
-  #       - UseMetadataNameValue()
+  AuthPreferenceV2:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - UseConstStringValue("auth_preference")
+  ClusterNetworkingConfigV2:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - UseConstStringValue("cluster_networking_config")
   DatabaseV3:
     -
       name: id
@@ -78,6 +84,13 @@ injected_fields:
       computed: true
       plan_modifiers:
         - UseMetadataNameValue()
+  SessionRecordingConfigV2:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - UseConstStringValue("session_recording_config")
   TrustedClusterV2:
     -
       name: id
@@ -124,28 +137,43 @@ exclude_fields:
 # These fields will be marked as Computed: true
 computed_fields:
     # Metadata
-    - "Metadata.Kind"    
     - "Metadata.Namespace"
 
     # App
     - "AppV3.Metadata.Labels"
+    - "AppV3.Kind"    
 
     # Auth preference
     - "AuthPreferenceV2.Spec.SecondFactor"
     - "AuthPreferenceV2.Spec.Type"
     - "AuthPreferenceV2.Spec.LockingMode"
     - "AuthPreferenceV2.Metadata.Namespace"
+    - "AuthPreferenceV2.Metadata.Labels"
+    - "AuthPreferenceV2.Kind"
 
     # Cluster networking
     - "ClusterNetworkingConfigV2.Spec.KeepAliveCountMax"
     - "ClusterNetworkingConfigV2.Spec.KeepAliveInterval"
+    - "ClusterNetworkingConfigV2.Kind"
+
+    # Database
+    - "DatabaseV3.Kind"
+
+    # Github connector
+    - "GithubConnectorV3.Kind"
+
+    # OIDC connector
+    - "OIDCConnectorV2.Kind"
 
     # Provision token
     - "ProvisionTokenV2.Spec.AWSIIDTTL"
+    - "ProvisionTokenV2.Kind"
 
     # Role
     - "RoleV4.Spec.Options.MaxSessionTTL"
     - "RoleV4.Spec.Options.CertificateFormat"
+    - "RoleV4.Spec.Options.BPF"
+    - "RoleV4.Kind"
 
     # SAML connector
     - "SAMLConnectorV2.Spec.Audience"
@@ -158,23 +186,37 @@ computed_fields:
     - "SAMLConnectorV2.Spec.EncryprionKeyPair"
     - "SAMLConnectorV2.Spec.EncryptionKeyPair.PrivateKey"
     - "SAMLConnectorV2.Spec.EncryptionKeyPair.Cert"
+    - "SAMLConnectorV2.Kind"
 
     # Session recording
     - "SessionRecordingConfigV2.Spec.Mode"
+    - "SessionRecordingConfigV2.Kind"
+
+    # Trusted cluster
+    - "TrustedClusterV2.Kind"
+
+    # User
+    - "UserV2.Kind"
 
 # These fields will be marked as Required: true 
 required_fields:
-    - "Version"
-
     # Metadata
     - "Metadata.Name"
+    
+    # App
+    - "AppV3.Version"
 
     # Auth preference
     - "AuthPreferenceV2.Spec"
+    - "AuthPreferenceV2.Version"
+
+    # ClusterNetworkingConfig
+    - "ClusterNetworkingConfigV2.Version"
 
     # Database
     - "DatabaseV3.Spec.Protocol"    
     - "DatabaseV3.Spec.URI"        
+    - "DatabaseV3.Version"
 
     # Github connector
     - "GithubConnectorV3.Spec"
@@ -183,24 +225,41 @@ required_fields:
     - "GithubConnectorV3.Spec.TeamsToLogins"
     - "GithubConnectorV3.Spec.TeamsToLogins.Team"
     - "GithubConnectorV3.Spec.TeamsToLogins.Logins"
+    - "GithubConnectorV3.Version"
 
     # Provision token
     - "ProvisionTokenV2.Spec"
     - "ProvisionTokenV2.Spec.Options"
     - "ProvisionTokenV2.Spec.Roles"
     - "ProvisionTokenV2.Metadata.Expires"
+    - "ProvisionTokenV2.Version"
+
+    # OIDC connector
+    - "OIDCConnectorV2.Spec"
+    - "OIDCConnectorV2.Version"
+
+    # Role
+    - "RoleV4.Version"
 
     # SAML connector
     - "SAMLConnectorV2.Spec"
     - "SAMLConnectorV2.Spec.AssertionConsumerService"
     - "SAMLConnectorV2.Spec.EntityDescriptor"
     - "SAMLConnectorV2.Spec.AttributesToRoles"
+    - "SAMLConnectorV2.Version"
 
-    # OIDC connector
-    - "OIDCConnectorV2.Spec"
+    # Session recording
+    - "SessionRecordingConfigV2.Version"
+
+    # Trusted cluster
+    - "TrustedClusterV2.Version"
+
+    # User
+    - "UserV2.Version"
 
     # Trusted cluster
     - "TrustedClusterV2.Spec"
+    - "TrustedClusterV2.Version"
     
 
 # These fields must be marked as sensitive
@@ -225,31 +284,42 @@ plan_modifiers:
     # Force to recreate resource if it's name changes
     Metadata.Name:
         - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    
 
 validators:
   # Expires must be in the future
-  "Metadata.Expires":
+  Metadata.Expires:
     - MustTimeBeInFuture()
-  "AppV3.Version":
-    - VersionValidator{3,3}
-  "AuthPreferenceV2.Version":
-    - VersionValidator{2,2}
-  "ClusterNetworkingConfigV2.Version":
-    - VersionValidator{2,2}
-  "DatabaseV3.Version":
-    - VersionValidator{3,3}
-  "GithubConnectorV3.Version":
-    - VersionValidator{3,3}
-  "OIDCConnectorV2.Version":
-    - VersionValidator{2,2}
-  "ProvisionTokenV2.Version":
-    - VersionValidator{2,2}
-  "RoleV4.Version":
-    - VersionValidator{4,5}
-  "SAMLConnectorV2.Version":
-    - VersionValidator{2,2}
-  "SessionRecordingConfigV2.Version":
-    - VersionValidator{2,2}
+  AppV3.Version:
+    - UseVersionBetween(3,3)
+  AuthPreferenceV2.Version:
+    - UseVersionBetween(2,2)
+  AuthPreferenceV2.Metadata.Labels:
+    - UseMapKeysPresentValidator("teleport.dev/origin")
+  ClusterNetworkingConfigV2.Version:
+    - UseVersionBetween(2,2)
+  ClusterNetworkingConfigV2.Metadata.Labels:
+    - UseMapKeysPresentValidator("teleport.dev/origin")
+  DatabaseV3.Version:
+    - UseVersionBetween(3,3)
+  DatabaseV3.Metadata.Labels:
+    - UseMapKeysPresentValidator("teleport.dev/origin")
+  GithubConnectorV3.Version:
+    - UseVersionBetween(3,3)
+  OIDCConnectorV2.Version:
+    - UseVersionBetween(2,2)
+  ProvisionTokenV2.Version:
+    - UseVersionBetween(2,2)
+  RoleV4.Version:
+    - UseVersionBetween(4,5)
+  SAMLConnectorV2.Version:
+    - UseVersionBetween(2,2)
+  SessionRecordingConfigV2.Version:
+    - UseVersionBetween(2,2)
+  SessionRecordingConfigV2.Metadata.Labels:
+    - UseMapKeysPresentValidator("teleport.dev/origin")
+  UserV2.Version:
+    - UseVersionBetween(2,2)
 
 time_type:
     type: "TimeType"

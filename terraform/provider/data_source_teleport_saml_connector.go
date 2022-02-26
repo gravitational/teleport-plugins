@@ -34,7 +34,7 @@ type dataSourceTeleportSAMLConnectorType struct{}
 
 // dataSourceTeleportSAMLConnector is the resource
 type dataSourceTeleportSAMLConnector struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the data source schema
@@ -45,7 +45,7 @@ func (r dataSourceTeleportSAMLConnectorType) GetSchema(ctx context.Context) (tfs
 // NewDataSource creates the empty data source
 func (r dataSourceTeleportSAMLConnectorType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
 	return dataSourceTeleportSAMLConnector{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

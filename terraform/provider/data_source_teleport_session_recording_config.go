@@ -33,7 +33,7 @@ type dataSourceTeleportSessionRecordingConfigType struct{}
 
 // dataSourceTeleportSessionRecordingConfig is the resource
 type dataSourceTeleportSessionRecordingConfig struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the data source schema
@@ -44,7 +44,7 @@ func (r dataSourceTeleportSessionRecordingConfigType) GetSchema(ctx context.Cont
 // NewDataSource creates the empty data source
 func (r dataSourceTeleportSessionRecordingConfigType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
 	return dataSourceTeleportSessionRecordingConfig{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

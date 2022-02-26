@@ -17,9 +17,11 @@ limitations under the License.
 package test
 
 import (
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/stretchr/testify/require"
 )
 
 func (s *TerraformSuite) TestRole() {
@@ -97,6 +99,40 @@ func (s *TerraformSuite) TestRole() {
 			{
 				Config:   s.getFixture("role_3_update.tf"), // Check that there is no state drift
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestImportRole() {
+	name := "teleport_role.test"
+
+	role := &types.RoleV4{
+		Metadata: types.Metadata{
+			Name: "test",
+		},
+		Spec: types.RoleSpecV4{},
+	}
+	err := role.CheckAndSetDefaults()
+	require.NoError(s.T(), err)
+
+	err = s.client.UpsertRole(s.Context(), role)
+	require.NoError(s.T(), err)
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:        s.terraformConfig + "\n" + `resource "teleport_role" "test" { }`,
+				ResourceName:  name,
+				ImportState:   true,
+				ImportStateId: "test",
+				ImportStateCheck: func(state []*terraform.InstanceState) error {
+					require.Equal(s.T(), state[0].Attributes["kind"], "role")
+					require.Equal(s.T(), state[0].Attributes["metadata.name"], "test")
+
+					return nil
+				},
 			},
 		},
 	})

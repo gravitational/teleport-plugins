@@ -35,7 +35,7 @@ type resourceTeleportDatabaseType struct{}
 
 // resourceTeleportDatabase is the resource
 type resourceTeleportDatabase struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the resource schema
@@ -46,7 +46,7 @@ func (r resourceTeleportDatabaseType) GetSchema(ctx context.Context) (tfsdk.Sche
 // NewResource creates the empty resource
 func (r resourceTeleportDatabaseType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
 	return resourceTeleportDatabase{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

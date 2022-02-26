@@ -35,7 +35,7 @@ type resourceTeleportOIDCConnectorType struct{}
 
 // resourceTeleportOIDCConnector is the resource
 type resourceTeleportOIDCConnector struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the resource schema
@@ -46,7 +46,7 @@ func (r resourceTeleportOIDCConnectorType) GetSchema(ctx context.Context) (tfsdk
 // NewResource creates the empty resource
 func (r resourceTeleportOIDCConnectorType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
 	return resourceTeleportOIDCConnector{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

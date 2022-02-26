@@ -35,7 +35,7 @@ type resourceTeleportProvisionTokenType struct{}
 
 // resourceTeleportProvisionToken is the resource
 type resourceTeleportProvisionToken struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the resource schema
@@ -46,7 +46,7 @@ func (r resourceTeleportProvisionTokenType) GetSchema(ctx context.Context) (tfsd
 // NewResource creates the empty resource
 func (r resourceTeleportProvisionTokenType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
 	return resourceTeleportProvisionToken{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

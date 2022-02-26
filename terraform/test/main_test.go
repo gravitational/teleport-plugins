@@ -147,11 +147,11 @@ func (s *TerraformSuite) SetupTest() {
 }
 
 func (s *TerraformSuite) closeClient() {
-	// m := s.terraformProvider.Meta()
-	// if m != nil {
-	// 	c := m.(*client.Client)
-	// 	require.NoError(s.T(), c.Close())
-	// }
+	p, ok := s.terraformProvider.(*provider.Provider)
+	require.True(s.T(), ok)
+	if p != nil && p.Client != nil {
+		require.NoError(s.T(), p.Client.Close())
+	}
 }
 
 // getFixture loads fixture and returns it as string or <error> if failed

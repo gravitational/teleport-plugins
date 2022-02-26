@@ -34,7 +34,7 @@ type dataSourceTeleport{{.Name}}Type struct{}
 
 // dataSourceTeleport{{.Name}} is the resource
 type dataSourceTeleport{{.Name}} struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the data source schema
@@ -45,7 +45,7 @@ func (r dataSourceTeleport{{.Name}}Type) GetSchema(ctx context.Context) (tfsdk.S
 // NewDataSource creates the empty data source
 func (r dataSourceTeleport{{.Name}}Type) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
 	return dataSourceTeleport{{.Name}}{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 
@@ -58,7 +58,7 @@ func (r dataSourceTeleport{{.Name}}) Read(ctx context.Context, req tfsdk.ReadDat
 		return
 	}
 
-	{{.VarName}}I, err := r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}id.Value{{if .HasSecrets}}, true{{end}})
+	{{.VarName}}I, err := r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}id.Value{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
 	if err != nil {
 		resp.Diagnostics.AddError("Error reading {{.Name}}", err.Error())
 		return

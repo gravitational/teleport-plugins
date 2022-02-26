@@ -34,7 +34,7 @@ type dataSourceTeleportTrustedClusterType struct{}
 
 // dataSourceTeleportTrustedCluster is the resource
 type dataSourceTeleportTrustedCluster struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the data source schema
@@ -45,7 +45,7 @@ func (r dataSourceTeleportTrustedClusterType) GetSchema(ctx context.Context) (tf
 // NewDataSource creates the empty data source
 func (r dataSourceTeleportTrustedClusterType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
 	return dataSourceTeleportTrustedCluster{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

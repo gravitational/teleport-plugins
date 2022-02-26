@@ -35,7 +35,7 @@ type resourceTeleportGithubConnectorType struct{}
 
 // resourceTeleportGithubConnector is the resource
 type resourceTeleportGithubConnector struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the resource schema
@@ -46,7 +46,7 @@ func (r resourceTeleportGithubConnectorType) GetSchema(ctx context.Context) (tfs
 // NewResource creates the empty resource
 func (r resourceTeleportGithubConnectorType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
 	return resourceTeleportGithubConnector{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

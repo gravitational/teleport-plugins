@@ -34,7 +34,7 @@ type resourceTeleportSessionRecordingConfigType struct{}
 
 // resourceTeleportSessionRecordingConfig is the resource
 type resourceTeleportSessionRecordingConfig struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the resource schema
@@ -45,7 +45,7 @@ func (r resourceTeleportSessionRecordingConfigType) GetSchema(ctx context.Contex
 // NewResource creates the empty resource
 func (r resourceTeleportSessionRecordingConfigType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
 	return resourceTeleportSessionRecordingConfig{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

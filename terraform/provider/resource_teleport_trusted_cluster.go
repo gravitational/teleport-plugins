@@ -35,7 +35,7 @@ type resourceTeleportTrustedClusterType struct{}
 
 // resourceTeleportTrustedCluster is the resource
 type resourceTeleportTrustedCluster struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the resource schema
@@ -46,7 +46,7 @@ func (r resourceTeleportTrustedClusterType) GetSchema(ctx context.Context) (tfsd
 // NewResource creates the empty resource
 func (r resourceTeleportTrustedClusterType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
 	return resourceTeleportTrustedCluster{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

@@ -11,4 +11,6 @@ resource "teleport_role" "test" {
             node_labels = {}
         }
     }
+
+    version = "v4"
 }

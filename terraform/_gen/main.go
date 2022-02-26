@@ -26,8 +26,8 @@ type payload struct {
 	DeleteMethod string
 	// UpsertMethodArity represents Create/Update method arity, if it's 2, then the call signature would be "_, err :="
 	UpsertMethodArity int
-	// HasSecrets indicates that a resource has withSecrets param for create/update
-	HasSecrets bool
+	// WithSecrets value for a withSecrets param of Get method (empty means no param used)
+	WithSecrets string
 	// GetWithoutContext indicates that get method has no context parameter (workaround for the User)
 	GetWithoutContext bool
 }
@@ -88,7 +88,7 @@ var (
 		CreateMethod: "UpsertGithubConnector",
 		UpdateMethod: "UpsertGithubConnector",
 		DeleteMethod: "DeleteGithubConnector",
-		HasSecrets:   true,
+		WithSecrets:  "true",
 	}
 
 	oidcConnector = payload{
@@ -99,7 +99,7 @@ var (
 		CreateMethod: "UpsertOIDCConnector",
 		UpdateMethod: "UpsertOIDCConnector",
 		DeleteMethod: "DeleteOIDCConnector",
-		HasSecrets:   true,
+		WithSecrets:  "true",
 	}
 
 	samlConnector = payload{
@@ -110,7 +110,7 @@ var (
 		CreateMethod: "UpsertSAMLConnector",
 		UpdateMethod: "UpsertSAMLConnector",
 		DeleteMethod: "DeleteSAMLConnector",
-		HasSecrets:   true,
+		WithSecrets:  "true",
 	}
 
 	provisionToken = payload{
@@ -162,7 +162,7 @@ var (
 		CreateMethod:      "CreateUser",
 		UpdateMethod:      "UpdateUser",
 		DeleteMethod:      "DeleteUser",
-		HasSecrets:        true,
+		WithSecrets:       "false",
 		GetWithoutContext: true,
 	}
 )

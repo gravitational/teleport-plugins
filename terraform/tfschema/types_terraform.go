@@ -53,9 +53,11 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"kind": {
-			Description: "Kind is the database resource kind.",
-			Optional:    true,
-			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Computed:      true,
+			Description:   "Kind is the database resource kind.",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"metadata": {
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -74,6 +76,7 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 					Description: "Labels is a set of labels",
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.MapType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+					Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseMapKeysPresentValidator("teleport.dev/origin")},
 				},
 				"name": {
 					Description:   "Name is an object name",
@@ -238,9 +241,9 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 		},
 		"version": {
 			Description: "Version is the resource version.",
-			Optional:    true,
+			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{VersionValidator{3, 3}},
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(3, 3)},
 		},
 	}}, nil
 }
@@ -256,9 +259,11 @@ func GenSchemaAppV3(ctx context.Context) (github_com_hashicorp_terraform_plugin_
 			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"kind": {
-			Description: "Kind is the app resource kind. Always \"app\".",
-			Optional:    true,
-			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Computed:      true,
+			Description:   "Kind is the app resource kind. Always \"app\".",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"metadata": {
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -373,9 +378,9 @@ func GenSchemaAppV3(ctx context.Context) (github_com_hashicorp_terraform_plugin_
 		},
 		"version": {
 			Description: "Version is the resource version.",
-			Optional:    true,
+			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{VersionValidator{3, 3}},
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(3, 3)},
 		},
 	}}, nil
 }
@@ -391,9 +396,11 @@ func GenSchemaProvisionTokenV2(ctx context.Context) (github_com_hashicorp_terraf
 			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"kind": {
-			Description: "Kind is a resource kind",
-			Optional:    true,
-			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Computed:      true,
+			Description:   "Kind is a resource kind",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"metadata": {
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -477,9 +484,9 @@ func GenSchemaProvisionTokenV2(ctx context.Context) (github_com_hashicorp_terraf
 		},
 		"version": {
 			Description: "Version is version",
-			Optional:    true,
+			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{VersionValidator{2, 2}},
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
 		},
 	}}, nil
 }
@@ -487,10 +494,19 @@ func GenSchemaProvisionTokenV2(ctx context.Context) (github_com_hashicorp_terraf
 // GenSchemaClusterNetworkingConfigV2 returns tfsdk.Schema definition for ClusterNetworkingConfigV2
 func GenSchemaClusterNetworkingConfigV2(ctx context.Context) (github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema, github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics) {
 	return github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema{Attributes: map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+		"id": {
+			Computed:      true,
+			Optional:      false,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{UseConstStringValue("cluster_networking_config")},
+			Required:      false,
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+		},
 		"kind": {
-			Description: "Kind is a resource kind",
-			Optional:    true,
-			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Computed:      true,
+			Description:   "Kind is a resource kind",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"metadata": {
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -509,6 +525,7 @@ func GenSchemaClusterNetworkingConfigV2(ctx context.Context) (github_com_hashico
 					Description: "Labels is a set of labels",
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.MapType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+					Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseMapKeysPresentValidator("teleport.dev/origin")},
 				},
 				"namespace": {
 					Computed:      true,
@@ -578,9 +595,9 @@ func GenSchemaClusterNetworkingConfigV2(ctx context.Context) (github_com_hashico
 		},
 		"version": {
 			Description: "Version is a resource version",
-			Optional:    true,
+			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{VersionValidator{2, 2}},
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
 		},
 	}}, nil
 }
@@ -588,10 +605,19 @@ func GenSchemaClusterNetworkingConfigV2(ctx context.Context) (github_com_hashico
 // GenSchemaSessionRecordingConfigV2 returns tfsdk.Schema definition for SessionRecordingConfigV2
 func GenSchemaSessionRecordingConfigV2(ctx context.Context) (github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema, github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics) {
 	return github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema{Attributes: map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+		"id": {
+			Computed:      true,
+			Optional:      false,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{UseConstStringValue("session_recording_config")},
+			Required:      false,
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+		},
 		"kind": {
-			Description: "Kind is a resource kind",
-			Optional:    true,
-			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Computed:      true,
+			Description:   "Kind is a resource kind",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"metadata": {
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -610,6 +636,7 @@ func GenSchemaSessionRecordingConfigV2(ctx context.Context) (github_com_hashicor
 					Description: "Labels is a set of labels",
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.MapType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+					Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseMapKeysPresentValidator("teleport.dev/origin")},
 				},
 				"namespace": {
 					Computed:      true,
@@ -643,9 +670,9 @@ func GenSchemaSessionRecordingConfigV2(ctx context.Context) (github_com_hashicor
 		},
 		"version": {
 			Description: "Version is a resource version",
-			Optional:    true,
+			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{VersionValidator{2, 2}},
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
 		},
 	}}, nil
 }
@@ -653,10 +680,19 @@ func GenSchemaSessionRecordingConfigV2(ctx context.Context) (github_com_hashicor
 // GenSchemaAuthPreferenceV2 returns tfsdk.Schema definition for AuthPreferenceV2
 func GenSchemaAuthPreferenceV2(ctx context.Context) (github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema, github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics) {
 	return github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema{Attributes: map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+		"id": {
+			Computed:      true,
+			Optional:      false,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{UseConstStringValue("auth_preference")},
+			Required:      false,
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+		},
 		"kind": {
-			Description: "Kind is a resource kind",
-			Optional:    true,
-			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Computed:      true,
+			Description:   "Kind is a resource kind",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"metadata": {
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -672,9 +708,12 @@ func GenSchemaAuthPreferenceV2(ctx context.Context) (github_com_hashicorp_terraf
 					Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{MustTimeBeInFuture()},
 				},
 				"labels": {
-					Description: "Labels is a set of labels",
-					Optional:    true,
-					Type:        github_com_hashicorp_terraform_plugin_framework_types.MapType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+					Computed:      true,
+					Description:   "Labels is a set of labels",
+					Optional:      true,
+					PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+					Type:          github_com_hashicorp_terraform_plugin_framework_types.MapType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+					Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseMapKeysPresentValidator("teleport.dev/origin")},
 				},
 				"namespace": {
 					Computed:      true,
@@ -785,9 +824,9 @@ func GenSchemaAuthPreferenceV2(ctx context.Context) (github_com_hashicorp_terraf
 		},
 		"version": {
 			Description: "Version is a resource version",
-			Optional:    true,
+			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{VersionValidator{2, 2}},
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
 		},
 	}}, nil
 }
@@ -803,9 +842,11 @@ func GenSchemaRoleV4(ctx context.Context) (github_com_hashicorp_terraform_plugin
 			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"kind": {
-			Description: "Kind is a resource kind",
-			Optional:    true,
-			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Computed:      true,
+			Description:   "Kind is a resource kind",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"metadata": {
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -1254,9 +1295,11 @@ func GenSchemaRoleV4(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.BoolType,
 						},
 						"enhanced_recording": {
-							Description: "BPF defines what events to record for the BPF-based session recorder.",
-							Optional:    true,
-							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+							Computed:      true,
+							Description:   "BPF defines what events to record for the BPF-based session recorder.",
+							Optional:      true,
+							PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+							Type:          github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
 						"forward_agent": {
 							Description: "ForwardAgent is SSH agent forwarding.",
@@ -1321,9 +1364,9 @@ func GenSchemaRoleV4(ctx context.Context) (github_com_hashicorp_terraform_plugin
 		},
 		"version": {
 			Description: "Version is version",
-			Optional:    true,
+			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{VersionValidator{4, 5}},
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(4, 5)},
 		},
 	}}, nil
 }
@@ -1339,9 +1382,11 @@ func GenSchemaUserV2(ctx context.Context) (github_com_hashicorp_terraform_plugin
 			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"kind": {
-			Description: "Kind is a resource kind",
-			Optional:    true,
-			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Computed:      true,
+			Description:   "Kind is a resource kind",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"metadata": {
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -1445,8 +1490,9 @@ func GenSchemaUserV2(ctx context.Context) (github_com_hashicorp_terraform_plugin
 		},
 		"version": {
 			Description: "Version is version",
-			Optional:    true,
+			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
 		},
 	}}, nil
 }
@@ -1462,9 +1508,11 @@ func GenSchemaOIDCConnectorV2(ctx context.Context) (github_com_hashicorp_terrafo
 			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"kind": {
-			Description: "Kind is a resource kind.",
-			Optional:    true,
-			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Computed:      true,
+			Description:   "Kind is a resource kind.",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"metadata": {
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -1597,9 +1645,9 @@ func GenSchemaOIDCConnectorV2(ctx context.Context) (github_com_hashicorp_terrafo
 		},
 		"version": {
 			Description: "Version is a resource version.",
-			Optional:    true,
+			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{VersionValidator{2, 2}},
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
 		},
 	}}, nil
 }
@@ -1615,9 +1663,11 @@ func GenSchemaSAMLConnectorV2(ctx context.Context) (github_com_hashicorp_terrafo
 			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"kind": {
-			Description: "Kind is a resource kind.",
-			Optional:    true,
-			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Computed:      true,
+			Description:   "Kind is a resource kind.",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"metadata": {
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -1792,9 +1842,9 @@ func GenSchemaSAMLConnectorV2(ctx context.Context) (github_com_hashicorp_terrafo
 		},
 		"version": {
 			Description: "Version is a resource version.",
-			Optional:    true,
+			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{VersionValidator{2, 2}},
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
 		},
 	}}, nil
 }
@@ -1810,9 +1860,11 @@ func GenSchemaGithubConnectorV3(ctx context.Context) (github_com_hashicorp_terra
 			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"kind": {
-			Description: "Kind is a resource kind.",
-			Optional:    true,
-			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Computed:      true,
+			Description:   "Kind is a resource kind.",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"metadata": {
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -1914,9 +1966,9 @@ func GenSchemaGithubConnectorV3(ctx context.Context) (github_com_hashicorp_terra
 		},
 		"version": {
 			Description: "Version is a resource version.",
-			Optional:    true,
+			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{VersionValidator{3, 3}},
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(3, 3)},
 		},
 	}}, nil
 }
@@ -1932,9 +1984,11 @@ func GenSchemaTrustedClusterV2(ctx context.Context) (github_com_hashicorp_terraf
 			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"kind": {
-			Description: "Kind is a resource kind.",
-			Optional:    true,
-			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Computed:      true,
+			Description:   "Kind is a resource kind.",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"metadata": {
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -2025,7 +2079,7 @@ func GenSchemaTrustedClusterV2(ctx context.Context) (github_com_hashicorp_terraf
 		},
 		"version": {
 			Description: "Version is a resource version.",
-			Optional:    true,
+			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 	}}, nil
@@ -2704,7 +2758,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Kind) == ""
 			}
 			v.Value = string(obj.Kind)
 			v.Unknown = false
@@ -2726,7 +2780,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.SubKind) == ""
 			}
 			v.Value = string(obj.SubKind)
 			v.Unknown = false
@@ -2748,7 +2802,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Version) == ""
 			}
 			v.Value = string(obj.Version)
 			v.Unknown = false
@@ -2794,7 +2848,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Metadata.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Name) == ""
 							}
 							v.Value = string(obj.Name)
 							v.Unknown = false
@@ -2816,7 +2870,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Namespace) == ""
 							}
 							v.Value = string(obj.Namespace)
 							v.Unknown = false
@@ -2838,7 +2892,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Description) == ""
 							}
 							v.Value = string(obj.Description)
 							v.Unknown = false
@@ -2860,6 +2914,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 
 										ElemType: o.ElemType,
 										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -2884,6 +2939,9 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Labels) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -2911,6 +2969,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 							if obj.Expires == nil {
 								v.Null = true
 							} else {
+								v.Null = false
 								v.Value = time.Time(*obj.Expires)
 							}
 							v.Unknown = false
@@ -2962,7 +3021,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.Protocol", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Protocol) == ""
 							}
 							v.Value = string(obj.Protocol)
 							v.Unknown = false
@@ -2984,7 +3043,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.URI", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.URI) == ""
 							}
 							v.Value = string(obj.URI)
 							v.Unknown = false
@@ -3006,7 +3065,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.CACert", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.CACert) == ""
 							}
 							v.Value = string(obj.CACert)
 							v.Unknown = false
@@ -3028,6 +3087,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 
 										ElemType: o.ElemType,
 										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DynamicLabels)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -3089,6 +3149,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 
 																ElemType: o.ElemType,
 																Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Command)),
+																Null:     true,
 															}
 														} else {
 															if c.Elems == nil {
@@ -3108,11 +3169,14 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 																	if !ok {
 																		diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.DynamicLabels.Command", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																	}
-																	v.Null = false
+																	v.Null = string(a) == ""
 																}
 																v.Value = string(a)
 																v.Unknown = false
 																c.Elems[k] = v
+															}
+															if len(obj.Command) > 0 {
+																c.Null = false
 															}
 														}
 														c.Unknown = false
@@ -3135,7 +3199,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.DynamicLabels.Result", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.Result) == ""
 													}
 													v.Value = string(obj.Result)
 													v.Unknown = false
@@ -3145,6 +3209,9 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 										}
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.DynamicLabels) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -3191,7 +3258,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.Region", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.Region) == ""
 											}
 											v.Value = string(obj.Region)
 											v.Unknown = false
@@ -3237,7 +3304,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 																if !ok {
 																	diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.Redshift.ClusterID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																}
-																v.Null = false
+																v.Null = string(obj.ClusterID) == ""
 															}
 															v.Value = string(obj.ClusterID)
 															v.Unknown = false
@@ -3289,7 +3356,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 																if !ok {
 																	diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.RDS.InstanceID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																}
-																v.Null = false
+																v.Null = string(obj.InstanceID) == ""
 															}
 															v.Value = string(obj.InstanceID)
 															v.Unknown = false
@@ -3311,7 +3378,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 																if !ok {
 																	diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.RDS.ClusterID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																}
-																v.Null = false
+																v.Null = string(obj.ClusterID) == ""
 															}
 															v.Value = string(obj.ClusterID)
 															v.Unknown = false
@@ -3333,7 +3400,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 																if !ok {
 																	diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.RDS.ResourceID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																}
-																v.Null = false
+																v.Null = string(obj.ResourceID) == ""
 															}
 															v.Value = string(obj.ResourceID)
 															v.Unknown = false
@@ -3355,7 +3422,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 																if !ok {
 																	diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.RDS.IAMAuth", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
 																}
-																v.Null = false
+																v.Null = bool(obj.IAMAuth) == false
 															}
 															v.Value = bool(obj.IAMAuth)
 															v.Unknown = false
@@ -3383,7 +3450,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.AccountID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.AccountID) == ""
 											}
 											v.Value = string(obj.AccountID)
 											v.Unknown = false
@@ -3435,7 +3502,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.GCP.ProjectID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.ProjectID) == ""
 											}
 											v.Value = string(obj.ProjectID)
 											v.Unknown = false
@@ -3457,7 +3524,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.GCP.InstanceID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.InstanceID) == ""
 											}
 											v.Value = string(obj.InstanceID)
 											v.Unknown = false
@@ -3509,7 +3576,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.Azure.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.Name) == ""
 											}
 											v.Value = string(obj.Name)
 											v.Unknown = false
@@ -3561,7 +3628,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.TLS.Mode", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
 												}
-												v.Null = false
+												v.Null = int64(obj.Mode) == 0
 											}
 											v.Value = int64(obj.Mode)
 											v.Unknown = false
@@ -3583,7 +3650,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.TLS.CACert", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.CACert) == ""
 											}
 											v.Value = string(obj.CACert)
 											v.Unknown = false
@@ -3605,7 +3672,7 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.TLS.ServerName", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.ServerName) == ""
 											}
 											v.Value = string(obj.ServerName)
 											v.Unknown = false
@@ -4085,7 +4152,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"AppV3.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Kind) == ""
 			}
 			v.Value = string(obj.Kind)
 			v.Unknown = false
@@ -4107,7 +4174,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"AppV3.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.SubKind) == ""
 			}
 			v.Value = string(obj.SubKind)
 			v.Unknown = false
@@ -4129,7 +4196,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"AppV3.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Version) == ""
 			}
 			v.Value = string(obj.Version)
 			v.Unknown = false
@@ -4175,7 +4242,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"AppV3.Metadata.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Name) == ""
 							}
 							v.Value = string(obj.Name)
 							v.Unknown = false
@@ -4197,7 +4264,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"AppV3.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Namespace) == ""
 							}
 							v.Value = string(obj.Namespace)
 							v.Unknown = false
@@ -4219,7 +4286,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"AppV3.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Description) == ""
 							}
 							v.Value = string(obj.Description)
 							v.Unknown = false
@@ -4241,6 +4308,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 
 										ElemType: o.ElemType,
 										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -4265,6 +4333,9 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Labels) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -4292,6 +4363,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 							if obj.Expires == nil {
 								v.Null = true
 							} else {
+								v.Null = false
 								v.Value = time.Time(*obj.Expires)
 							}
 							v.Unknown = false
@@ -4343,7 +4415,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"AppV3.Spec.URI", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.URI) == ""
 							}
 							v.Value = string(obj.URI)
 							v.Unknown = false
@@ -4365,7 +4437,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"AppV3.Spec.PublicAddr", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.PublicAddr) == ""
 							}
 							v.Value = string(obj.PublicAddr)
 							v.Unknown = false
@@ -4387,6 +4459,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 
 										ElemType: o.ElemType,
 										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DynamicLabels)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -4448,6 +4521,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 
 																ElemType: o.ElemType,
 																Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Command)),
+																Null:     true,
 															}
 														} else {
 															if c.Elems == nil {
@@ -4467,11 +4541,14 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 																	if !ok {
 																		diags.Append(attrWriteConversionFailureDiag{"AppV3.Spec.DynamicLabels.Command", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																	}
-																	v.Null = false
+																	v.Null = string(a) == ""
 																}
 																v.Value = string(a)
 																v.Unknown = false
 																c.Elems[k] = v
+															}
+															if len(obj.Command) > 0 {
+																c.Null = false
 															}
 														}
 														c.Unknown = false
@@ -4494,7 +4571,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"AppV3.Spec.DynamicLabels.Result", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.Result) == ""
 													}
 													v.Value = string(obj.Result)
 													v.Unknown = false
@@ -4504,6 +4581,9 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 										}
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.DynamicLabels) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -4526,7 +4606,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"AppV3.Spec.InsecureSkipVerify", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
 								}
-								v.Null = false
+								v.Null = bool(obj.InsecureSkipVerify) == false
 							}
 							v.Value = bool(obj.InsecureSkipVerify)
 							v.Unknown = false
@@ -4574,6 +4654,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Redirect)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -4593,11 +4674,14 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"AppV3.Spec.Rewrite.Redirect", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.Redirect) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -4620,6 +4704,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Headers)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -4661,7 +4746,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 																		if !ok {
 																			diags.Append(attrWriteConversionFailureDiag{"AppV3.Spec.Rewrite.Headers.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																		}
-																		v.Null = false
+																		v.Null = string(obj.Name) == ""
 																	}
 																	v.Value = string(obj.Name)
 																	v.Unknown = false
@@ -4683,7 +4768,7 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 																		if !ok {
 																			diags.Append(attrWriteConversionFailureDiag{"AppV3.Spec.Rewrite.Headers.Value", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																		}
-																		v.Null = false
+																		v.Null = string(obj.Value) == ""
 																	}
 																	v.Value = string(obj.Value)
 																	v.Unknown = false
@@ -4693,6 +4778,9 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 														}
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.Headers) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -5059,7 +5147,7 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Kind) == ""
 			}
 			v.Value = string(obj.Kind)
 			v.Unknown = false
@@ -5081,7 +5169,7 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.SubKind) == ""
 			}
 			v.Value = string(obj.SubKind)
 			v.Unknown = false
@@ -5103,7 +5191,7 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Version) == ""
 			}
 			v.Value = string(obj.Version)
 			v.Unknown = false
@@ -5149,7 +5237,7 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Metadata.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Name) == ""
 							}
 							v.Value = string(obj.Name)
 							v.Unknown = false
@@ -5171,7 +5259,7 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Namespace) == ""
 							}
 							v.Value = string(obj.Namespace)
 							v.Unknown = false
@@ -5193,7 +5281,7 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Description) == ""
 							}
 							v.Value = string(obj.Description)
 							v.Unknown = false
@@ -5215,6 +5303,7 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 
 										ElemType: o.ElemType,
 										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -5239,6 +5328,9 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Labels) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -5266,6 +5358,7 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 							if obj.Expires == nil {
 								v.Null = true
 							} else {
+								v.Null = false
 								v.Value = time.Time(*obj.Expires)
 							}
 							v.Unknown = false
@@ -5317,6 +5410,7 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 
 										ElemType: o.ElemType,
 										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -5336,11 +5430,14 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 											if !ok {
 												diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Spec.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 											}
-											v.Null = false
+											v.Null = string(a) == ""
 										}
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Roles) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -5363,6 +5460,7 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 
 										ElemType: o.ElemType,
 										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Allow)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -5404,7 +5502,7 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Spec.allow.AWSAccount", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.AWSAccount) == ""
 													}
 													v.Value = string(obj.AWSAccount)
 													v.Unknown = false
@@ -5426,6 +5524,7 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 
 																ElemType: o.ElemType,
 																Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.AWSRegions)),
+																Null:     true,
 															}
 														} else {
 															if c.Elems == nil {
@@ -5445,11 +5544,14 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 																	if !ok {
 																		diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Spec.allow.AWSRegions", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																	}
-																	v.Null = false
+																	v.Null = string(a) == ""
 																}
 																v.Value = string(a)
 																v.Unknown = false
 																c.Elems[k] = v
+															}
+															if len(obj.AWSRegions) > 0 {
+																c.Null = false
 															}
 														}
 														c.Unknown = false
@@ -5472,7 +5574,7 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Spec.allow.AWSRole", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.AWSRole) == ""
 													}
 													v.Value = string(obj.AWSRole)
 													v.Unknown = false
@@ -5482,6 +5584,9 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 										}
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Allow) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -5849,7 +5954,7 @@ func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj github_co
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"ClusterNetworkingConfigV2.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Kind) == ""
 			}
 			v.Value = string(obj.Kind)
 			v.Unknown = false
@@ -5871,7 +5976,7 @@ func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj github_co
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"ClusterNetworkingConfigV2.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.SubKind) == ""
 			}
 			v.Value = string(obj.SubKind)
 			v.Unknown = false
@@ -5893,7 +5998,7 @@ func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj github_co
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"ClusterNetworkingConfigV2.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Version) == ""
 			}
 			v.Value = string(obj.Version)
 			v.Unknown = false
@@ -5939,7 +6044,7 @@ func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj github_co
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"ClusterNetworkingConfigV2.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Namespace) == ""
 							}
 							v.Value = string(obj.Namespace)
 							v.Unknown = false
@@ -5961,7 +6066,7 @@ func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj github_co
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"ClusterNetworkingConfigV2.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Description) == ""
 							}
 							v.Value = string(obj.Description)
 							v.Unknown = false
@@ -5983,6 +6088,7 @@ func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj github_co
 
 										ElemType: o.ElemType,
 										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -6007,6 +6113,9 @@ func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj github_co
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Labels) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -6034,6 +6143,7 @@ func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj github_co
 							if obj.Expires == nil {
 								v.Null = true
 							} else {
+								v.Null = false
 								v.Value = time.Time(*obj.Expires)
 							}
 							v.Unknown = false
@@ -6129,7 +6239,7 @@ func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj github_co
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"ClusterNetworkingConfigV2.Spec.KeepAliveCountMax", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
 								}
-								v.Null = false
+								v.Null = int64(obj.KeepAliveCountMax) == 0
 							}
 							v.Value = int64(obj.KeepAliveCountMax)
 							v.Unknown = false
@@ -6173,7 +6283,7 @@ func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj github_co
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"ClusterNetworkingConfigV2.Spec.ClientIdleTimeoutMessage", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.ClientIdleTimeoutMessage) == ""
 							}
 							v.Value = string(obj.ClientIdleTimeoutMessage)
 							v.Unknown = false
@@ -6217,7 +6327,7 @@ func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj github_co
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"ClusterNetworkingConfigV2.Spec.ProxyListenerMode", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
 								}
-								v.Null = false
+								v.Null = int64(obj.ProxyListenerMode) == 0
 							}
 							v.Value = int64(obj.ProxyListenerMode)
 							v.Unknown = false
@@ -6239,7 +6349,7 @@ func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj github_co
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"ClusterNetworkingConfigV2.Spec.RoutingStrategy", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
 								}
-								v.Null = false
+								v.Null = int64(obj.RoutingStrategy) == 0
 							}
 							v.Value = int64(obj.RoutingStrategy)
 							v.Unknown = false
@@ -6472,7 +6582,7 @@ func CopySessionRecordingConfigV2ToTerraform(ctx context.Context, obj github_com
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"SessionRecordingConfigV2.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Kind) == ""
 			}
 			v.Value = string(obj.Kind)
 			v.Unknown = false
@@ -6494,7 +6604,7 @@ func CopySessionRecordingConfigV2ToTerraform(ctx context.Context, obj github_com
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"SessionRecordingConfigV2.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.SubKind) == ""
 			}
 			v.Value = string(obj.SubKind)
 			v.Unknown = false
@@ -6516,7 +6626,7 @@ func CopySessionRecordingConfigV2ToTerraform(ctx context.Context, obj github_com
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"SessionRecordingConfigV2.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Version) == ""
 			}
 			v.Value = string(obj.Version)
 			v.Unknown = false
@@ -6562,7 +6672,7 @@ func CopySessionRecordingConfigV2ToTerraform(ctx context.Context, obj github_com
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SessionRecordingConfigV2.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Namespace) == ""
 							}
 							v.Value = string(obj.Namespace)
 							v.Unknown = false
@@ -6584,7 +6694,7 @@ func CopySessionRecordingConfigV2ToTerraform(ctx context.Context, obj github_com
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SessionRecordingConfigV2.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Description) == ""
 							}
 							v.Value = string(obj.Description)
 							v.Unknown = false
@@ -6606,6 +6716,7 @@ func CopySessionRecordingConfigV2ToTerraform(ctx context.Context, obj github_com
 
 										ElemType: o.ElemType,
 										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -6630,6 +6741,9 @@ func CopySessionRecordingConfigV2ToTerraform(ctx context.Context, obj github_com
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Labels) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -6657,6 +6771,7 @@ func CopySessionRecordingConfigV2ToTerraform(ctx context.Context, obj github_com
 							if obj.Expires == nil {
 								v.Null = true
 							} else {
+								v.Null = false
 								v.Value = time.Time(*obj.Expires)
 							}
 							v.Unknown = false
@@ -6708,7 +6823,7 @@ func CopySessionRecordingConfigV2ToTerraform(ctx context.Context, obj github_com
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SessionRecordingConfigV2.Spec.Mode", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Mode) == ""
 							}
 							v.Value = string(obj.Mode)
 							v.Unknown = false
@@ -7237,7 +7352,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Kind) == ""
 			}
 			v.Value = string(obj.Kind)
 			v.Unknown = false
@@ -7259,7 +7374,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.SubKind) == ""
 			}
 			v.Value = string(obj.SubKind)
 			v.Unknown = false
@@ -7281,7 +7396,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Version) == ""
 			}
 			v.Value = string(obj.Version)
 			v.Unknown = false
@@ -7327,7 +7442,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Namespace) == ""
 							}
 							v.Value = string(obj.Namespace)
 							v.Unknown = false
@@ -7349,7 +7464,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Description) == ""
 							}
 							v.Value = string(obj.Description)
 							v.Unknown = false
@@ -7371,6 +7486,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 
 										ElemType: o.ElemType,
 										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -7395,6 +7511,9 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Labels) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -7422,6 +7541,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 							if obj.Expires == nil {
 								v.Null = true
 							} else {
+								v.Null = false
 								v.Value = time.Time(*obj.Expires)
 							}
 							v.Unknown = false
@@ -7473,7 +7593,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.Type", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Type) == ""
 							}
 							v.Value = string(obj.Type)
 							v.Unknown = false
@@ -7495,7 +7615,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.SecondFactor", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.SecondFactor) == ""
 							}
 							v.Value = string(obj.SecondFactor)
 							v.Unknown = false
@@ -7517,7 +7637,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.ConnectorName", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.ConnectorName) == ""
 							}
 							v.Value = string(obj.ConnectorName)
 							v.Unknown = false
@@ -7565,7 +7685,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.U2F.AppID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.AppID) == ""
 											}
 											v.Value = string(obj.AppID)
 											v.Unknown = false
@@ -7587,6 +7707,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Facets)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -7606,11 +7727,14 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.U2F.Facets", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.Facets) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -7633,6 +7757,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DeviceAttestationCAs)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -7652,11 +7777,14 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.U2F.DeviceAttestationCAs", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.DeviceAttestationCAs) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -7685,7 +7813,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.RequireSessionMFA", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
 								}
-								v.Null = false
+								v.Null = bool(obj.RequireSessionMFA) == false
 							}
 							v.Value = bool(obj.RequireSessionMFA)
 							v.Unknown = false
@@ -7725,7 +7853,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.MessageOfTheDay", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.MessageOfTheDay) == ""
 							}
 							v.Value = string(obj.MessageOfTheDay)
 							v.Unknown = false
@@ -7747,7 +7875,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.LockingMode", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.LockingMode) == ""
 							}
 							v.Value = string(obj.LockingMode)
 							v.Unknown = false
@@ -7795,7 +7923,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.Webauthn.RPID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.RPID) == ""
 											}
 											v.Value = string(obj.RPID)
 											v.Unknown = false
@@ -7817,6 +7945,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.AttestationAllowedCAs)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -7836,11 +7965,14 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.Webauthn.AttestationAllowedCAs", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.AttestationAllowedCAs) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -7863,6 +7995,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.AttestationDeniedCAs)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -7882,11 +8015,14 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.Webauthn.AttestationDeniedCAs", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.AttestationDeniedCAs) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -7909,7 +8045,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.Webauthn.Disabled", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
 												}
-												v.Null = false
+												v.Null = bool(obj.Disabled) == false
 											}
 											v.Value = bool(obj.Disabled)
 											v.Unknown = false
@@ -10152,7 +10288,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"RoleV4.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Kind) == ""
 			}
 			v.Value = string(obj.Kind)
 			v.Unknown = false
@@ -10174,7 +10310,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"RoleV4.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.SubKind) == ""
 			}
 			v.Value = string(obj.SubKind)
 			v.Unknown = false
@@ -10196,7 +10332,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"RoleV4.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Version) == ""
 			}
 			v.Value = string(obj.Version)
 			v.Unknown = false
@@ -10242,7 +10378,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"RoleV4.Metadata.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Name) == ""
 							}
 							v.Value = string(obj.Name)
 							v.Unknown = false
@@ -10264,7 +10400,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"RoleV4.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Namespace) == ""
 							}
 							v.Value = string(obj.Namespace)
 							v.Unknown = false
@@ -10286,7 +10422,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"RoleV4.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Description) == ""
 							}
 							v.Value = string(obj.Description)
 							v.Unknown = false
@@ -10308,6 +10444,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 										ElemType: o.ElemType,
 										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -10332,6 +10469,9 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Labels) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -10359,6 +10499,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 							if obj.Expires == nil {
 								v.Null = true
 							} else {
+								v.Null = false
 								v.Value = time.Time(*obj.Expires)
 							}
 							v.Unknown = false
@@ -10434,7 +10575,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Options.ForwardAgent", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
 												}
-												v.Null = false
+												v.Null = bool(obj.ForwardAgent) == false
 											}
 											v.Value = bool(obj.ForwardAgent)
 											v.Unknown = false
@@ -10487,7 +10628,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Options.CertificateFormat", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.CertificateFormat) == ""
 											}
 											v.Value = string(obj.CertificateFormat)
 											v.Unknown = false
@@ -10531,7 +10672,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Options.DisconnectExpiredCert", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
 												}
-												v.Null = false
+												v.Null = bool(obj.DisconnectExpiredCert) == false
 											}
 											v.Value = bool(obj.DisconnectExpiredCert)
 											v.Unknown = false
@@ -10553,6 +10694,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.BPF)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -10572,11 +10714,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Options.BPF", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.BPF) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -10599,7 +10744,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Options.PermitX11Forwarding", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
 												}
-												v.Null = false
+												v.Null = bool(obj.PermitX11Forwarding) == false
 											}
 											v.Value = bool(obj.PermitX11Forwarding)
 											v.Unknown = false
@@ -10621,7 +10766,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Options.MaxConnections", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
 												}
-												v.Null = false
+												v.Null = int64(obj.MaxConnections) == 0
 											}
 											v.Value = int64(obj.MaxConnections)
 											v.Unknown = false
@@ -10643,7 +10788,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Options.MaxSessions", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
 												}
-												v.Null = false
+												v.Null = int64(obj.MaxSessions) == 0
 											}
 											v.Value = int64(obj.MaxSessions)
 											v.Unknown = false
@@ -10665,7 +10810,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Options.RequestAccess", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.RequestAccess) == ""
 											}
 											v.Value = string(obj.RequestAccess)
 											v.Unknown = false
@@ -10687,7 +10832,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Options.RequestPrompt", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.RequestPrompt) == ""
 											}
 											v.Value = string(obj.RequestPrompt)
 											v.Unknown = false
@@ -10709,7 +10854,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Options.RequireSessionMFA", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
 												}
-												v.Null = false
+												v.Null = bool(obj.RequireSessionMFA) == false
 											}
 											v.Value = bool(obj.RequireSessionMFA)
 											v.Unknown = false
@@ -10731,7 +10876,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Options.Lock", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.Lock) == ""
 											}
 											v.Value = string(obj.Lock)
 											v.Unknown = false
@@ -10783,6 +10928,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Logins)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -10802,11 +10948,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Logins", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.Logins) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -10838,6 +10987,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Rules)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -10877,6 +11027,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																				ElemType: o.ElemType,
 																				Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Resources)),
+																				Null:     true,
 																			}
 																		} else {
 																			if c.Elems == nil {
@@ -10896,11 +11047,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																					if !ok {
 																						diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Rules.Resources", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																					}
-																					v.Null = false
+																					v.Null = string(a) == ""
 																				}
 																				v.Value = string(a)
 																				v.Unknown = false
 																				c.Elems[k] = v
+																			}
+																			if len(obj.Resources) > 0 {
+																				c.Null = false
 																			}
 																		}
 																		c.Unknown = false
@@ -10923,6 +11077,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																				ElemType: o.ElemType,
 																				Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Verbs)),
+																				Null:     true,
 																			}
 																		} else {
 																			if c.Elems == nil {
@@ -10942,11 +11097,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																					if !ok {
 																						diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Rules.Verbs", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																					}
-																					v.Null = false
+																					v.Null = string(a) == ""
 																				}
 																				v.Value = string(a)
 																				v.Unknown = false
 																				c.Elems[k] = v
+																			}
+																			if len(obj.Verbs) > 0 {
+																				c.Null = false
 																			}
 																		}
 																		c.Unknown = false
@@ -10969,7 +11127,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																		if !ok {
 																			diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Rules.Where", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																		}
-																		v.Null = false
+																		v.Null = string(obj.Where) == ""
 																	}
 																	v.Value = string(obj.Where)
 																	v.Unknown = false
@@ -10991,6 +11149,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																				ElemType: o.ElemType,
 																				Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Actions)),
+																				Null:     true,
 																			}
 																		} else {
 																			if c.Elems == nil {
@@ -11010,11 +11169,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																					if !ok {
 																						diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Rules.Actions", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																					}
-																					v.Null = false
+																					v.Null = string(a) == ""
 																				}
 																				v.Value = string(a)
 																				v.Unknown = false
 																				c.Elems[k] = v
+																			}
+																			if len(obj.Actions) > 0 {
+																				c.Null = false
 																			}
 																		}
 																		c.Unknown = false
@@ -11025,6 +11187,9 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 														}
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.Rules) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -11047,6 +11212,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.KubeGroups)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -11066,11 +11232,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.KubeGroups", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.KubeGroups) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -11119,6 +11288,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -11138,11 +11308,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																			if !ok {
 																				diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Request.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																			}
-																			v.Null = false
+																			v.Null = string(a) == ""
 																		}
 																		v.Value = string(a)
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.Roles) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -11165,6 +11338,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.ClaimsToRoles)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -11204,7 +11378,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Request.ClaimsToRoles.Claim", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																						}
-																						v.Null = false
+																						v.Null = string(obj.Claim) == ""
 																					}
 																					v.Value = string(obj.Claim)
 																					v.Unknown = false
@@ -11226,7 +11400,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Request.ClaimsToRoles.Value", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																						}
-																						v.Null = false
+																						v.Null = string(obj.Value) == ""
 																					}
 																					v.Value = string(obj.Value)
 																					v.Unknown = false
@@ -11248,6 +11422,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																								ElemType: o.ElemType,
 																								Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+																								Null:     true,
 																							}
 																						} else {
 																							if c.Elems == nil {
@@ -11267,11 +11442,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																									if !ok {
 																										diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Request.ClaimsToRoles.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																									}
-																									v.Null = false
+																									v.Null = string(a) == ""
 																								}
 																								v.Value = string(a)
 																								v.Unknown = false
 																								c.Elems[k] = v
+																							}
+																							if len(obj.Roles) > 0 {
+																								c.Null = false
 																							}
 																						}
 																						c.Unknown = false
@@ -11282,6 +11460,9 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																		}
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.ClaimsToRoles) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -11313,6 +11494,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Thresholds)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -11352,7 +11534,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Request.Thresholds.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																						}
-																						v.Null = false
+																						v.Null = string(obj.Name) == ""
 																					}
 																					v.Value = string(obj.Name)
 																					v.Unknown = false
@@ -11374,7 +11556,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Request.Thresholds.Filter", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																						}
-																						v.Null = false
+																						v.Null = string(obj.Filter) == ""
 																					}
 																					v.Value = string(obj.Filter)
 																					v.Unknown = false
@@ -11396,7 +11578,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Request.Thresholds.Approve", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
 																						}
-																						v.Null = false
+																						v.Null = int64(obj.Approve) == 0
 																					}
 																					v.Value = int64(obj.Approve)
 																					v.Unknown = false
@@ -11418,7 +11600,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Request.Thresholds.Deny", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
 																						}
-																						v.Null = false
+																						v.Null = int64(obj.Deny) == 0
 																					}
 																					v.Value = int64(obj.Deny)
 																					v.Unknown = false
@@ -11428,6 +11610,9 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																		}
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.Thresholds) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -11450,6 +11635,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.SuggestedReviewers)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -11469,11 +11655,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																			if !ok {
 																				diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Request.SuggestedReviewers", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																			}
-																			v.Null = false
+																			v.Null = string(a) == ""
 																		}
 																		v.Value = string(a)
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.SuggestedReviewers) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -11502,6 +11691,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.KubeUsers)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -11521,11 +11711,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.KubeUsers", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.KubeUsers) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -11584,6 +11777,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseNames)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -11603,11 +11797,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.DatabaseNames", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.DatabaseNames) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -11630,6 +11827,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseUsers)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -11649,11 +11847,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.DatabaseUsers", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.DatabaseUsers) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -11702,6 +11903,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Users)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -11721,11 +11923,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																			if !ok {
 																				diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Impersonate.Users", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																			}
-																			v.Null = false
+																			v.Null = string(a) == ""
 																		}
 																		v.Value = string(a)
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.Users) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -11748,6 +11953,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -11767,11 +11973,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																			if !ok {
 																				diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Impersonate.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																			}
-																			v.Null = false
+																			v.Null = string(a) == ""
 																		}
 																		v.Value = string(a)
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.Roles) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -11794,7 +12003,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																if !ok {
 																	diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.Impersonate.Where", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																}
-																v.Null = false
+																v.Null = string(obj.Where) == ""
 															}
 															v.Value = string(obj.Where)
 															v.Unknown = false
@@ -11848,6 +12057,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -11867,11 +12077,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																			if !ok {
 																				diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.ReviewRequests.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																			}
-																			v.Null = false
+																			v.Null = string(a) == ""
 																		}
 																		v.Value = string(a)
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.Roles) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -11894,6 +12107,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.ClaimsToRoles)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -11933,7 +12147,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.ReviewRequests.ClaimsToRoles.Claim", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																						}
-																						v.Null = false
+																						v.Null = string(obj.Claim) == ""
 																					}
 																					v.Value = string(obj.Claim)
 																					v.Unknown = false
@@ -11955,7 +12169,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.ReviewRequests.ClaimsToRoles.Value", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																						}
-																						v.Null = false
+																						v.Null = string(obj.Value) == ""
 																					}
 																					v.Value = string(obj.Value)
 																					v.Unknown = false
@@ -11977,6 +12191,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																								ElemType: o.ElemType,
 																								Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+																								Null:     true,
 																							}
 																						} else {
 																							if c.Elems == nil {
@@ -11996,11 +12211,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																									if !ok {
 																										diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.ReviewRequests.ClaimsToRoles.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																									}
-																									v.Null = false
+																									v.Null = string(a) == ""
 																								}
 																								v.Value = string(a)
 																								v.Unknown = false
 																								c.Elems[k] = v
+																							}
+																							if len(obj.Roles) > 0 {
+																								c.Null = false
 																							}
 																						}
 																						c.Unknown = false
@@ -12011,6 +12229,9 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																		}
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.ClaimsToRoles) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -12033,7 +12254,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																if !ok {
 																	diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.ReviewRequests.Where", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																}
-																v.Null = false
+																v.Null = string(obj.Where) == ""
 															}
 															v.Value = string(obj.Where)
 															v.Unknown = false
@@ -12061,6 +12282,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.AWSRoleARNs)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -12080,11 +12302,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.AWSRoleARNs", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.AWSRoleARNs) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -12107,6 +12332,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.WindowsDesktopLogins)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -12126,11 +12352,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Allow.WindowsDesktopLogins", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.WindowsDesktopLogins) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -12192,6 +12421,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Logins)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -12211,11 +12441,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Logins", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.Logins) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -12247,6 +12480,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Rules)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -12286,6 +12520,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																				ElemType: o.ElemType,
 																				Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Resources)),
+																				Null:     true,
 																			}
 																		} else {
 																			if c.Elems == nil {
@@ -12305,11 +12540,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																					if !ok {
 																						diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Rules.Resources", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																					}
-																					v.Null = false
+																					v.Null = string(a) == ""
 																				}
 																				v.Value = string(a)
 																				v.Unknown = false
 																				c.Elems[k] = v
+																			}
+																			if len(obj.Resources) > 0 {
+																				c.Null = false
 																			}
 																		}
 																		c.Unknown = false
@@ -12332,6 +12570,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																				ElemType: o.ElemType,
 																				Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Verbs)),
+																				Null:     true,
 																			}
 																		} else {
 																			if c.Elems == nil {
@@ -12351,11 +12590,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																					if !ok {
 																						diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Rules.Verbs", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																					}
-																					v.Null = false
+																					v.Null = string(a) == ""
 																				}
 																				v.Value = string(a)
 																				v.Unknown = false
 																				c.Elems[k] = v
+																			}
+																			if len(obj.Verbs) > 0 {
+																				c.Null = false
 																			}
 																		}
 																		c.Unknown = false
@@ -12378,7 +12620,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																		if !ok {
 																			diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Rules.Where", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																		}
-																		v.Null = false
+																		v.Null = string(obj.Where) == ""
 																	}
 																	v.Value = string(obj.Where)
 																	v.Unknown = false
@@ -12400,6 +12642,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																				ElemType: o.ElemType,
 																				Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Actions)),
+																				Null:     true,
 																			}
 																		} else {
 																			if c.Elems == nil {
@@ -12419,11 +12662,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																					if !ok {
 																						diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Rules.Actions", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																					}
-																					v.Null = false
+																					v.Null = string(a) == ""
 																				}
 																				v.Value = string(a)
 																				v.Unknown = false
 																				c.Elems[k] = v
+																			}
+																			if len(obj.Actions) > 0 {
+																				c.Null = false
 																			}
 																		}
 																		c.Unknown = false
@@ -12434,6 +12680,9 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 														}
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.Rules) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -12456,6 +12705,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.KubeGroups)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -12475,11 +12725,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.KubeGroups", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.KubeGroups) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -12528,6 +12781,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -12547,11 +12801,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																			if !ok {
 																				diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Request.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																			}
-																			v.Null = false
+																			v.Null = string(a) == ""
 																		}
 																		v.Value = string(a)
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.Roles) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -12574,6 +12831,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.ClaimsToRoles)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -12613,7 +12871,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Request.ClaimsToRoles.Claim", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																						}
-																						v.Null = false
+																						v.Null = string(obj.Claim) == ""
 																					}
 																					v.Value = string(obj.Claim)
 																					v.Unknown = false
@@ -12635,7 +12893,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Request.ClaimsToRoles.Value", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																						}
-																						v.Null = false
+																						v.Null = string(obj.Value) == ""
 																					}
 																					v.Value = string(obj.Value)
 																					v.Unknown = false
@@ -12657,6 +12915,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																								ElemType: o.ElemType,
 																								Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+																								Null:     true,
 																							}
 																						} else {
 																							if c.Elems == nil {
@@ -12676,11 +12935,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																									if !ok {
 																										diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Request.ClaimsToRoles.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																									}
-																									v.Null = false
+																									v.Null = string(a) == ""
 																								}
 																								v.Value = string(a)
 																								v.Unknown = false
 																								c.Elems[k] = v
+																							}
+																							if len(obj.Roles) > 0 {
+																								c.Null = false
 																							}
 																						}
 																						c.Unknown = false
@@ -12691,6 +12953,9 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																		}
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.ClaimsToRoles) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -12722,6 +12987,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Thresholds)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -12761,7 +13027,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Request.Thresholds.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																						}
-																						v.Null = false
+																						v.Null = string(obj.Name) == ""
 																					}
 																					v.Value = string(obj.Name)
 																					v.Unknown = false
@@ -12783,7 +13049,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Request.Thresholds.Filter", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																						}
-																						v.Null = false
+																						v.Null = string(obj.Filter) == ""
 																					}
 																					v.Value = string(obj.Filter)
 																					v.Unknown = false
@@ -12805,7 +13071,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Request.Thresholds.Approve", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
 																						}
-																						v.Null = false
+																						v.Null = int64(obj.Approve) == 0
 																					}
 																					v.Value = int64(obj.Approve)
 																					v.Unknown = false
@@ -12827,7 +13093,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Request.Thresholds.Deny", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
 																						}
-																						v.Null = false
+																						v.Null = int64(obj.Deny) == 0
 																					}
 																					v.Value = int64(obj.Deny)
 																					v.Unknown = false
@@ -12837,6 +13103,9 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																		}
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.Thresholds) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -12859,6 +13128,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.SuggestedReviewers)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -12878,11 +13148,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																			if !ok {
 																				diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Request.SuggestedReviewers", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																			}
-																			v.Null = false
+																			v.Null = string(a) == ""
 																		}
 																		v.Value = string(a)
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.SuggestedReviewers) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -12911,6 +13184,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.KubeUsers)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -12930,11 +13204,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.KubeUsers", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.KubeUsers) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -12993,6 +13270,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseNames)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -13012,11 +13290,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.DatabaseNames", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.DatabaseNames) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -13039,6 +13320,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseUsers)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -13058,11 +13340,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.DatabaseUsers", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.DatabaseUsers) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -13111,6 +13396,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Users)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -13130,11 +13416,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																			if !ok {
 																				diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Impersonate.Users", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																			}
-																			v.Null = false
+																			v.Null = string(a) == ""
 																		}
 																		v.Value = string(a)
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.Users) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -13157,6 +13446,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -13176,11 +13466,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																			if !ok {
 																				diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Impersonate.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																			}
-																			v.Null = false
+																			v.Null = string(a) == ""
 																		}
 																		v.Value = string(a)
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.Roles) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -13203,7 +13496,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																if !ok {
 																	diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.Impersonate.Where", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																}
-																v.Null = false
+																v.Null = string(obj.Where) == ""
 															}
 															v.Value = string(obj.Where)
 															v.Unknown = false
@@ -13257,6 +13550,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -13276,11 +13570,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																			if !ok {
 																				diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.ReviewRequests.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																			}
-																			v.Null = false
+																			v.Null = string(a) == ""
 																		}
 																		v.Value = string(a)
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.Roles) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -13303,6 +13600,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																		ElemType: o.ElemType,
 																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.ClaimsToRoles)),
+																		Null:     true,
 																	}
 																} else {
 																	if c.Elems == nil {
@@ -13342,7 +13640,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.ReviewRequests.ClaimsToRoles.Claim", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																						}
-																						v.Null = false
+																						v.Null = string(obj.Claim) == ""
 																					}
 																					v.Value = string(obj.Claim)
 																					v.Unknown = false
@@ -13364,7 +13662,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																						if !ok {
 																							diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.ReviewRequests.ClaimsToRoles.Value", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																						}
-																						v.Null = false
+																						v.Null = string(obj.Value) == ""
 																					}
 																					v.Value = string(obj.Value)
 																					v.Unknown = false
@@ -13386,6 +13684,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 																								ElemType: o.ElemType,
 																								Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+																								Null:     true,
 																							}
 																						} else {
 																							if c.Elems == nil {
@@ -13405,11 +13704,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																									if !ok {
 																										diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.ReviewRequests.ClaimsToRoles.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																									}
-																									v.Null = false
+																									v.Null = string(a) == ""
 																								}
 																								v.Value = string(a)
 																								v.Unknown = false
 																								c.Elems[k] = v
+																							}
+																							if len(obj.Roles) > 0 {
+																								c.Null = false
 																							}
 																						}
 																						c.Unknown = false
@@ -13420,6 +13722,9 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																		}
 																		v.Unknown = false
 																		c.Elems[k] = v
+																	}
+																	if len(obj.ClaimsToRoles) > 0 {
+																		c.Null = false
 																	}
 																}
 																c.Unknown = false
@@ -13442,7 +13747,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 																if !ok {
 																	diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.ReviewRequests.Where", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																}
-																v.Null = false
+																v.Null = string(obj.Where) == ""
 															}
 															v.Value = string(obj.Where)
 															v.Unknown = false
@@ -13470,6 +13775,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.AWSRoleARNs)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -13489,11 +13795,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.AWSRoleARNs", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.AWSRoleARNs) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -13516,6 +13825,7 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 														ElemType: o.ElemType,
 														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.WindowsDesktopLogins)),
+														Null:     true,
 													}
 												} else {
 													if c.Elems == nil {
@@ -13535,11 +13845,14 @@ func CopyRoleV4ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 															if !ok {
 																diags.Append(attrWriteConversionFailureDiag{"RoleV4.Spec.Deny.WindowsDesktopLogins", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 															}
-															v.Null = false
+															v.Null = string(a) == ""
 														}
 														v.Value = string(a)
 														v.Unknown = false
 														c.Elems[k] = v
+													}
+													if len(obj.WindowsDesktopLogins) > 0 {
+														c.Null = false
 													}
 												}
 												c.Unknown = false
@@ -14001,7 +14314,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"UserV2.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Kind) == ""
 			}
 			v.Value = string(obj.Kind)
 			v.Unknown = false
@@ -14023,7 +14336,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"UserV2.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.SubKind) == ""
 			}
 			v.Value = string(obj.SubKind)
 			v.Unknown = false
@@ -14045,7 +14358,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"UserV2.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Version) == ""
 			}
 			v.Value = string(obj.Version)
 			v.Unknown = false
@@ -14091,7 +14404,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"UserV2.Metadata.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Name) == ""
 							}
 							v.Value = string(obj.Name)
 							v.Unknown = false
@@ -14113,7 +14426,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"UserV2.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Namespace) == ""
 							}
 							v.Value = string(obj.Namespace)
 							v.Unknown = false
@@ -14135,7 +14448,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"UserV2.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Description) == ""
 							}
 							v.Value = string(obj.Description)
 							v.Unknown = false
@@ -14157,6 +14470,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 										ElemType: o.ElemType,
 										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -14181,6 +14495,9 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Labels) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -14208,6 +14525,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 							if obj.Expires == nil {
 								v.Null = true
 							} else {
+								v.Null = false
 								v.Value = time.Time(*obj.Expires)
 							}
 							v.Unknown = false
@@ -14259,6 +14577,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 										ElemType: o.ElemType,
 										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.OIDCIdentities)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -14298,7 +14617,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"UserV2.Spec.OIDCIdentities.ConnectorID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.ConnectorID) == ""
 													}
 													v.Value = string(obj.ConnectorID)
 													v.Unknown = false
@@ -14320,7 +14639,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"UserV2.Spec.OIDCIdentities.Username", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.Username) == ""
 													}
 													v.Value = string(obj.Username)
 													v.Unknown = false
@@ -14330,6 +14649,9 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 										}
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.OIDCIdentities) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -14352,6 +14674,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 										ElemType: o.ElemType,
 										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.SAMLIdentities)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -14391,7 +14714,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"UserV2.Spec.SAMLIdentities.ConnectorID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.ConnectorID) == ""
 													}
 													v.Value = string(obj.ConnectorID)
 													v.Unknown = false
@@ -14413,7 +14736,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"UserV2.Spec.SAMLIdentities.Username", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.Username) == ""
 													}
 													v.Value = string(obj.Username)
 													v.Unknown = false
@@ -14423,6 +14746,9 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 										}
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.SAMLIdentities) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -14445,6 +14771,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 										ElemType: o.ElemType,
 										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.GithubIdentities)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -14484,7 +14811,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"UserV2.Spec.GithubIdentities.ConnectorID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.ConnectorID) == ""
 													}
 													v.Value = string(obj.ConnectorID)
 													v.Unknown = false
@@ -14506,7 +14833,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"UserV2.Spec.GithubIdentities.Username", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.Username) == ""
 													}
 													v.Value = string(obj.Username)
 													v.Unknown = false
@@ -14516,6 +14843,9 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 										}
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.GithubIdentities) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -14538,6 +14868,7 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 
 										ElemType: o.ElemType,
 										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -14557,11 +14888,14 @@ func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 											if !ok {
 												diags.Append(attrWriteConversionFailureDiag{"UserV2.Spec.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 											}
-											v.Null = false
+											v.Null = string(a) == ""
 										}
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Roles) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -15100,7 +15434,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Kind) == ""
 			}
 			v.Value = string(obj.Kind)
 			v.Unknown = false
@@ -15122,7 +15456,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.SubKind) == ""
 			}
 			v.Value = string(obj.SubKind)
 			v.Unknown = false
@@ -15144,7 +15478,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Version) == ""
 			}
 			v.Value = string(obj.Version)
 			v.Unknown = false
@@ -15190,7 +15524,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Metadata.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Name) == ""
 							}
 							v.Value = string(obj.Name)
 							v.Unknown = false
@@ -15212,7 +15546,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Namespace) == ""
 							}
 							v.Value = string(obj.Namespace)
 							v.Unknown = false
@@ -15234,7 +15568,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Description) == ""
 							}
 							v.Value = string(obj.Description)
 							v.Unknown = false
@@ -15256,6 +15590,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 
 										ElemType: o.ElemType,
 										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -15280,6 +15615,9 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Labels) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -15307,6 +15645,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 							if obj.Expires == nil {
 								v.Null = true
 							} else {
+								v.Null = false
 								v.Value = time.Time(*obj.Expires)
 							}
 							v.Unknown = false
@@ -15358,7 +15697,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.IssuerURL", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.IssuerURL) == ""
 							}
 							v.Value = string(obj.IssuerURL)
 							v.Unknown = false
@@ -15380,7 +15719,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.ClientID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.ClientID) == ""
 							}
 							v.Value = string(obj.ClientID)
 							v.Unknown = false
@@ -15402,7 +15741,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.ClientSecret", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.ClientSecret) == ""
 							}
 							v.Value = string(obj.ClientSecret)
 							v.Unknown = false
@@ -15424,7 +15763,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.RedirectURL", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.RedirectURL) == ""
 							}
 							v.Value = string(obj.RedirectURL)
 							v.Unknown = false
@@ -15446,7 +15785,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.ACR", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.ACR) == ""
 							}
 							v.Value = string(obj.ACR)
 							v.Unknown = false
@@ -15468,7 +15807,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.Provider", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Provider) == ""
 							}
 							v.Value = string(obj.Provider)
 							v.Unknown = false
@@ -15490,7 +15829,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.Display", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Display) == ""
 							}
 							v.Value = string(obj.Display)
 							v.Unknown = false
@@ -15512,6 +15851,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 
 										ElemType: o.ElemType,
 										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Scope)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -15531,11 +15871,14 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 											if !ok {
 												diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.Scope", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 											}
-											v.Null = false
+											v.Null = string(a) == ""
 										}
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Scope) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -15558,7 +15901,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.Prompt", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Prompt) == ""
 							}
 							v.Value = string(obj.Prompt)
 							v.Unknown = false
@@ -15580,6 +15923,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 
 										ElemType: o.ElemType,
 										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.ClaimsToRoles)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -15619,7 +15963,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.ClaimsToRoles.Claim", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.Claim) == ""
 													}
 													v.Value = string(obj.Claim)
 													v.Unknown = false
@@ -15641,7 +15985,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.ClaimsToRoles.Value", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.Value) == ""
 													}
 													v.Value = string(obj.Value)
 													v.Unknown = false
@@ -15663,6 +16007,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 
 																ElemType: o.ElemType,
 																Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+																Null:     true,
 															}
 														} else {
 															if c.Elems == nil {
@@ -15682,11 +16027,14 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 																	if !ok {
 																		diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.ClaimsToRoles.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																	}
-																	v.Null = false
+																	v.Null = string(a) == ""
 																}
 																v.Value = string(a)
 																v.Unknown = false
 																c.Elems[k] = v
+															}
+															if len(obj.Roles) > 0 {
+																c.Null = false
 															}
 														}
 														c.Unknown = false
@@ -15697,6 +16045,9 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 										}
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.ClaimsToRoles) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -15719,7 +16070,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.GoogleServiceAccountURI", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.GoogleServiceAccountURI) == ""
 							}
 							v.Value = string(obj.GoogleServiceAccountURI)
 							v.Unknown = false
@@ -15741,7 +16092,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.GoogleServiceAccount", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.GoogleServiceAccount) == ""
 							}
 							v.Value = string(obj.GoogleServiceAccount)
 							v.Unknown = false
@@ -15763,7 +16114,7 @@ func CopyOIDCConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorV2.Spec.GoogleAdminEmail", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.GoogleAdminEmail) == ""
 							}
 							v.Value = string(obj.GoogleAdminEmail)
 							v.Unknown = false
@@ -16352,7 +16703,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Kind) == ""
 			}
 			v.Value = string(obj.Kind)
 			v.Unknown = false
@@ -16374,7 +16725,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.SubKind) == ""
 			}
 			v.Value = string(obj.SubKind)
 			v.Unknown = false
@@ -16396,7 +16747,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Version) == ""
 			}
 			v.Value = string(obj.Version)
 			v.Unknown = false
@@ -16442,7 +16793,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Metadata.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Name) == ""
 							}
 							v.Value = string(obj.Name)
 							v.Unknown = false
@@ -16464,7 +16815,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Namespace) == ""
 							}
 							v.Value = string(obj.Namespace)
 							v.Unknown = false
@@ -16486,7 +16837,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Description) == ""
 							}
 							v.Value = string(obj.Description)
 							v.Unknown = false
@@ -16508,6 +16859,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 
 										ElemType: o.ElemType,
 										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -16532,6 +16884,9 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Labels) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -16559,6 +16914,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 							if obj.Expires == nil {
 								v.Null = true
 							} else {
+								v.Null = false
 								v.Value = time.Time(*obj.Expires)
 							}
 							v.Unknown = false
@@ -16610,7 +16966,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.Issuer", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Issuer) == ""
 							}
 							v.Value = string(obj.Issuer)
 							v.Unknown = false
@@ -16632,7 +16988,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.SSO", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.SSO) == ""
 							}
 							v.Value = string(obj.SSO)
 							v.Unknown = false
@@ -16654,7 +17010,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.Cert", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Cert) == ""
 							}
 							v.Value = string(obj.Cert)
 							v.Unknown = false
@@ -16676,7 +17032,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.Display", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Display) == ""
 							}
 							v.Value = string(obj.Display)
 							v.Unknown = false
@@ -16698,7 +17054,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.AssertionConsumerService", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.AssertionConsumerService) == ""
 							}
 							v.Value = string(obj.AssertionConsumerService)
 							v.Unknown = false
@@ -16720,7 +17076,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.Audience", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Audience) == ""
 							}
 							v.Value = string(obj.Audience)
 							v.Unknown = false
@@ -16742,7 +17098,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.ServiceProviderIssuer", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.ServiceProviderIssuer) == ""
 							}
 							v.Value = string(obj.ServiceProviderIssuer)
 							v.Unknown = false
@@ -16764,7 +17120,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.EntityDescriptor", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.EntityDescriptor) == ""
 							}
 							v.Value = string(obj.EntityDescriptor)
 							v.Unknown = false
@@ -16786,7 +17142,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.EntityDescriptorURL", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.EntityDescriptorURL) == ""
 							}
 							v.Value = string(obj.EntityDescriptorURL)
 							v.Unknown = false
@@ -16808,6 +17164,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 
 										ElemType: o.ElemType,
 										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.AttributesToRoles)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -16847,7 +17204,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.AttributesToRoles.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.Name) == ""
 													}
 													v.Value = string(obj.Name)
 													v.Unknown = false
@@ -16869,7 +17226,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.AttributesToRoles.Value", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.Value) == ""
 													}
 													v.Value = string(obj.Value)
 													v.Unknown = false
@@ -16891,6 +17248,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 
 																ElemType: o.ElemType,
 																Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+																Null:     true,
 															}
 														} else {
 															if c.Elems == nil {
@@ -16910,11 +17268,14 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 																	if !ok {
 																		diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.AttributesToRoles.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																	}
-																	v.Null = false
+																	v.Null = string(a) == ""
 																}
 																v.Value = string(a)
 																v.Unknown = false
 																c.Elems[k] = v
+															}
+															if len(obj.Roles) > 0 {
+																c.Null = false
 															}
 														}
 														c.Unknown = false
@@ -16925,6 +17286,9 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 										}
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.AttributesToRoles) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -16973,7 +17337,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.SigningKeyPair.PrivateKey", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.PrivateKey) == ""
 											}
 											v.Value = string(obj.PrivateKey)
 											v.Unknown = false
@@ -16995,7 +17359,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.SigningKeyPair.Cert", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.Cert) == ""
 											}
 											v.Value = string(obj.Cert)
 											v.Unknown = false
@@ -17023,7 +17387,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.Provider", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Provider) == ""
 							}
 							v.Value = string(obj.Provider)
 							v.Unknown = false
@@ -17071,7 +17435,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.EncryptionKeyPair.PrivateKey", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.PrivateKey) == ""
 											}
 											v.Value = string(obj.PrivateKey)
 											v.Unknown = false
@@ -17093,7 +17457,7 @@ func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitat
 												if !ok {
 													diags.Append(attrWriteConversionFailureDiag{"SAMLConnectorV2.Spec.EncryptionKeyPair.Cert", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 												}
-												v.Null = false
+												v.Null = string(obj.Cert) == ""
 											}
 											v.Value = string(obj.Cert)
 											v.Unknown = false
@@ -17536,7 +17900,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Kind) == ""
 			}
 			v.Value = string(obj.Kind)
 			v.Unknown = false
@@ -17558,7 +17922,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.SubKind) == ""
 			}
 			v.Value = string(obj.SubKind)
 			v.Unknown = false
@@ -17580,7 +17944,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Version) == ""
 			}
 			v.Value = string(obj.Version)
 			v.Unknown = false
@@ -17626,7 +17990,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.Metadata.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Name) == ""
 							}
 							v.Value = string(obj.Name)
 							v.Unknown = false
@@ -17648,7 +18012,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Namespace) == ""
 							}
 							v.Value = string(obj.Namespace)
 							v.Unknown = false
@@ -17670,7 +18034,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Description) == ""
 							}
 							v.Value = string(obj.Description)
 							v.Unknown = false
@@ -17692,6 +18056,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 
 										ElemType: o.ElemType,
 										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -17716,6 +18081,9 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Labels) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -17743,6 +18111,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 							if obj.Expires == nil {
 								v.Null = true
 							} else {
+								v.Null = false
 								v.Value = time.Time(*obj.Expires)
 							}
 							v.Unknown = false
@@ -17794,7 +18163,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.Spec.ClientID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.ClientID) == ""
 							}
 							v.Value = string(obj.ClientID)
 							v.Unknown = false
@@ -17816,7 +18185,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.Spec.ClientSecret", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.ClientSecret) == ""
 							}
 							v.Value = string(obj.ClientSecret)
 							v.Unknown = false
@@ -17838,7 +18207,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.Spec.RedirectURL", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.RedirectURL) == ""
 							}
 							v.Value = string(obj.RedirectURL)
 							v.Unknown = false
@@ -17860,6 +18229,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 
 										ElemType: o.ElemType,
 										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.TeamsToLogins)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -17899,7 +18269,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.Spec.TeamsToLogins.Organization", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.Organization) == ""
 													}
 													v.Value = string(obj.Organization)
 													v.Unknown = false
@@ -17921,7 +18291,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.Spec.TeamsToLogins.Team", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.Team) == ""
 													}
 													v.Value = string(obj.Team)
 													v.Unknown = false
@@ -17943,6 +18313,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 
 																ElemType: o.ElemType,
 																Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Logins)),
+																Null:     true,
 															}
 														} else {
 															if c.Elems == nil {
@@ -17962,11 +18333,14 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 																	if !ok {
 																		diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.Spec.TeamsToLogins.Logins", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																	}
-																	v.Null = false
+																	v.Null = string(a) == ""
 																}
 																v.Value = string(a)
 																v.Unknown = false
 																c.Elems[k] = v
+															}
+															if len(obj.Logins) > 0 {
+																c.Null = false
 															}
 														}
 														c.Unknown = false
@@ -17989,6 +18363,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 
 																ElemType: o.ElemType,
 																Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.KubeGroups)),
+																Null:     true,
 															}
 														} else {
 															if c.Elems == nil {
@@ -18008,11 +18383,14 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 																	if !ok {
 																		diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.Spec.TeamsToLogins.KubeGroups", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																	}
-																	v.Null = false
+																	v.Null = string(a) == ""
 																}
 																v.Value = string(a)
 																v.Unknown = false
 																c.Elems[k] = v
+															}
+															if len(obj.KubeGroups) > 0 {
+																c.Null = false
 															}
 														}
 														c.Unknown = false
@@ -18035,6 +18413,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 
 																ElemType: o.ElemType,
 																Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.KubeUsers)),
+																Null:     true,
 															}
 														} else {
 															if c.Elems == nil {
@@ -18054,11 +18433,14 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 																	if !ok {
 																		diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.Spec.TeamsToLogins.KubeUsers", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																	}
-																	v.Null = false
+																	v.Null = string(a) == ""
 																}
 																v.Value = string(a)
 																v.Unknown = false
 																c.Elems[k] = v
+															}
+															if len(obj.KubeUsers) > 0 {
+																c.Null = false
 															}
 														}
 														c.Unknown = false
@@ -18069,6 +18451,9 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 										}
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.TeamsToLogins) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -18091,7 +18476,7 @@ func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravit
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"GithubConnectorV3.Spec.Display", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Display) == ""
 							}
 							v.Value = string(obj.Display)
 							v.Unknown = false
@@ -18484,7 +18869,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"TrustedClusterV2.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Kind) == ""
 			}
 			v.Value = string(obj.Kind)
 			v.Unknown = false
@@ -18506,7 +18891,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"TrustedClusterV2.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.SubKind) == ""
 			}
 			v.Value = string(obj.SubKind)
 			v.Unknown = false
@@ -18528,7 +18913,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 				if !ok {
 					diags.Append(attrWriteConversionFailureDiag{"TrustedClusterV2.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 				}
-				v.Null = false
+				v.Null = string(obj.Version) == ""
 			}
 			v.Value = string(obj.Version)
 			v.Unknown = false
@@ -18574,7 +18959,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"TrustedClusterV2.Metadata.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Name) == ""
 							}
 							v.Value = string(obj.Name)
 							v.Unknown = false
@@ -18596,7 +18981,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"TrustedClusterV2.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Namespace) == ""
 							}
 							v.Value = string(obj.Namespace)
 							v.Unknown = false
@@ -18618,7 +19003,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"TrustedClusterV2.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Description) == ""
 							}
 							v.Value = string(obj.Description)
 							v.Unknown = false
@@ -18640,6 +19025,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 
 										ElemType: o.ElemType,
 										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -18664,6 +19050,9 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Labels) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -18691,6 +19080,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 							if obj.Expires == nil {
 								v.Null = true
 							} else {
+								v.Null = false
 								v.Value = time.Time(*obj.Expires)
 							}
 							v.Unknown = false
@@ -18742,7 +19132,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"TrustedClusterV2.Spec.Enabled", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
 								}
-								v.Null = false
+								v.Null = bool(obj.Enabled) == false
 							}
 							v.Value = bool(obj.Enabled)
 							v.Unknown = false
@@ -18764,6 +19154,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 
 										ElemType: o.ElemType,
 										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -18783,11 +19174,14 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 											if !ok {
 												diags.Append(attrWriteConversionFailureDiag{"TrustedClusterV2.Spec.Roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 											}
-											v.Null = false
+											v.Null = string(a) == ""
 										}
 										v.Value = string(a)
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.Roles) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false
@@ -18810,7 +19204,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"TrustedClusterV2.Spec.Token", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.Token) == ""
 							}
 							v.Value = string(obj.Token)
 							v.Unknown = false
@@ -18832,7 +19226,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"TrustedClusterV2.Spec.ProxyAddress", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.ProxyAddress) == ""
 							}
 							v.Value = string(obj.ProxyAddress)
 							v.Unknown = false
@@ -18854,7 +19248,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 								if !ok {
 									diags.Append(attrWriteConversionFailureDiag{"TrustedClusterV2.Spec.ReverseTunnelAddress", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 								}
-								v.Null = false
+								v.Null = string(obj.ReverseTunnelAddress) == ""
 							}
 							v.Value = string(obj.ReverseTunnelAddress)
 							v.Unknown = false
@@ -18876,6 +19270,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 
 										ElemType: o.ElemType,
 										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.RoleMap)),
+										Null:     true,
 									}
 								} else {
 									if c.Elems == nil {
@@ -18915,7 +19310,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 														if !ok {
 															diags.Append(attrWriteConversionFailureDiag{"TrustedClusterV2.Spec.RoleMap.Remote", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 														}
-														v.Null = false
+														v.Null = string(obj.Remote) == ""
 													}
 													v.Value = string(obj.Remote)
 													v.Unknown = false
@@ -18937,6 +19332,7 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 
 																ElemType: o.ElemType,
 																Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Local)),
+																Null:     true,
 															}
 														} else {
 															if c.Elems == nil {
@@ -18956,11 +19352,14 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 																	if !ok {
 																		diags.Append(attrWriteConversionFailureDiag{"TrustedClusterV2.Spec.RoleMap.Local", "github.com/hashicorp/terraform-plugin-framework/types.String"})
 																	}
-																	v.Null = false
+																	v.Null = string(a) == ""
 																}
 																v.Value = string(a)
 																v.Unknown = false
 																c.Elems[k] = v
+															}
+															if len(obj.Local) > 0 {
+																c.Null = false
 															}
 														}
 														c.Unknown = false
@@ -18971,6 +19370,9 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravita
 										}
 										v.Unknown = false
 										c.Elems[k] = v
+									}
+									if len(obj.RoleMap) > 0 {
+										c.Null = false
 									}
 								}
 								c.Unknown = false

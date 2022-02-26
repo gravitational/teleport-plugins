@@ -34,36 +34,53 @@ provider "teleport" {
 #  }
 #}
 
-resource "teleport_role" "test" {
+resource "teleport_app" "test" {
     metadata = {
-        name = "test"
-        description = "Test role"
-        expires = "2022-12-12T00:00:00Z"
+        name = "example"
+        description = "Test app"
+        labels  = {
+            example = "yes"
+            "teleport.dev/origin" = "dynamic"
+        }    
     }
 
     spec = {
-        options = {
-            max_session_ttl = "2s"
-        }
-        allow = {
-            logins = ["anonymous"]
-            request = {
-                roles = ["example", "terraform"]
-                claims_to_roles = [
-                    {
-                        claim = "example"
-                        value = "example"
-                        roles = ["example"]
-                    },
-                ]
-            }
-
-            node_labels = {
-                "example" = ["no"]
-                "sample" = ["yes", "no"]
-            }            
-        }
+        uri = "localhost:3000"
     }
 
-    version = "v4"
+    version = "v3"
 }
+
+# resource "teleport_role" "test" {
+#     metadata = {
+#         name = "test"
+#         description = "Test role"
+#         expires = "2022-12-12T00:00:00Z"
+#     }
+
+#     spec = {
+#         options = {
+#             max_session_ttl = "2s"
+#         }
+#         allow = {
+#             logins = ["anonymous"]
+#             request = {
+#                 roles = ["example", "terraform"]
+#                 claims_to_roles = [
+#                     {
+#                         claim = "example"
+#                         value = "example"
+#                         roles = ["example"]
+#                     },
+#                 ]
+#             }
+
+#             node_labels = {
+#                 "example" = ["no"]
+#                 "sample" = ["yes", "no"]
+#             }            
+#         }
+#     }
+
+#     version = "v4"
+# }

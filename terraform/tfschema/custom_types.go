@@ -122,14 +122,58 @@ func CopyToLabels(diags diag.Diagnostics, o apitypes.Labels, t attr.Type, v attr
 }
 
 func CopyFromTraits(diags diag.Diagnostics, v attr.Value, o *wrappers.Traits) {
-	//CopyFromLabels(diags, tf, o)
+	value, ok := v.(types.Map)
+	if !ok {
+		diags.AddError("Error reading from Terraform object", fmt.Sprintf("Can not convert %T to types.Map", v))
+		return
+	}
+
+	*o = make(wrappers.Traits, len(value.Elems))
+	for k, e := range value.Elems {
+		l, ok := e.(types.List)
+		if !ok {
+			diags.AddError("Error reading from Terraform object", fmt.Sprintf("Can not convert %T to types.List", l))
+			return
+		}
+
+		(*o)[k] = make(utils.Strings, len(l.Elems))
+
+		for i, v := range l.Elems {
+			s, ok := v.(types.String)
+			if !ok {
+				diags.AddError("Error reading from Terraform object", fmt.Sprintf("Can not convert %T to types.String", s))
+				return
+			}
+
+			(*o)[k][i] = s.Value
+		}
+	}
 }
 
 func CopyToTraits(diags diag.Diagnostics, o wrappers.Traits, t attr.Type, v attr.Value) attr.Value {
-	return types.Map{Null: true, ElemType: types.ListType{ElemType: types.StringType}}
-}
+	typ := t.(types.MapType) // By the convention, t comes type-asserted so there would be no failure
 
-type CustomType interface {
-	ToTerraformValue()
-	FromTerraformValue()
+	value, ok := v.(types.Map)
+	if !ok {
+		value = types.Map{ElemType: typ.ElemType}
+	}
+
+	if value.Elems == nil {
+		value.Elems = make(map[string]attr.Value, len(o))
+	}
+
+	for k, l := range o {
+		row := types.List{
+			ElemType: types.StringType,
+			Elems:    make([]attr.Value, len(l)),
+		}
+
+		for i, e := range l {
+			row.Elems[i] = types.String{Value: e}
+		}
+
+		value.Elems[k] = row
+	}
+
+	return value
 }

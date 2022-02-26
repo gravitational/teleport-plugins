@@ -35,7 +35,7 @@ type resourceTeleportSAMLConnectorType struct{}
 
 // resourceTeleportSAMLConnector is the resource
 type resourceTeleportSAMLConnector struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the resource schema
@@ -46,7 +46,7 @@ func (r resourceTeleportSAMLConnectorType) GetSchema(ctx context.Context) (tfsdk
 // NewResource creates the empty resource
 func (r resourceTeleportSAMLConnectorType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
 	return resourceTeleportSAMLConnector{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 

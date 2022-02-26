@@ -34,7 +34,7 @@ type dataSourceTeleportOIDCConnectorType struct{}
 
 // dataSourceTeleportOIDCConnector is the resource
 type dataSourceTeleportOIDCConnector struct {
-	p provider
+	p Provider
 }
 
 // GetSchema returns the data source schema
@@ -45,7 +45,7 @@ func (r dataSourceTeleportOIDCConnectorType) GetSchema(ctx context.Context) (tfs
 // NewDataSource creates the empty data source
 func (r dataSourceTeleportOIDCConnectorType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
 	return dataSourceTeleportOIDCConnector{
-		p: *(p.(*provider)),
+		p: *(p.(*Provider)),
 	}, nil
 }
 
