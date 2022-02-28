@@ -51,6 +51,11 @@ apply: install
 reapply:
 	terraform -chdir=$(TFDIR) apply -var-file="vars.tfvars"
 
-.phone: debug_import
+.PHONY: debug_import
 debug_import:
 	make install && terraform -chdir=$(TFDIR) init -var-file="vars.tfvars" && terraform -chdir=$(TFDIR) import -var-file="vars.tfvars" teleport_role.test test
+
+# NOTE: Please note that running these tests might require to increase ulimit. Default OS X limit of 256 does not work.
+.PHONY: test
+test: install
+	TF_ACC=true go test ./test
