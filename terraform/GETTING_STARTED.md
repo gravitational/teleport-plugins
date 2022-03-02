@@ -96,7 +96,11 @@ provider "teleport" {
 }
 
 resource "teleport_user" "example" {
-  metadata {
+  depends_on = [
+    teleport_role.example
+  ]
+
+  metadata = {
     name        = "example"
     description = "example"
 
@@ -105,13 +109,13 @@ resource "teleport_user" "example" {
     }
   }
 
-  spec {
+  spec = {
     roles = ["admin"]
   }
 }
 
 resource "teleport_role" "example" {
-  metadata {
+  metadata = {
     name        = "example"
     description = "Example Teleport Role"
     expires     = "2022-10-12T07:20:50.52Z"
@@ -120,8 +124,8 @@ resource "teleport_role" "example" {
     }
   }
   
-  spec {
-    options {
+  spec = {
+    options = {
       forward_agent           = false
       max_session_ttl         = "7m"
       port_forwarding         = false
@@ -131,30 +135,7 @@ resource "teleport_role" "example" {
       request_access          = "denied"
     }
 
-    allow {
-      logins = ["example"]
-
-      rules {
-        resources = ["user", "role"]
-        verbs = ["list"]
-      }
-
-      request {
-        roles = ["example"]
-        claims_to_roles {
-          claim = "example"
-          value = "example"
-          roles = ["example"]
-        }
-      }
-
-      node_labels {
-         key = "example"
-         value = ["yes"]
-      }
-    }
-
-    deny {
+    deny = {
       logins = ["anonymous"]
     }
   }
