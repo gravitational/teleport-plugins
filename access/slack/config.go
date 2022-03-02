@@ -22,7 +22,7 @@ type Config struct {
 // SlackConfig holds Slack-specific configuration options.
 type SlackConfig struct {
 	Token string
-	// DELETE IN 10.0.0 (Joerger) - use "role_to_recipients["*"]" instead
+	// DELETE IN 11.0.0 (Joerger) - use "role_to_recipients["*"]" instead
 	Recipients []string
 	APIURL     string
 }
@@ -101,8 +101,8 @@ func (c *Config) CheckAndSetDefaults() error {
 		c.Log.Severity = "info"
 	}
 
-	if c.Slack.Recipients != nil {
-		if c.Recipients != nil {
+	if len(c.Slack.Recipients) > 0 {
+		if len(c.Recipients) > 0 {
 			return trace.BadParameter("provide either slack.recipients or role_to_recipients, not both.")
 		}
 
@@ -111,9 +111,9 @@ func (c *Config) CheckAndSetDefaults() error {
 		}
 	}
 
-	if c.Recipients == nil {
+	if len(c.Recipients) == 0 {
 		return trace.BadParameter("missing required value role_to_recipients.")
-	} else if c.Recipients[types.Wildcard] == nil {
+	} else if len(c.Recipients[types.Wildcard]) == 0 {
 		return trace.BadParameter("missing required value role_to_recipients[%v].", types.Wildcard)
 	}
 

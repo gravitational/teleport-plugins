@@ -85,6 +85,10 @@ func run(configPath string, debug bool) error {
 		logger.Standard().Debugf("DEBUG logging enabled")
 	}
 
+	if conf.Slack.Recipients != nil {
+		logger.Standard().Warn("The slack.recipients config option is deprecated, set role_to_recipients[\"*\"] instead for the same functionality")
+	}
+
 	app, err := NewApp(*conf)
 	if err != nil {
 		return trace.Wrap(err)
