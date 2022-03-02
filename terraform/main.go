@@ -13,16 +13,20 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 package main
 
+//go:generate go run ./_gen/main.go
+
 import (
+	"context"
+
 	"github.com/gravitational/teleport-plugins/terraform/provider"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/plugin"
+
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 )
 
 func main() {
-	plugin.Serve(&plugin.ServeOpts{
-		ProviderFunc: provider.Provider,
+	tfsdk.Serve(context.Background(), provider.New, tfsdk.ServeOpts{
+		Name: "teleport",
 	})
 }

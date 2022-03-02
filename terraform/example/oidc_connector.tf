@@ -1,20 +1,20 @@
 # Teleport OIDC connector
 
 resource "teleport_oidc_connector" "example" {
-  metadata {
-     name = "example"
-     labels = {
-       test = "yes"
-     }
+  metadata = {
+    name = "example"
+    labels = {
+      test = "yes"
+    }
   }
 
-  spec {
+  spec = {
     client_id = "client"
     client_secret = "value"
 
-    claims_to_roles {
+    claims_to_roles = [{
       claim = "test"
       roles = ["terraform"]
-    }
+    }]
   }
 }

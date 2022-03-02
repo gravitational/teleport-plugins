@@ -6,43 +6,38 @@ resource "teleport_user" "example" {
     teleport_role.example
   ]
 
-  metadata {
+  metadata = {
     name        = "example"
     description = "Example Teleport User"
 
-    expires = "2022-10-12T07:20:50.3Z"
+    expires = "2022-10-12T07:20:50Z"
 
     labels = {
       example = "yes"
     }
   }
 
-  spec {
+  spec = {
     roles = ["example"]
 
-    oidc_identities {
+    oidc_identities = [{
       connector_id = "oidc1"
       username     = "example"
+    }]
+
+    traits = {
+      "logins1" = ["example"]
+      "logins2" = ["example"]
     }
 
-    traits {
-      key   = "logins1"
-      value = ["example"]
-    }
-
-    traits {
-      key   = "logins2"
-      value = ["example"]
-    }
-
-    github_identities {
+    github_identities = [{
       connector_id = "github"
       username     = "example"
-    }
+    }]
 
-    saml_identities {
+    saml_identities = [{
       connector_id = "example-saml"
       username     = "example"
-    }
+    }]
   }
 }

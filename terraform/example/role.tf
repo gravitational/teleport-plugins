@@ -1,17 +1,17 @@
 # Teleport Role resource
 
 resource "teleport_role" "example" {
-  metadata {
+  metadata = {
     name        = "example"
     description = "Example Teleport Role"
-    expires     = "2022-10-12T07:20:51.2Z"
+    expires     = "2022-10-12T07:20:51Z"
     labels = {
       example  = "yes"      
     }
   }
   
-  spec {
-    options {
+  spec = {
+    options = {
       forward_agent           = false
       max_session_ttl         = "7m"
       port_forwarding         = false
@@ -21,30 +21,29 @@ resource "teleport_role" "example" {
       request_access          = "denied"
     }
 
-    allow {
+    allow = {
       logins = ["example"]
 
-      rules {
+      rules = [{
         resources = ["user", "role"]
         verbs = ["list"]
-      }
+      }]
 
-      request {
+      request = {
         roles = ["example"]
-        claims_to_roles {
+        claims_to_roles = [{
           claim = "example"
           value = "example"
           roles = ["example"]
-        }
+        }]
       }
 
-      node_labels {
-         key = "example"
-         value = ["yes"]
+      node_labels = {
+        example = ["yes"]
       }
     }
 
-    deny {
+    deny = {
       logins = ["anonymous"]
     }
   }

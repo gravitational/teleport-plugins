@@ -18,155 +18,245 @@ package provider
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 
-	"github.com/gravitational/teleport-plugins/terraform/tfschema"
-	"github.com/gravitational/trace"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
-	"github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/teleport-plugins/terraform/tfschema"
+	apitypes "github.com/gravitational/teleport/api/types"
 )
 
-// resourceTeleportProvisionToken returns Teleport github_connector resource definition
-func resourceTeleportProvisionToken() *schema.Resource {
-	return &schema.Resource{
-		CreateContext: resourceProvisionTokenCreate,
-		ReadContext:   resourceProvisionTokenRead,
-		UpdateContext: resourceProvisionTokenUpdate,
-		DeleteContext: resourceProvisionTokenDelete,
+// resourceTeleportProvisionTokenType is the resource metadata type
+type resourceTeleportProvisionTokenType struct{}
 
-		Schema:        tfschema.SchemaProvisionTokenV2,
-		SchemaVersion: 2,
-
-		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
-		},
-	}
+// resourceTeleportProvisionToken is the resource
+type resourceTeleportProvisionToken struct {
+	p Provider
 }
 
-// resourceProvisionTokenCreate creates Teleport token from resource definition
-func resourceProvisionTokenCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c, err := getClient(m)
-	if err != nil {
-		return diagFromErr(err)
-	}
-
-	name, err := getResourceName(d, "provision_token")
-	if err != nil {
-		return diagFromErr(err)
-	}
-
-	// Check if token already exists
-	_, err = c.GetToken(ctx, name)
-	if err == nil {
-		existErr := "token " + name + " exists in Teleport. Either remove it (tctl tokens rm " + name + ")" +
-			" or import it to the existing state (terraform import teleport_provision_token." + name + " " + name + ")"
-
-		return diagFromErr(trace.Errorf(existErr))
-	}
-	if err != nil && !trace.IsNotFound(err) {
-		return diagFromErr(describeErr(err, "token"))
-	}
-
-	t := types.ProvisionTokenV2{}
-	err = tfschema.FromTerraformProvisionTokenV2(d, &t)
-	if err != nil {
-		return diagFromErr(err)
-	}
-
-	err = t.CheckAndSetDefaults()
-	if err != nil {
-		return diagFromErr(err)
-	}
-
-	err = c.UpsertToken(ctx, &t)
-	if err != nil {
-		return diagFromErr(describeErr(err, "token"))
-	}
-
-	d.SetId(t.GetName())
-
-	return resourceProvisionTokenRead(ctx, d, m)
+// GetSchema returns the resource schema
+func (r resourceTeleportProvisionTokenType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+	return tfschema.GenSchemaProvisionTokenV2(ctx)
 }
 
-// resourceProvisionTokenRead reads Teleport token
-func resourceProvisionTokenRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c, err := getClient(m)
+// NewResource creates the empty resource
+func (r resourceTeleportProvisionTokenType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
+	return resourceTeleportProvisionToken{
+		p: *(p.(*Provider)),
+	}, nil
+}
+
+// Create creates the provision token
+func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	if !r.p.IsConfigured(resp.Diagnostics) {
+		return
+	}
+
+	var plan types.Object
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	provisionToken := &apitypes.ProvisionTokenV2{}
+	diags = tfschema.CopyProvisionTokenV2FromTerraform(ctx, plan, provisionToken)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if provisionToken.Metadata.Name == "" {
+		b := make([]byte, 32)
+		_, err := rand.Read(b)
+		if err != nil {
+			resp.Diagnostics.AddError("Failed to generate token", err.Error())
+			return
+		}
+		provisionToken.Metadata.Name = hex.EncodeToString(b)
+	}
+
+	err := provisionToken.CheckAndSetDefaults()
 	if err != nil {
-		return diagFromErr(err)
+		resp.Diagnostics.AddError("Error setting ProvisionToken defaults", err.Error())
+		return
 	}
 
-	id := d.Id()
-
-	t, err := c.GetToken(ctx, id)
-	if trace.IsNotFound(err) {
-		d.SetId("")
-		return diag.Diagnostics{}
-	}
-
+	err = r.p.Client.UpsertToken(ctx, provisionToken)
 	if err != nil {
-		return diagFromErr(describeErr(err, "token"))
+		resp.Diagnostics.AddError("Error creating ProvisionToken", err.Error())
+		return
 	}
 
-	tV2, ok := t.(*types.ProvisionTokenV2)
+	id := provisionToken.Metadata.Name
+	provisionTokenI, err := r.p.Client.GetToken(ctx, id)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading ProvisionToken", err.Error())
+		return
+	}
+
+	provisionToken, ok := provisionTokenI.(*apitypes.ProvisionTokenV2)
 	if !ok {
-		return diagFromErr(fmt.Errorf("failed to convert created user to types.ProvisionTokenV2 from %T", t))
+		resp.Diagnostics.AddError("Error reading ProvisionToken", fmt.Sprintf("Can not convert %T to ProvisionTokenV2", provisionTokenI))
+		return
 	}
 
-	err = tfschema.ToTerraformProvisionTokenV2(tV2, d)
-	if err != nil {
-		return diagFromErr(err)
+	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, *provisionToken, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	return diag.Diagnostics{}
+	diags = resp.State.Set(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
-// resourceProvisionTokenUpdate updates Teleport token from resource definition
-func resourceProvisionTokenUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c, err := getClient(m)
+// Read reads teleport ProvisionToken
+func (r resourceTeleportProvisionToken) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+	var state types.Object
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var id types.String
+	diags = req.State.GetAttribute(ctx, tftypes.NewAttributePath().WithAttributeName("metadata").WithAttributeName("name"), &id)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	provisionTokenI, err := r.p.Client.GetToken(ctx, id.Value)
 	if err != nil {
-		return diagFromErr(err)
+		resp.Diagnostics.AddError("Error reading ProvisionToken", err.Error())
+		return
 	}
 
-	id := d.Id()
-
-	// Check that token exists. This situation is hardly possible because Terraform tries to read a resource before updating it.
-	t, err := c.GetToken(ctx, id)
-	if err != nil {
-		return diagFromErr(describeErr(err, "token"))
+	provisionToken := provisionTokenI.(*apitypes.ProvisionTokenV2)
+	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, *provisionToken, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	tV2, ok := t.(*types.ProvisionTokenV2)
-	if !ok {
-		return diagFromErr(fmt.Errorf("failed to convert created token to types.GithubConnectorV3 from %T", t))
+	diags = resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
-
-	err = tfschema.FromTerraformProvisionTokenV2(d, tV2)
-	if err != nil {
-		return diagFromErr(err)
-	}
-
-	err = c.UpsertToken(ctx, tV2)
-	if err != nil {
-		return diagFromErr(err)
-	}
-
-	return resourceProvisionTokenRead(ctx, d, m)
 }
 
-// resourceProvisionTokenDelete deletes Teleport token from resource definition
-func resourceProvisionTokenDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-	c, err := getClient(m)
-	if err != nil {
-		return diagFromErr(err)
+// Update updates teleport ProvisionToken
+func (r resourceTeleportProvisionToken) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+	if !r.p.IsConfigured(resp.Diagnostics) {
+		return
 	}
 
-	id := d.Id()
-	err = c.DeleteToken(ctx, id)
-	if err != nil {
-		return diagFromErr(describeErr(err, "token"))
+	var plan types.Object
+	diags := req.Plan.Get(ctx, &plan)
+
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
 	}
 
-	return diag.Diagnostics{}
+	provisionToken := &apitypes.ProvisionTokenV2{}
+	diags = tfschema.CopyProvisionTokenV2FromTerraform(ctx, plan, provisionToken)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	name := provisionToken.Metadata.Name
+
+	err := provisionToken.CheckAndSetDefaults()
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating ProvisionToken", err.Error())
+		return
+	}
+
+	err = r.p.Client.UpsertToken(ctx, provisionToken)
+	if err != nil {
+		resp.Diagnostics.AddError("Error updating ProvisionToken", err.Error())
+		return
+	}
+
+	provisionTokenI, err := r.p.Client.GetToken(ctx, name)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading ProvisionToken", err.Error())
+		return
+	}
+
+	provisionToken = provisionTokenI.(*apitypes.ProvisionTokenV2)
+	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, *provisionToken, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diags = resp.State.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+}
+
+// Delete deletes Teleport ProvisionToken
+func (r resourceTeleportProvisionToken) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+	var id types.String
+	diags := req.State.GetAttribute(ctx, tftypes.NewAttributePath().WithAttributeName("metadata").WithAttributeName("name"), &id)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	err := r.p.Client.DeleteToken(ctx, id.Value)
+	if err != nil {
+		resp.Diagnostics.AddError("Error deleting ProvisionTokenV2", err.Error())
+		return
+	}
+
+	resp.State.RemoveResource(ctx)
+}
+
+// ImportState imports ProvisionToken state
+func (r resourceTeleportProvisionToken) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
+	provisionTokenI, err := r.p.Client.GetToken(ctx, req.ID)
+	if err != nil {
+		resp.Diagnostics.AddError("Error reading ProvisionToken", err.Error())
+		return
+	}
+
+	provisionToken := provisionTokenI.(*apitypes.ProvisionTokenV2)
+
+	var state types.Object
+
+	diags := resp.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, *provisionToken, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	state.Attrs["id"] = types.String{Value: provisionToken.Metadata.Name}
+
+	diags = resp.State.Set(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }

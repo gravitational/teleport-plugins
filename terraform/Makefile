@@ -4,7 +4,7 @@ LOCALDIR := $(dir $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
 GENTERRAFORMPATH := $(shell go env GOPATH)/bin
 
 BUILDDIR ?= build
-TFDIR ?= tf
+TFDIR ?= example
 
 ADDFLAGS ?=
 BUILDFLAGS ?= $(ADDFLAGS) -ldflags '-w -s'
@@ -30,40 +30,10 @@ clean: tfclean
 build: clean
 	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/terraform-provider-teleport $(BUILDFLAGS)
 
-.PHONY: release
-release: build
-	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
-
-# Used for debugging
-.PHONY: setup-tf
-setup-tf:
-	mkdir -p tf
-	cp example/* tf
-	cp tf/vars.tfvars.example tf/vars.tfvars
-
-# Used for debugging
-.PHONY: apply
-apply: install
-	-tctl tokens rm example
-	-tctl users rm example
-	-tctl rm role/example
-	-tctl rm github/example
-	-tctl rm oidc/example
-	-tctl rm saml/example
-	-tctl rm app/example
-	-tctl rm db/example
-	terraform -chdir=$(TFDIR) init -var-file="vars.tfvars" && terraform -chdir=$(TFDIR) apply -auto-approve -var-file="vars.tfvars"
-
-# Used for debugging
-.PHONY: reapply
-reapply:
-	terraform -chdir=$(TFDIR) apply -var-file="vars.tfvars"
-
 CUSTOM_IMPORTS_TMP_DIR ?= /tmp/protoc-gen-terraform/custom-imports
 
-# Regenerates types_terraform.go
-gen-schema:
-
+.PHONY: gen-tfschema
+gen-tfschema:
 # The wrappers.proto file needed for this generator exist only inside the go mod cache,
 # so we retrieve the file path for the cached proto files with go mod tools.
 	$(eval API_MOD_PATH := $(shell go mod download --json github.com/gravitational/teleport/api | jq .Dir))
@@ -84,6 +54,23 @@ gen-schema:
 		-I$(API_MOD_PATH)/types \
 		-I$(PROTOBUF_MOD_PATH) \
 		-I$(CUSTOM_IMPORTS_TMP_DIR) \
-		--plugin=$(GENTERRAFORMPATH)/protoc-gen-terraform\
-		--terraform_out=config=gen_teleport.yaml:./tfschema \
+		--plugin=$(GENTERRAFORMPATH)/protoc-gen-terraform \
+		--terraform_out=config=protoc-gen-terraform-teleport.yaml:./tfschema \
 		types.proto
+
+.PHONY: release
+release: build
+	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
+
+.PHONY: apply
+apply: install
+	terraform -chdir=$(TFDIR) init -var-file="vars.tfvars" && terraform -chdir=$(TFDIR) apply -auto-approve -var-file="vars.tfvars"
+
+.PHONY: reapply
+reapply:
+	terraform -chdir=$(TFDIR) apply -var-file="vars.tfvars"
+
+# NOTE: Please note that running these tests might require to increase ulimit. Default OS X limit of 256 does not work.
+.PHONY: test
+test: install
+	TF_ACC=true go test ./test

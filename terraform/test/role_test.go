@@ -17,92 +17,14 @@ limitations under the License.
 package test
 
 import (
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/stretchr/testify/require"
 )
 
 func (s *TerraformSuite) TestRole() {
-	res := "teleport_role"
-
-	create := s.terraformConfig + `
-		resource "` + res + `" "test" {
-			metadata {
-				name        = "test"
-				labels = {
-					example  = "yes"      
-				}
-			}
-			
-			spec {
-				options {
-					forward_agent           = false
-					max_session_ttl         = "7m"
-					request_access          = "denied"
-				}
-			
-				allow {
-					logins = ["example"]
-			
-					rules {
-						resources = ["user", "role"]
-						verbs = ["list"]
-					}
-				
-					node_labels {
-						key = "example"
-						value = ["yes"]
-					}
-				}
-			
-				deny {
-					logins = ["anonymous"]
-				}
-			}
-		}
-	`
-
-	update := s.terraformConfig + `
-		resource "` + res + `" "test" {
-			metadata {
-				name        = "test"
-				labels = {
-					example  = "yes"      
-				}
-			}
-			
-			spec {
-				options {
-					forward_agent           = true
-					max_session_ttl         = "1h00m"
-				}
-			
-				allow {
-					logins = ["example"]
-			
-					rules {
-						resources = ["user", "role"]
-						verbs = ["list"]
-					}
-				
-					node_labels {
-						key = "example"
-						value = ["yes"]
-					}
-
-					node_labels {
-						key = "additional"
-						value = ["yes"]
-					}
-				}
-			
-				deny {
-					logins = ["anonymous"]
-				}
-			}
-		}
-	`
-
 	checkRoleDestroyed := func(state *terraform.State) error {
 		_, err := s.client.GetRole(s.Context(), "test")
 		if trace.IsNotFound(err) {
@@ -112,50 +34,105 @@ func (s *TerraformSuite) TestRole() {
 		return err
 	}
 
-	name := res + ".test"
+	name := "teleport_role.test"
 
 	resource.Test(s.T(), resource.TestCase{
-		ProviderFactories: s.terraformProviders,
-		CheckDestroy:      checkRoleDestroyed,
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkRoleDestroyed,
 		Steps: []resource.TestStep{
 			{
-				Config: create,
+				Config: s.getFixture("role_0_create.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "role"),
-					resource.TestCheckResourceAttr(name, "spec.0.options.0.forward_agent", "false"),
-					resource.TestCheckResourceAttr(name, "spec.0.options.0.max_session_ttl", "7m0s"),
-					resource.TestCheckResourceAttr(name, "spec.0.options.0.request_access", "denied"),
-					resource.TestCheckResourceAttr(name, "spec.0.allow.0.logins.0", "example"),
-					resource.TestCheckResourceAttr(name, "spec.0.allow.0.rules.0.resources.0", "user"),
-					resource.TestCheckResourceAttr(name, "spec.0.allow.0.rules.0.resources.1", "role"),
-					resource.TestCheckResourceAttr(name, "spec.0.allow.0.rules.0.verbs.0", "list"),
-					resource.TestCheckResourceAttr(name, "spec.0.allow.0.node_labels.0.key", "example"),
-					resource.TestCheckResourceAttr(name, "spec.0.allow.0.node_labels.0.value.0", "yes"),
+					resource.TestCheckNoResourceAttr(name, "spec.options"),
+					resource.TestCheckResourceAttr(name, "version", "v4"),
+					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "anonymous"),
 				),
 			},
 			{
-				Config:   create, // Check that there is no state drift
+				Config:   s.getFixture("role_0_create.tf"),
 				PlanOnly: true,
 			},
 			{
-				Config: update,
+				Config: s.getFixture("role_1_update.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "role"),
-					resource.TestCheckResourceAttr(name, "spec.0.options.0.forward_agent", "true"),
-					resource.TestCheckResourceAttr(name, "spec.0.options.0.max_session_ttl", "1h0m0s"),
-					resource.TestCheckResourceAttr(name, "spec.0.allow.0.logins.0", "example"),
-					resource.TestCheckResourceAttr(name, "spec.0.allow.0.rules.0.resources.0", "user"),
-					resource.TestCheckResourceAttr(name, "spec.0.allow.0.rules.0.resources.1", "role"),
-					resource.TestCheckResourceAttr(name, "spec.0.allow.0.rules.0.verbs.0", "list"),
-					resource.TestCheckResourceAttr(name, "spec.0.allow.0.node_labels.0.key", "additional"),
-					resource.TestCheckResourceAttr(name, "spec.0.allow.0.node_labels.0.value.0", "yes"),
-					resource.TestCheckResourceAttr(name, "spec.0.allow.0.node_labels.1.key", "example"),
-					resource.TestCheckResourceAttr(name, "spec.0.allow.0.node_labels.1.value.0", "yes"),
+					resource.TestCheckResourceAttr(name, "spec.options.forward_agent", "true"),
+					resource.TestCheckResourceAttr(name, "spec.options.max_session_ttl", "2h3m"),
+					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "known"),
+					resource.TestCheckResourceAttr(name, "spec.allow.logins.1", "anonymous"),
+					resource.TestCheckResourceAttr(name, "spec.allow.request.roles.0", "example"),
+					resource.TestCheckResourceAttr(name, "spec.allow.request.claims_to_roles.0.claim", "example"),
+					resource.TestCheckResourceAttr(name, "spec.allow.request.claims_to_roles.0.value", "example"),
+					resource.TestCheckResourceAttr(name, "spec.allow.request.claims_to_roles.0.roles.0", "example"),
+					resource.TestCheckResourceAttr(name, "spec.allow.node_labels.example.0", "yes"),
+					resource.TestCheckResourceAttr(name, "spec.allow.node_labels.example.1", "no"),
+
+					resource.TestCheckResourceAttr(name, "version", "v4"),
 				),
 			},
 			{
-				Config:   update, // Check that there is no state drift
+				Config:   s.getFixture("role_1_update.tf"),
 				PlanOnly: true,
+			},
+			{
+				Config: s.getFixture("role_2_update.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "role"),
+					resource.TestCheckNoResourceAttr(name, "spec.options"),
+					resource.TestCheckResourceAttr(name, "spec.allow.node_labels.example.0", "no"),
+					resource.TestCheckResourceAttr(name, "spec.allow.node_labels.sample.0", "yes"),
+					resource.TestCheckResourceAttr(name, "spec.allow.node_labels.sample.1", "no"),
+				),
+			},
+			{
+				Config:   s.getFixture("role_2_update.tf"),
+				PlanOnly: true,
+			},
+			{
+				Config: s.getFixture("role_3_update.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "role"),
+					resource.TestCheckNoResourceAttr(name, "spec.options"),
+				),
+			},
+			{
+				Config:   s.getFixture("role_3_update.tf"), // Check that there is no state drift
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestImportRole() {
+	name := "teleport_role.test"
+
+	role := &types.RoleV4{
+		Metadata: types.Metadata{
+			Name: "test",
+		},
+		Spec: types.RoleSpecV4{},
+	}
+	err := role.CheckAndSetDefaults()
+	require.NoError(s.T(), err)
+
+	err = s.client.UpsertRole(s.Context(), role)
+	require.NoError(s.T(), err)
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:        s.terraformConfig + "\n" + `resource "teleport_role" "test" { }`,
+				ResourceName:  name,
+				ImportState:   true,
+				ImportStateId: "test",
+				ImportStateCheck: func(state []*terraform.InstanceState) error {
+					require.Equal(s.T(), state[0].Attributes["kind"], "role")
+					require.Equal(s.T(), state[0].Attributes["metadata.name"], "test")
+
+					return nil
+				},
 			},
 		},
 	})

@@ -1,12 +1,10 @@
-# Example Terraform Provider configuration
-
 variable "identity_file_path" {}
 variable "addr" {}
 
 terraform {
   required_providers {
     teleport = {
-      version = "7.3.2"
+      version = "8.2.0"
       source  = "gravitational.com/teleport/teleport"
     }
   }

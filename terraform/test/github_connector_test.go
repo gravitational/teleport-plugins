@@ -17,62 +17,16 @@ limitations under the License.
 package test
 
 import (
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/stretchr/testify/require"
 )
 
 func (s *TerraformSuite) TestGithubConnector() {
-	res := "teleport_github_connector"
-
-	create := s.terraformConfig + `
-		resource "` + res + `" "test" {
-			metadata {
-				name    = "test"
-				expires = "2022-10-12T07:20:50.3Z"
-				labels  = {
-				  	example = "yes"
-				}
-			}
-
-			spec {
-			    client_id = "Iv1.3386eee92ff932a4"
-			    client_secret = "secret"
-		   
-			    teams_to_logins {
-					organization = "evilmartians"
-					team = "devs"
-					logins = ["terraform"]
-			    }
-			}
-		}
-	`
-
-	update := s.terraformConfig + `
-		resource "` + res + `" "test" {
-			metadata {
-				name    = "test"
-				expires = "2022-10-12T07:20:50.3Z"
-				labels  = {
-					example = "yes"
-				}
-			}
-
-			spec {
-			    client_id = "Iv1.3386eee92ff932a4"
-			    client_secret = "secret"
-		   
-			    teams_to_logins {
-					organization = "gravitational"
-					team = "devs"
-					logins = ["terraform"]
-			    }
-			}
-		}
-	`
-
-	checkGithubConnectorDestroyed := func(state *terraform.State) error {
-		_, err := s.client.GetGithubConnector(s.Context(), "test", true)
+	checkRoleDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetGithubConnector(s.Context(), "test", false)
 		if trace.IsNotFound(err) {
 			return nil
 		}
@@ -80,41 +34,89 @@ func (s *TerraformSuite) TestGithubConnector() {
 		return err
 	}
 
-	name := res + ".test"
+	name := "teleport_github_connector.test"
 
 	resource.Test(s.T(), resource.TestCase{
-		ProviderFactories: s.terraformProviders,
-		CheckDestroy:      checkGithubConnectorDestroyed,
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkRoleDestroyed,
 		Steps: []resource.TestStep{
 			{
-				Config: create,
+				Config: s.getFixture("github_connector_0_create.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "github"),
-					resource.TestCheckResourceAttr(name, "metadata.0.expires", "2022-10-12T07:20:50.3Z"),
-					resource.TestCheckResourceAttr(name, "spec.0.client_id", "Iv1.3386eee92ff932a4"),
-					resource.TestCheckResourceAttr(name, "spec.0.teams_to_logins.0.organization", "evilmartians"),
-					resource.TestCheckResourceAttr(name, "spec.0.teams_to_logins.0.team", "devs"),
-					resource.TestCheckResourceAttr(name, "spec.0.teams_to_logins.0.logins.0", "terraform"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2022-10-12T07:20:50Z"),
+					resource.TestCheckResourceAttr(name, "spec.client_id", "Iv1.3386eee92ff932a4"),
+					resource.TestCheckResourceAttr(name, "spec.teams_to_logins.0.organization", "evilmartians"),
+					resource.TestCheckResourceAttr(name, "spec.teams_to_logins.0.team", "devs"),
+					resource.TestCheckResourceAttr(name, "spec.teams_to_logins.0.logins.0", "terraform"),
 				),
 			},
 			{
-				Config:   create, // Check that there is no state drift
+				Config:   s.getFixture("github_connector_0_create.tf"),
 				PlanOnly: true,
 			},
 			{
-				Config: update,
+				Config: s.getFixture("github_connector_1_update.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "github"),
-					resource.TestCheckResourceAttr(name, "metadata.0.expires", "2022-10-12T07:20:50.3Z"),
-					resource.TestCheckResourceAttr(name, "spec.0.client_id", "Iv1.3386eee92ff932a4"),
-					resource.TestCheckResourceAttr(name, "spec.0.teams_to_logins.0.organization", "gravitational"),
-					resource.TestCheckResourceAttr(name, "spec.0.teams_to_logins.0.team", "devs"),
-					resource.TestCheckResourceAttr(name, "spec.0.teams_to_logins.0.logins.0", "terraform"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2022-10-12T07:20:50Z"),
+					resource.TestCheckResourceAttr(name, "spec.client_id", "Iv1.3386eee92ff932a4"),
+					resource.TestCheckResourceAttr(name, "spec.teams_to_logins.0.organization", "gravitational"),
+					resource.TestCheckResourceAttr(name, "spec.teams_to_logins.0.team", "devs"),
+					resource.TestCheckResourceAttr(name, "spec.teams_to_logins.0.logins.0", "terraform"),
 				),
 			},
 			{
-				Config:   update, // Check that there is no state drift
+				Config:   s.getFixture("github_connector_1_update.tf"),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestImportGithubConnector() {
+	name := "teleport_github_connector.test"
+
+	githubConnector := &types.GithubConnectorV3{
+		Metadata: types.Metadata{
+			Name: "test",
+		},
+		Spec: types.GithubConnectorSpecV3{
+			ClientID:     "Iv1.3386eee92ff932a4",
+			ClientSecret: "secret",
+			TeamsToLogins: []types.TeamMapping{
+				{
+					Organization: "evilmartians",
+					Team:         "devs",
+					Logins:       []string{"terraform"},
+				},
+			},
+		},
+	}
+
+	err := githubConnector.CheckAndSetDefaults()
+	require.NoError(s.T(), err)
+
+	err = s.client.UpsertGithubConnector(s.Context(), githubConnector)
+	require.NoError(s.T(), err)
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:        s.terraformConfig + "\n" + `resource "teleport_github_connector" "test" { }`,
+				ResourceName:  name,
+				ImportState:   true,
+				ImportStateId: "test",
+				ImportStateCheck: func(state []*terraform.InstanceState) error {
+					require.Equal(s.T(), state[0].Attributes["kind"], "github")
+					require.Equal(s.T(), state[0].Attributes["spec.client_id"], "Iv1.3386eee92ff932a4")
+					require.Equal(s.T(), state[0].Attributes["spec.teams_to_logins.0.organization"], "evilmartians")
+					require.Equal(s.T(), state[0].Attributes["spec.teams_to_logins.0.team"], "devs")
+					require.Equal(s.T(), state[0].Attributes["spec.teams_to_logins.0.logins.0"], "terraform")
+
+					return nil
+				},
 			},
 		},
 	})

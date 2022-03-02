@@ -8,21 +8,21 @@ resource "teleport_github_connector" "github" {
     teleport_role.example
   ]
 
-  metadata {
+  metadata = {
      name = "example"
      labels = {
        example = "yes"
      }
   }
   
-  spec {
+  spec = {
     client_id = " Iv1.3386eee92ff932a4"
     client_secret = var.github_secret
 
-    teams_to_logins {
+    teams_to_logins = [{
        organization = "evilmartians"
        team = "devs"
        logins = ["example"]
-    }
+    }]
   }
 }

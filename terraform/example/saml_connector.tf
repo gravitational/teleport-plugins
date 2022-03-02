@@ -20,22 +20,22 @@ resource "teleport_saml_connector" "example" {
     teleport_role.example
   ]
 
-  metadata {
+  metadata = {
     name = "example"
   }
 
-  spec {
-    attributes_to_roles {
+  spec = {
+    attributes_to_roles = [{
       name = "groups"
       roles = ["example"]
       value = "okta-admin"
-    }
+    }]
 
-    attributes_to_roles {
+    attributes_to_roles = [{
       name = "groups"
       roles = ["example"]
       value = "okta-dev"
-    }
+    }]
 
     acs = "https://${var.addr}/v1/webapi/saml/acs"
     entity_descriptor = var.saml_entity_descriptor

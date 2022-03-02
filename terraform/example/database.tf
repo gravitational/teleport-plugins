@@ -1,7 +1,7 @@
 # Teleport Database
 
 resource "teleport_database" "example" {
-    metadata {
+    metadata = {
         name = "example"
         description = "Test database"
         labels = {
@@ -9,7 +9,7 @@ resource "teleport_database" "example" {
         }
     }
 
-    spec {
+    spec = {
         protocol = "postgres"
         uri = "localhost"
     }
