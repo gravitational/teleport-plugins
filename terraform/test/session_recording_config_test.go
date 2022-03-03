@@ -57,7 +57,9 @@ func (s *TerraformSuite) TestSessionRecordingConfig() {
 }
 
 func (s *TerraformSuite) TestImportSessionRecordingConfig() {
-	name := "teleport_session_recording_config.test"
+	r := "teleport_session_recording_config"
+	id := "test_import"
+	name := r + "." + id
 
 	sessionrRecordingConfig := &types.SessionRecordingConfigV2{
 		Metadata: types.Metadata{},
@@ -75,10 +77,10 @@ func (s *TerraformSuite) TestImportSessionRecordingConfig() {
 		ProtoV6ProviderFactories: s.terraformProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:        s.terraformConfig + "\n" + `resource "teleport_session_recording_config" "test" { }`,
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
 				ResourceName:  name,
 				ImportState:   true,
-				ImportStateId: "test",
+				ImportStateId: id,
 				ImportStateCheck: func(state []*terraform.InstanceState) error {
 					require.Equal(s.T(), state[0].Attributes["kind"], "session_recording_config")
 					require.Equal(s.T(), state[0].Attributes["spec.proxy_checks_host_keys"], "true")

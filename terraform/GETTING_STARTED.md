@@ -8,7 +8,7 @@ Check [Terraform official docs](https://learn.hashicorp.com/tutorials/terraform/
 
 # Install provider
 
-_NOTE: This won't be necessary once we publish provider in Terraform registry. Repo URL will also change._
+_NOTE: This won't be necessary once we publish provider in Terraform registry._
 
 ```
 git clone --depth 1 git@github.com:gravitational/teleport-plugins.git
@@ -118,7 +118,7 @@ resource "teleport_role" "example" {
   metadata = {
     name        = "example"
     description = "Example Teleport Role"
-    expires     = "2022-10-12T07:20:50.52Z"
+    expires     = "2025-10-12T07:20:50Z"
     labels = {
       example  = "yes"      
     }

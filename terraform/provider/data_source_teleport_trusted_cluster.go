@@ -27,6 +27,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // dataSourceTeleportTrustedClusterType is the data source metadata type
@@ -60,7 +61,7 @@ func (r dataSourceTeleportTrustedCluster) Read(ctx context.Context, req tfsdk.Re
 
 	trustedClusterI, err := r.p.Client.GetTrustedCluster(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading TrustedCluster", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))
 		return
 	}
 

@@ -20,6 +20,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // resourceTeleportOIDCConnectorType is the resource metadata type
@@ -70,28 +72,43 @@ func (r resourceTeleportOIDCConnector) Create(ctx context.Context, req tfsdk.Cre
 		return
 	}
 
-	err := oidcConnector.CheckAndSetDefaults()
+	_, err := r.p.Client.GetOIDCConnector(ctx, oidcConnector.Metadata.Name, true)
+	if err == nil {
+		n := oidcConnector.Metadata.Name
+		existErr := fmt.Sprintf("OIDCConnector exists in Teleport. Either remove it (tctl rm oidc/%v)"+
+			" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+
+		resp.Diagnostics.Append(diagFromErr("OIDCConnector exists in Teleport", trace.Errorf(existErr)))
+		return
+	}
+
+	if err != nil && !trace.IsNotFound(err) {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(err), "oidc"))
+		return
+	}
+
+	err = oidcConnector.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error setting OIDCConnector defaults", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting OIDCConnector defaults", trace.Wrap(err), "oidc"))
 		return
 	}
 
 	err = r.p.Client.UpsertOIDCConnector(ctx, oidcConnector)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating OIDCConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error creating OIDCConnector", trace.Wrap(err), "oidc"))
 		return
 	}
 
 	id := oidcConnector.Metadata.Name
 	oidcConnectorI, err := r.p.Client.GetOIDCConnector(ctx, id, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading OIDCConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(err), "oidc"))
 		return
 	}
 
 	oidcConnector, ok := oidcConnectorI.(*apitypes.OIDCConnectorV3)
 	if !ok {
-		resp.Diagnostics.AddError("Error reading OIDCConnector", fmt.Sprintf("Can not convert %T to OIDCConnectorV3", oidcConnectorI))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Errorf("Can not convert %T to OIDCConnectorV3", oidcConnectorI), "oidc"))
 		return
 	}
 
@@ -100,6 +117,8 @@ func (r resourceTeleportOIDCConnector) Create(ctx context.Context, req tfsdk.Cre
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	plan.Attrs["id"] = types.String{Value: oidcConnector.Metadata.Name}
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -126,7 +145,7 @@ func (r resourceTeleportOIDCConnector) Read(ctx context.Context, req tfsdk.ReadR
 
 	oidcConnectorI, err := r.p.Client.GetOIDCConnector(ctx, id.Value, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading OIDCConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(err), "oidc"))
 		return
 	}
 
@@ -169,19 +188,19 @@ func (r resourceTeleportOIDCConnector) Update(ctx context.Context, req tfsdk.Upd
 
 	err := oidcConnector.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating OIDCConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating OIDCConnector", err, "oidc"))
 		return
 	}
 
 	err = r.p.Client.UpsertOIDCConnector(ctx, oidcConnector)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating OIDCConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating OIDCConnector", err, "oidc"))
 		return
 	}
 
 	oidcConnectorI, err := r.p.Client.GetOIDCConnector(ctx, name, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading OIDCConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", err, "oidc"))
 		return
 	}
 
@@ -210,7 +229,7 @@ func (r resourceTeleportOIDCConnector) Delete(ctx context.Context, req tfsdk.Del
 
 	err := r.p.Client.DeleteOIDCConnector(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting OIDCConnectorV3", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting OIDCConnectorV3", trace.Wrap(err), "oidc"))
 		return
 	}
 
@@ -221,7 +240,7 @@ func (r resourceTeleportOIDCConnector) Delete(ctx context.Context, req tfsdk.Del
 func (r resourceTeleportOIDCConnector) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	oidcConnectorI, err := r.p.Client.GetOIDCConnector(ctx, req.ID, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading OIDCConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(err), "oidc"))
 		return
 	}
 

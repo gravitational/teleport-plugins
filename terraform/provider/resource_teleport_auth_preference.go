@@ -19,7 +19,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // resourceTeleportAuthPreferenceType is the resource metadata type
@@ -71,25 +71,27 @@ func (r resourceTeleportAuthPreference) Create(ctx context.Context, req tfsdk.Cr
 
 	err := authPreference.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error setting AuthPreference defaults", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting AuthPreference defaults", trace.Wrap(err), "cluster_auth_preference"))
 		return
 	}
 
 	err = r.p.Client.SetAuthPreference(ctx, authPreference)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating AuthPreference", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error creating AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
 		return
 	}
 
 	authPreferenceI, err := r.p.Client.GetAuthPreference(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading AuthPreference", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
 		return
 	}
 
 	authPreference, ok := authPreferenceI.(*apitypes.AuthPreferenceV2)
 	if !ok {
-		resp.Diagnostics.AddError("Error reading AuthPreference", fmt.Sprintf("Can not convert %T to AuthPreferenceV2", authPreferenceI))
+		resp.Diagnostics.Append(
+			diagFromWrappedErr("Error reading AuthPreference", trace.Errorf("Can not convert %T to AuthPreferenceV2", authPreferenceI), "cluster_auth_preference"),
+		)
 		return
 	}
 
@@ -98,6 +100,8 @@ func (r resourceTeleportAuthPreference) Create(ctx context.Context, req tfsdk.Cr
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	plan.Attrs["id"] = types.String{Value: "auth_preference"}
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -117,7 +121,7 @@ func (r resourceTeleportAuthPreference) Read(ctx context.Context, req tfsdk.Read
 
 	authPreferenceI, err := r.p.Client.GetAuthPreference(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading AuthPreference", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
 		return
 	}
 
@@ -158,19 +162,19 @@ func (r resourceTeleportAuthPreference) Update(ctx context.Context, req tfsdk.Up
 
 	err := authPreference.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating AuthPreference", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
 		return
 	}
 
 	err = r.p.Client.SetAuthPreference(ctx, authPreference)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating AuthPreference", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
 		return
 	}
 
 	authPreferenceI, err := r.p.Client.GetAuthPreference(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading AuthPreference", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
 		return
 	}
 
@@ -192,7 +196,7 @@ func (r resourceTeleportAuthPreference) Update(ctx context.Context, req tfsdk.Up
 func (r resourceTeleportAuthPreference) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
 	err := r.p.Client.ResetAuthPreference(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting AuthPreferenceV2", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
 		return
 	}
 
@@ -203,7 +207,7 @@ func (r resourceTeleportAuthPreference) Delete(ctx context.Context, req tfsdk.De
 func (r resourceTeleportAuthPreference) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	authPreferenceI, err := r.p.Client.GetAuthPreference(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading AuthPreference", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
 		return
 	}
 

@@ -19,7 +19,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // resourceTeleportClusterNetworkingConfigType is the resource metadata type
@@ -71,25 +71,27 @@ func (r resourceTeleportClusterNetworkingConfig) Create(ctx context.Context, req
 
 	err := clusterNetworkingConfig.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error setting ClusterNetworkingConfig defaults", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting ClusterNetworkingConfig defaults", trace.Wrap(err), "cluster_networking_config"))
 		return
 	}
 
 	err = r.p.Client.SetClusterNetworkingConfig(ctx, clusterNetworkingConfig)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating ClusterNetworkingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error creating ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
 		return
 	}
 
 	clusterNetworkingConfigI, err := r.p.Client.GetClusterNetworkingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading ClusterNetworkingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))	
 		return
 	}
 
 	clusterNetworkingConfig, ok := clusterNetworkingConfigI.(*apitypes.ClusterNetworkingConfigV2)
 	if !ok {
-		resp.Diagnostics.AddError("Error reading ClusterNetworkingConfig", fmt.Sprintf("Can not convert %T to ClusterNetworkingConfigV2", clusterNetworkingConfigI))
+		resp.Diagnostics.Append(
+			diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Errorf("Can not convert %T to ClusterNetworkingConfigV2", clusterNetworkingConfigI), "cluster_networking_config"),
+		)
 		return
 	}
 
@@ -98,6 +100,8 @@ func (r resourceTeleportClusterNetworkingConfig) Create(ctx context.Context, req
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	plan.Attrs["id"] = types.String{Value: "cluster_networking_config"}
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -117,7 +121,7 @@ func (r resourceTeleportClusterNetworkingConfig) Read(ctx context.Context, req t
 
 	clusterNetworkingConfigI, err := r.p.Client.GetClusterNetworkingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading ClusterNetworkingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))	
 		return
 	}
 
@@ -158,19 +162,19 @@ func (r resourceTeleportClusterNetworkingConfig) Update(ctx context.Context, req
 
 	err := clusterNetworkingConfig.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating ClusterNetworkingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))	
 		return
 	}
 
 	err = r.p.Client.SetClusterNetworkingConfig(ctx, clusterNetworkingConfig)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating ClusterNetworkingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))	
 		return
 	}
 
 	clusterNetworkingConfigI, err := r.p.Client.GetClusterNetworkingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading ClusterNetworkingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))	
 		return
 	}
 
@@ -192,7 +196,7 @@ func (r resourceTeleportClusterNetworkingConfig) Update(ctx context.Context, req
 func (r resourceTeleportClusterNetworkingConfig) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
 	err := r.p.Client.ResetClusterNetworkingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting ClusterNetworkingConfigV2", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))	
 		return
 	}
 
@@ -203,7 +207,7 @@ func (r resourceTeleportClusterNetworkingConfig) Delete(ctx context.Context, req
 func (r resourceTeleportClusterNetworkingConfig) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	clusterNetworkingConfigI, err := r.p.Client.GetClusterNetworkingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading ClusterNetworkingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))	
 		return
 	}
 

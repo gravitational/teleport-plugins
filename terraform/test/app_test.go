@@ -25,7 +25,7 @@ import (
 )
 
 func (s *TerraformSuite) TestApp() {
-	checkRoleDestroyed := func(state *terraform.State) error {
+	checkDestroyed := func(state *terraform.State) error {
 		_, err := s.client.GetApp(s.Context(), "test")
 		if trace.IsNotFound(err) {
 			return nil
@@ -38,7 +38,7 @@ func (s *TerraformSuite) TestApp() {
 
 	resource.Test(s.T(), resource.TestCase{
 		ProtoV6ProviderFactories: s.terraformProviders,
-		CheckDestroy:             checkRoleDestroyed,
+		CheckDestroy:             checkDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: s.getFixture("app_0_create.tf"),
@@ -67,11 +67,13 @@ func (s *TerraformSuite) TestApp() {
 }
 
 func (s *TerraformSuite) TestImportApp() {
-	name := "teleport_app.test"
+	r := "teleport_app"
+	id := "test_import"
+	name := r + "." + id
 
 	app := &types.AppV3{
 		Metadata: types.Metadata{
-			Name: "test",
+			Name: id,
 		},
 		Spec: types.AppSpecV3{
 			URI: "localhost:3000/test",
@@ -87,10 +89,10 @@ func (s *TerraformSuite) TestImportApp() {
 		ProtoV6ProviderFactories: s.terraformProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:        s.terraformConfig + "\n" + `resource "teleport_app" "test" { }`,
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
 				ResourceName:  name,
 				ImportState:   true,
-				ImportStateId: "test",
+				ImportStateId: id,
 				ImportStateCheck: func(state []*terraform.InstanceState) error {
 					require.Equal(s.T(), state[0].Attributes["kind"], "app")
 					require.Equal(s.T(), state[0].Attributes["spec.uri"], "localhost:3000/test")

@@ -26,6 +26,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // dataSourceTeleportSessionRecordingConfigType is the data source metadata type
@@ -52,7 +53,7 @@ func (r dataSourceTeleportSessionRecordingConfigType) NewDataSource(_ context.Co
 func (r dataSourceTeleportSessionRecordingConfig) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
 	sessionRecordingConfigI, err := r.p.Client.GetSessionRecordingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading SessionRecordingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
 		return
 	}
 

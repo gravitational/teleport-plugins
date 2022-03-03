@@ -26,6 +26,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // dataSourceTeleportClusterNetworkingConfigType is the data source metadata type
@@ -52,7 +53,7 @@ func (r dataSourceTeleportClusterNetworkingConfigType) NewDataSource(_ context.C
 func (r dataSourceTeleportClusterNetworkingConfig) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
 	clusterNetworkingConfigI, err := r.p.Client.GetClusterNetworkingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading ClusterNetworkingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
 		return
 	}
 

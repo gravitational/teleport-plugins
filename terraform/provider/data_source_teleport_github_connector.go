@@ -27,6 +27,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // dataSourceTeleportGithubConnectorType is the data source metadata type
@@ -60,7 +61,7 @@ func (r dataSourceTeleportGithubConnector) Read(ctx context.Context, req tfsdk.R
 
 	githubConnectorI, err := r.p.Client.GetGithubConnector(ctx, id.Value, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading GithubConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))
 		return
 	}
 

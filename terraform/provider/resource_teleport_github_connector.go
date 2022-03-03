@@ -20,6 +20,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // resourceTeleportGithubConnectorType is the resource metadata type
@@ -70,28 +72,43 @@ func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.C
 		return
 	}
 
-	err := githubConnector.CheckAndSetDefaults()
+	_, err := r.p.Client.GetGithubConnector(ctx, githubConnector.Metadata.Name, true)
+	if !trace.IsNotFound(err) {
+		if err == nil {
+			n := githubConnector.Metadata.Name
+			existErr := fmt.Sprintf("GithubConnector exists in Teleport. Either remove it (tctl rm github/%v)"+
+				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+
+			resp.Diagnostics.Append(diagFromErr("GithubConnector exists in Teleport", trace.Errorf(existErr)))
+			return
+		}
+
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))
+		return
+	}
+
+	err = githubConnector.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error setting GithubConnector defaults", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting GithubConnector defaults", trace.Wrap(err), "github"))
 		return
 	}
 
 	err = r.p.Client.UpsertGithubConnector(ctx, githubConnector)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating GithubConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error creating GithubConnector", trace.Wrap(err), "github"))
 		return
 	}
 
 	id := githubConnector.Metadata.Name
 	githubConnectorI, err := r.p.Client.GetGithubConnector(ctx, id, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading GithubConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))
 		return
 	}
 
 	githubConnector, ok := githubConnectorI.(*apitypes.GithubConnectorV3)
 	if !ok {
-		resp.Diagnostics.AddError("Error reading GithubConnector", fmt.Sprintf("Can not convert %T to GithubConnectorV3", githubConnectorI))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Errorf("Can not convert %T to GithubConnectorV3", githubConnectorI), "github"))
 		return
 	}
 
@@ -100,6 +117,8 @@ func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.C
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	plan.Attrs["id"] = types.String{Value: githubConnector.Metadata.Name}
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -126,7 +145,7 @@ func (r resourceTeleportGithubConnector) Read(ctx context.Context, req tfsdk.Rea
 
 	githubConnectorI, err := r.p.Client.GetGithubConnector(ctx, id.Value, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading GithubConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))
 		return
 	}
 
@@ -169,19 +188,19 @@ func (r resourceTeleportGithubConnector) Update(ctx context.Context, req tfsdk.U
 
 	err := githubConnector.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating GithubConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating GithubConnector", err, "github"))
 		return
 	}
 
 	err = r.p.Client.UpsertGithubConnector(ctx, githubConnector)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating GithubConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating GithubConnector", err, "github"))
 		return
 	}
 
 	githubConnectorI, err := r.p.Client.GetGithubConnector(ctx, name, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading GithubConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", err, "github"))
 		return
 	}
 
@@ -210,7 +229,7 @@ func (r resourceTeleportGithubConnector) Delete(ctx context.Context, req tfsdk.D
 
 	err := r.p.Client.DeleteGithubConnector(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting GithubConnectorV3", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting GithubConnectorV3", trace.Wrap(err), "github"))
 		return
 	}
 
@@ -221,7 +240,7 @@ func (r resourceTeleportGithubConnector) Delete(ctx context.Context, req tfsdk.D
 func (r resourceTeleportGithubConnector) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	githubConnectorI, err := r.p.Client.GetGithubConnector(ctx, req.ID, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading GithubConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))
 		return
 	}
 

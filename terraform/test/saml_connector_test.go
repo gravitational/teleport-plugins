@@ -25,7 +25,7 @@ import (
 )
 
 func (s *TerraformSuite) TestSAMLConnector() {
-	checkRoleDestroyed := func(state *terraform.State) error {
+	checkDestroyed := func(state *terraform.State) error {
 		_, err := s.client.GetSAMLConnector(s.Context(), "test", false)
 		if trace.IsNotFound(err) {
 			return nil
@@ -38,7 +38,7 @@ func (s *TerraformSuite) TestSAMLConnector() {
 
 	resource.Test(s.T(), resource.TestCase{
 		ProtoV6ProviderFactories: s.terraformProviders,
-		CheckDestroy:             checkRoleDestroyed,
+		CheckDestroy:             checkDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: s.getFixture("saml_connector_0_create.tf"),
@@ -73,11 +73,13 @@ func (s *TerraformSuite) TestSAMLConnector() {
 }
 
 func (s *TerraformSuite) TestImportSAMLConnector() {
-	name := "teleport_saml_connector.test"
+	r := "teleport_saml_connector"
+	id := "test_import"
+	name := r + "." + id
 
 	samlConnector := &types.SAMLConnectorV2{
 		Metadata: types.Metadata{
-			Name: "test",
+			Name: id,
 		},
 		Spec: types.SAMLConnectorSpecV2{
 			AssertionConsumerService: "https://example.com/v1/webapi/saml/acs",
@@ -110,10 +112,10 @@ func (s *TerraformSuite) TestImportSAMLConnector() {
 		ProtoV6ProviderFactories: s.terraformProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:        s.terraformConfig + "\n" + `resource "teleport_saml_connector" "test" { }`,
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
 				ResourceName:  name,
 				ImportState:   true,
-				ImportStateId: "test",
+				ImportStateId: id,
 				ImportStateCheck: func(state []*terraform.InstanceState) error {
 					require.Equal(s.T(), state[0].Attributes["kind"], "saml")
 					require.Equal(s.T(), state[0].Attributes["spec.acs"], "https://example.com/v1/webapi/saml/acs")

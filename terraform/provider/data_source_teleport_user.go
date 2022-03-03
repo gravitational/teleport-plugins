@@ -27,6 +27,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // dataSourceTeleportUserType is the data source metadata type
@@ -60,7 +61,7 @@ func (r dataSourceTeleportUser) Read(ctx context.Context, req tfsdk.ReadDataSour
 
 	userI, err := r.p.Client.GetUser(id.Value, false)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading User", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
 		return
 	}
 

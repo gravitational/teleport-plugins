@@ -25,7 +25,7 @@ import (
 )
 
 func (s *TerraformSuite) TestDatabase() {
-	checkRoleDestroyed := func(state *terraform.State) error {
+	checkDestroyed := func(state *terraform.State) error {
 		_, err := s.client.GetDatabase(s.Context(), "test")
 		if trace.IsNotFound(err) {
 			return nil
@@ -38,7 +38,7 @@ func (s *TerraformSuite) TestDatabase() {
 
 	resource.Test(s.T(), resource.TestCase{
 		ProtoV6ProviderFactories: s.terraformProviders,
-		CheckDestroy:             checkRoleDestroyed,
+		CheckDestroy:             checkDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: s.getFixture("database_0_create.tf"),
@@ -71,11 +71,13 @@ func (s *TerraformSuite) TestDatabase() {
 }
 
 func (s *TerraformSuite) TestImportDatabase() {
-	name := "teleport_database.test"
+	r := "teleport_database"
+	id := "test_import"
+	name := r + "." + id
 
 	database := &types.DatabaseV3{
 		Metadata: types.Metadata{
-			Name: "test",
+			Name: id,
 		},
 		Spec: types.DatabaseSpecV3{
 			Protocol: "postgres",
@@ -92,10 +94,10 @@ func (s *TerraformSuite) TestImportDatabase() {
 		ProtoV6ProviderFactories: s.terraformProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:        s.terraformConfig + "\n" + `resource "teleport_database" "test" { }`,
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
 				ResourceName:  name,
 				ImportState:   true,
-				ImportStateId: "test",
+				ImportStateId: id,
 				ImportStateCheck: func(state []*terraform.InstanceState) error {
 					require.Equal(s.T(), state[0].Attributes["kind"], "db")
 					require.Equal(s.T(), state[0].Attributes["spec.uri"], "localhost:3000/test")

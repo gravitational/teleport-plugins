@@ -20,6 +20,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // resourceTeleportAppType is the resource metadata type
@@ -70,28 +72,43 @@ func (r resourceTeleportApp) Create(ctx context.Context, req tfsdk.CreateResourc
 		return
 	}
 
-	err := app.CheckAndSetDefaults()
+	_, err := r.p.Client.GetApp(ctx, app.Metadata.Name)
+	if !trace.IsNotFound(err) {
+		if err == nil {
+			n := app.Metadata.Name
+			existErr := fmt.Sprintf("App exists in Teleport. Either remove it (tctl rm app/%v)"+
+				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+
+			resp.Diagnostics.Append(diagFromErr("App exists in Teleport", trace.Errorf(existErr)))
+			return
+		}
+
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(err), "app"))
+		return
+	}
+
+	err = app.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error setting App defaults", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting App defaults", trace.Wrap(err), "app"))
 		return
 	}
 
 	err = r.p.Client.CreateApp(ctx, app)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating App", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error creating App", trace.Wrap(err), "app"))
 		return
 	}
 
 	id := app.Metadata.Name
 	appI, err := r.p.Client.GetApp(ctx, id)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading App", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(err), "app"))
 		return
 	}
 
 	app, ok := appI.(*apitypes.AppV3)
 	if !ok {
-		resp.Diagnostics.AddError("Error reading App", fmt.Sprintf("Can not convert %T to AppV3", appI))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Errorf("Can not convert %T to AppV3", appI), "app"))
 		return
 	}
 
@@ -100,6 +117,8 @@ func (r resourceTeleportApp) Create(ctx context.Context, req tfsdk.CreateResourc
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	plan.Attrs["id"] = types.String{Value: app.Metadata.Name}
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -126,7 +145,7 @@ func (r resourceTeleportApp) Read(ctx context.Context, req tfsdk.ReadResourceReq
 
 	appI, err := r.p.Client.GetApp(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading App", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(err), "app"))
 		return
 	}
 
@@ -169,19 +188,19 @@ func (r resourceTeleportApp) Update(ctx context.Context, req tfsdk.UpdateResourc
 
 	err := app.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating App", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating App", err, "app"))
 		return
 	}
 
 	err = r.p.Client.UpdateApp(ctx, app)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating App", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating App", err, "app"))
 		return
 	}
 
 	appI, err := r.p.Client.GetApp(ctx, name)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading App", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", err, "app"))
 		return
 	}
 
@@ -210,7 +229,7 @@ func (r resourceTeleportApp) Delete(ctx context.Context, req tfsdk.DeleteResourc
 
 	err := r.p.Client.DeleteApp(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting AppV3", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting AppV3", trace.Wrap(err), "app"))
 		return
 	}
 
@@ -221,7 +240,7 @@ func (r resourceTeleportApp) Delete(ctx context.Context, req tfsdk.DeleteResourc
 func (r resourceTeleportApp) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	appI, err := r.p.Client.GetApp(ctx, req.ID)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading App", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(err), "app"))
 		return
 	}
 

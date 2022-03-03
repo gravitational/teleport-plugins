@@ -30,6 +30,12 @@ type payload struct {
 	WithSecrets string
 	// GetWithoutContext indicates that get method has no context parameter (workaround for the User)
 	GetWithoutContext bool
+	// ID id value on create and import
+	ID string
+	// RandomMetadataName indicates that Metadata.Name must be generated
+	RandomMetadataName bool
+	// Kind Teleport kind for a resource
+	Kind string
 }
 
 const (
@@ -48,6 +54,8 @@ var (
 		CreateMethod: "CreateApp",
 		UpdateMethod: "UpdateApp",
 		DeleteMethod: "DeleteApp",
+		ID:           `app.Metadata.Name`,
+		Kind:         "app",
 	}
 
 	authPreference = payload{
@@ -58,6 +66,8 @@ var (
 		CreateMethod: "SetAuthPreference",
 		UpdateMethod: "SetAuthPreference",
 		DeleteMethod: "ResetAuthPreference",
+		ID:           `"auth_preference"`,
+		Kind:         "cluster_auth_preference",
 	}
 
 	clusterNetworking = payload{
@@ -68,6 +78,8 @@ var (
 		CreateMethod: "SetClusterNetworkingConfig",
 		UpdateMethod: "SetClusterNetworkingConfig",
 		DeleteMethod: "ResetClusterNetworkingConfig",
+		ID:           `"cluster_networking_config"`,
+		Kind:         "cluster_networking_config",
 	}
 
 	database = payload{
@@ -78,6 +90,8 @@ var (
 		CreateMethod: "CreateDatabase",
 		UpdateMethod: "UpdateDatabase",
 		DeleteMethod: "DeleteDatabase",
+		ID:           `database.Metadata.Name`,
+		Kind:         "db",
 	}
 
 	githubConnector = payload{
@@ -89,6 +103,8 @@ var (
 		UpdateMethod: "UpsertGithubConnector",
 		DeleteMethod: "DeleteGithubConnector",
 		WithSecrets:  "true",
+		ID:           "githubConnector.Metadata.Name",
+		Kind:         "github",
 	}
 
 	oidcConnector = payload{
@@ -100,6 +116,8 @@ var (
 		UpdateMethod: "UpsertOIDCConnector",
 		DeleteMethod: "DeleteOIDCConnector",
 		WithSecrets:  "true",
+		ID:           "oidcConnector.Metadata.Name",
+		Kind:         "oidc",
 	}
 
 	samlConnector = payload{
@@ -111,16 +129,21 @@ var (
 		UpdateMethod: "UpsertSAMLConnector",
 		DeleteMethod: "DeleteSAMLConnector",
 		WithSecrets:  "true",
+		ID:           "samlConnector.Metadata.Name",
+		Kind:         "saml",
 	}
 
 	provisionToken = payload{
-		Name:         "ProvisionToken",
-		TypeName:     "ProvisionTokenV2",
-		VarName:      "provisionToken",
-		GetMethod:    "GetToken",
-		CreateMethod: "UpsertToken",
-		UpdateMethod: "UpsertToken",
-		DeleteMethod: "DeleteToken",
+		Name:               "ProvisionToken",
+		TypeName:           "ProvisionTokenV2",
+		VarName:            "provisionToken",
+		GetMethod:          "GetToken",
+		CreateMethod:       "UpsertToken",
+		UpdateMethod:       "UpsertToken",
+		DeleteMethod:       "DeleteToken",
+		ID:                 "provisionToken.Metadata.Name",
+		RandomMetadataName: true,
+		Kind:               "token",
 	}
 
 	role = payload{
@@ -131,6 +154,8 @@ var (
 		CreateMethod: "UpsertRole",
 		UpdateMethod: "UpsertRole",
 		DeleteMethod: "DeleteRole",
+		ID:           "role.Metadata.Name",
+		Kind:         "role",
 	}
 
 	sessionRecording = payload{
@@ -141,6 +166,8 @@ var (
 		CreateMethod: "SetSessionRecordingConfig",
 		UpdateMethod: "SetSessionRecordingConfig",
 		DeleteMethod: "ResetSessionRecordingConfig",
+		ID:           `"session_recording_config"`,
+		Kind:         "session_recording_config",
 	}
 
 	trustedCluster = payload{
@@ -152,6 +179,8 @@ var (
 		UpdateMethod:      "UpsertTrustedCluster",
 		DeleteMethod:      "DeleteTrustedCluster",
 		UpsertMethodArity: 2,
+		ID:                "trustedCluster.Metadata.Name",
+		Kind:              "trusted_cluster",
 	}
 
 	user = payload{
@@ -164,6 +193,8 @@ var (
 		DeleteMethod:      "DeleteUser",
 		WithSecrets:       "false",
 		GetWithoutContext: true,
+		ID:                "user.Metadata.Name",
+		Kind:              "user",
 	}
 )
 
@@ -183,8 +214,8 @@ func main() {
 	generate(samlConnector, pluralResource, "provider/resource_teleport_saml_connector.go")
 	generate(samlConnector, pluralDataSource, "provider/data_source_teleport_saml_connector.go")
 	// Provision Token code is an exception because it requires custom id generation TODO: generalize
-	// generate(provisionToken, pluralResource, "provider/resource_teleport_provision_token.go")
-	// generate(provisionToken, pluralDataSource, "provider/data_source_teleport_provision_token.go")
+	generate(provisionToken, pluralResource, "provider/resource_teleport_provision_token.go")
+	generate(provisionToken, pluralDataSource, "provider/data_source_teleport_provision_token.go")
 	generate(role, pluralResource, "provider/resource_teleport_role.go")
 	generate(role, pluralDataSource, "provider/data_source_teleport_role.go")
 	generate(trustedCluster, pluralResource, "provider/resource_teleport_trusted_cluster.go")

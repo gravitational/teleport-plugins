@@ -27,6 +27,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // dataSourceTeleportOIDCConnectorType is the data source metadata type
@@ -60,7 +61,7 @@ func (r dataSourceTeleportOIDCConnector) Read(ctx context.Context, req tfsdk.Rea
 
 	oidcConnectorI, err := r.p.Client.GetOIDCConnector(ctx, id.Value, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading OIDCConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(err), "oidc"))
 		return
 	}
 

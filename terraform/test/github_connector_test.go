@@ -25,7 +25,7 @@ import (
 )
 
 func (s *TerraformSuite) TestGithubConnector() {
-	checkRoleDestroyed := func(state *terraform.State) error {
+	checkDestroyed := func(state *terraform.State) error {
 		_, err := s.client.GetGithubConnector(s.Context(), "test", false)
 		if trace.IsNotFound(err) {
 			return nil
@@ -38,7 +38,7 @@ func (s *TerraformSuite) TestGithubConnector() {
 
 	resource.Test(s.T(), resource.TestCase{
 		ProtoV6ProviderFactories: s.terraformProviders,
-		CheckDestroy:             checkRoleDestroyed,
+		CheckDestroy:             checkDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: s.getFixture("github_connector_0_create.tf"),
@@ -75,11 +75,13 @@ func (s *TerraformSuite) TestGithubConnector() {
 }
 
 func (s *TerraformSuite) TestImportGithubConnector() {
-	name := "teleport_github_connector.test"
+	r := "teleport_github_connector"
+	id := "test_import"
+	name := r + "." + id
 
 	githubConnector := &types.GithubConnectorV3{
 		Metadata: types.Metadata{
-			Name: "test",
+			Name: id,
 		},
 		Spec: types.GithubConnectorSpecV3{
 			ClientID:     "Iv1.3386eee92ff932a4",
@@ -104,10 +106,10 @@ func (s *TerraformSuite) TestImportGithubConnector() {
 		ProtoV6ProviderFactories: s.terraformProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:        s.terraformConfig + "\n" + `resource "teleport_github_connector" "test" { }`,
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
 				ResourceName:  name,
 				ImportState:   true,
-				ImportStateId: "test",
+				ImportStateId: id,
 				ImportStateCheck: func(state []*terraform.InstanceState) error {
 					require.Equal(s.T(), state[0].Attributes["kind"], "github")
 					require.Equal(s.T(), state[0].Attributes["spec.client_id"], "Iv1.3386eee92ff932a4")

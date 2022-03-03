@@ -20,6 +20,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // resourceTeleportTrustedClusterType is the resource metadata type
@@ -70,28 +72,43 @@ func (r resourceTeleportTrustedCluster) Create(ctx context.Context, req tfsdk.Cr
 		return
 	}
 
-	err := trustedCluster.CheckAndSetDefaults()
+	_, err := r.p.Client.GetTrustedCluster(ctx, trustedCluster.Metadata.Name)
+	if !trace.IsNotFound(err) {
+		if err == nil {
+			n := trustedCluster.Metadata.Name
+			existErr := fmt.Sprintf("TrustedCluster exists in Teleport. Either remove it (tctl rm trusted_cluster/%v)"+
+				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+
+			resp.Diagnostics.Append(diagFromErr("TrustedCluster exists in Teleport", trace.Errorf(existErr)))
+			return
+		}
+
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))
+		return
+	}
+
+	err = trustedCluster.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error setting TrustedCluster defaults", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting TrustedCluster defaults", trace.Wrap(err), "trusted_cluster"))
 		return
 	}
 
 	_, err = r.p.Client.UpsertTrustedCluster(ctx, trustedCluster)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating TrustedCluster", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error creating TrustedCluster", trace.Wrap(err), "trusted_cluster"))
 		return
 	}
 
 	id := trustedCluster.Metadata.Name
 	trustedClusterI, err := r.p.Client.GetTrustedCluster(ctx, id)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading TrustedCluster", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))
 		return
 	}
 
 	trustedCluster, ok := trustedClusterI.(*apitypes.TrustedClusterV2)
 	if !ok {
-		resp.Diagnostics.AddError("Error reading TrustedCluster", fmt.Sprintf("Can not convert %T to TrustedClusterV2", trustedClusterI))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Errorf("Can not convert %T to TrustedClusterV2", trustedClusterI), "trusted_cluster"))
 		return
 	}
 
@@ -100,6 +117,8 @@ func (r resourceTeleportTrustedCluster) Create(ctx context.Context, req tfsdk.Cr
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	plan.Attrs["id"] = types.String{Value: trustedCluster.Metadata.Name}
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -126,7 +145,7 @@ func (r resourceTeleportTrustedCluster) Read(ctx context.Context, req tfsdk.Read
 
 	trustedClusterI, err := r.p.Client.GetTrustedCluster(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading TrustedCluster", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))
 		return
 	}
 
@@ -169,19 +188,19 @@ func (r resourceTeleportTrustedCluster) Update(ctx context.Context, req tfsdk.Up
 
 	err := trustedCluster.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating TrustedCluster", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating TrustedCluster", err, "trusted_cluster"))
 		return
 	}
 
 	_, err = r.p.Client.UpsertTrustedCluster(ctx, trustedCluster)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating TrustedCluster", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating TrustedCluster", err, "trusted_cluster"))
 		return
 	}
 
 	trustedClusterI, err := r.p.Client.GetTrustedCluster(ctx, name)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading TrustedCluster", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", err, "trusted_cluster"))
 		return
 	}
 
@@ -210,7 +229,7 @@ func (r resourceTeleportTrustedCluster) Delete(ctx context.Context, req tfsdk.De
 
 	err := r.p.Client.DeleteTrustedCluster(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting TrustedClusterV2", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting TrustedClusterV2", trace.Wrap(err), "trusted_cluster"))
 		return
 	}
 
@@ -221,7 +240,7 @@ func (r resourceTeleportTrustedCluster) Delete(ctx context.Context, req tfsdk.De
 func (r resourceTeleportTrustedCluster) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	trustedClusterI, err := r.p.Client.GetTrustedCluster(ctx, req.ID)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading TrustedCluster", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))
 		return
 	}
 

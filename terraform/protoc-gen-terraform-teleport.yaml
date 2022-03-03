@@ -28,84 +28,84 @@ injected_fields:
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
       computed: true
       plan_modifiers:
-        - UseConstStringValue("app")
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   AuthPreferenceV2:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
       computed: true
       plan_modifiers:
-        - UseConstStringValue("auth_preference")
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   ClusterNetworkingConfigV2:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
       computed: true
       plan_modifiers:
-        - UseConstStringValue("cluster_networking_config")
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   DatabaseV3:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
       computed: true
       plan_modifiers:
-        - UseConstStringValue("db")
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   GithubConnectorV3:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
       computed: true
       plan_modifiers:
-        - UseConstStringValue("github")
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   OIDCConnectorV3:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
       computed: true
       plan_modifiers:
-        - UseConstStringValue("oidc")
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   ProvisionTokenV2:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
       computed: true
       plan_modifiers:
-        - UseConstStringValue("token")
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   RoleV4:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
       computed: true
       plan_modifiers:
-        - UseConstStringValue("role")
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   SAMLConnectorV2:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
       computed: true
       plan_modifiers:
-        - UseConstStringValue("saml")
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   SessionRecordingConfigV2:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
       computed: true
       plan_modifiers:
-        - UseConstStringValue("session_recording_config")
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   TrustedClusterV2:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
       computed: true
       plan_modifiers:
-        - UseConstStringValue("trusted_cluster")
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   UserV2:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
       computed: true
       plan_modifiers:
-        - UseConstStringValue("user")
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
 
 # These fields will be excluded
 exclude_fields:
@@ -314,7 +314,7 @@ validators:
   ProvisionTokenV2.Version:
     - UseVersionBetween(2,2)
   RoleV4.Version:
-    - UseVersionBetween(3,5)
+    - UseVersionBetween(3,4)
   SAMLConnectorV2.Version:
     - UseVersionBetween(2,2)
   SessionRecordingConfigV2.Version:

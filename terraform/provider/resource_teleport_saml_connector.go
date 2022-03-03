@@ -20,6 +20,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // resourceTeleportSAMLConnectorType is the resource metadata type
@@ -70,28 +72,43 @@ func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.Cre
 		return
 	}
 
-	err := samlConnector.CheckAndSetDefaults()
+	_, err := r.p.Client.GetSAMLConnector(ctx, samlConnector.Metadata.Name, true)
+	if !trace.IsNotFound(err) {
+		if err == nil {
+			n := samlConnector.Metadata.Name
+			existErr := fmt.Sprintf("SAMLConnector exists in Teleport. Either remove it (tctl rm saml/%v)"+
+				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+
+			resp.Diagnostics.Append(diagFromErr("SAMLConnector exists in Teleport", trace.Errorf(existErr)))
+			return
+		}
+
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))
+		return
+	}
+
+	err = samlConnector.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error setting SAMLConnector defaults", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting SAMLConnector defaults", trace.Wrap(err), "saml"))
 		return
 	}
 
 	err = r.p.Client.UpsertSAMLConnector(ctx, samlConnector)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating SAMLConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error creating SAMLConnector", trace.Wrap(err), "saml"))
 		return
 	}
 
 	id := samlConnector.Metadata.Name
 	samlConnectorI, err := r.p.Client.GetSAMLConnector(ctx, id, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading SAMLConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))
 		return
 	}
 
 	samlConnector, ok := samlConnectorI.(*apitypes.SAMLConnectorV2)
 	if !ok {
-		resp.Diagnostics.AddError("Error reading SAMLConnector", fmt.Sprintf("Can not convert %T to SAMLConnectorV2", samlConnectorI))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Errorf("Can not convert %T to SAMLConnectorV2", samlConnectorI), "saml"))
 		return
 	}
 
@@ -100,6 +117,8 @@ func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.Cre
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	plan.Attrs["id"] = types.String{Value: samlConnector.Metadata.Name}
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -126,7 +145,7 @@ func (r resourceTeleportSAMLConnector) Read(ctx context.Context, req tfsdk.ReadR
 
 	samlConnectorI, err := r.p.Client.GetSAMLConnector(ctx, id.Value, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading SAMLConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))
 		return
 	}
 
@@ -169,19 +188,19 @@ func (r resourceTeleportSAMLConnector) Update(ctx context.Context, req tfsdk.Upd
 
 	err := samlConnector.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating SAMLConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SAMLConnector", err, "saml"))
 		return
 	}
 
 	err = r.p.Client.UpsertSAMLConnector(ctx, samlConnector)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating SAMLConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SAMLConnector", err, "saml"))
 		return
 	}
 
 	samlConnectorI, err := r.p.Client.GetSAMLConnector(ctx, name, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading SAMLConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", err, "saml"))
 		return
 	}
 
@@ -210,7 +229,7 @@ func (r resourceTeleportSAMLConnector) Delete(ctx context.Context, req tfsdk.Del
 
 	err := r.p.Client.DeleteSAMLConnector(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting SAMLConnectorV2", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting SAMLConnectorV2", trace.Wrap(err), "saml"))
 		return
 	}
 
@@ -221,7 +240,7 @@ func (r resourceTeleportSAMLConnector) Delete(ctx context.Context, req tfsdk.Del
 func (r resourceTeleportSAMLConnector) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	samlConnectorI, err := r.p.Client.GetSAMLConnector(ctx, req.ID, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading SAMLConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))
 		return
 	}
 

@@ -27,6 +27,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // dataSourceTeleportSAMLConnectorType is the data source metadata type
@@ -60,7 +61,7 @@ func (r dataSourceTeleportSAMLConnector) Read(ctx context.Context, req tfsdk.Rea
 
 	samlConnectorI, err := r.p.Client.GetSAMLConnector(ctx, id.Value, true)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading SAMLConnector", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))
 		return
 	}
 

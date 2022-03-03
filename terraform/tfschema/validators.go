@@ -94,7 +94,7 @@ func (v VersionValidator) Validate(_ context.Context, req tfsdk.ValidateAttribut
 	}
 
 	if version < v.Min || version > v.Max {
-		resp.Diagnostics.AddError("Version validation error", fmt.Sprintf("Version %v (%v) is not in %v..%v", version, req.AttributePath.String(), v.Min, v.Max))
+		resp.Diagnostics.AddError("Version validation error", fmt.Sprintf("Version v%v (%v) is not in range v%v..v%v", version, req.AttributePath.String(), v.Min, v.Max))
 		return
 	}
 }

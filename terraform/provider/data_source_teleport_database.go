@@ -27,6 +27,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // dataSourceTeleportDatabaseType is the data source metadata type
@@ -60,7 +61,7 @@ func (r dataSourceTeleportDatabase) Read(ctx context.Context, req tfsdk.ReadData
 
 	databaseI, err := r.p.Client.GetDatabase(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading Database", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
 		return
 	}
 

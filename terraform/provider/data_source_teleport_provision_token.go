@@ -27,6 +27,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // dataSourceTeleportProvisionTokenType is the data source metadata type
@@ -60,7 +61,7 @@ func (r dataSourceTeleportProvisionToken) Read(ctx context.Context, req tfsdk.Re
 
 	provisionTokenI, err := r.p.Client.GetToken(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading ProvisionToken", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))
 		return
 	}
 

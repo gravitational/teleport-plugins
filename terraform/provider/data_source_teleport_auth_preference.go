@@ -26,6 +26,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // dataSourceTeleportAuthPreferenceType is the data source metadata type
@@ -52,7 +53,7 @@ func (r dataSourceTeleportAuthPreferenceType) NewDataSource(_ context.Context, p
 func (r dataSourceTeleportAuthPreference) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
 	authPreferenceI, err := r.p.Client.GetAuthPreference(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading AuthPreference", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
 		return
 	}
 

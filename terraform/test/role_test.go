@@ -25,7 +25,7 @@ import (
 )
 
 func (s *TerraformSuite) TestRole() {
-	checkRoleDestroyed := func(state *terraform.State) error {
+	checkDestroyed := func(state *terraform.State) error {
 		_, err := s.client.GetRole(s.Context(), "test")
 		if trace.IsNotFound(err) {
 			return nil
@@ -38,7 +38,7 @@ func (s *TerraformSuite) TestRole() {
 
 	resource.Test(s.T(), resource.TestCase{
 		ProtoV6ProviderFactories: s.terraformProviders,
-		CheckDestroy:             checkRoleDestroyed,
+		CheckDestroy:             checkDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: s.getFixture("role_0_create.tf"),
@@ -105,11 +105,13 @@ func (s *TerraformSuite) TestRole() {
 }
 
 func (s *TerraformSuite) TestImportRole() {
-	name := "teleport_role.test"
+	r := "teleport_role"
+	id := "test_import"
+	name := r + "." + id
 
 	role := &types.RoleV4{
 		Metadata: types.Metadata{
-			Name: "test",
+			Name: id,
 		},
 		Spec: types.RoleSpecV4{},
 	}
@@ -123,13 +125,13 @@ func (s *TerraformSuite) TestImportRole() {
 		ProtoV6ProviderFactories: s.terraformProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:        s.terraformConfig + "\n" + `resource "teleport_role" "test" { }`,
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
 				ResourceName:  name,
 				ImportState:   true,
-				ImportStateId: "test",
+				ImportStateId: id,
 				ImportStateCheck: func(state []*terraform.InstanceState) error {
 					require.Equal(s.T(), state[0].Attributes["kind"], "role")
-					require.Equal(s.T(), state[0].Attributes["metadata.name"], "test")
+					require.Equal(s.T(), state[0].Attributes["metadata.name"], "test_import")
 
 					return nil
 				},

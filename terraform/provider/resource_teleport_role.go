@@ -20,6 +20,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // resourceTeleportRoleType is the resource metadata type
@@ -70,28 +72,43 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 		return
 	}
 
-	err := role.CheckAndSetDefaults()
+	_, err := r.p.Client.GetRole(ctx, role.Metadata.Name)
+	if !trace.IsNotFound(err) {
+		if err == nil {
+			n := role.Metadata.Name
+			existErr := fmt.Sprintf("Role exists in Teleport. Either remove it (tctl rm role/%v)"+
+				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+
+			resp.Diagnostics.Append(diagFromErr("Role exists in Teleport", trace.Errorf(existErr)))
+			return
+		}
+
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
+		return
+	}
+
+	err = role.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error setting Role defaults", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting Role defaults", trace.Wrap(err), "role"))
 		return
 	}
 
 	err = r.p.Client.UpsertRole(ctx, role)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating Role", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error creating Role", trace.Wrap(err), "role"))
 		return
 	}
 
 	id := role.Metadata.Name
 	roleI, err := r.p.Client.GetRole(ctx, id)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading Role", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
 		return
 	}
 
 	role, ok := roleI.(*apitypes.RoleV4)
 	if !ok {
-		resp.Diagnostics.AddError("Error reading Role", fmt.Sprintf("Can not convert %T to RoleV4", roleI))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Errorf("Can not convert %T to RoleV4", roleI), "role"))
 		return
 	}
 
@@ -100,6 +117,8 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	plan.Attrs["id"] = types.String{Value: role.Metadata.Name}
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -126,7 +145,7 @@ func (r resourceTeleportRole) Read(ctx context.Context, req tfsdk.ReadResourceRe
 
 	roleI, err := r.p.Client.GetRole(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading Role", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
 		return
 	}
 
@@ -169,19 +188,19 @@ func (r resourceTeleportRole) Update(ctx context.Context, req tfsdk.UpdateResour
 
 	err := role.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating Role", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating Role", err, "role"))
 		return
 	}
 
 	err = r.p.Client.UpsertRole(ctx, role)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating Role", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating Role", err, "role"))
 		return
 	}
 
 	roleI, err := r.p.Client.GetRole(ctx, name)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading Role", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", err, "role"))
 		return
 	}
 
@@ -210,7 +229,7 @@ func (r resourceTeleportRole) Delete(ctx context.Context, req tfsdk.DeleteResour
 
 	err := r.p.Client.DeleteRole(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting RoleV4", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting RoleV4", trace.Wrap(err), "role"))
 		return
 	}
 
@@ -221,7 +240,7 @@ func (r resourceTeleportRole) Delete(ctx context.Context, req tfsdk.DeleteResour
 func (r resourceTeleportRole) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	roleI, err := r.p.Client.GetRole(ctx, req.ID)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading Role", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
 		return
 	}
 

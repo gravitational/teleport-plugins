@@ -79,11 +79,13 @@ func (s *TerraformSuite) TestProvisionToken() {
 }
 
 func (s *TerraformSuite) TestImportProvisionToken() {
-	name := "teleport_provision_token.test"
+	r := "teleport_provision_token"
+	id := "test_import"
+	name := r + "." + id
 
 	token := &types.ProvisionTokenV2{
 		Metadata: types.Metadata{
-			Name: "test",
+			Name: id,
 		},
 		Spec: types.ProvisionTokenSpecV2{
 			Roles: []types.SystemRole{"Node", "Auth"},
@@ -99,13 +101,13 @@ func (s *TerraformSuite) TestImportProvisionToken() {
 		ProtoV6ProviderFactories: s.terraformProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:        s.terraformConfig + "\n" + `resource "teleport_provision_token" "test" { }`,
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
 				ResourceName:  name,
 				ImportState:   true,
-				ImportStateId: "test",
+				ImportStateId: id,
 				ImportStateCheck: func(state []*terraform.InstanceState) error {
 					require.Equal(s.T(), state[0].Attributes["kind"], "token")
-					require.Equal(s.T(), state[0].Attributes["metadata.name"], "test")
+					require.Equal(s.T(), state[0].Attributes["metadata.name"], "test_import")
 
 					return nil
 				},

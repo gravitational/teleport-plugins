@@ -19,7 +19,6 @@ package provider
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -27,6 +26,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // resourceTeleportSessionRecordingConfigType is the resource metadata type
@@ -71,25 +71,27 @@ func (r resourceTeleportSessionRecordingConfig) Create(ctx context.Context, req 
 
 	err := sessionRecordingConfig.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error setting SessionRecordingConfig defaults", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting SessionRecordingConfig defaults", trace.Wrap(err), "session_recording_config"))
 		return
 	}
 
 	err = r.p.Client.SetSessionRecordingConfig(ctx, sessionRecordingConfig)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating SessionRecordingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error creating SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
 		return
 	}
 
 	sessionRecordingConfigI, err := r.p.Client.GetSessionRecordingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading SessionRecordingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
 		return
 	}
 
 	sessionRecordingConfig, ok := sessionRecordingConfigI.(*apitypes.SessionRecordingConfigV2)
 	if !ok {
-		resp.Diagnostics.AddError("Error reading SessionRecordingConfig", fmt.Sprintf("Can not convert %T to SessionRecordingConfigV2", sessionRecordingConfigI))
+		resp.Diagnostics.Append(
+			diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Errorf("Can not convert %T to SessionRecordingConfigV2", sessionRecordingConfigI), "session_recording_config"),
+		)
 		return
 	}
 
@@ -98,6 +100,8 @@ func (r resourceTeleportSessionRecordingConfig) Create(ctx context.Context, req 
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	plan.Attrs["id"] = types.String{Value: "session_recording_config"}
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -117,7 +121,7 @@ func (r resourceTeleportSessionRecordingConfig) Read(ctx context.Context, req tf
 
 	sessionRecordingConfigI, err := r.p.Client.GetSessionRecordingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading SessionRecordingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
 		return
 	}
 
@@ -158,19 +162,19 @@ func (r resourceTeleportSessionRecordingConfig) Update(ctx context.Context, req 
 
 	err := sessionRecordingConfig.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating SessionRecordingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
 		return
 	}
 
 	err = r.p.Client.SetSessionRecordingConfig(ctx, sessionRecordingConfig)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating SessionRecordingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
 		return
 	}
 
 	sessionRecordingConfigI, err := r.p.Client.GetSessionRecordingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading SessionRecordingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
 		return
 	}
 
@@ -192,7 +196,7 @@ func (r resourceTeleportSessionRecordingConfig) Update(ctx context.Context, req 
 func (r resourceTeleportSessionRecordingConfig) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
 	err := r.p.Client.ResetSessionRecordingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting SessionRecordingConfigV2", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
 		return
 	}
 
@@ -203,7 +207,7 @@ func (r resourceTeleportSessionRecordingConfig) Delete(ctx context.Context, req 
 func (r resourceTeleportSessionRecordingConfig) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	sessionRecordingConfigI, err := r.p.Client.GetSessionRecordingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading SessionRecordingConfig", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
 		return
 	}
 

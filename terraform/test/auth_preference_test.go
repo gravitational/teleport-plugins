@@ -58,7 +58,9 @@ func (s *TerraformSuite) TestAuthPreference() {
 }
 
 func (s *TerraformSuite) TestImportAuthPreference() {
-	name := "teleport_auth_preference.test"
+	r := "teleport_auth_preference"
+	id := "test_import"
+	name := r + "." + id
 
 	authPreference := &types.AuthPreferenceV2{
 		Metadata: types.Metadata{},
@@ -76,10 +78,10 @@ func (s *TerraformSuite) TestImportAuthPreference() {
 		ProtoV6ProviderFactories: s.terraformProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:        s.terraformConfig + "\n" + `resource "teleport_auth_preference" "test" { }`,
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
 				ResourceName:  name,
 				ImportState:   true,
-				ImportStateId: "test",
+				ImportStateId: id,
 				ImportStateCheck: func(state []*terraform.InstanceState) error {
 					require.Equal(s.T(), state[0].Attributes["kind"], "cluster_auth_preference")
 					require.Equal(s.T(), state[0].Attributes["spec.disconnect_expired_cert"], "true")

@@ -20,6 +20,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // resourceTeleportUserType is the resource metadata type
@@ -70,28 +72,43 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 		return
 	}
 
-	err := user.CheckAndSetDefaults()
+	_, err := r.p.Client.GetUser(user.Metadata.Name, false)
+	if !trace.IsNotFound(err) {
+		if err == nil {
+			n := user.Metadata.Name
+			existErr := fmt.Sprintf("User exists in Teleport. Either remove it (tctl rm user/%v)"+
+				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+
+			resp.Diagnostics.Append(diagFromErr("User exists in Teleport", trace.Errorf(existErr)))
+			return
+		}
+
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
+		return
+	}
+
+	err = user.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error setting User defaults", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting User defaults", trace.Wrap(err), "user"))
 		return
 	}
 
 	err = r.p.Client.CreateUser(ctx, user)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating User", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error creating User", trace.Wrap(err), "user"))
 		return
 	}
 
 	id := user.Metadata.Name
 	userI, err := r.p.Client.GetUser(id, false)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading User", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
 		return
 	}
 
 	user, ok := userI.(*apitypes.UserV2)
 	if !ok {
-		resp.Diagnostics.AddError("Error reading User", fmt.Sprintf("Can not convert %T to UserV2", userI))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Errorf("Can not convert %T to UserV2", userI), "user"))
 		return
 	}
 
@@ -100,6 +117,8 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	plan.Attrs["id"] = types.String{Value: user.Metadata.Name}
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -126,7 +145,7 @@ func (r resourceTeleportUser) Read(ctx context.Context, req tfsdk.ReadResourceRe
 
 	userI, err := r.p.Client.GetUser(id.Value, false)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading User", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
 		return
 	}
 
@@ -169,19 +188,19 @@ func (r resourceTeleportUser) Update(ctx context.Context, req tfsdk.UpdateResour
 
 	err := user.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating User", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating User", err, "user"))
 		return
 	}
 
 	err = r.p.Client.UpdateUser(ctx, user)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating User", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating User", err, "user"))
 		return
 	}
 
 	userI, err := r.p.Client.GetUser(name, false)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading User", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", err, "user"))
 		return
 	}
 
@@ -210,7 +229,7 @@ func (r resourceTeleportUser) Delete(ctx context.Context, req tfsdk.DeleteResour
 
 	err := r.p.Client.DeleteUser(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting UserV2", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting UserV2", trace.Wrap(err), "user"))
 		return
 	}
 
@@ -221,7 +240,7 @@ func (r resourceTeleportUser) Delete(ctx context.Context, req tfsdk.DeleteResour
 func (r resourceTeleportUser) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	userI, err := r.p.Client.GetUser(req.ID, false)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading User", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
 		return
 	}
 

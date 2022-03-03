@@ -26,6 +26,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // dataSourceTeleport{{.Name}}Type is the data source metadata type
@@ -52,7 +53,7 @@ func (r dataSourceTeleport{{.Name}}Type) NewDataSource(_ context.Context, p tfsd
 func (r dataSourceTeleport{{.Name}}) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
 	{{.VarName}}I, err := r.p.Client.{{.GetMethod}}(ctx)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading {{.Name}}", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
 

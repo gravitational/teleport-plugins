@@ -20,6 +20,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	{{if .RandomMetadataName}}
+	"crypto/rand"
+	"encoding/hex"
+	{{end}}
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -28,6 +32,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // resourceTeleport{{.Name}}Type is the resource metadata type
@@ -70,28 +75,55 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 		return
 	}
 
-	err := {{.VarName}}.CheckAndSetDefaults()
+	{{if .RandomMetadataName -}}
+	if {{.VarName}}.Metadata.Name == "" {
+		b := make([]byte, 32)
+		_, err := rand.Read(b)
+		if err != nil {
+			resp.Diagnostics.AddError("Failed to generate random token", err.Error())
+			return
+		}
+		{{.VarName}}.Metadata.Name = hex.EncodeToString(b)
+	}
+	{{end -}}
+
+	_, err := r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}{{.VarName}}.Metadata.Name{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
+	if !trace.IsNotFound(err) {
+		if err == nil {
+			n := {{.VarName}}.Metadata.Name
+			existErr := fmt.Sprintf("{{.Name}} exists in Teleport. Either remove it (tctl rm {{.Kind}}/%v)"+
+				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+
+			resp.Diagnostics.Append(diagFromErr("{{.Name}} exists in Teleport", trace.Errorf(existErr)))
+			return
+		}
+
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
+		return
+	}
+
+	err = {{.VarName}}.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error setting {{.Name}} defaults", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting {{.Name}} defaults", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
 
 	{{if eq .UpsertMethodArity 2}}_, {{end}}err = r.p.Client.{{.CreateMethod}}(ctx, {{.VarName}})
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating {{.Name}}", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error creating {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
 
 	id := {{.VarName}}.Metadata.Name
 	{{.VarName}}I, err := r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}id{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading {{.Name}}", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
 
 	{{.VarName}}, ok := {{.VarName}}I.(*apitypes.{{.TypeName}})
 	if !ok {
-		resp.Diagnostics.AddError("Error reading {{.Name}}", fmt.Sprintf("Can not convert %T to {{.TypeName}}", {{.VarName}}I))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Errorf("Can not convert %T to {{.TypeName}}", {{.VarName}}I), "{{.Kind}}"))
 		return
 	}
 
@@ -100,6 +132,8 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	plan.Attrs["id"] = types.String{Value: {{.ID}}}
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -126,7 +160,7 @@ func (r resourceTeleport{{.Name}}) Read(ctx context.Context, req tfsdk.ReadResou
 
 	{{.VarName}}I, err := r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}id.Value{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading {{.Name}}", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
 
@@ -169,19 +203,19 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 
 	err := {{.VarName}}.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating {{.Name}}", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating {{.Name}}", err, "{{.Kind}}"))
 		return
 	}
 
 	{{if eq .UpsertMethodArity 2}}_, {{end}}err = r.p.Client.{{.UpdateMethod}}(ctx, {{.VarName}})
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating {{.Name}}", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating {{.Name}}", err, "{{.Kind}}"))
 		return
 	}
 
 	{{.VarName}}I, err := r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}name{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading {{.Name}}", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", err, "{{.Kind}}"))
 		return
 	}
 
@@ -210,7 +244,7 @@ func (r resourceTeleport{{.Name}}) Delete(ctx context.Context, req tfsdk.DeleteR
 
 	err := r.p.Client.{{.DeleteMethod}}(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting {{.TypeName}}", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting {{.TypeName}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
 
@@ -221,7 +255,7 @@ func (r resourceTeleport{{.Name}}) Delete(ctx context.Context, req tfsdk.DeleteR
 func (r resourceTeleport{{.Name}}) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	{{.VarName}}I, err := r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}req.ID{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading {{.Name}}", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
 

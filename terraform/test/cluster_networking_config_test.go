@@ -61,7 +61,9 @@ func (s *TerraformSuite) TestClusterNetworkingConfig() {
 }
 
 func (s *TerraformSuite) TestImportClusterNetworkingConfig() {
-	name := "teleport_cluster_networking_config.test"
+	r := "teleport_cluster_networking_config"
+	id := "test_import"
+	name := r + "." + id
 
 	clusterNetworkingConfig := &types.ClusterNetworkingConfigV2{
 		Metadata: types.Metadata{},
@@ -79,10 +81,10 @@ func (s *TerraformSuite) TestImportClusterNetworkingConfig() {
 		ProtoV6ProviderFactories: s.terraformProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:        s.terraformConfig + "\n" + `resource "teleport_cluster_networking_config" "test" { }`,
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
 				ResourceName:  name,
 				ImportState:   true,
-				ImportStateId: "test",
+				ImportStateId: id,
 				ImportStateCheck: func(state []*terraform.InstanceState) error {
 					require.Equal(s.T(), state[0].Attributes["kind"], "cluster_networking_config")
 					require.Equal(s.T(), state[0].Attributes["spec.client_idle_timeout"], "30s")

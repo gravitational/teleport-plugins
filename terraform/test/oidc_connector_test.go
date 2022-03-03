@@ -25,7 +25,7 @@ import (
 )
 
 func (s *TerraformSuite) TestOIDCConnector() {
-	checkRoleDestroyed := func(state *terraform.State) error {
+	checkDestroyed := func(state *terraform.State) error {
 		_, err := s.client.GetOIDCConnector(s.Context(), "test", false)
 		if trace.IsNotFound(err) {
 			return nil
@@ -38,7 +38,7 @@ func (s *TerraformSuite) TestOIDCConnector() {
 
 	resource.Test(s.T(), resource.TestCase{
 		ProtoV6ProviderFactories: s.terraformProviders,
-		CheckDestroy:             checkRoleDestroyed,
+		CheckDestroy:             checkDestroyed,
 		Steps: []resource.TestStep{
 			{
 				Config: s.getFixture("oidc_connector_0_create.tf"),
@@ -73,11 +73,13 @@ func (s *TerraformSuite) TestOIDCConnector() {
 }
 
 func (s *TerraformSuite) TestImportOIDCConnector() {
-	name := "teleport_oidc_connector.test"
+	r := "teleport_oidc_connector"
+	id := "test_import"
+	name := r + "." + id
 
 	oidcConnector := &types.OIDCConnectorV3{
 		Metadata: types.Metadata{
-			Name: "test",
+			Name: id,
 		},
 		Spec: types.OIDCConnectorSpecV3{
 			ClientID:     "Iv1.3386eee92ff932a4",
@@ -101,10 +103,10 @@ func (s *TerraformSuite) TestImportOIDCConnector() {
 		ProtoV6ProviderFactories: s.terraformProviders,
 		Steps: []resource.TestStep{
 			{
-				Config:        s.terraformConfig + "\n" + `resource "teleport_oidc_connector" "test" { }`,
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
 				ResourceName:  name,
 				ImportState:   true,
-				ImportStateId: "test",
+				ImportStateId: id,
 				ImportStateCheck: func(state []*terraform.InstanceState) error {
 					require.Equal(s.T(), state[0].Attributes["kind"], "oidc")
 					require.Equal(s.T(), state[0].Attributes["spec.client_id"], "Iv1.3386eee92ff932a4")

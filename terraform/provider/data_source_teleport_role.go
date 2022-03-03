@@ -27,6 +27,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // dataSourceTeleportRoleType is the data source metadata type
@@ -60,7 +61,7 @@ func (r dataSourceTeleportRole) Read(ctx context.Context, req tfsdk.ReadDataSour
 
 	roleI, err := r.p.Client.GetRole(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading Role", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
 		return
 	}
 

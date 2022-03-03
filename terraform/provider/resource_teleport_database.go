@@ -20,6 +20,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -28,6 +29,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 )
 
 // resourceTeleportDatabaseType is the resource metadata type
@@ -70,28 +72,43 @@ func (r resourceTeleportDatabase) Create(ctx context.Context, req tfsdk.CreateRe
 		return
 	}
 
-	err := database.CheckAndSetDefaults()
+	_, err := r.p.Client.GetDatabase(ctx, database.Metadata.Name)
+	if !trace.IsNotFound(err) {
+		if err == nil {
+			n := database.Metadata.Name
+			existErr := fmt.Sprintf("Database exists in Teleport. Either remove it (tctl rm db/%v)"+
+				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+
+			resp.Diagnostics.Append(diagFromErr("Database exists in Teleport", trace.Errorf(existErr)))
+			return
+		}
+
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
+		return
+	}
+
+	err = database.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error setting Database defaults", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting Database defaults", trace.Wrap(err), "db"))
 		return
 	}
 
 	err = r.p.Client.CreateDatabase(ctx, database)
 	if err != nil {
-		resp.Diagnostics.AddError("Error creating Database", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error creating Database", trace.Wrap(err), "db"))
 		return
 	}
 
 	id := database.Metadata.Name
 	databaseI, err := r.p.Client.GetDatabase(ctx, id)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading Database", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
 		return
 	}
 
 	database, ok := databaseI.(*apitypes.DatabaseV3)
 	if !ok {
-		resp.Diagnostics.AddError("Error reading Database", fmt.Sprintf("Can not convert %T to DatabaseV3", databaseI))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Errorf("Can not convert %T to DatabaseV3", databaseI), "db"))
 		return
 	}
 
@@ -100,6 +117,8 @@ func (r resourceTeleportDatabase) Create(ctx context.Context, req tfsdk.CreateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+
+	plan.Attrs["id"] = types.String{Value: database.Metadata.Name}
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -126,7 +145,7 @@ func (r resourceTeleportDatabase) Read(ctx context.Context, req tfsdk.ReadResour
 
 	databaseI, err := r.p.Client.GetDatabase(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading Database", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
 		return
 	}
 
@@ -169,19 +188,19 @@ func (r resourceTeleportDatabase) Update(ctx context.Context, req tfsdk.UpdateRe
 
 	err := database.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating Database", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating Database", err, "db"))
 		return
 	}
 
 	err = r.p.Client.UpdateDatabase(ctx, database)
 	if err != nil {
-		resp.Diagnostics.AddError("Error updating Database", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating Database", err, "db"))
 		return
 	}
 
 	databaseI, err := r.p.Client.GetDatabase(ctx, name)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading Database", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", err, "db"))
 		return
 	}
 
@@ -210,7 +229,7 @@ func (r resourceTeleportDatabase) Delete(ctx context.Context, req tfsdk.DeleteRe
 
 	err := r.p.Client.DeleteDatabase(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.AddError("Error deleting DatabaseV3", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting DatabaseV3", trace.Wrap(err), "db"))
 		return
 	}
 
@@ -221,7 +240,7 @@ func (r resourceTeleportDatabase) Delete(ctx context.Context, req tfsdk.DeleteRe
 func (r resourceTeleportDatabase) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	databaseI, err := r.p.Client.GetDatabase(ctx, req.ID)
 	if err != nil {
-		resp.Diagnostics.AddError("Error reading Database", err.Error())
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
 		return
 	}
 

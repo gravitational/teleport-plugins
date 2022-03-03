@@ -70,7 +70,8 @@ apply: install
 reapply:
 	terraform -chdir=$(TFDIR) apply -var-file="vars.tfvars"
 
-# NOTE: Please note that running these tests might require to increase ulimit. Default OS X limit of 256 does not work.
+# NOTE: Please note that running these tests might require to increase ulimit (ulimit -n 1024). 
+# Default OS X limit of 256 does not work.
 .PHONY: test
 test: install
-	TF_ACC=true go test ./test
+	TF_ACC=true go test ./test -v
