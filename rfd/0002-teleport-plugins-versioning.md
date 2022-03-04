@@ -66,6 +66,10 @@ This is handled in two steps:
         - Other sections may need to be updated, such as `sensitive fields`.
     - Run `make -C terraform gen-schema`
 
+In the future, we can consider using [buf](https://docs.buf.build/introduction)
+or something similar to handle `.proto` dependencies more carefully, and avoid
+the need for unguided manual fixes.
+
 ### Additional Concerns
 
 #### Release branches
