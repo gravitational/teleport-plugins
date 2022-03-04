@@ -49,6 +49,6 @@ require (
 
 replace (
 	github.com/gogo/protobuf => github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf
-	github.com/hashicorp/terraform-plugin-framework => github.com/gzigzigzeo/terraform-plugin-framework v0.4.3-0.20220222142812-b05811fefc63
+	github.com/hashicorp/terraform-plugin-framework => github.com/gzigzigzeo/terraform-plugin-framework v0.4.3-0.20220304162136-1d7997102c3b
 	github.com/julienschmidt/httprouter => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 )
