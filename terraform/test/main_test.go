@@ -74,7 +74,7 @@ func (s *TerraformSuite) SetupSuite() {
 	var bootstrap integration.Bootstrap
 
 	unrestricted := []string{"list", "create", "read", "update", "delete"}
-	role, err := bootstrap.AddRole("terraform", types.RoleSpecV4{
+	role, err := bootstrap.AddRole("terraform", types.RoleSpecV5{
 		Allow: types.RoleConditions{
 			DatabaseLabels: types.Labels(map[string]utils.Strings{"*": []string{"*"}}),
 			AppLabels:      types.Labels(map[string]utils.Strings{"*": []string{"*"}}),

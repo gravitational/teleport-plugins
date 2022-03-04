@@ -37,7 +37,7 @@ func resourceTeleportRole() *schema.Resource {
 		UpdateContext: resourceRoleUpdate,
 		DeleteContext: resourceRoleDelete,
 
-		Schema:        tfschema.SchemaRoleV4,
+		Schema:        tfschema.SchemaRoleV5,
 		SchemaVersion: 4,
 
 		Importer: &schema.ResourceImporter{
@@ -70,9 +70,9 @@ func resourceRoleCreate(ctx context.Context, d *schema.ResourceData, m interface
 		return diagFromErr(describeErr(err, "role"))
 	}
 
-	r := types.RoleV4{}
+	r := types.RoleV5{}
 
-	err = tfschema.FromTerraformRoleV4(d, &r)
+	err = tfschema.FromTerraformRoleV5(d, &r)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -108,7 +108,7 @@ func resourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface{}
 		return diag.Diagnostics{}
 	}
 
-	err = tfschema.ToTerraformRoleV4(r, d)
+	err = tfschema.ToTerraformRoleV5(r, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -131,7 +131,7 @@ func resourceRoleUpdate(ctx context.Context, d *schema.ResourceData, m interface
 		return diag.Diagnostics{}
 	}
 
-	err = tfschema.FromTerraformRoleV4(d, r)
+	err = tfschema.FromTerraformRoleV5(d, r)
 	if err != nil {
 		return diagFromErr(err)
 	}
@@ -161,7 +161,7 @@ func resourceRoleDelete(ctx context.Context, d *schema.ResourceData, m interface
 }
 
 // getRole gets role with graceful destroy handling
-func getRole(ctx context.Context, d *schema.ResourceData, c *client.Client) (*types.RoleV4, error) {
+func getRole(ctx context.Context, d *schema.ResourceData, c *client.Client) (*types.RoleV5, error) {
 	id := d.Id()
 
 	r, err := c.GetRole(ctx, id)
@@ -174,9 +174,9 @@ func getRole(ctx context.Context, d *schema.ResourceData, c *client.Client) (*ty
 		return nil, trace.Wrap(err)
 	}
 
-	r3, ok := r.(*types.RoleV4)
+	r3, ok := r.(*types.RoleV5)
 	if !ok {
-		return nil, fmt.Errorf("failed to convert created user to types.RoleV4 from %T", r)
+		return nil, fmt.Errorf("failed to convert created user to types.RoleV5 from %T", r)
 	}
 
 	return r3, nil

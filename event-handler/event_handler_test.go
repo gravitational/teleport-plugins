@@ -76,7 +76,7 @@ func (s *EventHandlerSuite) SetupSuite() {
 
 	// Set up plugin user.
 
-	role, err := bootstrap.AddRole("access-event-handler", types.RoleSpecV4{
+	role, err := bootstrap.AddRole("access-event-handler", types.RoleSpecV5{
 		Allow: types.RoleConditions{
 			Rules: []types.Rule{
 				types.NewRule("event", []string{"list", "read"}),

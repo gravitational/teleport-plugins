@@ -18,8 +18,8 @@ require (
 	github.com/google/uuid v1.2.0
 	github.com/gravitational/kingpin v2.1.11-0.20190130013101-742f2714c145+incompatible
 	github.com/gravitational/protoc-gen-terraform v0.0.0-20211108170245-3b37ff28d21e // protoc-gen-terraform master (#13)
-	github.com/gravitational/teleport/api v0.0.0-20220216032207-d7ae31ced755 // tag v8.3.0
-	github.com/gravitational/trace v1.1.16-0.20210609220119-4855e69c89fc
+	github.com/gravitational/teleport/api v0.0.0-20220222172130-5696e0b8e7a4 // tag v9.0.0-beta.1
+	github.com/gravitational/trace v1.1.17
 	github.com/hashicorp/go-version v1.3.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.8.0
 	github.com/jonboulle/clockwork v0.2.2
@@ -31,12 +31,11 @@ require (
 	github.com/pelletier/go-toml v1.8.0
 	github.com/peterbourgon/diskv/v3 v3.0.0
 	github.com/sethvargo/go-limiter v0.7.2
-	github.com/sirupsen/logrus v1.8.1-0.20210219125412-f104497f2b21
+	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.0
 	go.etcd.io/bbolt v1.3.5
-	golang.org/x/net v0.0.0-20210326060303-6b1517762897
+	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
-	golang.org/x/term v0.0.0-20210220032956-6a3ed077a48d // indirect
 	google.golang.org/genproto v0.0.0-20210223151946-22b48be4551b // indirect
 	google.golang.org/grpc v1.43.0
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect

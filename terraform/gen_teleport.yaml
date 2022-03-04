@@ -10,13 +10,12 @@ use_json_tag: true
 types:
     - "types.AppV3"
     - "types.AuthPreferenceV2"
-    - "types.ClusterAuditConfigV2"
     - "types.ClusterNetworkingConfigV2"
     - "types.DatabaseV3"
     - "types.GithubConnectorV3"
     - "types.OIDCConnectorV3"
     - "types.ProvisionTokenV2"    
-    - "types.RoleV4"
+    - "types.RoleV5"
     - "types.SAMLConnectorV2"
     - "types.SessionRecordingConfigV2"
     - "types.TrustedClusterV2"
@@ -30,15 +29,12 @@ exclude_fields:
     # AuthPreference
     - "types.AuthPreferenceV2.Metadata.Name" # It's a signleton resource
 
-    # ClusterAuditConfig
-    - "types.ClusterAuditConfigV2.Metadata.Name" # It's a signleton resource
-
     # NetworkingConfig
     - "types.ClusterNetworkingConfigV2.Metadata.Name" # It's a signleton resource
 
     # Role
-    - "types.RoleV4.Spec.Allow.Namespaces" # These fields are not settable via API
-    - "types.RoleV4.Spec.Deny.Namespaces"
+    - "types.RoleV5.Spec.Allow.Namespaces" # These fields are not settable via API
+    - "types.RoleV5.Spec.Deny.Namespaces"
 
     # SessionRecordingConfig
     - "types.SessionRecordingConfigV2.Metadata.Name" # It's a signleton resource
@@ -74,11 +70,6 @@ computed_fields:
     - "types.AuthPreferenceV2.Spec.LockingMode"
     - "types.AuthPreferenceV2.Metadata.Namespace"
 
-    # Audit config
-    - "types.ClusterAuditConfigV2.Version"
-    - "types.ClusterAuditConfigV2.Kind"
-    - "types.ClusterAuditConfigV2.Metadata.Namespace"
-
     # Networking config
     - "types.ClusterNetworkingConfigV2.Version"
     - "types.ClusterNetworkingConfigV2.Kind"
@@ -103,11 +94,11 @@ computed_fields:
     - "types.ProvisionTokenV2.Spec.AWSIIDTTL"
 
     # Role
-    - "types.RoleV4.Kind"
-    - "types.RoleV4.Version"
-    - "types.RoleV4.Metadata.Namespace"
-    - "types.RoleV4.Spec.Options.MaxSessionTTL"
-    - "types.RoleV4.Spec.Options.CertificateFormat"
+    - "types.RoleV5.Kind"
+    - "types.RoleV5.Version"
+    - "types.RoleV5.Metadata.Namespace"
+    - "types.RoleV5.Spec.Options.MaxSessionTTL"
+    - "types.RoleV5.Spec.Options.CertificateFormat"
 
     # SAML connector
     - "types.SAMLConnectorV2.Kind"
@@ -151,9 +142,6 @@ required_fields:
     # Auth preference
     - "types.AuthPreferenceV2.Spec"
 
-    # Audit config
-    - "types.ClusterAuditConfigV2.Spec"
-
     # Networking config
     - "types.ClusterNetworkingConfigV2.Spec"
 
@@ -179,7 +167,7 @@ required_fields:
     - "types.ProvisionTokenV2.Metadata.Expires"
 
     # Role
-    - "types.RoleV4.Spec"
+    - "types.RoleV5.Spec"
 
     # SAML connector
     - "types.SAMLConnectorV2.Spec"

@@ -52,10 +52,6 @@ var (
 	SchemaProvisionTokenV2 = GenSchemaProvisionTokenV2()
 	// SchemaMetaProvisionTokenV2 is schema metadata for ProvisionTokenV2 specifies provisioning token
 	SchemaMetaProvisionTokenV2 = GenSchemaMetaProvisionTokenV2()
-	// SchemaClusterAuditConfigV2 is schema for ClusterAuditConfigV2 represents audit log settings in the cluster.
-	SchemaClusterAuditConfigV2 = GenSchemaClusterAuditConfigV2()
-	// SchemaMetaClusterAuditConfigV2 is schema metadata for ClusterAuditConfigV2 represents audit log settings in the cluster.
-	SchemaMetaClusterAuditConfigV2 = GenSchemaMetaClusterAuditConfigV2()
 	// SchemaClusterNetworkingConfigV2 is schema for ClusterNetworkingConfigV2 contains cluster-wide networking configuration.
 	SchemaClusterNetworkingConfigV2 = GenSchemaClusterNetworkingConfigV2()
 	// SchemaMetaClusterNetworkingConfigV2 is schema metadata for ClusterNetworkingConfigV2 contains cluster-wide networking configuration.
@@ -68,10 +64,10 @@ var (
 	SchemaAuthPreferenceV2 = GenSchemaAuthPreferenceV2()
 	// SchemaMetaAuthPreferenceV2 is schema metadata for AuthPreferenceV2 implements the AuthPreference interface.
 	SchemaMetaAuthPreferenceV2 = GenSchemaMetaAuthPreferenceV2()
-	// SchemaRoleV4 is schema for RoleV4 represents role resource specification
-	SchemaRoleV4 = GenSchemaRoleV4()
-	// SchemaMetaRoleV4 is schema metadata for RoleV4 represents role resource specification
-	SchemaMetaRoleV4 = GenSchemaMetaRoleV4()
+	// SchemaRoleV5 is schema for RoleV5 represents role resource specification
+	SchemaRoleV5 = GenSchemaRoleV5()
+	// SchemaMetaRoleV5 is schema metadata for RoleV5 represents role resource specification
+	SchemaMetaRoleV5 = GenSchemaMetaRoleV5()
 	// SchemaUserV2 is schema for UserV2 is version 2 resource spec of the user
 	SchemaUserV2 = GenSchemaUserV2()
 	// SchemaMetaUserV2 is schema metadata for UserV2 is version 2 resource spec of the user
@@ -129,13 +125,6 @@ func FromTerraformProvisionTokenV2(data *schema.ResourceData, obj *types.Provisi
 func ToTerraformProvisionTokenV2(obj *types.ProvisionTokenV2, data *schema.ResourceData) error {
 	return accessors.ToTerraform(obj, data, SchemaProvisionTokenV2, SchemaMetaProvisionTokenV2)
 }
-func FromTerraformClusterAuditConfigV2(data *schema.ResourceData, obj *types.ClusterAuditConfigV2) error {
-	return accessors.FromTerraform(obj, data, SchemaClusterAuditConfigV2, SchemaMetaClusterAuditConfigV2)
-}
-
-func ToTerraformClusterAuditConfigV2(obj *types.ClusterAuditConfigV2, data *schema.ResourceData) error {
-	return accessors.ToTerraform(obj, data, SchemaClusterAuditConfigV2, SchemaMetaClusterAuditConfigV2)
-}
 func FromTerraformClusterNetworkingConfigV2(data *schema.ResourceData, obj *types.ClusterNetworkingConfigV2) error {
 	return accessors.FromTerraform(obj, data, SchemaClusterNetworkingConfigV2, SchemaMetaClusterNetworkingConfigV2)
 }
@@ -157,12 +146,12 @@ func FromTerraformAuthPreferenceV2(data *schema.ResourceData, obj *types.AuthPre
 func ToTerraformAuthPreferenceV2(obj *types.AuthPreferenceV2, data *schema.ResourceData) error {
 	return accessors.ToTerraform(obj, data, SchemaAuthPreferenceV2, SchemaMetaAuthPreferenceV2)
 }
-func FromTerraformRoleV4(data *schema.ResourceData, obj *types.RoleV4) error {
-	return accessors.FromTerraform(obj, data, SchemaRoleV4, SchemaMetaRoleV4)
+func FromTerraformRoleV5(data *schema.ResourceData, obj *types.RoleV5) error {
+	return accessors.FromTerraform(obj, data, SchemaRoleV5, SchemaMetaRoleV5)
 }
 
-func ToTerraformRoleV4(obj *types.RoleV4, data *schema.ResourceData) error {
-	return accessors.ToTerraform(obj, data, SchemaRoleV4, SchemaMetaRoleV4)
+func ToTerraformRoleV5(obj *types.RoleV5, data *schema.ResourceData) error {
+	return accessors.ToTerraform(obj, data, SchemaRoleV5, SchemaMetaRoleV5)
 }
 func FromTerraformUserV2(data *schema.ResourceData, obj *types.UserV2) error {
 	return accessors.FromTerraform(obj, data, SchemaUserV2, SchemaMetaUserV2)
@@ -508,6 +497,42 @@ func GenSchemaDatabaseV3() map[string]*schema.Schema {
 							},
 						},
 					},
+					// AD is the Active Directory configuration for the database.
+					"ad": {
+						Type:        schema.TypeList,
+						MaxItems:    1,
+						Description: "AD contains Active Directory specific database configuration.",
+
+						Optional: true,
+						Elem: &schema.Resource{
+							Schema: map[string]*schema.Schema{
+								// KeytabFile is the path to the Kerberos keytab file.
+								"keytab_file": {
+									Type:        schema.TypeString,
+									Description: "KeytabFile is the path to the Kerberos keytab file.",
+									Optional:    true,
+								},
+								// Krb5File is the path to the Kerberos configuration file. Defaults to /etc/krb5.conf.
+								"krb5_file": {
+									Type:        schema.TypeString,
+									Description: "Krb5File is the path to the Kerberos configuration file. Defaults to /etc/krb5.conf.",
+									Optional:    true,
+								},
+								// Domain is the Active Directory domain the database resides in.
+								"domain": {
+									Type:        schema.TypeString,
+									Description: "Domain is the Active Directory domain the database resides in.",
+									Optional:    true,
+								},
+								// SPN is the service principal name for the database.
+								"spn": {
+									Type:        schema.TypeString,
+									Description: "SPN is the service principal name for the database.",
+									Optional:    true,
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -752,6 +777,38 @@ func GenSchemaMetaDatabaseV3() map[string]*accessors.SchemaMeta {
 						// servername/hostname on a certificate during validation.
 						"server_name": {
 							Name:       "ServerName",
+							IsTime:     false,
+							IsDuration: false,
+						},
+					},
+				},
+				// AD is the Active Directory configuration for the database.
+				"ad": {
+					Name:       "AD",
+					IsTime:     false,
+					IsDuration: false,
+					Nested: map[string]*accessors.SchemaMeta{
+						// KeytabFile is the path to the Kerberos keytab file.
+						"keytab_file": {
+							Name:       "KeytabFile",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Krb5File is the path to the Kerberos configuration file. Defaults to /etc/krb5.conf.
+						"krb5_file": {
+							Name:       "Krb5File",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// Domain is the Active Directory domain the database resides in.
+						"domain": {
+							Name:       "Domain",
+							IsTime:     false,
+							IsDuration: false,
+						},
+						// SPN is the service principal name for the database.
+						"spn": {
+							Name:       "SPN",
 							IsTime:     false,
 							IsDuration: false,
 						},
@@ -1281,6 +1338,12 @@ func GenSchemaProvisionTokenV2() map[string]*schema.Schema {
 						Description: "JoinMethod is the joining method required in order to use this token.  Supported joining methods include \"token\", \"ec2\", and \"iam\".",
 						Optional:    true,
 					},
+					// BotName is the name of the bot this token grants access to, if any
+					"bot_name": {
+						Type:        schema.TypeString,
+						Description: "BotName is the name of the bot this token grants access to, if any",
+						Optional:    true,
+					},
 				},
 			},
 		},
@@ -1414,315 +1477,11 @@ func GenSchemaMetaProvisionTokenV2() map[string]*accessors.SchemaMeta {
 					IsTime:     false,
 					IsDuration: false,
 				},
-			},
-		},
-	}
-}
-
-// SchemaClusterAuditConfigV2 returns schema for ClusterAuditConfigV2
-//
-// ClusterAuditConfigV2 represents audit log settings in the cluster.
-func GenSchemaClusterAuditConfigV2() map[string]*schema.Schema {
-	return map[string]*schema.Schema{
-		// Kind is a resource kind
-		"kind": {
-			Type:        schema.TypeString,
-			Description: "Kind is a resource kind",
-			Optional:    true,
-			Computed:    true,
-		},
-		// SubKind is an optional resource sub kind, used in some resources
-		"sub_kind": {
-			Type:        schema.TypeString,
-			Description: "SubKind is an optional resource sub kind, used in some resources",
-			Optional:    true,
-		},
-		// Version is a resource version
-		"version": {
-			Type:        schema.TypeString,
-			Description: "Version is a resource version",
-			Optional:    true,
-			Computed:    true,
-		},
-		// Metadata is resource metadata
-		"metadata": {
-			Type:        schema.TypeList,
-			MaxItems:    1,
-			Description: "Metadata is resource metadata",
-
-			Optional: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					// Namespace is object namespace. The field should be called "namespace"
-					// when it returns in Teleport 2.4.
-					"namespace": {
-						Type:        schema.TypeString,
-						Description: "Namespace is object namespace. The field should be called \"namespace\"  when it returns in Teleport 2.4.",
-						Optional:    true,
-						Computed:    true,
-					},
-					// Description is object description
-					"description": {
-						Type:        schema.TypeString,
-						Description: "Description is object description",
-						Optional:    true,
-					},
-					// Labels is a set of labels
-					"labels": {
-
-						Optional:    true,
-						Type:        schema.TypeMap,
-						Description: "Labels is a set of labels",
-						Elem: &schema.Schema{
-							Type: schema.TypeString,
-						},
-					},
-					// Expires is a global expiry time header can be set on any resource in the
-					// system.
-					"expires": {
-						Type:         schema.TypeString,
-						Description:  "Expires is a global expiry time header can be set on any resource in the  system.",
-						ValidateFunc: validation.IsRFC3339Time,
-						StateFunc:    TruncateMs,
-						Optional:     true,
-					},
-				},
-			},
-		},
-		// Spec is a ClusterAuditConfig specification
-		"spec": {
-			Type:        schema.TypeList,
-			MaxItems:    1,
-			Description: "ClusterAuditConfigSpecV2 is the actual data we care about  for ClusterAuditConfig.",
-
-			Required: true,
-			Elem: &schema.Resource{
-				Schema: map[string]*schema.Schema{
-					// Type is audit backend type
-					"type": {
-						Type:        schema.TypeString,
-						Description: "Type is audit backend type",
-						Optional:    true,
-					},
-					// Region is a region setting for audit sessions used by cloud providers
-					"region": {
-						Type:        schema.TypeString,
-						Description: "Region is a region setting for audit sessions used by cloud providers",
-						Optional:    true,
-					},
-					// AuditSessionsURI is a parameter where to upload sessions
-					"audit_sessions_uri": {
-						Type:        schema.TypeString,
-						Description: "AuditSessionsURI is a parameter where to upload sessions",
-						Optional:    true,
-					},
-					// AuditEventsURI is a parameter with all supported outputs
-					// for audit events
-					"audit_events_uri": SchemaStrings(),
-					// EnableContinuousBackups is used to enable (or disable) PITR (Point-In-Time Recovery).
-					"continuous_backups": {
-						Type:        schema.TypeBool,
-						Description: "EnableContinuousBackups is used to enable (or disable) PITR (Point-In-Time Recovery).",
-						Optional:    true,
-					},
-					// EnableAutoScaling is used to enable (or disable) auto scaling policy.
-					"auto_scaling": {
-						Type:        schema.TypeBool,
-						Description: "EnableAutoScaling is used to enable (or disable) auto scaling policy.",
-						Optional:    true,
-					},
-					// ReadMaxCapacity is the maximum provisioned read capacity.
-					"read_max_capacity": {
-						Type:        schema.TypeInt,
-						Description: "ReadMaxCapacity is the maximum provisioned read capacity.",
-						Optional:    true,
-					},
-					// ReadMinCapacity is the minimum provisioned read capacity.
-					"read_min_capacity": {
-						Type:        schema.TypeInt,
-						Description: "ReadMinCapacity is the minimum provisioned read capacity.",
-						Optional:    true,
-					},
-					// ReadTargetValue is the ratio of consumed read to provisioned capacity.
-					"read_target_value": {
-						Type:        schema.TypeFloat,
-						Description: "ReadTargetValue is the ratio of consumed read to provisioned capacity.",
-						Optional:    true,
-					},
-					// WriteMaxCapacity is the maximum provisioned write capacity.
-					"write_max_capacity": {
-						Type:        schema.TypeInt,
-						Description: "WriteMaxCapacity is the maximum provisioned write capacity.",
-						Optional:    true,
-					},
-					// WriteMinCapacity is the minimum provisioned write capacity.
-					"write_min_capacity": {
-						Type:        schema.TypeInt,
-						Description: "WriteMinCapacity is the minimum provisioned write capacity.",
-						Optional:    true,
-					},
-					// WriteTargetValue is the ratio of consumed write to provisioned capacity.
-					"write_target_value": {
-						Type:        schema.TypeFloat,
-						Description: "WriteTargetValue is the ratio of consumed write to provisioned capacity.",
-						Optional:    true,
-					},
-					// RetentionPeriod is the retention period for audit events.
-					"audit_retention_period": {
-						Type:             schema.TypeString,
-						Description:      "RetentionPeriod is the retention period for audit events.",
-						DiffSuppressFunc: SuppressDurationChange,
-						Optional:         true,
-					},
-				},
-			},
-		},
-	}
-}
-
-// GenSchemaMetaClusterAuditConfigV2 returns schema for ClusterAuditConfigV2
-//
-// ClusterAuditConfigV2 represents audit log settings in the cluster.
-func GenSchemaMetaClusterAuditConfigV2() map[string]*accessors.SchemaMeta {
-	return map[string]*accessors.SchemaMeta{
-		// Kind is a resource kind
-		"kind": {
-			Name:       "Kind",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// SubKind is an optional resource sub kind, used in some resources
-		"sub_kind": {
-			Name:       "SubKind",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// Version is a resource version
-		"version": {
-			Name:       "Version",
-			IsTime:     false,
-			IsDuration: false,
-		},
-		// Metadata is resource metadata
-		"metadata": {
-			Name:       "Metadata",
-			IsTime:     false,
-			IsDuration: false,
-			Nested: map[string]*accessors.SchemaMeta{
-				// Namespace is object namespace. The field should be called "namespace"
-				// when it returns in Teleport 2.4.
-				"namespace": {
-					Name:       "Namespace",
+				// BotName is the name of the bot this token grants access to, if any
+				"bot_name": {
+					Name:       "BotName",
 					IsTime:     false,
 					IsDuration: false,
-				},
-				// Description is object description
-				"description": {
-					Name:       "Description",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Labels is a set of labels
-				"labels": {
-					Name:       "Labels",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Expires is a global expiry time header can be set on any resource in the
-				// system.
-				"expires": {
-					Name:       "Expires",
-					IsTime:     true,
-					IsDuration: false,
-				},
-			},
-		},
-		// Spec is a ClusterAuditConfig specification
-		"spec": {
-			Name:       "Spec",
-			IsTime:     false,
-			IsDuration: false,
-			Nested: map[string]*accessors.SchemaMeta{
-				// Type is audit backend type
-				"type": {
-					Name:       "Type",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// Region is a region setting for audit sessions used by cloud providers
-				"region": {
-					Name:       "Region",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// AuditSessionsURI is a parameter where to upload sessions
-				"audit_sessions_uri": {
-					Name:       "AuditSessionsURI",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// AuditEventsURI is a parameter with all supported outputs
-				// for audit events
-				"audit_events_uri": {
-					Name:          "AuditEventsURI",
-					IsTime:        false,
-					IsDuration:    false,
-					FromTerraform: FromTerraformStrings,
-					ToTerraform:   ToTerraformStrings,
-				},
-				// EnableContinuousBackups is used to enable (or disable) PITR (Point-In-Time Recovery).
-				"continuous_backups": {
-					Name:       "EnableContinuousBackups",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// EnableAutoScaling is used to enable (or disable) auto scaling policy.
-				"auto_scaling": {
-					Name:       "EnableAutoScaling",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// ReadMaxCapacity is the maximum provisioned read capacity.
-				"read_max_capacity": {
-					Name:       "ReadMaxCapacity",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// ReadMinCapacity is the minimum provisioned read capacity.
-				"read_min_capacity": {
-					Name:       "ReadMinCapacity",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// ReadTargetValue is the ratio of consumed read to provisioned capacity.
-				"read_target_value": {
-					Name:       "ReadTargetValue",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// WriteMaxCapacity is the maximum provisioned write capacity.
-				"write_max_capacity": {
-					Name:       "WriteMaxCapacity",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// WriteMinCapacity is the minimum provisioned write capacity.
-				"write_min_capacity": {
-					Name:       "WriteMinCapacity",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// WriteTargetValue is the ratio of consumed write to provisioned capacity.
-				"write_target_value": {
-					Name:       "WriteTargetValue",
-					IsTime:     false,
-					IsDuration: false,
-				},
-				// RetentionPeriod is the retention period for audit events.
-				"audit_retention_period": {
-					Name:       "RetentionPeriod",
-					IsTime:     false,
-					IsDuration: true,
 				},
 			},
 		},
@@ -2622,10 +2381,10 @@ func GenSchemaMetaAuthPreferenceV2() map[string]*accessors.SchemaMeta {
 	}
 }
 
-// SchemaRoleV4 returns schema for RoleV4
+// SchemaRoleV5 returns schema for RoleV5
 //
-// RoleV4 represents role resource specification
-func GenSchemaRoleV4() map[string]*schema.Schema {
+// RoleV5 represents role resource specification
+func GenSchemaRoleV5() map[string]*schema.Schema {
 	return map[string]*schema.Schema{
 		// Kind is a resource kind
 		"kind": {
@@ -2703,7 +2462,7 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 		"spec": {
 			Type:        schema.TypeList,
 			MaxItems:    1,
-			Description: "RoleSpecV4 is role specification for RoleV4.",
+			Description: "RoleSpecV5 is role specification for RoleV5.",
 
 			Required: true,
 			Elem: &schema.Resource{
@@ -2815,6 +2574,63 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 									Type:        schema.TypeString,
 									Description: "Lock specifies the locking mode (strict|best_effort) to be applied with  the role.",
 									Optional:    true,
+								},
+								// RecordDesktopSession indicates whether desktop access sessions should be recorded.
+								// It defaults to true unless explicitly set to false.
+								"record_session": {
+									Type:        schema.TypeList,
+									MaxItems:    1,
+									Description: "",
+
+									Optional: true,
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Desktop indicates whether desktop sessions should be recorded.
+											// It defaults to true unless explicitly set to false.
+											"desktop": SchemaBoolOption(),
+										},
+									},
+								},
+								// DesktopClipboard indicates whether clipboard sharing is allowed between the user's
+								// workstation and the remote desktop. It defaults to true unless explicitly set to
+								// false.
+								"desktop_clipboard": SchemaBoolOption(),
+								// CertExtensions specifies the key/values
+								"cert_extensions": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "CertExtensions specifies the key/values",
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Type represents the certificate type being extended, only ssh
+											// is supported at this time.
+											"type": {
+												Type:        schema.TypeString,
+												Description: "Type represents the certificate type being extended, only ssh  is supported at this time.",
+												Optional:    true,
+											},
+											// Mode is the type of extension to be used -- currently
+											// critical-option is not supported
+											"mode": {
+												Type:        schema.TypeString,
+												Description: "Mode is the type of extension to be used -- currently  critical-option is not supported",
+												Optional:    true,
+											},
+											// Name specifies the key to be used in the cert extension.
+											"name": {
+												Type:        schema.TypeString,
+												Description: "Name specifies the key to be used in the cert extension.",
+												Optional:    true,
+											},
+											// Value specifies the valueg to be used in the cert extension.
+											"value": {
+												Type:        schema.TypeString,
+												Description: "Value specifies the valueg to be used in the cert extension.",
+												Optional:    true,
+											},
+										},
+									},
 								},
 							},
 						},
@@ -3174,6 +2990,109 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 								},
 								// WindowsDesktopLabels are used in the RBAC system to allow/deny access to Windows desktops.
 								"windows_desktop_labels": SchemaLabels(),
+								// RequireSessionJoin specifies policies for required users to start a session.
+								"require_session_join": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "RequireSessionJoin specifies policies for required users to start a session.",
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Name is the name of the policy.
+											"name": {
+												Type:        schema.TypeString,
+												Description: "Name is the name of the policy.",
+												Optional:    true,
+											},
+											// Filter is a predicate that determines what users count towards this policy.
+											"filter": {
+												Type:        schema.TypeString,
+												Description: "Filter is a predicate that determines what users count towards this policy.",
+												Optional:    true,
+											},
+											// Kinds are the session kinds this policy applies to.
+											"kinds": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Kinds are the session kinds this policy applies to.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Count is the amount of people that need to be matched for this policy to be fulfilled.
+											"count": {
+												Type:        schema.TypeInt,
+												Description: "Count is the amount of people that need to be matched for this policy to be fulfilled.",
+												Optional:    true,
+											},
+											// Modes is the list of modes that may be used to fulfill this policy.
+											"modes": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Modes is the list of modes that may be used to fulfill this policy.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// OnLeave is the behaviour that's used when the policy is no longer fulfilled
+											// for a live session.
+											"on_leave": {
+												Type:        schema.TypeString,
+												Description: "OnLeave is the behaviour that's used when the policy is no longer fulfilled  for a live session.",
+												Optional:    true,
+											},
+										},
+									},
+								},
+								// JoinSessions specifies policies to allow users to join other sessions.
+								"join_sessions": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "JoinSessions specifies policies to allow users to join other sessions.",
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Name is the name of the policy.
+											"name": {
+												Type:        schema.TypeString,
+												Description: "Name is the name of the policy.",
+												Optional:    true,
+											},
+											// Roles is a list of roles that you can join the session of.
+											"roles": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Roles is a list of roles that you can join the session of.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Kinds are the session kinds this policy applies to.
+											"kinds": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Kinds are the session kinds this policy applies to.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Modes is a list of permitted participant modes for this policy.
+											"modes": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Modes is a list of permitted participant modes for this policy.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+										},
+									},
+								},
 							},
 						},
 					},
@@ -3533,6 +3452,109 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 								},
 								// WindowsDesktopLabels are used in the RBAC system to allow/deny access to Windows desktops.
 								"windows_desktop_labels": SchemaLabels(),
+								// RequireSessionJoin specifies policies for required users to start a session.
+								"require_session_join": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "RequireSessionJoin specifies policies for required users to start a session.",
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Name is the name of the policy.
+											"name": {
+												Type:        schema.TypeString,
+												Description: "Name is the name of the policy.",
+												Optional:    true,
+											},
+											// Filter is a predicate that determines what users count towards this policy.
+											"filter": {
+												Type:        schema.TypeString,
+												Description: "Filter is a predicate that determines what users count towards this policy.",
+												Optional:    true,
+											},
+											// Kinds are the session kinds this policy applies to.
+											"kinds": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Kinds are the session kinds this policy applies to.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Count is the amount of people that need to be matched for this policy to be fulfilled.
+											"count": {
+												Type:        schema.TypeInt,
+												Description: "Count is the amount of people that need to be matched for this policy to be fulfilled.",
+												Optional:    true,
+											},
+											// Modes is the list of modes that may be used to fulfill this policy.
+											"modes": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Modes is the list of modes that may be used to fulfill this policy.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// OnLeave is the behaviour that's used when the policy is no longer fulfilled
+											// for a live session.
+											"on_leave": {
+												Type:        schema.TypeString,
+												Description: "OnLeave is the behaviour that's used when the policy is no longer fulfilled  for a live session.",
+												Optional:    true,
+											},
+										},
+									},
+								},
+								// JoinSessions specifies policies to allow users to join other sessions.
+								"join_sessions": {
+
+									Optional:    true,
+									Type:        schema.TypeList,
+									Description: "JoinSessions specifies policies to allow users to join other sessions.",
+									Elem: &schema.Resource{
+										Schema: map[string]*schema.Schema{
+											// Name is the name of the policy.
+											"name": {
+												Type:        schema.TypeString,
+												Description: "Name is the name of the policy.",
+												Optional:    true,
+											},
+											// Roles is a list of roles that you can join the session of.
+											"roles": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Roles is a list of roles that you can join the session of.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Kinds are the session kinds this policy applies to.
+											"kinds": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Kinds are the session kinds this policy applies to.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+											// Modes is a list of permitted participant modes for this policy.
+											"modes": {
+
+												Optional:    true,
+												Type:        schema.TypeList,
+												Description: "Modes is a list of permitted participant modes for this policy.",
+												Elem: &schema.Schema{
+													Type: schema.TypeString,
+												},
+											},
+										},
+									},
+								},
 							},
 						},
 					},
@@ -3542,10 +3564,10 @@ func GenSchemaRoleV4() map[string]*schema.Schema {
 	}
 }
 
-// GenSchemaMetaRoleV4 returns schema for RoleV4
+// GenSchemaMetaRoleV5 returns schema for RoleV5
 //
-// RoleV4 represents role resource specification
-func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
+// RoleV5 represents role resource specification
+func GenSchemaMetaRoleV5() map[string]*accessors.SchemaMeta {
 	return map[string]*accessors.SchemaMeta{
 		// Kind is a resource kind
 		"kind": {
@@ -3713,6 +3735,68 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 							Name:       "Lock",
 							IsTime:     false,
 							IsDuration: false,
+						},
+						// RecordDesktopSession indicates whether desktop access sessions should be recorded.
+						// It defaults to true unless explicitly set to false.
+						"record_session": {
+							Name:       "RecordSession",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Desktop indicates whether desktop sessions should be recorded.
+								// It defaults to true unless explicitly set to false.
+								"desktop": {
+									Name:          "Desktop",
+									IsTime:        false,
+									IsDuration:    false,
+									FromTerraform: FromTerraformBoolOption,
+									ToTerraform:   ToTerraformBoolOption,
+								},
+							},
+						},
+						// DesktopClipboard indicates whether clipboard sharing is allowed between the user's
+						// workstation and the remote desktop. It defaults to true unless explicitly set to
+						// false.
+						"desktop_clipboard": {
+							Name:          "DesktopClipboard",
+							IsTime:        false,
+							IsDuration:    false,
+							FromTerraform: FromTerraformBoolOption,
+							ToTerraform:   ToTerraformBoolOption,
+						},
+						// CertExtensions specifies the key/values
+						"cert_extensions": {
+							Name:       "CertExtensions",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Type represents the certificate type being extended, only ssh
+								// is supported at this time.
+								"type": {
+									Name:       "Type",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Mode is the type of extension to be used -- currently
+								// critical-option is not supported
+								"mode": {
+									Name:       "Mode",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Name specifies the key to be used in the cert extension.
+								"name": {
+									Name:       "Name",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Value specifies the valueg to be used in the cert extension.
+								"value": {
+									Name:       "Value",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
 						},
 					},
 				},
@@ -4018,6 +4102,83 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 							FromTerraform: FromTerraformLabels,
 							ToTerraform:   ToTerraformLabels,
 						},
+						// RequireSessionJoin specifies policies for required users to start a session.
+						"require_session_join": {
+							Name:       "RequireSessionJoin",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Name is the name of the policy.
+								"name": {
+									Name:       "Name",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Filter is a predicate that determines what users count towards this policy.
+								"filter": {
+									Name:       "Filter",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Kinds are the session kinds this policy applies to.
+								"kinds": {
+									Name:       "Kinds",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Count is the amount of people that need to be matched for this policy to be fulfilled.
+								"count": {
+									Name:       "Count",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Modes is the list of modes that may be used to fulfill this policy.
+								"modes": {
+									Name:       "Modes",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// OnLeave is the behaviour that's used when the policy is no longer fulfilled
+								// for a live session.
+								"on_leave": {
+									Name:       "OnLeave",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
+						},
+						// JoinSessions specifies policies to allow users to join other sessions.
+						"join_sessions": {
+							Name:       "JoinSessions",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Name is the name of the policy.
+								"name": {
+									Name:       "Name",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Roles is a list of roles that you can join the session of.
+								"roles": {
+									Name:       "Roles",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Kinds are the session kinds this policy applies to.
+								"kinds": {
+									Name:       "Kinds",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Modes is a list of permitted participant modes for this policy.
+								"modes": {
+									Name:       "Modes",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
+						},
 					},
 				},
 				// Deny is the set of conditions evaluated to deny access. Deny takes priority
@@ -4322,6 +4483,83 @@ func GenSchemaMetaRoleV4() map[string]*accessors.SchemaMeta {
 							IsDuration:    false,
 							FromTerraform: FromTerraformLabels,
 							ToTerraform:   ToTerraformLabels,
+						},
+						// RequireSessionJoin specifies policies for required users to start a session.
+						"require_session_join": {
+							Name:       "RequireSessionJoin",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Name is the name of the policy.
+								"name": {
+									Name:       "Name",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Filter is a predicate that determines what users count towards this policy.
+								"filter": {
+									Name:       "Filter",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Kinds are the session kinds this policy applies to.
+								"kinds": {
+									Name:       "Kinds",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Count is the amount of people that need to be matched for this policy to be fulfilled.
+								"count": {
+									Name:       "Count",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Modes is the list of modes that may be used to fulfill this policy.
+								"modes": {
+									Name:       "Modes",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// OnLeave is the behaviour that's used when the policy is no longer fulfilled
+								// for a live session.
+								"on_leave": {
+									Name:       "OnLeave",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
+						},
+						// JoinSessions specifies policies to allow users to join other sessions.
+						"join_sessions": {
+							Name:       "JoinSessions",
+							IsTime:     false,
+							IsDuration: false,
+							Nested: map[string]*accessors.SchemaMeta{
+								// Name is the name of the policy.
+								"name": {
+									Name:       "Name",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Roles is a list of roles that you can join the session of.
+								"roles": {
+									Name:       "Roles",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Kinds are the session kinds this policy applies to.
+								"kinds": {
+									Name:       "Kinds",
+									IsTime:     false,
+									IsDuration: false,
+								},
+								// Modes is a list of permitted participant modes for this policy.
+								"modes": {
+									Name:       "Modes",
+									IsTime:     false,
+									IsDuration: false,
+								},
+							},
 						},
 					},
 				},

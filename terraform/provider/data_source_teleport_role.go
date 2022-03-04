@@ -30,7 +30,7 @@ import (
 func dataSourceTeleportRole() *schema.Resource {
 	return &schema.Resource{
 		ReadContext: dataSourceRoleRead,
-		Schema:      tfschema.SchemaRoleV4,
+		Schema:      tfschema.SchemaRoleV5,
 	}
 }
 
@@ -48,12 +48,12 @@ func dataSourceRoleRead(ctx context.Context, d *schema.ResourceData, m interface
 		return diagFromErr(describeErr(err, "role"))
 	}
 
-	r4, ok := r.(*types.RoleV4)
+	r4, ok := r.(*types.RoleV5)
 	if !ok {
 		return diagFromErr(trace.Errorf("can not convert %T to *types.RoleV3", r))
 	}
 
-	err = tfschema.ToTerraformRoleV4(r4, d)
+	err = tfschema.ToTerraformRoleV5(r4, d)
 	if err != nil {
 		return diagFromErr(err)
 	}
