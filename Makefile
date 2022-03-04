@@ -80,8 +80,21 @@ releases: release/access-slack release/access-jira release/access-mattermost rel
 .PHONY: build-all
 build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab access-email terraform event-handler
 
+.PHONY: release-version
+release-version: update-api-version update-version terraform/gen-schema update-tag
+
+.PHONY:
+update-api-version:
+	@test $(VERSION)
+	# Update the teleport/api dependency to the given version.
+	# This will fail if teleport/api@VERSION has not been released.
+	# It can be manually updated to a specific git commit with
+	# go get github.com/gravitational/telepeport/api@v0.0.0-timestamp-6_byte_hex_commit_hash.
+	go get github.com/gravitational/telepeport/api@v$(VERSION)
+	go mod tidy
+
 .PHONY: update-version
-update-version:
+update-version: update-api-version
 	# Make sure VERSION is set on the command line "make update-version VERSION=x.y.z".
 	@test $(VERSION)
 	sed -i '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
