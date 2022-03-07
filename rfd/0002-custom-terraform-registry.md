@@ -151,7 +151,7 @@ need new secrets:
 
 _**Note:**_ We currently expect to use the RPM signing key as the Terraform
 signing key as it already exists and is already used for a similar purpose.
-That said, but there is no technical reason why it _must_ be the RPM signing
+That said, there is no technical reason why it _must_ be the RPM signing
 key. As long as the private key used to sign the package agrees with the a
 public key exposed via the registry, the signature should be deemed valid
 by Terraform.
