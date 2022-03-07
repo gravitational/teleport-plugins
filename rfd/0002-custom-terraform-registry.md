@@ -49,7 +49,7 @@ scripts, and the Terraform tool would take care of the rest.
 terraform {
     required_providers {
         teleport = {
-            source = "http://goteleport.com/api/teleport/"
+            source = "https://goteleport.com/api/teleport/"
             version = "9.1.0"
         }
     }
