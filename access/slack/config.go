@@ -1,56 +1,62 @@
 package main
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/pelletier/go-toml"
 )
 
 // Config stores the full configuration for the teleport-slack plugin to run.
 type Config struct {
-	Teleport lib.TeleportConfig `toml:"teleport"`
-	Slack    SlackConfig        `toml:"slack"`
-	Log      logger.Config      `toml:"log"`
+	Teleport   lib.TeleportConfig
+	Slack      SlackConfig
+	Recipients RecipientsMap `toml:"role_to_recipients"`
+	Log        logger.Config
 }
 
 // SlackConfig holds Slack-specific configuration options.
 type SlackConfig struct {
-	Token      string   `toml:"token"`
-	Recipients []string `toml:"recipients"`
+	Token string
+	// DELETE IN 11.0.0 (Joerger) - use "role_to_recipients["*"]" instead
+	Recipients []string
 	APIURL     string
 }
 
-const exampleConfig = `# Example slack plugin configuration TOML file
+// RecipientsMap is a mapping of roles to recipient(s).
+type RecipientsMap map[string][]string
 
-[teleport]
-# Teleport Auth/Proxy Server address.
-#
-# Should be port 3025 for Auth Server and 3080 or 443 for Proxy.
-# For Teleport Cloud, should be in the form "your-account.teleport.sh:443".
-addr = "example.com:3025"
+func (r *RecipientsMap) UnmarshalTOML(in interface{}) error {
+	*r = make(RecipientsMap)
 
-# Credentials.
-#
-# When using --format=file:
-# identity = "/var/lib/teleport/plugins/slack/auth_id"    # Identity file
-#
-# When using --format=tls:
-# client_key = "/var/lib/teleport/plugins/slack/auth.key" # Teleport TLS secret key
-# client_crt = "/var/lib/teleport/plugins/slack/auth.crt" # Teleport TLS certificate
-# root_cas = "/var/lib/teleport/plugins/slack/auth.cas"   # Teleport CA certs
+	recipientsMap, ok := in.(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("unexpected type for recipients %T", in)
+	}
 
-[slack]
-token = "xoxb-11xx"                                 # Slack Bot OAuth token
-# recipients = ["person@email.com","YYYYYYY"]       # Optional Slack Rooms 
-                                                    # Can also set suggested_reviewers for each role
+	for k, v := range recipientsMap {
+		switch val := v.(type) {
+		case string:
+			(*r)[k] = []string{val}
+		case []interface{}:
+			for _, str := range val {
+				str, ok := str.(string)
+				if !ok {
+					return fmt.Errorf("unexpected type for recipients value %T", v)
+				}
+				(*r)[k] = append((*r)[k], str)
+			}
+		default:
+			return fmt.Errorf("unexpected type for recipients value %T", v)
+		}
+	}
 
-[log]
-output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/slack.log"
-severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
-`
+	return nil
+}
 
 // LoadConfig reads the config file, initializes a new Config struct object, and returns it.
 // Optionally returns an error if the file is not readable, or if file format is invalid.
@@ -59,16 +65,19 @@ func LoadConfig(filepath string) (*Config, error) {
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
+
 	conf := &Config{}
 	if err := t.Unmarshal(conf); err != nil {
 		return nil, trace.Wrap(err)
 	}
+
 	if strings.HasPrefix(conf.Slack.Token, "/") {
 		conf.Slack.Token, err = lib.ReadPassword(conf.Slack.Token)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
 	}
+
 	if err := conf.CheckAndSetDefaults(); err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -91,5 +100,22 @@ func (c *Config) CheckAndSetDefaults() error {
 	if c.Log.Severity == "" {
 		c.Log.Severity = "info"
 	}
+
+	if len(c.Slack.Recipients) > 0 {
+		if len(c.Recipients) > 0 {
+			return trace.BadParameter("provide either slack.recipients or role_to_recipients, not both.")
+		}
+
+		c.Recipients = RecipientsMap{
+			types.Wildcard: c.Slack.Recipients,
+		}
+	}
+
+	if len(c.Recipients) == 0 {
+		return trace.BadParameter("missing required value role_to_recipients.")
+	} else if len(c.Recipients[types.Wildcard]) == 0 {
+		return trace.BadParameter("missing required value role_to_recipients[%v].", types.Wildcard)
+	}
+
 	return nil
 }
