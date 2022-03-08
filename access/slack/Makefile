@@ -1,4 +1,5 @@
 VERSION=8.3.4
+GO_VERSION=1.17.8
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-slack
@@ -16,7 +17,8 @@ RELEASE_MESSAGE := "Building with GOOS=$(OS) GOARCH=$(ARCH)."
 
 VERSRC = version.go gitref.go
 
-IMG ?= quay.io/gravitational/$(RELEASE_NAME):$(VERSION)
+DOCKER_IMAGE ?= quay.io/gravitational/$(RELEASE_NAME):$(VERSION)
+DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg ACCESS_PLUGIN=slack
 
 export
 
@@ -53,11 +55,11 @@ release: clean $(VERSRC) $(BINARY)
 
 .PHONY: docker-build
 docker-build: ## Build docker image with the plugin.
-	docker build -t ${IMG} -f ./Dockerfile ../..
+	docker build ${DOCKER_BUILD_ARGS} -t ${DOCKER_IMAGE} ../..
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the plugin.
-	docker push ${IMG}
+	docker push ${DOCKER_IMAGE}
 
 
 # This rule triggers re-generation of version.go and gitref.go if Makefile changes

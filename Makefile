@@ -26,6 +26,10 @@ access-example:
 access-email:
 	go build -o build/access-email ./access/email
 
+.PHONY: docker-build-%
+docker-build-%:
+	$(MAKE) -C access/$* docker-build
+
 .PHONY: terraform
 terraform:
 	make -C terraform

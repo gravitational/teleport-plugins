@@ -1,4 +1,5 @@
 VERSION=8.3.4
+GO_VERSION=1.17.8
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-pagerduty
@@ -13,6 +14,9 @@ RELEASE_NAME=teleport-access-pagerduty
 RELEASE=$(RELEASE_NAME)-$(GITTAG)-$(OS)-$(ARCH)-bin
 
 RELEASE_MESSAGE := "Building with GOOS=$(OS) GOARCH=$(ARCH)."
+
+DOCKER_IMAGE ?= quay.io/gravitational/$(RELEASE_NAME):$(VERSION)
+DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg ACCESS_PLUGIN=pagerduty
 
 VERSRC = version.go gitref.go
 
@@ -48,6 +52,14 @@ release: clean $(VERSRC) $(BINARY)
 	tar -czf $(RELEASE).tar.gz $(RELEASE_NAME)
 	rm -rf $(RELEASE_NAME)/
 	@echo "---> Created $(RELEASE).tar.gz."
+
+.PHONY: docker-build
+docker-build: ## Build docker image with the plugin.
+	docker build ${DOCKER_BUILD_ARGS} -t ${DOCKER_IMAGE} ../..
+
+.PHONY: docker-push
+docker-push: ## Push docker image with the plugin.
+	docker push ${DOCKER_IMAGE}
 
 # This rule triggers re-generation of version.go and gitref.go if Makefile changes
 $(VERSRC): Makefile
