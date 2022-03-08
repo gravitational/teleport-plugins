@@ -24,6 +24,6 @@ RUN make -C access/${ACCESS_PLUGIN}
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
 FROM gcr.io/distroless/base
 ARG ACCESS_PLUGIN
-COPY --from=builder /workspace/access/${ACCESS_PLUGIN}/build/teleport-${ACCESS_PLUGIN} /usr/local/bin/
+COPY --from=builder /workspace/access/${ACCESS_PLUGIN}/build/teleport-${ACCESS_PLUGIN} /usr/local/bin/teleport-plugin
 
-ENTRYPOINT ["/usr/local/bin/teleport-${ACCESS_PLUGIN}"]
+ENTRYPOINT ["/usr/local/bin/teleport-plugin"]
