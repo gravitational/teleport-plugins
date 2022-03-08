@@ -80,10 +80,7 @@ releases: release/access-slack release/access-jira release/access-mattermost rel
 .PHONY: build-all
 build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab access-email terraform event-handler
 
-.PHONY: release-version
-release-version: update-api-version update-version terraform/gen-schema update-tag
-
-.PHONY:
+.PHONY: update-api-version
 update-api-version:
 	@test $(VERSION)
 	# Update the teleport/api dependency to the given version.
@@ -92,6 +89,13 @@ update-api-version:
 	# go get github.com/gravitational/telepeport/api@v0.0.0-timestamp-6_byte_hex_commit_hash.
 	go get github.com/gravitational/telepeport/api@v$(VERSION)
 	go mod tidy
+
+	# Once the API version is updated, the terraform schema
+	# must be regenerated with the up to date .proto files.
+	# If significant changes have been made to the grpc API
+	# then the terraform/gen_teleport.yaml file will need to
+	# be updated manually.
+	$(MAKE) -C terraform gen-schema
 
 .PHONY: update-version
 update-version: update-api-version

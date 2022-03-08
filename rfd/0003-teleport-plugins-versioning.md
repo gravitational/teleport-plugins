@@ -3,7 +3,7 @@ authors: Brian Joerger (bjoerger@goteleport.com)
 state: draft
 ---
 
-# RFD 2 - Teleport Plugins releases
+# RFD 3 - Teleport Plugins releases
 
 ## What
 
@@ -46,7 +46,7 @@ and will require some manual work to resolve.
 
 To avoid delaying releases, a PR should be made as soon as `teleport@vX.Y.Z-beta.1`
 is released to update the Plugins version to `vX.Y.Z-beta.1`. Any issues can then 
-be resolved well before `teleport@vX.Y.Z-beta.1` is released, and updated afterwards.
+be resolved well before `teleport@vX.Y.Z` is released, and updated afterwards.
 
 Alternatively, if we shift towards using release branches (detailed below), then 
 the beta PR canbe merged into `branch/vX` and then another PR can be made once
