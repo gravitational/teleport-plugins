@@ -72,6 +72,8 @@ func (r resourceTeleportTrustedCluster) Create(ctx context.Context, req tfsdk.Cr
 		return
 	}
 
+	
+
 	_, err := r.p.Client.GetTrustedCluster(ctx, trustedCluster.Metadata.Name)
 	if !trace.IsNotFound(err) {
 		if err == nil {
@@ -144,6 +146,11 @@ func (r resourceTeleportTrustedCluster) Read(ctx context.Context, req tfsdk.Read
 	}
 
 	trustedClusterI, err := r.p.Client.GetTrustedCluster(ctx, id.Value)
+	if trace.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))
 		return

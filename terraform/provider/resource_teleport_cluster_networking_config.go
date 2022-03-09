@@ -75,6 +75,8 @@ func (r resourceTeleportClusterNetworkingConfig) Create(ctx context.Context, req
 		return
 	}
 
+	
+
 	err = r.p.Client.SetClusterNetworkingConfig(ctx, clusterNetworkingConfig)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))

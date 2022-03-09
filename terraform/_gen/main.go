@@ -32,10 +32,12 @@ type payload struct {
 	GetWithoutContext bool
 	// ID id value on create and import
 	ID string
-	// RandomMetadataName indicates that Metadata.Name must be generated
+	// RandomMetadataName indicates that Metadata.Name must be generated (supported by plural resources only)
 	RandomMetadataName bool
 	// Kind Teleport kind for a resource
 	Kind string
+	// DefaultVersion represents the default resource version on create
+	DefaultVersion string
 }
 
 const (
@@ -147,15 +149,16 @@ var (
 	}
 
 	role = payload{
-		Name:         "Role",
-		TypeName:     "RoleV4",
-		VarName:      "role",
-		GetMethod:    "GetRole",
-		CreateMethod: "UpsertRole",
-		UpdateMethod: "UpsertRole",
-		DeleteMethod: "DeleteRole",
-		ID:           "role.Metadata.Name",
-		Kind:         "role",
+		Name:           "Role",
+		TypeName:       "RoleV4",
+		VarName:        "role",
+		GetMethod:      "GetRole",
+		CreateMethod:   "UpsertRole",
+		UpdateMethod:   "UpsertRole",
+		DeleteMethod:   "DeleteRole",
+		ID:             "role.Metadata.Name",
+		Kind:           "role",
+		DefaultVersion: "v4", // TODO (Joerger)
 	}
 
 	sessionRecording = payload{

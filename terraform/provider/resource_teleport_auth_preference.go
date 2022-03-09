@@ -75,6 +75,8 @@ func (r resourceTeleportAuthPreference) Create(ctx context.Context, req tfsdk.Cr
 		return
 	}
 
+	
+
 	err = r.p.Client.SetAuthPreference(ctx, authPreference)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating AuthPreference", trace.Wrap(err), "cluster_auth_preference"))

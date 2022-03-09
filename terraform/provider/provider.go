@@ -195,7 +195,7 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 	}
 
 	log.WithField("dir", profileDir).WithField("name", profileName).Debug("Using profile as the default auth method")
-	creds = append(creds, client.LoadProfile(profileName, profileDir))
+	creds = append(creds, client.LoadProfile(profileDir, profileName))
 
 	client, err := client.New(ctx, client.Config{
 		Addrs:       []string{addr},

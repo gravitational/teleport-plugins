@@ -75,6 +75,12 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 		return
 	}
 
+	{{if .DefaultVersion -}}
+	if {{.VarName}}.Version == "" {
+		{{.VarName}}.Version = "{{.DefaultVersion}}"
+	}
+	{{- end}}
+
 	err = r.p.Client.{{.CreateMethod}}(ctx, {{.VarName}})
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating {{.Name}}", trace.Wrap(err), "{{.Kind}}"))

@@ -72,17 +72,19 @@ func (r resourceTeleportOIDCConnector) Create(ctx context.Context, req tfsdk.Cre
 		return
 	}
 
+	
+
 	_, err := r.p.Client.GetOIDCConnector(ctx, oidcConnector.Metadata.Name, true)
-	if err == nil {
-		n := oidcConnector.Metadata.Name
-		existErr := fmt.Sprintf("OIDCConnector exists in Teleport. Either remove it (tctl rm oidc/%v)"+
-			" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+	if !trace.IsNotFound(err) {
+		if err == nil {
+			n := oidcConnector.Metadata.Name
+			existErr := fmt.Sprintf("OIDCConnector exists in Teleport. Either remove it (tctl rm oidc/%v)"+
+				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
 
-		resp.Diagnostics.Append(diagFromErr("OIDCConnector exists in Teleport", trace.Errorf(existErr)))
-		return
-	}
+			resp.Diagnostics.Append(diagFromErr("OIDCConnector exists in Teleport", trace.Errorf(existErr)))
+			return
+		}
 
-	if err != nil && !trace.IsNotFound(err) {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(err), "oidc"))
 		return
 	}
@@ -144,6 +146,11 @@ func (r resourceTeleportOIDCConnector) Read(ctx context.Context, req tfsdk.ReadR
 	}
 
 	oidcConnectorI, err := r.p.Client.GetOIDCConnector(ctx, id.Value, true)
+	if trace.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(err), "oidc"))
 		return

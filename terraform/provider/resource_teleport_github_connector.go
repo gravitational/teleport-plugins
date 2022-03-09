@@ -72,6 +72,8 @@ func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.C
 		return
 	}
 
+	
+
 	_, err := r.p.Client.GetGithubConnector(ctx, githubConnector.Metadata.Name, true)
 	if !trace.IsNotFound(err) {
 		if err == nil {
@@ -144,6 +146,11 @@ func (r resourceTeleportGithubConnector) Read(ctx context.Context, req tfsdk.Rea
 	}
 
 	githubConnectorI, err := r.p.Client.GetGithubConnector(ctx, id.Value, true)
+	if trace.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))
 		return

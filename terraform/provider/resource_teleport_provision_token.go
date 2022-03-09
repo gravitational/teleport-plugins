@@ -84,6 +84,8 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 		}
 		provisionToken.Metadata.Name = hex.EncodeToString(b)
 	}
+	
+
 	_, err := r.p.Client.GetToken(ctx, provisionToken.Metadata.Name)
 	if !trace.IsNotFound(err) {
 		if err == nil {
@@ -156,6 +158,11 @@ func (r resourceTeleportProvisionToken) Read(ctx context.Context, req tfsdk.Read
 	}
 
 	provisionTokenI, err := r.p.Client.GetToken(ctx, id.Value)
+	if trace.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))
 		return

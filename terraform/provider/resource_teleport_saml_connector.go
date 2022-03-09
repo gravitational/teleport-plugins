@@ -72,6 +72,8 @@ func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.Cre
 		return
 	}
 
+	
+
 	_, err := r.p.Client.GetSAMLConnector(ctx, samlConnector.Metadata.Name, true)
 	if !trace.IsNotFound(err) {
 		if err == nil {
@@ -144,6 +146,11 @@ func (r resourceTeleportSAMLConnector) Read(ctx context.Context, req tfsdk.ReadR
 	}
 
 	samlConnectorI, err := r.p.Client.GetSAMLConnector(ctx, id.Value, true)
+	if trace.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))
 		return

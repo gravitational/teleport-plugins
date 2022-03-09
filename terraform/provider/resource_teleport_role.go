@@ -72,6 +72,10 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 		return
 	}
 
+	if role.Version == "" {
+		role.Version = "v4"
+	}
+
 	_, err := r.p.Client.GetRole(ctx, role.Metadata.Name)
 	if !trace.IsNotFound(err) {
 		if err == nil {
@@ -144,6 +148,11 @@ func (r resourceTeleportRole) Read(ctx context.Context, req tfsdk.ReadResourceRe
 	}
 
 	roleI, err := r.p.Client.GetRole(ctx, id.Value)
+	if trace.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
 		return

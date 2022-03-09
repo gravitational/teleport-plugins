@@ -72,6 +72,8 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 		return
 	}
 
+	
+
 	_, err := r.p.Client.GetUser(user.Metadata.Name, false)
 	if !trace.IsNotFound(err) {
 		if err == nil {
@@ -144,6 +146,11 @@ func (r resourceTeleportUser) Read(ctx context.Context, req tfsdk.ReadResourceRe
 	}
 
 	userI, err := r.p.Client.GetUser(id.Value, false)
+	if trace.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
 		return

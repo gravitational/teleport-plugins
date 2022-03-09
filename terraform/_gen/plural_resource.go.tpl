@@ -86,6 +86,11 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 		{{.VarName}}.Metadata.Name = hex.EncodeToString(b)
 	}
 	{{end -}}
+	{{if .DefaultVersion -}}
+	if {{.VarName}}.Version == "" {
+		{{.VarName}}.Version = "{{.DefaultVersion}}"
+	}
+	{{- end}}
 
 	_, err := r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}{{.VarName}}.Metadata.Name{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
 	if !trace.IsNotFound(err) {
@@ -159,6 +164,11 @@ func (r resourceTeleport{{.Name}}) Read(ctx context.Context, req tfsdk.ReadResou
 	}
 
 	{{.VarName}}I, err := r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}id.Value{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
+	if trace.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return

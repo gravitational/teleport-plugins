@@ -72,6 +72,8 @@ func (r resourceTeleportApp) Create(ctx context.Context, req tfsdk.CreateResourc
 		return
 	}
 
+	
+
 	_, err := r.p.Client.GetApp(ctx, app.Metadata.Name)
 	if !trace.IsNotFound(err) {
 		if err == nil {
@@ -144,6 +146,11 @@ func (r resourceTeleportApp) Read(ctx context.Context, req tfsdk.ReadResourceReq
 	}
 
 	appI, err := r.p.Client.GetApp(ctx, id.Value)
+	if trace.IsNotFound(err) {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(err), "app"))
 		return
