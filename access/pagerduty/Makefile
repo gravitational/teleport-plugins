@@ -55,7 +55,7 @@ release: clean $(VERSRC) $(BINARY)
 
 .PHONY: docker-build
 docker-build: ## Build docker image with the plugin.
-	docker build ${DOCKER_BUILD_ARGS} -t ${DOCKER_IMAGE} ../..
+	docker build ${DOCKER_BUILD_ARGS} -t ${DOCKER_IMAGE} -f ../Dockerfile ../..
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the plugin.
