@@ -13,15 +13,13 @@ ARCH ?= $(shell go env GOARCH)
 RELEASE_NAME=teleport-access-pagerduty
 RELEASE=$(RELEASE_NAME)-$(GITTAG)-$(OS)-$(ARCH)-bin
 
-RELEASE_MESSAGE := "Building with GOOS=$(OS) GOARCH=$(ARCH)."
+RELEASE_MESSAGE = "Building with GOOS=$(OS) GOARCH=$(ARCH)."
 
 DOCKER_NAME=access-plugin-pagerduty
 DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/teleport/$(DOCKER_NAME):$(VERSION)
 DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg ACCESS_PLUGIN=pagerduty
 
 VERSRC = version.go gitref.go
-
-export
 
 .PHONY: $(BINARY)
 $(BINARY):
