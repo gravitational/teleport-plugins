@@ -98,7 +98,7 @@ update-api-version:
 	$(MAKE) -C terraform gen-schema
 
 .PHONY: update-version
-update-version: update-api-version
+update-version:
 	# Make sure VERSION is set on the command line "make update-version VERSION=x.y.z".
 	@test $(VERSION)
 	sed -i '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
@@ -114,6 +114,7 @@ update-version: update-api-version
 	sed -i '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
 	make -C access/email version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
+	$(MAKE) update-api-version
 
 .PHONY: update-tag
 update-tag:
