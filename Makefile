@@ -40,6 +40,11 @@ docker-build-access-plugins: docker-build-access-email \
  docker-build-access-pagerduty \
  docker-build-access-slack
 
+# Build event-handler plugin with docker
+.PHONY: docker-build-event-handler
+docker-build-event-handler:
+	$(MAKE) -C event-handler docker-build
+
 .PHONY: terraform
 terraform:
 	make -C terraform
