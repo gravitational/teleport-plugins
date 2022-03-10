@@ -9,7 +9,7 @@ Please, refer to [GETTING_STARTED guide](GETTING_STARTED.md) and [official docum
 1. Install [`protobuf`](https://grpc.io/docs/protoc-installation/).
 2. Install [`protoc-gen-terraform`](https://github.com/gravitational/protoc-gen-terraform) v1.0.0+.
 
-    ```go install github.com/gravitational/protoc-gen-terraform@ed458d13eb0fc66b5bebbd3d6dc6897b8cd751ef```
+    ```go install github.com/gravitational/protoc-gen-terraform@a63aa54956b6bbbcdac039d2f54261bae12d19e8```
 
     _NOTE_: Once PR is merged, we'll replace SHA with v1.0.0
 
@@ -36,7 +36,7 @@ Please, refer to [GETTING_STARTED guide](GETTING_STARTED.md) and [official docum
     make test
     ```
 
-# Regenerating the schema
+# Updating the provider
 
 Run:
 
@@ -44,16 +44,11 @@ Run:
 make gen-tfschema
 ```
 
-# Usage
+This will generate `types_tfschema.go` from a current API `.proto` file, and regenerate the provider code.
 
-See `example/*.tf` for available configuration options. `make apply` to do an initial application of this configuration to your Terraform cluster.
+# Running the examples
 
----
+WIP
 
-4. If you desire to use an example for testing:
-
-```bash
-cp example/vars.tfvars.example example/vars.tfvars
-```
-
-Edit `vars.tfvars` and set path to certificate files which were generated in the previous step.
+<!-- 1. Run `cp example/vars.tfvars.example example/vars.tfvars`.
+2. Replace `github_secret` and `saml_entity_descriptor` with the actual values (where `github_secret` could be random, and `saml_entity_descriptor` should be a real entity descriptor taken from OKTA). -->

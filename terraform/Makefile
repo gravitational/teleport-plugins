@@ -32,12 +32,12 @@ build: clean
 
 CUSTOM_IMPORTS_TMP_DIR ?= /tmp/protoc-gen-terraform/custom-imports
 PROTOC_GEN_TERRAFORM_VERSION ?= v1.0.0
-PROTOC_GEN_TERRAFORM_EXIST := $(shell protoc-gen-terraform version 2>&1 >/dev/null | grep 'protoc-gen-terraform $(PROTOC_GEN_TERRAFORM_VERSION)')
+PROTOC_GEN_TERRAFORM_EXISTS := $(shell protoc-gen-terraform version 2>&1 >/dev/null | grep 'protoc-gen-terraform $(PROTOC_GEN_TERRAFORM_VERSION)')
 
 .PHONY: gen-tfschema
 gen-tfschema:
-ifndef PROTOC_GEN_TERRAFORM_EXIST
-	@echo "protoc-gen-terraform v1.0.0 does not exist. Please, refer to README.md on installation instructions."
+ifndef PROTOC_GEN_TERRAFORM_EXISTS
+	@echo "protoc-gen-terraform v1.0.0 is not installed. Please, refer to README.md for installation instructions."
 	@exit -1
 endif
 
@@ -65,6 +65,8 @@ endif
 		--terraform_out=config=protoc-gen-terraform-teleport.yaml:./tfschema \
 		types.proto
 
+	@go run ./_gen/main.go
+
 .PHONY: release
 release: build
 	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
@@ -77,8 +79,18 @@ apply: install
 reapply:
 	terraform -chdir=$(TFDIR) apply -var-file="vars.tfvars"
 
-# NOTE: Please note that running these tests might require to increase ulimit (ulimit -n 1024). 
-# Default OS X limit of 256 does not work.
+TERRAFORM_EXISTS := $(shell terraform -version | grep 'Terraform v1.1')
+CURRENT_ULIMIT := $(shell ulimit -n)
+
 .PHONY: test
 test: install
+ifndef TERRAFORM_EXISTS
+	@echo "Terraform v1.1+ is not installed. Please, refer to README.md for installation instructions."
+	@exit -1
+endif
+# NOTE: This is related to an old bug in Terraform and will be fixed in future releases (possibly, by a workaround on our side)
+ifeq ($(shell expr $(CURRENT_ULIMIT) \< 1024), 1)
+	@echo "ulimit -n is too low ($(CURRENT_ULIMIT)), please set ulimit -n 1024"
+	@exit -1
+endif
 	TF_ACC=true go test ./test -v

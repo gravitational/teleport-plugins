@@ -15,8 +15,6 @@ limitations under the License.
 */
 package main
 
-//go:generate go run ./_gen/main.go
-
 import (
 	"context"
 
