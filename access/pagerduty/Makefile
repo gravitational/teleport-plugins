@@ -10,12 +10,13 @@ CGOFLAG ?= CGO_ENABLED=1
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
-RELEASE_NAME=teleport-access-pagerduty
+NAME=access-pagerduty
+RELEASE_NAME=teleport-$(NAME)
 RELEASE=$(RELEASE_NAME)-$(GITTAG)-$(OS)-$(ARCH)-bin
 
 RELEASE_MESSAGE := "Building with GOOS=$(OS) GOARCH=$(ARCH)."
 
-DOCKER_IMAGE ?= quay.io/gravitational/$(RELEASE_NAME):$(VERSION)
+DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/teleport/$(NAME):$(VERSION)
 DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg ACCESS_PLUGIN=pagerduty
 
 VERSRC = version.go gitref.go
