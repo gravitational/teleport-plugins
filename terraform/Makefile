@@ -31,9 +31,16 @@ build: clean
 	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/terraform-provider-teleport $(BUILDFLAGS)
 
 CUSTOM_IMPORTS_TMP_DIR ?= /tmp/protoc-gen-terraform/custom-imports
+PROTOC_GEN_TERRAFORM_VERSION ?= v1.0.0
+PROTOC_GEN_TERRAFORM_EXIST := $(shell protoc-gen-terraform version 2>&1 >/dev/null | grep 'protoc-gen-terraform $(PROTOC_GEN_TERRAFORM_VERSION)')
 
 .PHONY: gen-tfschema
 gen-tfschema:
+ifndef PROTOC_GEN_TERRAFORM_EXIST
+	@echo "protoc-gen-terraform v1.0.0 does not exist. Please, refer to README.md on installation instructions."
+	@exit -1
+endif
+
 # The wrappers.proto file needed for this generator exist only inside the go mod cache,
 # so we retrieve the file path for the cached proto files with go mod tools.
 	$(eval API_MOD_PATH := $(shell go mod download --json github.com/gravitational/teleport/api | jq .Dir))

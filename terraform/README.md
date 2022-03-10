@@ -9,7 +9,9 @@ Please, refer to [GETTING_STARTED guide](GETTING_STARTED.md) and [official docum
 1. Install [`protobuf`](https://grpc.io/docs/protoc-installation/).
 2. Install [`protoc-gen-terraform`](https://github.com/gravitational/protoc-gen-terraform) v1.0.0+.
 
-    ```go install https://github.com/gravitational/protoc-gen-terraform@chore/tfsdk```
+    ```go install github.com/gravitational/protoc-gen-terraform@ed458d13eb0fc66b5bebbd3d6dc6897b8cd751ef```
+
+    _NOTE_: Once PR is merged, we'll replace SHA with v1.0.0
 
 3. Install [`Terraform`](https://learn.hashicorp.com/tutorials/terraform/install-cli) v1.1.0+. Alternatively, you can use [`tfenv`](https://github.com/tfutils/tfenv). Please note that on Mac M1 you need to specify `TFENV_ARCH` (ex: `TFENV_ARCH=arm64 tfenv install 1.1.6`).
 
@@ -19,12 +21,32 @@ Please, refer to [GETTING_STARTED guide](GETTING_STARTED.md) and [official docum
     git clone git@github.com:gravitational/teleport-plugins --branch chore/terraform-refactoring
     ```
 
+    _NOTE_: Once PR is merged, we'll remove --branch
+
 5. Build and install the plugin:
 
     ```bash
     cd teleport-plugins/terraform
     make install
     ```
+
+6. Run tests:
+
+    ```bash
+    make test
+    ```
+
+# Regenerating the schema
+
+Run:
+
+```
+make gen-tfschema
+```
+
+# Usage
+
+See `example/*.tf` for available configuration options. `make apply` to do an initial application of this configuration to your Terraform cluster.
 
 ---
 
@@ -35,26 +57,3 @@ cp example/vars.tfvars.example example/vars.tfvars
 ```
 
 Edit `vars.tfvars` and set path to certificate files which were generated in the previous step.
-
-# Regenerating the schema
-
-```
-go install github.com/gravitational/protoc-gen-terraform
-make gen-tfschema
-```
-
-Please note that `ProvisionTokenV2.Allow` field is defined lowercase in `.proto` file (`repeated TokenRule allow = 2 [ (gogoproto.jsontag) = "allow,omitempty" ];`). You need to manually patch `types_tfschema.go`, set `Name: "Allow"` in provision token metadata struct (`GenSchemaMetaProvisionTokenV2()`) until it is fixed.
-
-# Usage
-
-See `example/*.tf` for available configuration options. `make apply` to do an initial application of this configuration to your Terraform cluster.
-
-# Testing
-
-`TF_ACC=true` is required to switch Terraform to acceptance test mode. Terraform 1.0.0+ needs to be available on the host machine.
-
-```
-TF_ACC=true go test test/*
-```
-
-Use '-v' flag to see logs.
