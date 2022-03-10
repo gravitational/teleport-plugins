@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"time"
@@ -28,6 +29,9 @@ import (
 	"github.com/gravitational/kingpin"
 	"github.com/gravitational/trace"
 )
+
+//go:embed example_config.toml
+var exampleConfig string
 
 func main() {
 	logger.Init()
@@ -79,6 +83,10 @@ func run(configPath string, debug bool) error {
 	}
 	if debug {
 		logger.Standard().Debugf("DEBUG logging enabled")
+	}
+
+	if conf.Slack.Recipients != nil {
+		logger.Standard().Warn("The slack.recipients config option is deprecated, set role_to_recipients[\"*\"] instead for the same functionality")
 	}
 
 	app, err := NewApp(*conf)
