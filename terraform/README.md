@@ -1,28 +1,32 @@
 # Terraform Provider Plugin
 
-# Installation
+## Usage
 
-1. Clone the plugin:
+Please, refer to [GETTING_STARTED guide](GETTING_STARTED.md) and [official documentation](https://goteleport.com/docs/setup/guides/terraform-provider/).
 
-```bash
-git clone git@github.com:gravitational/teleport-plugins
-```
+## Development
 
-2. Install the plugin to Teleport:
+1. Install [`protobuf`](https://grpc.io/docs/protoc-installation/).
+2. Install [`protoc-gen-terraform`](https://github.com/gravitational/protoc-gen-terraform) v1.0.0+.
 
-```bash
-cd teleport-plugins/terraform
-make install
-```
+    ```go install https://github.com/gravitational/protoc-gen-terraform@chore/tfsdk```
 
-3. Configure teleport:
+3. Install [`Terraform`](https://learn.hashicorp.com/tutorials/terraform/install-cli) v1.1.0+. Alternatively, you can use [`tfenv`](https://github.com/tfutils/tfenv). Please note that on Mac M1 you need to specify `TFENV_ARCH` (ex: `TFENV_ARCH=arm64 tfenv install 1.1.6`).
 
-```bash
-tctl create example/teleport.yaml
-tctl auth sign --format=file --user=terraform --out=terraform-identity --ttl=10h
-```
+4. Clone the plugin:
 
-Move generated keys to the desired location.
+    ```bash
+    git clone git@github.com:gravitational/teleport-plugins --branch chore/terraform-refactoring
+    ```
+
+5. Build and install the plugin:
+
+    ```bash
+    cd teleport-plugins/terraform
+    make install
+    ```
+
+---
 
 4. If you desire to use an example for testing:
 
@@ -36,7 +40,7 @@ Edit `vars.tfvars` and set path to certificate files which were generated in the
 
 ```
 go install github.com/gravitational/protoc-gen-terraform
-make gen-schema
+make gen-tfschema
 ```
 
 Please note that `ProvisionTokenV2.Allow` field is defined lowercase in `.proto` file (`repeated TokenRule allow = 2 [ (gogoproto.jsontag) = "allow,omitempty" ];`). You need to manually patch `types_tfschema.go`, set `Name: "Allow"` in provision token metadata struct (`GenSchemaMetaProvisionTokenV2()`) until it is fixed.
