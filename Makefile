@@ -26,9 +26,19 @@ access-example:
 access-email:
 	go build -o build/access-email ./access/email
 
-.PHONY: docker-build-%
-docker-build-%:
+# Build specific access plugin with docker
+.PHONY: docker-build-access-%
+docker-build-access-%:
 	$(MAKE) -C access/$* docker-build
+
+# Build all access plugins with docker
+.PHONY: docker-build-access-plugins
+docker-build-access-plugins: docker-build-access-email \
+ docker-build-access-gitlab \
+ docker-build-access-jira \
+ docker-build-access-mattermost \
+ docker-build-access-pagerduty \
+ docker-build-access-slack
 
 .PHONY: terraform
 terraform:
