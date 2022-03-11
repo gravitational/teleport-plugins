@@ -71,14 +71,6 @@ endif
 release: build
 	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
 
-.PHONY: apply
-apply: install
-	terraform -chdir=$(TFDIR) init -var-file="vars.tfvars" && terraform -chdir=$(TFDIR) apply -auto-approve -var-file="vars.tfvars"
-
-.PHONY: reapply
-reapply:
-	terraform -chdir=$(TFDIR) apply -var-file="vars.tfvars"
-
 TERRAFORM_EXISTS := $(shell terraform -version | grep 'Terraform v1.1')
 CURRENT_ULIMIT := $(shell ulimit -n)
 
@@ -94,3 +86,11 @@ ifeq ($(shell expr $(CURRENT_ULIMIT) \< 1024), 1)
 	@exit -1
 endif
 	TF_ACC=true go test ./test -v
+
+.PHONY: apply
+apply: install
+	terraform -chdir=$(TFDIR) init && terraform -chdir=$(TFDIR) apply -auto-approve
+
+.PHONY: reapply
+reapply:
+	terraform -chdir=$(TFDIR) apply

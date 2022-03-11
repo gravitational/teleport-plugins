@@ -9,7 +9,7 @@ Please, refer to [GETTING_STARTED guide](GETTING_STARTED.md) and [official docum
 1. Install [`protobuf`](https://grpc.io/docs/protoc-installation/).
 2. Install [`protoc-gen-terraform`](https://github.com/gravitational/protoc-gen-terraform) v1.0.0+.
 
-    ```go install github.com/gravitational/protoc-gen-terraform@a63aa54956b6bbbcdac039d2f54261bae12d19e8```
+    ```go install github.com/gravitational/protoc-gen-terraform@latest```
 
     _NOTE_: Once PR is merged, we'll replace SHA with v1.0.0
 
@@ -18,10 +18,8 @@ Please, refer to [GETTING_STARTED guide](GETTING_STARTED.md) and [official docum
 4. Clone the plugin:
 
     ```bash
-    git clone git@github.com:gravitational/teleport-plugins --branch chore/terraform-refactoring
+    git clone git@github.com:gravitational/teleport-plugins
     ```
-
-    _NOTE_: Once PR is merged, we'll remove --branch
 
 5. Build and install the plugin:
 
@@ -46,9 +44,48 @@ make gen-tfschema
 
 This will generate `types_tfschema.go` from a current API `.proto` file, and regenerate the provider code.
 
-# Running the examples
+# Playing with examples locally
 
-WIP
+1. Start Teleport.
 
-<!-- 1. Run `cp example/vars.tfvars.example example/vars.tfvars`.
-2. Replace `github_secret` and `saml_entity_descriptor` with the actual values (where `github_secret` could be random, and `saml_entity_descriptor` should be a real entity descriptor taken from OKTA). -->
+    ```
+    teleport start
+    ```
+
+1. Create Terraform user and role:
+
+    ```
+    tctl create example/terraform.yaml
+    tctl auth sign --format=file --user=terraform --out=/tmp/terraform-identity --ttl=10h
+    ```
+
+1. Create `main.tf` file:
+
+    ```
+    cp examples/main.tf.example examlpes/main.tf
+    ```
+
+    Please note that target identity file was exported to `/tmp/terraform-identity` on previous step. If you used another location, please change in in `main.tf`.
+
+1. Create sample resources:
+
+    ```
+    cp examples/user.tf.example examples/user.tf
+    cp examples/role.tf.example examples/role.tf
+    cp examples/provision_token.tf.example examples/provision_token.tf
+    ```
+
+    Please note that some resources require preliminary setup steps.
+
+1. Apply changes:
+
+    ```
+    make apply
+    ```
+
+1. Make changes to .tf files and run:
+
+    ```
+    make reapply
+    ```
+

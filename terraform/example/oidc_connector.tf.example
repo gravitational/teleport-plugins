@@ -1,4 +1,7 @@
 # Teleport OIDC connector
+# 
+# Please note that OIDC connector will work in Enterprise version only. Check the setup docs:
+# https://goteleport.com/docs/enterprise/sso/oidc/
 
 resource "teleport_oidc_connector" "example" {
   metadata = {

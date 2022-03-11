@@ -12,6 +12,9 @@ terraform {
 
 # Terraform Provider configuration. See provider.go for available options
 provider "teleport" {
-  identity_file_path = var.identity_file_path
-  addr = var.addr
+  # Path to Teleport identity file
+  identity_file_path = "/tmp/terraform-identity"
+
+  # Teleport proxy addr
+  addr = "localhost:3025"
 }
