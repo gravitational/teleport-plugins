@@ -296,7 +296,7 @@ func getConfigFromProfile(d *schema.ResourceData) (client.Credentials, error) {
 
 	log.WithFields(log.Fields{"name": name, "dir": dir}).Debug("Profile is set")
 
-	return client.LoadProfile(name, dir), nil
+	return client.LoadProfile(dir, name), nil
 }
 
 // getConfigFromCerts returns client configuration which uses certificates
