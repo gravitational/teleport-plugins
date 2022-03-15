@@ -253,7 +253,7 @@ by default, and this should still be considered the primary artefact product
 of the _release_ build, at least as long as Houston is expected to serve
 downloads of the Terraform provider.
 
-The release tarball(s) will be injected ibto the build by being downloaded
+The release tarball(s) will be injected into the build by being downloaded
 from the staging bucket, based on the version tag supplied during the
 promotion process.
 
