@@ -66,8 +66,9 @@ on using custom registries.
 What to do about people publishing homemade Teleport providers to the
 Hashicorp registry is beyond the scope of this RFD.
 
-It's worth noting, though, that _not_ being on the main Hashicorp redistry _does_
+It's worth noting, though, that _not_ being on the main Hashicorp registry _does_
 make our official solution harder to find.
+
 ## Details
 
 ### Terminology
@@ -161,6 +162,7 @@ RFD.
 I have assumed in this document that the public-facing address for the
 terraform registry host will follow the naming convention for other Teleport
 distribution points, and be `terraform.releases.teleport.dev`.
+
 #### Bucket structure
 
 The bucket requires main structures: the **_discovery file_**, the
@@ -219,12 +221,12 @@ normal use.
 The `download` metadata for each version/OS/architecture triple is stored
 according to the rule
 
-```
+```shell
 /registry/gravitational/teleport/:version/:os/:architecture
 ```
 
 Once created, each `download` metadata does not need modification, unless
-an object is re-published.
+a provider object is re-published.
 
 ##### 3. The object store (key prefix `/store`)
 
@@ -233,6 +235,56 @@ provider artefact, together with its associated hash & signatures files.
 
 This section of the bucket should be write-only. No objects in this section
 should be modifiable or delete-able.
+
+#### Build trigger and inputs
+
+By analogy with the main Teleport release system, the Terraform registry
+packaging and publishing will be happen during release _promotion_ task on
+Drone.
+
+##### Release Tarball
+
+The Teleport provider release process currently produces a compressed tarball
+by default, and this should still be considered the primary artefact product
+of the _release_ build, at least as long as Houston is expected to serve
+downloads of the Terraform provider.
+
+The release tarball(s) will be injected ibto the build by being downloaded
+from the staging bucket, based on the version tag supplied during the
+promotion process.
+
+##### Terraform Plugin API Version
+
+In order to correctly index the providers, the registry need to know what
+version of the Terraform Plugin API a given provider supports. This is not
+something we can deduce from the provider itself, and must be "just known"
+in advance.
+
+This will be injected into the build via a value in the Drone yaml. There
+is a danger that we will forget to modify this value should we upgrade the
+version of the Teleport Plugin framework we use, and mislabel a release in
+the registry.
+
+Any suggestions on an interlock for this value greatly appreciated.
+
+##### Signing GPG Key
+
+Packaging for the registry requires a GPG signing key, including an
+identity. The Identity is displayed to the user when the provider is
+installed, so it should be an "official" teleport key rather than a
+self-signed one
+
+For example (from my PoC):
+
+```shell
+Initializing provider plugins...
+- Finding terraform.clarke.mobi/gravitational/teleport versions matching "~> 8.3"...
+- Installing terraform.clarke.mobi/gravitational/teleport v8.3.4...
+- Installed terraform.clarke.mobi/gravitational/teleport v8.3.4 (self-signed, key ID 7DA6C64E1701F9E4)
+```
+
+My proof-of-concept cose expects the signing key in ASCII-armor format, but I
+am sure others are acceptable as well.
 
 #### Building the packages
 
@@ -244,15 +296,6 @@ provider consists of:
  `sha256sum` tool)
 * A signature file containing a binary, detached GPG signature for
   checksum file.
-
-The Teleport provider release process currently produces a compressed tarball
-by default, and this should still be considered the primary artefact produced
-by the build, at least as long as Houston is expected to serve downloads of
-the Terraform provider.
-
-By analogy with the main Teleport release system, the registry-compatible
-provider package will be created during release _promotion_, with a build
-task that will:
 
 For each release tarball (one each for multiple release platforms - i.e.
 `linux` and `darwin`):
@@ -281,7 +324,7 @@ continue that pattern in `teleport-plugins`.
 
 #### Final publishing
 
-Upload the repackaged `zip` files, the updated `versions` index and the new 
+Upload the repackaged `zip` files, the updated `versions` index and the new
 `download` files to the S3 bucket.
 
 #### Synchronization Hazard
@@ -318,3 +361,9 @@ That said, there is no technical reason why it _must_ be the RPM signing
 key. As long as the private key used to sign the package agrees with the a
 public key exposed via the registry, the signature should be deemed valid
 by Terraform.
+
+### Testing
+
+The system will be tested by promoting to a "staging" environment. The
+staging environment will be selected during the Drone promotion process
+and will use a dummy bucket and signing key.
