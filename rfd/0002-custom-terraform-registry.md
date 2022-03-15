@@ -69,9 +69,7 @@ Hashicorp registry is beyond the scope of this RFD.
 It's worth noting, though, that _not_ being on the main Hashicorp registry _does_
 make our official solution harder to find.
 
-## Details
-
-### Terminology
+## Terminology
 
 The terminology used in the Terraform documentation has changed over time and
 is not always consistent. For the sake of this discussion, I will be using the
@@ -115,6 +113,8 @@ In this document I have used `gravitational` as the namespace and `teleport` as
 the provider in order to disambiguate the two components of the provider name,
 but there is no reason that we can't use `teleport/teleport` in the actual
 deployment if that's the preferred branding.
+
+## Details
 
 ### Terraform Registry Protocol requirements
 
@@ -165,10 +165,14 @@ distribution points, and be `terraform.releases.teleport.dev`.
 
 #### Bucket structure
 
-The bucket requires main structures: the **_discovery file_**, the
-**_registry_**, and the **_object store_**. Each structure will live under a
-separate key prefix, which should allow independent policies to be applied to
-each.
+The S3 bucket backing the registry requires 3 main structures:
+
+1. the **_discovery file_**,
+2. the **_registry_**, and
+3. the **_object store_**
+
+Each structure will live under a separate key prefix, which should allow 
+independent policies to be applied to each.
 
 ##### 1. The _discovery file_ (key `/.well-known/terraform.json`)
 
