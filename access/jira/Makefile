@@ -1,4 +1,5 @@
 VERSION=9.0.0
+GO_VERSION=1.17.8
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-jira
@@ -12,11 +13,13 @@ ARCH ?= $(shell go env GOARCH)
 RELEASE_NAME=teleport-access-jira
 RELEASE=$(RELEASE_NAME)-$(GITTAG)-$(OS)-$(ARCH)-bin
 
-RELEASE_MESSAGE := "Building with GOOS=$(OS) GOARCH=$(ARCH)."
+RELEASE_MESSAGE = "Building with GOOS=$(OS) GOARCH=$(ARCH)."
 
 VERSRC = version.go gitref.go
 
-export
+DOCKER_NAME = access-plugin-jira
+DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/teleport/$(DOCKER_NAME):$(VERSION)
+DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg ACCESS_PLUGIN=jira
 
 .PHONY: $(BINARY)
 $(BINARY):
@@ -48,6 +51,10 @@ release: clean $(VERSRC) $(BINARY)
 	tar -czf $(RELEASE).tar.gz $(RELEASE_NAME)
 	rm -rf $(RELEASE_NAME)/
 	@echo "---> Created $(RELEASE).tar.gz."
+
+.PHONY: docker-build
+docker-build: ## Build docker image with the plugin.
+	docker build ${DOCKER_BUILD_ARGS} -t ${DOCKER_IMAGE} -f ../Dockerfile ../..
 
 # This rule triggers re-generation of version.go and gitref.go if Makefile changes
 $(VERSRC): Makefile
