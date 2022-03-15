@@ -26,7 +26,7 @@ customers
     Terraform, we want to supply them with a Terraform provider, and a method
     for installing it that is natural to the Terraform ecosystem. This is a
     good practice in general and, in the specific, is part of our Q1 focus on
-    improving out Time-to_first-Value.
+    improving our Time-to_first-Value.
 
  2. We want to maintain close control of the distribution of our software.
 
@@ -253,7 +253,7 @@ by default, and this should still be considered the primary artefact product
 of the _release_ build, at least as long as Houston is expected to serve
 downloads of the Terraform provider.
 
-The release tarball(s) will be injected ibto the build by being downloaded
+The release tarball(s) will be injected into the build by being downloaded
 from the staging bucket, based on the version tag supplied during the
 promotion process.
 
