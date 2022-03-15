@@ -28,11 +28,18 @@ customers
     good practice in general and, in the specific, is part of our Q1 focus on
     improving our Time-to_first-Value.
 
- 2. We want to maintain close control of the distribution of our software.
+ 2. We want to maintain close control of the distribution of our software,
+    including supply chain management and monitoring of publishing, changes,
+    downloads and host of other activities.
 
 With these two goals in mind, the most practical solution for distributing
 the Teleport Terraform provider appears to be hosting a custom Terraform
 registry.
+
+Note that the concerns in point 2 are being addressed in a more general scope
+by [Cloud RFD 0004](https://github.com/gravitational/cloud/blob/master/rfd/0004-Release-Asset-Management.md),
+and the solution proposed by this document will endeavour to be compatible
+Cloud RFD 004 as far as possible.
 
 ### Why not use the public Hashicorp registry?
 
@@ -114,6 +121,12 @@ the provider in order to disambiguate the two components of the provider name,
 but there is no reason that we can't use `teleport/teleport` in the actual
 deployment if that's the preferred branding.
 
+## References
+
+* [Cloud RFD 0004 - Release Asset Management](https://github.com/gravitational/cloud/blob/master/rfd/0004-Release-Asset-Management.md)
+* [Cloud RFD 0017 - Artifact Storage Standards](https://github.com/gravitational/cloud/blob/master/rfd/0017-artifact-storage-standards.md)
+* [Terraform Provider Registry Specification](https://www.terraform.io/internals/provider-registry-protocol)
+
 ## Details
 
 ### Terraform Registry Protocol requirements
@@ -171,7 +184,7 @@ The S3 bucket backing the registry requires 3 main structures:
 2. the **_registry_**, and
 3. the **_object store_**
 
-Each structure will live under a separate key prefix, which should allow 
+Each structure will live under a separate key prefix, which should allow
 independent policies to be applied to each.
 
 ##### 1. The _discovery file_ (key `/.well-known/terraform.json`)
@@ -353,7 +366,7 @@ provided by Drone.
 
 #### Build Security issues
 
-This process will require that the `teleport-plugins` promotion process have 
+This process will require that the `teleport-plugins` promotion process have
 access to new secrets:
 
 1. Read access to a signing key, to sign the package (see note below)
