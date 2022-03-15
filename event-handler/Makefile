@@ -1,4 +1,5 @@
 VERSION=9.0.0
+GO_VERSION=1.17.8
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
@@ -20,6 +21,10 @@ KEYLEN = 1024
 CLOUD_ADDR=evilmartians.teleport.sh:443
 IDENTITY_FILE=example/keys/identity
 
+DOCKER_NAME=event-handler-plugin
+DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/teleport/$(DOCKER_NAME):$(VERSION)
+DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION}
+
 RELEASE = teleport-event-handler-v$(VERSION)-$(OS)-$(ARCH)-bin
 
 .PHONY: build
@@ -33,6 +38,10 @@ release: build
 .PHONY: clean
 clean:
 	go clean
+
+.PHONY: docker-build
+docker-build: ## Build docker image with the plugin.
+	docker build ${DOCKER_BUILD_ARGS} -t ${DOCKER_IMAGE} -f ./Dockerfile ../
 
 .PHONY: install
 install: build
