@@ -26,7 +26,7 @@ customers
     Terraform, we want to supply them with a Terraform provider, and a method
     for installing it that is natural to the Terraform ecosystem. This is a
     good practice in general and, in the specific, is part of our Q1 focus on
-    improving out Time-to_first-Value.
+    improving our Time-to_first-Value.
 
  2. We want to maintain close control of the distribution of our software.
 
