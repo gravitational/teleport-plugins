@@ -353,8 +353,8 @@ provided by Drone.
 
 #### Build Security issues
 
-This process will require that the `teleport-plugins` promotion process will
-need new secrets:
+This process will require that the `teleport-plugins` promotion process have 
+access to new secrets:
 
 1. Read access to a signing key, to sign the package (see note below)
 2. Write access to the AWS bucket storing the signed packages for distribution
