@@ -4,10 +4,10 @@ steps:
     entrypoint: bash
     args: 
     - '-c'
-    - 'make docker-build-access-plugins'
+    - 'DOCKER_BUILDKIT=1 make docker-build-access-plugins'
   - name: 'gcr.io/cloud-builders/docker'
     id: Build Event Handler Plugin
     entrypoint: bash
     args: 
     - '-c'
-    - 'make docker-build-event-handler'
+    - 'DOCKER_BUILDKIT=1 make docker-build-event-handler'
