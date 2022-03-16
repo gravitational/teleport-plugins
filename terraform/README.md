@@ -2,7 +2,7 @@
 
 ## Usage
 
-Please, refer to [GETTING_STARTED guide](GETTING_STARTED.md) and [official documentation](https://goteleport.com/docs/setup/guides/terraform-provider/).
+Please, refer to [official documentation](https://goteleport.com/docs/setup/guides/terraform-provider/).
 
 ## Development
 
@@ -62,7 +62,7 @@ This will generate `types_tfschema.go` from a current API `.proto` file, and reg
 1. Create `main.tf` file:
 
     ```
-    cp examples/main.tf.example examlpes/main.tf
+    cp example/main.tf.example example/main.tf
     ```
 
     Please note that target identity file was exported to `/tmp/terraform-identity` on previous step. If you used another location, please change in in `main.tf`.
@@ -70,9 +70,9 @@ This will generate `types_tfschema.go` from a current API `.proto` file, and reg
 1. Create sample resources:
 
     ```
-    cp examples/user.tf.example examples/user.tf
-    cp examples/role.tf.example examples/role.tf
-    cp examples/provision_token.tf.example examples/provision_token.tf
+    cp example/user.tf.example example/user.tf
+    cp example/role.tf.example example/role.tf
+    cp example/provision_token.tf.example example/provision_token.tf
     ```
 
     Please note that some resources require preliminary setup steps.

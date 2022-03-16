@@ -40,7 +40,7 @@ require (
 	golang.org/x/tools v0.0.0-20210106214847-113979e3529a // indirect
 	google.golang.org/genproto v0.0.0-20210223151946-22b48be4551b // indirect
 	google.golang.org/grpc v1.44.0
-	google.golang.org/protobuf v1.25.0
+	google.golang.org/protobuf v1.27.1
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/mail.v2 v2.3.1
 	gopkg.in/resty.v1 v1.12.0

@@ -94,3 +94,7 @@ apply: install
 .PHONY: reapply
 reapply:
 	terraform -chdir=$(TFDIR) apply
+
+.PHONY: destroy
+destroy:
+	terraform -chdir=$(TFDIR) destroy -auto-approve
