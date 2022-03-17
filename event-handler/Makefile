@@ -10,7 +10,7 @@ GENTERRAFORMPATH := $(shell go env GOPATH)/bin
 
 BUILDDIR ?= build
 
-GITREF = $(shell git describe --dirty --long --tags --match '*email*')
+GITREF = $(shell git describe --dirty --long --tags --match '*event-handler*')
 ADDFLAGS ?=
 BUILDFLAGS ?= $(ADDFLAGS) -ldflags "-w -s -X main.Gitref=$(GITREF) -X main.Version=$(VERSION)"
 CGOFLAG ?= CGO_ENABLED=1
