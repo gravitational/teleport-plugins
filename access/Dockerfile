@@ -7,6 +7,9 @@ ARG ACCESS_PLUGIN
 
 WORKDIR /workspace
 
+# Copy .git directory needed for go build
+COPY .git .git
+
 # Copy the Go Modules manifests
 COPY go.mod go.mod
 COPY go.sum go.sum
