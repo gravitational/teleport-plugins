@@ -56,6 +56,10 @@ release: clean $(VERSRC) $(BINARY)
 docker-build: ## Build docker image with the plugin.
 	docker build ${DOCKER_BUILD_ARGS} -t ${DOCKER_IMAGE} -f ../Dockerfile ../..
 
+.PHONY: docker-push
+docker-push: 
+	docker push ${DOCKER_IMAGE}
+
 # This rule triggers re-generation of version.go and gitref.go if Makefile changes
 $(VERSRC): Makefile
 	VERSION=$(VERSION) $(MAKE) -f version.mk setver
