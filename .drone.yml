@@ -201,6 +201,27 @@ steps:
       target: teleport-plugins/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
 
+---
+kind: pipeline
+type: kubernetes
+name: tag-build-plugins-docker
+
+trigger:
+  event:
+    - tag
+  ref:
+    include:
+      - refs/tags/teleport-gitlab-v*
+      - refs/tags/teleport-jira-v*
+      - refs/tags/teleport-mattermost-v*
+      - refs/tags/teleport-pagerduty-v*
+      - refs/tags/teleport-slack-v*
+      - refs/tags/teleport-email-v*
+
+depends_on:
+  - test-linux
+
+steps:
   - name: Build and push to ECR
     image: docker:git
     environment:
@@ -353,6 +374,22 @@ steps:
       target: teleport-plugins/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
 
+---
+kind: pipeline
+type: kubernetes
+name: tag-build-event-handler-docker
+
+trigger:
+  event:
+    - tag
+  ref:
+    include:
+      - refs/tags/teleport-event-handler-v*
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+steps:
   - name: Build and push to ECR
     image: docker:git
     environment:
@@ -424,33 +461,6 @@ steps:
       - cd build
       - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
 
-  - name: Build and push to ECR
-    environment:
-      AWS_ACCESS_KEY_ID:
-        from_secret: PLUGIN_DRONE_ECR_KEY
-      AWS_SECRET_ACCESS_KEY:
-        from_secret: PLUGIN_DRONE_ECR_SECRET
-      AWS_DEFAULT_REGION: us-west-2
-      DOCKER_BUILDKIT: 1
-    volumes:
-      - name: dockersock
-        path: /var/run
-    commands:
-      - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
-      - make docker-push-event-handler
-
-services:
-  - name: start docker
-    image: docker:dind
-    privileged: true
-    volumes:
-      - name: dockersock
-        path: /var/run
-
-volumes:
-  - name: dockersock
-    temp: {}
-
 ---
 kind: pipeline
 type: kubernetes
@@ -499,6 +509,6 @@ steps:
 
 ---
 kind: signature
-hmac: 2689c47ad6a3d8bf75c85c2486e80b0d767a93e927e14b6f092c080bf94fc186
+hmac: 7381b82e23954f22b26d90324d9219d7b1f2c0d81a4b9e2b27f868674beec197
 
 ...
