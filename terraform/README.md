@@ -11,8 +11,6 @@ Please, refer to [official documentation](https://goteleport.com/docs/setup/guid
 
     ```go install github.com/gravitational/protoc-gen-terraform@latest```
 
-    _NOTE_: Once PR is merged, we'll replace SHA with v1.0.0
-
 3. Install [`Terraform`](https://learn.hashicorp.com/tutorials/terraform/install-cli) v1.1.0+. Alternatively, you can use [`tfenv`](https://github.com/tfutils/tfenv). Please note that on Mac M1 you need to specify `TFENV_ARCH` (ex: `TFENV_ARCH=arm64 tfenv install 1.1.6`).
 
 4. Clone the plugin:
