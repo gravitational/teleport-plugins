@@ -106,6 +106,66 @@ steps:
     image: golang:1.17.5
     commands:
       - make build-all
+---
+kind: pipeline
+type: kubernetes
+name: build-and-push-images-on-push-linux
+
+trigger:
+  branch:
+    - master
+  event:
+    include:
+      - push
+
+depends_on:
+  - test-linux
+
+steps:
+  - name: fetch tags
+    image: docker:git
+    commands:
+      - git fetch --tags
+
+  - name: build images
+    image: docker:git
+    environment:
+      DOCKER_BUILDKIT: 1
+    volumes:
+      - name: dockersock
+        path: /var/run
+    commands:
+      - make docker-build-access-plugins
+      - make docker-build-event-handler
+
+  - name: push to ECR
+    image: docker:git
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: PLUGIN_DRONE_ECR_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: PLUGIN_DRONE_ECR_SECRET
+      AWS_DEFAULT_REGION: us-west-2
+    volumes:
+      - name: dockersock
+        path: /var/run
+    commands:
+      - apk add --no-cache make aws-cli
+      - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
+      - make docker-push-event-handler
+      - make docker-push-access-plugins
+
+services:
+  - name: start docker
+    image: docker:dind
+    privileged: true
+    volumes:
+      - name: dockersock
+        path: /var/run
+
+volumes:
+  - name: dockersock
+    temp: {}
 
 ---
 kind: pipeline
@@ -509,6 +569,6 @@ steps:
 
 ---
 kind: signature
-hmac: 7381b82e23954f22b26d90324d9219d7b1f2c0d81a4b9e2b27f868674beec197
+hmac: ede0e0312d72f7cb7f00e4278b27c1d4668d9399ded92ae6957fffde092ed8c5
 
 ...
