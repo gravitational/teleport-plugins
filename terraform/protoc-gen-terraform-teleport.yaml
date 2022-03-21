@@ -1,0 +1,338 @@
+---
+target_package_name: "tfschema"
+default_package_name: "github.com/gravitational/teleport/api/types"
+duration_custom_type: Duration
+use_state_for_unknown_by_default: true
+
+# Top-level type names to export
+types:
+    - "AppV3"
+    - "AuthPreferenceV2"
+    - "ClusterNetworkingConfigV2"
+    - "DatabaseV3"
+    - "GithubConnectorV3"
+    - "OIDCConnectorV3"
+    - "ProvisionTokenV2"
+    - "RoleV4"
+    - "SAMLConnectorV2"
+    - "SessionRecordingConfigV2"
+    - "TrustedClusterV2"
+    - "UserV2"
+
+# id field is required for integration tests. It is not used by provider. 
+# We have to add it manually (might be removed in the future versions).
+injected_fields:
+  AppV3:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  AuthPreferenceV2:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  ClusterNetworkingConfigV2:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  DatabaseV3:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  GithubConnectorV3:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  OIDCConnectorV3:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  ProvisionTokenV2:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  RoleV4:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  SAMLConnectorV2:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  SessionRecordingConfigV2:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  TrustedClusterV2:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  UserV2:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+
+# These fields will be excluded
+exclude_fields:
+    # Metadata (we id resources by name on our side)
+    - "Metadata.ID"
+
+    # AuthPreference
+    - "AuthPreferenceV2.Metadata.Name" # It's a signleton resource
+
+    # NetworkingConfig
+    - "ClusterNetworkingConfigV2.Metadata.Name" # It's a signleton resource
+
+    # Status
+    - "DatabaseV3.Status"
+
+    # Role
+    - "RoleV4.Spec.Allow.Namespaces" # These fields are not settable via API
+    - "RoleV4.Spec.Deny.Namespaces"
+
+    # SessionRecordingConfig
+    - "SessionRecordingConfigV2.Metadata.Name" # It's a signleton resource
+
+    # User
+    - "UserSpecV2.LocalAuth" # We do not need to set user auth data
+    - "UserSpecV2.Expires"   # Those fields are Teleport side meta, we do not need to change them via Terraform
+    - "UserSpecV2.CreatedBy"
+    - "UserSpecV2.Status"
+
+
+# These fields will be marked as Computed: true
+computed_fields:
+    # Metadata
+    - "Metadata.Namespace"
+
+    # App
+    - "AppV3.Metadata.Labels"
+    - "AppV3.Kind"    
+    - "AppV3.Version"
+
+    # Auth preference
+    - "AuthPreferenceV2.Spec.SecondFactor"
+    - "AuthPreferenceV2.Spec.Type"
+    - "AuthPreferenceV2.Spec.LockingMode"
+    - "AuthPreferenceV2.Metadata.Namespace"
+    - "AuthPreferenceV2.Metadata.Labels"
+    - "AuthPreferenceV2.Kind"
+    - "AuthPreferenceV2.Version"
+
+    # Cluster networking
+    - "ClusterNetworkingConfigV2.Spec.KeepAliveCountMax"
+    - "ClusterNetworkingConfigV2.Spec.KeepAliveInterval"
+    - "ClusterNetworkingConfigV2.Kind"
+    - "ClusterNetworkingConfigV2.Version"
+
+    # Database
+    - "DatabaseV3.Kind"
+    - "DatabaseV3.Version"
+
+    # Github connector
+    - "GithubConnectorV3.Kind"
+    - "GithubConnectorV3.Version"
+
+    # Provision token
+    - "ProvisionTokenV2.Spec.AWSIIDTTL"
+    - "ProvisionTokenV2.Kind"
+    - "ProvisionTokenV2.Metadata.Name"    
+    - "ProvisionTokenV2.Version"    
+
+    # OIDC connector
+    - "OIDCConnectorV3.Kind"
+    - "OIDCConnectorV3.Version"
+
+    # Role
+    - "RoleV4.Spec.Options.MaxSessionTTL"
+    - "RoleV4.Spec.Options.CertificateFormat"
+    - "RoleV4.Spec.Options.BPF"
+    - "RoleV4.Kind"
+    - "RoleV4.Version"
+
+    # SAML connector
+    - "SAMLConnectorV2.Spec.Audience"
+    - "SAMLConnectorV2.Spec.Issuer"
+    - "SAMLConnectorV2.Spec.ServiceProviderIssuer"
+    - "SAMLConnectorV2.Spec.SSO"
+    - "SAMLConnectorV2.Spec.SigningKeyPair"
+    - "SAMLConnectorV2.Spec.SigningKeyPair.PrivateKey"
+    - "SAMLConnectorV2.Spec.SigningKeyPair.Cert"
+    - "SAMLConnectorV2.Spec.EncryprionKeyPair"
+    - "SAMLConnectorV2.Spec.EncryptionKeyPair.PrivateKey"
+    - "SAMLConnectorV2.Spec.EncryptionKeyPair.Cert"
+    - "SAMLConnectorV2.Kind"
+    - "SAMLConnectorV2.Version"
+
+    # Session recording
+    - "SessionRecordingConfigV2.Spec.Mode"
+    - "SessionRecordingConfigV2.Kind"
+    - "SessionRecordingConfigV2.Version"
+
+    # Trusted cluster
+    - "TrustedClusterV2.Kind"
+    - "TrustedClusterV2.Version"
+
+    # User
+    - "UserV2.Kind"
+    - "UserV2.Version"
+
+# These fields will be marked as Required: true 
+required_fields:
+    # App
+    - "AppV3.Metadata.Name"
+
+    # Auth preference
+    - "AuthPreferenceV2.Spec"
+    - "AuthPreferenceV2.Metadata.Name"
+
+    # Database
+    - "DatabaseV3.Spec.Protocol"    
+    - "DatabaseV3.Spec.URI"        
+    - "DatabaseV3.Metadata.Name"
+
+    # Github connector
+    - "GithubConnectorV3.Spec"
+    - "GithubConnectorV3.Spec.ClientID"
+    - "GithubConnectorV3.Spec.ClientSecret"
+    - "GithubConnectorV3.Spec.TeamsToLogins"
+    - "GithubConnectorV3.Spec.TeamsToLogins.Team"
+    - "GithubConnectorV3.Spec.TeamsToLogins.Logins"
+    - "GithubConnectorV3.Metadata.Name"
+
+    # OIDC connector
+    - "OIDCConnectorV3.Spec"
+    - "OIDCConnectorV3.Metadata.Name"
+
+    # Provision token
+    - "ProvisionTokenV2.Spec"
+    - "ProvisionTokenV2.Spec.Options"
+    - "ProvisionTokenV2.Spec.Roles"
+    - "ProvisionTokenV2.Metadata.Expires"
+
+    # Role
+    - "RoleV4.Metadata.Name"    
+
+    # SAML connector
+    - "SAMLConnectorV2.Spec"
+    - "SAMLConnectorV2.Spec.AssertionConsumerService"
+    - "SAMLConnectorV2.Spec.EntityDescriptor"
+    - "SAMLConnectorV2.Spec.AttributesToRoles"
+    - "SAMLConnectorV2.Metadata.Name"    
+
+    # Trusted cluster
+    - "TrustedClusterV2.Metadata.Name"        
+    - "TrustedClusterV2.Spec"
+
+    # User
+    - "UserV2.Metadata.Name"
+    
+
+# These fields must be marked as sensitive
+sensitive_fields:
+    - "ProvisionTokenV2.Metadata.Name"
+    - "SAMLConnectorV2.Spec.Cert"
+    - "SAMLConnectorV2.Spec.SigningKeyPair.PrivateKey"
+    - "SAMLConnectorV2.Spec.EncryptionKeyPair.PrivateKey"
+    - "SAMLConnectorV2.Spec.EntityDescriptor"    
+    - "GithubConnectorV3.Spec.ClientSecret"
+    - "OIDCConnectorV3.Spec.ClientSecret"
+    - "OIDCConnectorV3.Spec.GoogleServiceAccount"
+
+# These suffixes for custom methods called when field has custom_type flag. By default they might be weird.
+suffixes:
+    "BoolOption": "BoolOption" # This is listed here for convenience. Just to have all custom method names in a single place.
+    "Labels": "Labels"
+    "github.com/gravitational/teleport/api/types/wrappers.Traits": "Traits"
+    "github.com/gravitational/teleport/api/types/wrappers.Strings": "Strings"
+
+plan_modifiers:
+    # Force to recreate resource if it's name changes
+    Metadata.Name:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    ProvisionTokenV2.Metadata.Name:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"      
+
+validators:
+  # Expires must be in the future
+  Metadata.Expires:
+    - MustTimeBeInFuture()
+  AppV3.Version:
+    - UseVersionBetween(3,3)
+  AuthPreferenceV2.Version:
+    - UseVersionBetween(2,2)
+  AuthPreferenceV2.Metadata.Labels:
+    - UseMapKeysPresentValidator("teleport.dev/origin")
+  ClusterNetworkingConfigV2.Version:
+    - UseVersionBetween(2,2)
+  ClusterNetworkingConfigV2.Metadata.Labels:
+    - UseMapKeysPresentValidator("teleport.dev/origin")
+  DatabaseV3.Version:
+    - UseVersionBetween(3,3)
+  DatabaseV3.Metadata.Labels:
+    - UseMapKeysPresentValidator("teleport.dev/origin")
+  GithubConnectorV3.Version:
+    - UseVersionBetween(3,3)
+  OIDCConnectorV3.Version:
+    - UseVersionBetween(2,2)
+  ProvisionTokenV2.Version:
+    - UseVersionBetween(2,2)
+  RoleV4.Version:
+    - UseVersionBetween(3,4)
+  SAMLConnectorV2.Version:
+    - UseVersionBetween(2,2)
+  SessionRecordingConfigV2.Version:
+    - UseVersionBetween(2,2)
+  SessionRecordingConfigV2.Metadata.Labels:
+    - UseMapKeysPresentValidator("teleport.dev/origin")
+  UserV2.Version:
+    - UseVersionBetween(2,2)
+
+time_type:
+    type: "TimeType"
+    value_type: "TimeValue"
+    cast_to_type: "time.Time"
+    cast_from_type: "time.Time"
+    type_constructor: UseRFC3339Time()    
+
+duration_type:
+    type: "DurationType"
+    value_type: "DurationValue"
+    cast_to_type: "time.Duration"
+    cast_from_type: "time.Duration"
