@@ -187,6 +187,12 @@ func (s *EventHandlerSuite) TestEvents() {
 
 	evt, err = s.fakeFluentd.GetMessage(s.Context())
 	require.NoError(t, err)
+	require.Contains(t, evt, `"event":"cert.create"`)
+	require.Contains(t, evt, `"user":"`+s.userNames.ruler+`"`)
+	require.Contains(t, evt, `"roles":["integration-admin"]`)
+
+	evt, err = s.fakeFluentd.GetMessage(s.Context())
+	require.NoError(t, err)
 	require.Contains(t, evt, `"event":"role.created"`)
 	require.Contains(t, evt, `"name":"access-event-handler"`)
 
@@ -194,6 +200,12 @@ func (s *EventHandlerSuite) TestEvents() {
 	require.NoError(t, err)
 	require.Contains(t, evt, `"event":"user.create"`)
 	require.Contains(t, evt, `"name":"`+s.userNames.plugin+`"`)
+	require.Contains(t, evt, `"roles":["access-event-handler"]`)
+
+	evt, err = s.fakeFluentd.GetMessage(s.Context())
+	require.NoError(t, err)
+	require.Contains(t, evt, `"event":"cert.create"`)
+	require.Contains(t, evt, `"user":"`+s.userNames.plugin+`"`)
 	require.Contains(t, evt, `"roles":["access-event-handler"]`)
 
 	evt, err = s.fakeFluentd.GetMessage(s.Context())
