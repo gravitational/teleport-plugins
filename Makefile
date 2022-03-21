@@ -18,13 +18,9 @@ access-pagerduty:
 access-gitlab:
 	make -C access/gitlab
 
-.PHONY: access-example
-access-example:
-	go build -o build/access-example ./access/example
-
 .PHONY: access-email
 access-email:
-	go build -o build/access-email ./access/email
+	make -C access/email
 
 # Build specific access plugin with docker
 .PHONY: docker-build-access-%
@@ -108,31 +104,19 @@ releases: release/access-slack release/access-jira release/access-mattermost rel
 .PHONY: build-all
 build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab access-email terraform event-handler
 
-.PHONY: update-version
-update-version:
-	# Make sure VERSION is set on the command line "make update-version VERSION=x.y.z".
-	@test $(VERSION)
-	sed -i '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/jira/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/mattermost/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/slack/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
-
 .PHONY: update-tag
 update-tag:
 	# Make sure VERSION is set on the command line "make update-tag VERSION=x.y.z".
 	@test $(VERSION)
 	# Tag all releases first locally.
-	git tag teleport-event-handler-v$(VERSION)
-	git tag teleport-jira-v$(VERSION)
-	git tag teleport-mattermost-v$(VERSION)
-	git tag teleport-slack-v$(VERSION)
-	git tag teleport-pagerduty-v$(VERSION)
-	git tag teleport-email-v$(VERSION)
-	git tag terraform-provider-teleport-v$(VERSION)
-	git tag v$(VERSION)
+	git tag --sign --message "Teleport Event Handler Plugin $(VERSION)" teleport-event-handler-v$(VERSION)
+	git tag --sign --message "Teleport Access Jira Plugin $(VERSION)" teleport-jira-v$(VERSION)
+	git tag --sign --message "Teleport Access Mattermost Plugin $(VERSION)" teleport-mattermost-v$(VERSION)
+	git tag --sign --message "Teleport Access Slack Plugin $(VERSION)" teleport-slack-v$(VERSION)
+	git tag --sign --message "Teleport Access Pagerduty $(VERSION)" teleport-pagerduty-v$(VERSION)
+	git tag --sign --message "Teleport Access Email $(VERSION)" teleport-email-v$(VERSION)
+	git tag --sign --message "Teleport Terraform Provider $(VERSION)" terraform-provider-teleport-v$(VERSION)
+	git tag --sign --message "Teleport Plugins $(VERSION)" v$(VERSION)
 	# Push all releases to origin.
 	git push origin teleport-event-handler-v$(VERSION)
 	git push origin teleport-jira-v$(VERSION)
@@ -152,3 +136,7 @@ update-tag:
 lint: GO_LINT_FLAGS ?=
 lint:
 	golangci-lint run -c .golangci.yml $(GO_LINT_FLAGS)
+
+.PHONY: print-version
+print-version:
+	@./version.sh
