@@ -65,7 +65,7 @@ func fetchObject(ctx context.Context, client downloader, dstDirRoot string, buck
 	dstFilename = filepath.Join(dstDirRoot, dstFilename)
 
 	log.Infof("Fetching %s", key)
-	log.Debugf("into %s", dstFilename)
+	log.Tracef("... into %s", dstFilename)
 	dstDir := filepath.Dir(dstFilename)
 	err = os.MkdirAll(dstDir, 0700)
 	if err != nil {

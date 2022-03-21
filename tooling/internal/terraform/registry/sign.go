@@ -29,8 +29,8 @@ func IsProviderTarball(fn string) bool {
 	return info.Type == "terraform-provider"
 }
 
-func makeFileNames(info filename.Info) FileNames {
-	zipFileName := info.Filename(".zip")
+func makeFileNames(dstDir string, info filename.Info) FileNames {
+	zipFileName := filepath.Join(dstDir, info.Filename(".zip"))
 	return FileNames{
 		Zip: zipFileName,
 		Sum: zipFileName + ".sums",
@@ -79,7 +79,7 @@ func RepackProvider(dstDir string, srcFileName string, signingEntity *openpgp.En
 
 	result := &RepackResult{
 		Info:          info,
-		FileNames:     makeFileNames(info),
+		FileNames:     makeFileNames(dstDir, info),
 		SigningEntity: signingEntity,
 	}
 
@@ -98,7 +98,7 @@ func RepackProvider(dstDir string, srcFileName string, signingEntity *openpgp.En
 	}
 
 	// Write everything out to the dstdir
-	err = writeOutput(dstDir, result, zipArchive.Bytes(), sums.Bytes(), sig.Bytes())
+	err = writeOutput(result, zipArchive.Bytes(), sums.Bytes(), sig.Bytes())
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -106,9 +106,8 @@ func RepackProvider(dstDir string, srcFileName string, signingEntity *openpgp.En
 	return result, nil
 }
 
-func writeOutput(dstDir string, entry *RepackResult, zip, sums, sig []byte) error {
-	zipFileName := filepath.Join(dstDir, entry.Zip)
-	zipFile, err := os.Create(zipFileName)
+func writeOutput(entry *RepackResult, zip, sums, sig []byte) error {
+	zipFile, err := os.Create(entry.Zip)
 	if err != nil {
 		return trace.Wrap(err, "opening zipfile failed")
 	}
@@ -119,8 +118,7 @@ func writeOutput(dstDir string, entry *RepackResult, zip, sums, sig []byte) erro
 		return trace.Wrap(err, "writing zipfile failed")
 	}
 
-	sumFileName := filepath.Join(dstDir, entry.Sum)
-	sumFile, err := os.Create(sumFileName)
+	sumFile, err := os.Create(entry.Sum)
 	if err != nil {
 		return trace.Wrap(err, "opening sum file failed")
 	}
@@ -131,8 +129,7 @@ func writeOutput(dstDir string, entry *RepackResult, zip, sums, sig []byte) erro
 		return trace.Wrap(err, "writing sumfile failed")
 	}
 
-	sigFileName := filepath.Join(dstDir, entry.Sig)
-	sigFile, err := os.Create(sigFileName)
+	sigFile, err := os.Create(entry.Sig)
 	if err != nil {
 		return trace.Wrap(err, "opening sig file failed")
 	}

@@ -8,8 +8,9 @@ import (
 	"path/filepath"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
+	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/coreos/go-semver/semver"
 	"github.com/gravitational/trace"
-	"golang.org/x/crypto/openpgp/armor"
 )
 
 const (
@@ -65,9 +66,9 @@ type Platform struct {
 }
 
 type Version struct {
-	Version   string     `json:"version"`
-	Protocols []string   `json:"protocols"`
-	Platforms []Platform `json:"platforms"`
+	Version   semver.Version `json:"version"`
+	Protocols []string       `json:"protocols"`
+	Platforms []Platform     `json:"platforms"`
 }
 
 type GpgPublicKey struct {
@@ -94,23 +95,23 @@ type Download struct {
 	SigningKeys  SigningKeys `json:"signing_keys"`
 }
 
-func (dl *Download) Save(indexDir, namespace, name, version string) error {
-	filename := filepath.Join(indexDir, namespace, name, version, "download", dl.OS, dl.Arch)
+func (dl *Download) Save(indexDir, namespace, name string, version semver.Version) (string, error) {
+	filename := filepath.Join(indexDir, namespace, name, version.String(), "download", dl.OS, dl.Arch)
 
 	if err := os.MkdirAll(filepath.Dir(filename), 0700); err != nil {
-		return trace.Wrap(err, "Creating download dir")
+		return "", trace.Wrap(err, "Creating download dir")
 	}
 
 	f, err := os.Create(filename)
 	if err != nil {
-		return trace.Wrap(err, "Failed opening file")
+		return "", trace.Wrap(err, "Failed opening file")
 	}
 	defer f.Close()
 
 	encoder := json.NewEncoder(f)
 	encoder.SetIndent("", "  ")
 
-	return encoder.Encode(dl)
+	return filename, encoder.Encode(dl)
 }
 
 func NewDownloadFromRepackResult(info *RepackResult, protocols []string, objectStoreURL string) (*Download, error) {
@@ -124,11 +125,11 @@ func NewDownloadFromRepackResult(info *RepackResult, protocols []string, objectS
 		Protocols:    protocols,
 		OS:           info.OS,
 		Arch:         info.Arch,
-		Filename:     info.Zip,
+		Filename:     filepath.Base(info.Zip),
 		Sha:          info.Sha256String(),
-		DownloadURL:  objectStoreURL + info.Zip,
-		ShaURL:       objectStoreURL + info.Sum,
-		SignatureURL: objectStoreURL + info.Sig,
+		DownloadURL:  objectStoreURL + filepath.Base(info.Zip),
+		ShaURL:       objectStoreURL + filepath.Base(info.Sum),
+		SignatureURL: objectStoreURL + filepath.Base(info.Sig),
 		SigningKeys: SigningKeys{
 			GpgPublicKeys: []GpgPublicKey{
 				{

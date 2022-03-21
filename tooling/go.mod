@@ -5,10 +5,12 @@ go 1.17
 require (
 	github.com/ProtonMail/go-crypto v0.0.0-20220113124808-70ae35bab23f
 	github.com/aws/aws-sdk-go v1.43.19
+	github.com/aws/aws-sdk-go-v2 v1.15.0
 	github.com/aws/aws-sdk-go-v2/config v1.15.0
 	github.com/aws/aws-sdk-go-v2/credentials v1.10.0
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.11.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.26.0
+	github.com/coreos/go-semver v0.3.0
 	github.com/gravitational/kingpin v2.1.10+incompatible
 	github.com/gravitational/trace v1.1.18
 	github.com/sirupsen/logrus v1.8.1
@@ -19,7 +21,6 @@ require (
 	github.com/alecthomas/assert v1.0.0 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
-	github.com/aws/aws-sdk-go-v2 v1.15.0 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.4.0 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.0 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.6 // indirect

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"regexp"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/gravitational/trace"
 )
 
@@ -14,7 +15,7 @@ var (
 
 type Info struct {
 	Type    string
-	Version string
+	Version semver.Version
 	OS      string
 	Arch    string
 }
@@ -24,12 +25,17 @@ func Parse(filename string) (Info, error) {
 
 	matches := filenamePattern.FindStringSubmatch(filename)
 	if len(matches) == 0 {
-		return Info{}, trace.Errorf("Filename %q does not match required pattern", filename)
+		return Info{}, trace.Errorf("filename %q does not match required pattern", filename)
+	}
+
+	version, err := semver.NewVersion(matches[2])
+	if err != nil {
+		return Info{}, trace.Wrap(err, "failed parsing version as semver")
 	}
 
 	return Info{
 		Type:    matches[1],
-		Version: matches[2],
+		Version: *version,
 		OS:      matches[3],
 		Arch:    matches[4],
 	}, nil

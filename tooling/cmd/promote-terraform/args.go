@@ -24,6 +24,7 @@ type args struct {
 	protocolVersions  []string
 	providerNamespace string
 	providerName      string
+	verbosity         int
 }
 
 func parseCommandLine() *args {
@@ -97,6 +98,10 @@ func parseCommandLine() *args {
 	app.Flag("name", "Terraform provider name").
 		Default("teleport").
 		StringVar(&result.providerName)
+
+	app.Flag("verbose", "Output more trace output").
+		Short('v').
+		CounterVar(&result.verbosity)
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 
