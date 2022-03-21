@@ -8,7 +8,7 @@ import (
 
 func TestParseFilename(t *testing.T) {
 	t.Run("WithLeadingPath", func(t *testing.T) {
-		info, err := Parse("/some/bath/to/file/terraform-provider-teleport-v7.0.0-darwin-amd64-bin.tar.gz")
+		info, err := Parse("/some/path/to/file/terraform-provider-teleport-v7.0.0-darwin-amd64-bin.tar.gz")
 		require.NoError(t, err)
 
 		require.Equal(t, "terraform-provider", info.Type)
@@ -26,8 +26,40 @@ func TestParseFilename(t *testing.T) {
 		require.Equal(t, "arm", info.Arch)
 	})
 
-	t.Run("Random Junk", func(t *testing.T) {
+	t.Run("RandomJunk", func(t *testing.T) {
 		_, err := Parse("blahblahblah")
+		require.Error(t, err)
+	})
+
+	t.Run("WithPreRelease", func(t *testing.T) {
+		info, err := Parse("terraform-provider-teleport-v1.2.3-beta.1-linux-arm-bin.tar.gz")
+		require.NoError(t, err)
+		require.Equal(t, "terraform-provider", info.Type)
+		require.Equal(t, "1.2.3-beta.1", info.Version)
+		require.Equal(t, "linux", info.OS)
+		require.Equal(t, "arm", info.Arch)
+	})
+
+	t.Run("WithBuild", func(t *testing.T) {
+		info, err := Parse("terraform-provider-teleport-v1.2.3+1-linux-arm-bin.tar.gz")
+		require.NoError(t, err)
+		require.Equal(t, "terraform-provider", info.Type)
+		require.Equal(t, "1.2.3+1", info.Version)
+		require.Equal(t, "linux", info.OS)
+		require.Equal(t, "arm", info.Arch)
+	})
+
+	t.Run("WithPreReleaseAndBuild", func(t *testing.T) {
+		info, err := Parse("terraform-provider-teleport-v1.2.3-beta.1+42-linux-arm-bin.tar.gz")
+		require.NoError(t, err)
+		require.Equal(t, "terraform-provider", info.Type)
+		require.Equal(t, "1.2.3-beta.1+42", info.Version)
+		require.Equal(t, "linux", info.OS)
+		require.Equal(t, "arm", info.Arch)
+	})
+
+	t.Run("UnsupportedOS", func(t *testing.T) {
+		_, err := Parse("terraform-provider-teleport-v1.2.3-beos-arm-bin.tar.gz")
 		require.Error(t, err)
 	})
 }

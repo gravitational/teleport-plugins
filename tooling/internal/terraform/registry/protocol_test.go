@@ -36,7 +36,7 @@ const validIndex = `
 `
 
 func TestIndexJson(t *testing.T) {
-	uut := Index{
+	uut := Versions{
 		Versions: []*Version{
 			{
 				Version:   "2.0.0",
@@ -80,7 +80,7 @@ func TestIndexJson(t *testing.T) {
 	})
 
 	t.Run("Parsing", func(t *testing.T) {
-		var parsedIndex Index
+		var parsedIndex Versions
 		require.NoError(t, json.Unmarshal([]byte(validIndex), &parsedIndex))
 		require.Equal(t, uut, parsedIndex)
 	})
