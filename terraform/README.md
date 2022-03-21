@@ -32,6 +32,9 @@ Please, refer to [official documentation](https://goteleport.com/docs/setup/guid
     make test
     ```
 
+    Note: Some tests won't pass without a valid `teleport` binary, enterprise license, etc. 
+    See [Testing](../TESTING.md) to see how to provide these values to the tests locally.
+
 # Updating the provider
 
 Run:
@@ -82,8 +85,11 @@ This will generate `types_tfschema.go` from a current API `.proto` file, and reg
     ```
 
 1. Make changes to .tf files and run:
-
     ```
     make reapply
     ```
 
+1. Clean up:
+    ```
+    make destroy
+    ```
