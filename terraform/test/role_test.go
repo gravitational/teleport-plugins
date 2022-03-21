@@ -109,11 +109,11 @@ func (s *TerraformSuite) TestImportRole() {
 	id := "test_import"
 	name := r + "." + id
 
-	role := &types.RoleV4{
+	role := &types.RoleV5{
 		Metadata: types.Metadata{
 			Name: id,
 		},
-		Spec: types.RoleSpecV4{},
+		Spec: types.RoleSpecV5{},
 	}
 	err := role.CheckAndSetDefaults()
 	require.NoError(s.T(), err)

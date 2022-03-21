@@ -150,7 +150,7 @@ var (
 
 	role = payload{
 		Name:           "Role",
-		TypeName:       "RoleV4",
+		TypeName:       "RoleV5",
 		VarName:        "role",
 		GetMethod:      "GetRole",
 		CreateMethod:   "UpsertRole",

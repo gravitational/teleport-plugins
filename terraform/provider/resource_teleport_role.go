@@ -42,7 +42,7 @@ type resourceTeleportRole struct {
 
 // GetSchema returns the resource schema
 func (r resourceTeleportRoleType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfschema.GenSchemaRoleV4(ctx)
+	return tfschema.GenSchemaRoleV5(ctx)
 }
 
 // NewResource creates the empty resource
@@ -65,8 +65,8 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 		return
 	}
 
-	role := &apitypes.RoleV4{}
-	diags = tfschema.CopyRoleV4FromTerraform(ctx, plan, role)
+	role := &apitypes.RoleV5{}
+	diags = tfschema.CopyRoleV5FromTerraform(ctx, plan, role)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -110,13 +110,13 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 		return
 	}
 
-	role, ok := roleI.(*apitypes.RoleV4)
+	role, ok := roleI.(*apitypes.RoleV5)
 	if !ok {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Errorf("Can not convert %T to RoleV4", roleI), "role"))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Errorf("Can not convert %T to RoleV5", roleI), "role"))
 		return
 	}
 
-	diags = tfschema.CopyRoleV4ToTerraform(ctx, *role, &plan)
+	diags = tfschema.CopyRoleV5ToTerraform(ctx, *role, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -158,8 +158,8 @@ func (r resourceTeleportRole) Read(ctx context.Context, req tfsdk.ReadResourceRe
 		return
 	}
 
-	role := roleI.(*apitypes.RoleV4)
-	diags = tfschema.CopyRoleV4ToTerraform(ctx, *role, &state)
+	role := roleI.(*apitypes.RoleV5)
+	diags = tfschema.CopyRoleV5ToTerraform(ctx, *role, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -186,8 +186,8 @@ func (r resourceTeleportRole) Update(ctx context.Context, req tfsdk.UpdateResour
 		return
 	}
 
-	role := &apitypes.RoleV4{}
-	diags = tfschema.CopyRoleV4FromTerraform(ctx, plan, role)
+	role := &apitypes.RoleV5{}
+	diags = tfschema.CopyRoleV5FromTerraform(ctx, plan, role)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -213,8 +213,8 @@ func (r resourceTeleportRole) Update(ctx context.Context, req tfsdk.UpdateResour
 		return
 	}
 
-	role = roleI.(*apitypes.RoleV4)
-	diags = tfschema.CopyRoleV4ToTerraform(ctx, *role, &plan)
+	role = roleI.(*apitypes.RoleV5)
+	diags = tfschema.CopyRoleV5ToTerraform(ctx, *role, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -238,7 +238,7 @@ func (r resourceTeleportRole) Delete(ctx context.Context, req tfsdk.DeleteResour
 
 	err := r.p.Client.DeleteRole(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting RoleV4", trace.Wrap(err), "role"))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting RoleV5", trace.Wrap(err), "role"))
 		return
 	}
 
@@ -253,7 +253,7 @@ func (r resourceTeleportRole) ImportState(ctx context.Context, req tfsdk.ImportR
 		return
 	}
 
-	role := roleI.(*apitypes.RoleV4)
+	role := roleI.(*apitypes.RoleV5)
 
 	var state types.Object
 
@@ -263,7 +263,7 @@ func (r resourceTeleportRole) ImportState(ctx context.Context, req tfsdk.ImportR
 		return
 	}
 
-	diags = tfschema.CopyRoleV4ToTerraform(ctx, *role, &state)
+	diags = tfschema.CopyRoleV5ToTerraform(ctx, *role, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

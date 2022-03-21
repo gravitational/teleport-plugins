@@ -1,7 +1,7 @@
 steps:
   - name: golang:1.17.5
     env:
-      - TELEPORT_GET_VERSION=v8.0.5
+      - TELEPORT_GET_VERSION=v9.0.1
     secretEnv:
       - TELEPORT_ENTERPRISE_LICENSE
     entrypoint: /bin/bash
