@@ -28,7 +28,7 @@ type args struct {
 }
 
 func parseCommandLine() *args {
-	app := kingpin.New("update-registry", "Adds files to a terraform registry")
+	app := kingpin.New("promote-terraform", "Adds files to a terraform registry")
 	result := &args{}
 
 	app.Flag("tag", "The version tag identifying  version of provider to promote").
@@ -41,6 +41,7 @@ func parseCommandLine() *args {
 		StringVar(&result.staging.bucketName)
 
 	app.Flag("staging-region", "AWS region the staging bucket is in").
+		Envar("STAGING_REGION").
 		Default("us-west-2").
 		StringVar(&result.staging.region)
 
@@ -59,6 +60,7 @@ func parseCommandLine() *args {
 		StringVar(&result.production.bucketName)
 
 	app.Flag("prod-region", "AWS region the production bucket is in").
+		Envar("PRODUCTION_REGION").
 		Default("us-east-1").
 		StringVar(&result.production.region)
 

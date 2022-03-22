@@ -1,209 +1,6 @@
 ---
 kind: pipeline
 type: kubernetes
-name: test-linux
-
-trigger:
-  branch:
-    - master
-    - branch/*
-  event:
-    include:
-      - push
-  repo:
-    include:
-      - gravitational/*
-
-workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
-
-steps:
-  - name: Run linter
-    image: golangci/golangci-lint:v1.39.0
-    commands:
-      - make lint
-
-  - name: Run tests
-    image: golang:1.17.5
-    environment:
-      TELEPORT_ENTERPRISE_LICENSE:
-        from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v8.0.5
-    commands:
-      - echo Testing plugins against Teleport $TELEPORT_GET_VERSION
-      - make test
-
----
-kind: pipeline
-type: exec
-name: test-darwin
-
-concurrency:
-  limit: 1
-
-platform:
-  os: darwin
-  arch: amd64
-
-trigger:
-  branch:
-    - master
-    - branch/*
-  event:
-    include:
-      - push
-  repo:
-    include:
-      - gravitational/*
-
-workspace:
-  path: /tmp/teleport-plugins/test-darwin
-
-steps:
-  - name: Clean up exec runner storage
-    commands:
-      # This will remove subdirectories under pkg/mod which 0400 permissions.
-      # See for more details: https://github.com/golang/go/issues/27455
-      - go clean -modcache
-      - rm -rf /tmp/teleport-plugins/test-darwin/go
-      - mkdir -p /tmp/teleport-plugins/test-darwin/go
-
-  - name: Run tests
-    environment:
-      TELEPORT_ENTERPRISE_LICENSE:
-        from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v8.0.5
-      GOPATH: /tmp/teleport-plugins/test-darwin/go
-      GOCACHE: /tmp/teleport-plugins/test-darwin/go/cache
-    commands:
-      - go version
-      - make test
-
----
-kind: pipeline
-type: kubernetes
-name: build-on-push-linux
-
-trigger:
-  branch:
-    - master
-    - branch/*
-  event:
-    include:
-      - push
-  repo:
-    include:
-      - gravitational/*
-
-depends_on:
-  - test-linux
-
-workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
-
-steps:
-  - name: Build artifacts
-    image: golang:1.17.5
-    commands:
-      - make build-all
-
----
-kind: pipeline
-type: exec
-name: build-on-push-darwin
-
-concurrency:
-  limit: 1
-
-platform:
-  os: darwin
-  arch: amd64
-
-trigger:
-  branch:
-    - master
-    - branch/*
-  event:
-    include:
-      - push
-  repo:
-    include:
-      - gravitational/*
-
-depends_on:
-  - test-darwin
-
-workspace:
-  path: /tmp/teleport-plugins/build-darwin
-
-steps:
-  - name: Clean up exec runner storage (pre)
-    commands:
-      # This will remove subdirectories under pkg/mod which 0400 permissions.
-      # See for more details: https://github.com/golang/go/issues/27455
-      - go clean -modcache
-      - rm -rf /tmp/teleport-plugins/build-darwin/go
-      - mkdir -p /tmp/teleport-plugins/build-darwin/go/cache
-
-  - name: Build artifacts (darwin)
-    environment:
-      GOPATH: /tmp/teleport-plugins/build-darwin/go
-      GOCACHE: /tmp/teleport-plugins/build-darwin/go/cache
-    commands:
-      - make build-all
-
----
-kind: pipeline
-type: kubernetes
-name: tag-build-plugins-linux
-
-trigger:
-  event:
-    - tag
-  ref:
-    include:
-      - refs/tags/teleport-gitlab-v*
-      - refs/tags/teleport-jira-v*
-      - refs/tags/teleport-mattermost-v*
-      - refs/tags/teleport-pagerduty-v*
-      - refs/tags/teleport-slack-v*
-      - refs/tags/teleport-email-v*
-
-depends_on:
-  - test-linux
-
-workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
-
-steps:
-  - name: Build artifacts
-    image: golang:1.17.5
-    commands:
-      - mkdir -p build/
-      - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
-      - make release/access-$PLUGIN_TYPE
-      - find access/ -iname "*.tar.gz" -print -exec cp {} build/ \;
-      - cd build
-      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
-      - ls -l .
-
-  - name: Upload to S3
-    image: plugins/s3
-    settings:
-      bucket:
-        from_secret: AWS_S3_BUCKET
-      access_key:
-        from_secret: AWS_ACCESS_KEY_ID
-      secret_key:
-        from_secret: AWS_SECRET_ACCESS_KEY
-      region: us-west-2
-      source: /go/src/github.com/gravitational/teleport-plugins/build/*
-      target: teleport-plugins/tag/${DRONE_TAG}
-      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
-
----
-kind: pipeline
-type: kubernetes
 name: tag-build-terraform-linux
 
 trigger:
@@ -286,130 +83,53 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
-name: tag-build-event-handler-linux
+name: stage-terraform-provider-registry
 
 trigger:
   event:
     - tag
   ref:
     include:
-      - refs/tags/teleport-event-handler-v*
+      - refs/tags/terraform-provider-teleport-v*
 
-workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
-
-steps:
-  - name: Build artifacts
-    image: golang:1.17.5
-    commands:
-      - mkdir -p build/
-      - make release/event-handler
-      - find event-handler/ -iname "*.tar.gz" -print -exec cp {} build/ \;
-      - cd build
-      - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
-      - ls -l .
-
-  - name: Upload to S3
-    image: plugins/s3
-    settings:
-      bucket:
-        from_secret: AWS_S3_BUCKET
-      access_key:
-        from_secret: AWS_ACCESS_KEY_ID
-      secret_key:
-        from_secret: AWS_SECRET_ACCESS_KEY
-      region: us-west-2
-      source: /go/src/github.com/gravitational/teleport-plugins/build/*
-      target: teleport-plugins/tag/${DRONE_TAG}
-      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
-
----
-kind: pipeline
-type: exec
-name: tag-build-event-handler-darwin
+depends_on:
+  - tag-build-terraform-linux
+  - tag-build-terraform-darwin
 
 concurrency:
   limit: 1
 
-platform:
-  os: darwin
-  arch: amd64
-
-trigger:
-  event:
-    - tag
-  ref:
-    include:
-      - refs/tags/teleport-event-handler-v*
-
 steps:
-  - name: Build artifacts
+  - name: Promote terraform provider to staging registry
+    image: golang:1.17.5
     commands:
-      - mkdir -p build/
-      - make release/event-handler
-      - find event-handler/ -iname "*.tar.gz" -print -exec cp {} build/ \;
-      - cd build
-      - for FILE in *.tar.gz; do shasum -a 256 $FILE > $FILE.sha256; done
-      - ls -l .
+      - cd tooling
+      - go run ./cmd-promote-terraform \
+        --tag ${DRONE_TAG}             \
+        -p 4.0 -p 5.1                  \
+        --namespace gravitational      \
+        --name teleport
 
-  - name: Upload to S3
     environment:
-      AWS_S3_BUCKET:
+      STAGING_REGION: us-west-2
+      STAGING_BUCKET:
         from_secret: AWS_S3_BUCKET
-      AWS_ACCESS_KEY_ID:
+      STAGING_ACCESS_KEY_ID:
         from_secret: AWS_ACCESS_KEY_ID
-      AWS_SECRET_ACCESS_KEY:
+      STAGING_SECRET_ACCESS_KEY:
         from_secret: AWS_SECRET_ACCESS_KEY
-      AWS_REGION: us-west-2
-    commands:
-      - cd build
-      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
-
----
-kind: pipeline
-type: kubernetes
-name: promote-artifact
-
-trigger:
-  event:
-    - promote
-  target:
-    - production
-
-workspace:
-  path: /go/src/github.com/gravitational/teleport-plugins
-
-clone:
-  disable: true
-
-steps:
-  - name: Download artifact from S3 artifact publishing bucket
-    image: amazon/aws-cli
-    environment:
-      AWS_S3_BUCKET:
+      
+      PRODUCTION_REGION: us-west-2
+      PROD_BUCKET:
         from_secret: AWS_S3_BUCKET
-      AWS_ACCESS_KEY_ID:
+      PROD_ACCESS_KEY_ID:
         from_secret: AWS_ACCESS_KEY_ID
-      AWS_SECRET_ACCESS_KEY:
+      PROD_SECRET_ACCESS_KEY:
         from_secret: AWS_SECRET_ACCESS_KEY
-      AWS_REGION: us-west-2
-    commands:
-      - aws s3 sync s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/ .
+      
+      SIGNING_KEY:
+        from_secret: TERRAFORM_REGISTRY_SIGNING_KEY
 
-  - name: Upload artifact to production S3 bucket with public read access
-    image: plugins/s3
-    settings:
-      bucket:
-        from_secret: PRODUCTION_AWS_S3_BUCKET
-      access_key:
-        from_secret: PRODUCTION_AWS_ACCESS_KEY_ID
-      secret_key:
-        from_secret: PRODUCTION_AWS_SECRET_ACCESS_KEY
-      region: us-east-1
-      acl: public-read
-      source: /go/src/github.com/gravitational/teleport-plugins/*
-      target: teleport-plugins/${DRONE_TAG##*-v}/
-      strip_prefix: /go/src/github.com/gravitational/teleport-plugins/
 
 ---
 kind: signature
