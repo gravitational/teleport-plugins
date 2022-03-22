@@ -10,8 +10,9 @@ GENTERRAFORMPATH := $(shell go env GOPATH)/bin
 
 BUILDDIR ?= build
 
+GITREF = $(shell git describe --dirty --long --tags --match '*event-handler*')
 ADDFLAGS ?=
-BUILDFLAGS ?= $(ADDFLAGS) -ldflags "-w -s -X main.Sha=`git rev-parse HEAD` -X main.Version=$(VERSION)"
+BUILDFLAGS ?= $(ADDFLAGS) -ldflags "-w -s -X main.Gitref=$(GITREF) -X main.Version=$(VERSION)"
 CGOFLAG ?= CGO_ENABLED=1
 
 PASS ?= 1234
