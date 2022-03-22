@@ -1,0 +1,69 @@
+should match the snapshot:
+  1: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: teleport-plugin-email
+        app.kubernetes.io/version: 9.0.0
+        helm.sh/chart: teleport-plugin-email-0.1.0
+      name: RELEASE-NAME-teleport-plugin-email
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app.kubernetes.io/instance: RELEASE-NAME
+          app.kubernetes.io/name: teleport-plugin-email
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/name: teleport-plugin-email
+        spec:
+          containers:
+          - command:
+            - /usr/local/bin/teleport-plugin
+            - start
+            - --config
+            - /etc/teleport-email.toml
+            image: gcr.io/overridden/repository:v98.76.54
+            imagePullPolicy: IfNotPresent
+            livenessProbe:
+              httpGet:
+                path: /
+                port: http
+            name: teleport-plugin-email
+            ports:
+            - containerPort: 80
+              name: http
+              protocol: TCP
+            readinessProbe:
+              httpGet:
+                path: /
+                port: http
+            resources: {}
+            securityContext: {}
+            volumeMounts:
+            - mountPath: /etc/teleport-email.toml
+              name: config
+              subPath: teleport-email.toml
+            - mountPath: /var/lib/teleport/plugins/email/auth_id
+              name: config
+              subPath: auth_id
+          - command:
+            - bash
+            - -c
+            - |
+              apt-get update &&
+              apt-get install -y tcpdump &&
+              tcpdump -A -vv -w /tmp/tcpdump.pcap -i any port 443
+            image: kbence/auto-install
+            name: debug
+          securityContext: {}
+          volumes:
+          - configMap:
+              defaultMode: 384
+              name: RELEASE-NAME-teleport-plugin-email
+            name: config

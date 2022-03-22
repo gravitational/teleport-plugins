@@ -1,0 +1,92 @@
+should match the snapshot (email on):
+  1: |
+    apiVersion: v1
+    data:
+      auth_id: ""
+      teleport-email.toml: |
+        [teleport]
+        addr = "teleport.example.com:1234"
+        identity = "/var/lib/teleport/plugins/email/auth_id"
+
+        [delivery]
+        sender = "noreply@example.com"
+        recipients = ["all@example.com"]
+
+        [log]
+        output = "stdout"
+        severity = "INFO"
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: teleport-plugin-email
+        app.kubernetes.io/version: 9.0.0
+        helm.sh/chart: teleport-plugin-email-0.1.0
+      name: RELEASE-NAME-teleport-plugin-email
+should match the snapshot (smtp on):
+  1: |
+    apiVersion: v1
+    data:
+      auth_id: ""
+      teleport-email.toml: |
+        [teleport]
+        addr = "teleport.example.com:1234"
+        identity = "/var/lib/teleport/plugins/email/auth_id"
+
+
+        [smtp]
+        host          = "smtp.someservice.com"
+        port          = 1234
+        username      = "mysmtpuser"
+        password      = "mysmtppasswd"
+
+        [delivery]
+        sender = "teleport@example.com"
+        recipients = ["security@mycompany.com"]
+
+        [log]
+        output = "/var/log/teleport-email.log"
+        severity = "DEBUG"
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: teleport-plugin-email
+        app.kubernetes.io/version: 9.0.0
+        helm.sh/chart: teleport-plugin-email-0.1.0
+      name: RELEASE-NAME-teleport-plugin-email
+should match the snapshot (smtp on, password file):
+  1: |
+    apiVersion: v1
+    data:
+      auth_id: ""
+      teleport-email.toml: |
+        [teleport]
+        addr = "teleport.example.com:1234"
+        identity = "/var/lib/teleport/plugins/email/auth_id"
+
+
+        [smtp]
+        host          = "smtp.example.com"
+        port          = 587
+        username      = "username@example.com"
+        password_file = "/etc/teleport/supersecretemailpw"
+
+        [delivery]
+        sender = "noreply@example.com"
+        recipients = ["all@example.com"]
+
+        [log]
+        output = "stdout"
+        severity = "INFO"
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: teleport-plugin-email
+        app.kubernetes.io/version: 9.0.0
+        helm.sh/chart: teleport-plugin-email-0.1.0
+      name: RELEASE-NAME-teleport-plugin-email

@@ -94,7 +94,7 @@ smtp:
   port: 587
   username: username@example.com
   password: ""
-  passwordFile: "/var/lib/teleport/plugins/email/smtp_password"
+  passwordFile: ""
 
 delivery:
   sender: noreply@example.com
