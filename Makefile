@@ -40,10 +40,19 @@ docker-build-access-plugins: docker-build-access-email \
  docker-build-access-pagerduty \
  docker-build-access-slack
 
+# Push specific access plugin with docker to ECR
+.PHONY: docker-push-access-%
+docker-push-access-%: docker-build-access-%
+	$(MAKE) -C access/$* docker-push
+
 # Build event-handler plugin with docker
 .PHONY: docker-build-event-handler
 docker-build-event-handler:
 	$(MAKE) -C event-handler docker-build
+
+.PHONY: docker-push-event-handler
+docker-push-event-handler: docker-build-event-handler
+	$(MAKE) -C event-handler docker-push
 
 .PHONY: terraform
 terraform:
@@ -104,17 +113,11 @@ update-version:
 	# Make sure VERSION is set on the command line "make update-version VERSION=x.y.z".
 	@test $(VERSION)
 	sed -i '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
-	make -C event-handler version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' access/jira/Makefile
-	make -C access/jira version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' access/mattermost/Makefile
-	make -C access/mattermost version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' access/slack/Makefile
-	make -C access/slack version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
-	make -C access/pagerduty version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
-	make -C access/email version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
 
 .PHONY: update-tag

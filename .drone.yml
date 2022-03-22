@@ -204,6 +204,57 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
+name: tag-build-plugins-docker
+
+trigger:
+  event:
+    - tag
+  ref:
+    include:
+      - refs/tags/teleport-gitlab-v*
+      - refs/tags/teleport-jira-v*
+      - refs/tags/teleport-mattermost-v*
+      - refs/tags/teleport-pagerduty-v*
+      - refs/tags/teleport-slack-v*
+      - refs/tags/teleport-email-v*
+
+depends_on:
+  - test-linux
+
+steps:
+  - name: Build and push to ECR
+    image: docker:git
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: PLUGIN_DRONE_ECR_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: PLUGIN_DRONE_ECR_SECRET
+      AWS_DEFAULT_REGION: us-west-2
+      DOCKER_BUILDKIT: 1
+    volumes:
+      - name: dockersock
+        path: /var/run
+    commands:
+      - apk add --no-cache make aws-cli
+      - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
+      - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
+      - make docker-push-access-${PLUGIN_TYPE}
+
+services:
+  - name: start docker
+    image: docker:dind
+    privileged: true
+    volumes:
+      - name: dockersock
+        path: /var/run
+
+volumes:
+  - name: dockersock
+    temp: {}
+
+---
+kind: pipeline
+type: kubernetes
 name: tag-build-terraform-linux
 
 trigger:
@@ -325,6 +376,51 @@ steps:
 
 ---
 kind: pipeline
+type: kubernetes
+name: tag-build-event-handler-docker
+
+trigger:
+  event:
+    - tag
+  ref:
+    include:
+      - refs/tags/teleport-event-handler-v*
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+steps:
+  - name: Build and push to ECR
+    image: docker:git
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: PLUGIN_DRONE_ECR_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: PLUGIN_DRONE_ECR_SECRET
+      AWS_DEFAULT_REGION: us-west-2
+      DOCKER_BUILDKIT: 1
+    volumes:
+      - name: dockersock
+        path: /var/run
+    commands:
+      - apk add --no-cache make aws-cli
+      - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
+      - make docker-push-event-handler
+
+services:
+  - name: start docker
+    image: docker:dind
+    privileged: true
+    volumes:
+      - name: dockersock
+        path: /var/run
+
+volumes:
+  - name: dockersock
+    temp: {}
+
+---
+kind: pipeline
 type: exec
 name: tag-build-event-handler-darwin
 
@@ -413,6 +509,6 @@ steps:
 
 ---
 kind: signature
-hmac: c427752b53eaa9eb47bf95e1c3aed04b4c8273f930ba4ab83c67f12052d37821
+hmac: 7381b82e23954f22b26d90324d9219d7b1f2c0d81a4b9e2b27f868674beec197
 
 ...

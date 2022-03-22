@@ -10,8 +10,9 @@ GENTERRAFORMPATH := $(shell go env GOPATH)/bin
 
 BUILDDIR ?= build
 
+GITREF = $(shell git describe --dirty --long --tags --match '*event-handler*')
 ADDFLAGS ?=
-BUILDFLAGS ?= $(ADDFLAGS) -ldflags "-w -s -X main.Sha=`git rev-parse HEAD` -X main.Version=$(VERSION)"
+BUILDFLAGS ?= $(ADDFLAGS) -ldflags "-w -s -X main.Gitref=$(GITREF) -X main.Version=$(VERSION)"
 CGOFLAG ?= CGO_ENABLED=1
 
 PASS ?= 1234
@@ -42,6 +43,10 @@ clean:
 .PHONY: docker-build
 docker-build: ## Build docker image with the plugin.
 	docker build ${DOCKER_BUILD_ARGS} -t ${DOCKER_IMAGE} -f ./Dockerfile ../
+
+.PHONY: docker-push
+docker-push:
+	docker push ${DOCKER_IMAGE}
 
 .PHONY: install
 install: build
