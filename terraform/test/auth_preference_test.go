@@ -17,68 +17,77 @@ limitations under the License.
 package test
 
 import (
+	"github.com/gravitational/teleport/api/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/stretchr/testify/require"
 )
 
 func (s *TerraformSuite) TestAuthPreference() {
-	res := "teleport_auth_preference"
-
-	create := s.terraformConfig + `
-		resource "` + res + `" "test" {
-			metadata {
-				labels = {
-					  "example" = "yes"
-				}
-			}
-			
-			spec {
-				disconnect_expired_cert = true
-			}			
-		}
-	`
-
-	update := s.terraformConfig + `
-		resource "` + res + `" "test" {
-			metadata {
-				labels = {
-					  "example" = "yes"
-				}
-			}
-			
-			spec {
-				disconnect_expired_cert = false
-			}			
-		}
-	`
-	name := res + ".test"
+	name := "teleport_auth_preference.test"
 
 	resource.Test(s.T(), resource.TestCase{
-		ProviderFactories:         s.terraformProviders,
+		ProtoV6ProviderFactories:  s.terraformProviders,
 		PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: create,
+				Config: s.getFixture("auth_preference_0_set.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "cluster_auth_preference"),
-					resource.TestCheckResourceAttr(name, "metadata.0.labels.example", "yes"),
-					resource.TestCheckResourceAttr(name, "spec.0.disconnect_expired_cert", "true"),
+					resource.TestCheckResourceAttr(name, "metadata.labels.example", "yes"),
+					resource.TestCheckResourceAttr(name, "spec.disconnect_expired_cert", "true"),
 				),
 			},
 			{
-				Config:   create, // Check that there is no state drift
+				Config:   s.getFixture("auth_preference_0_set.tf"),
 				PlanOnly: true,
 			},
 			{
-				Config: update,
+				Config: s.getFixture("auth_preference_1_update.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "cluster_auth_preference"),
-					resource.TestCheckResourceAttr(name, "metadata.0.labels.example", "yes"),
-					resource.TestCheckResourceAttr(name, "spec.0.disconnect_expired_cert", "false"),
+					resource.TestCheckResourceAttr(name, "spec.disconnect_expired_cert", "false"),
 				),
 			},
 			{
-				Config:   update, // Check that there is no state drift
+				Config:   s.getFixture("auth_preference_1_update.tf"),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestImportAuthPreference() {
+	r := "teleport_auth_preference"
+	id := "test_import"
+	name := r + "." + id
+
+	authPreference := &types.AuthPreferenceV2{
+		Metadata: types.Metadata{},
+		Spec: types.AuthPreferenceSpecV2{
+			DisconnectExpiredCert: types.NewBoolOption(true),
+		},
+	}
+	err := authPreference.CheckAndSetDefaults()
+	require.NoError(s.T(), err)
+
+	err = s.client.SetAuthPreference(s.Context(), authPreference)
+	require.NoError(s.T(), err)
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
+				ResourceName:  name,
+				ImportState:   true,
+				ImportStateId: id,
+				ImportStateCheck: func(state []*terraform.InstanceState) error {
+					require.Equal(s.T(), state[0].Attributes["kind"], "cluster_auth_preference")
+					require.Equal(s.T(), state[0].Attributes["spec.disconnect_expired_cert"], "true")
+
+					return nil
+				},
 			},
 		},
 	})

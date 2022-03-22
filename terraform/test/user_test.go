@@ -23,74 +23,6 @@ import (
 )
 
 func (s *TerraformSuite) TestUser() {
-	res := "teleport_user"
-
-	create := s.terraformConfig + `
-		resource "` + res + `" "test" {
-			metadata {
-				name    = "test"			
-				expires = "2022-10-12T07:20:50.3Z"
-				labels  = {
-				  	example = "yes"
-				}
-			}
-			
-			spec {
-				roles = ["admin"]
-
-				traits {
-					key   = "logins1"
-					value = ["example"]
-				}
-			
-				traits {
-					key   = "logins2"
-					value = ["example"]
-				}
-
-				oidc_identities {
-					connector_id = "oidc"
-					username     = "example"
-				}
-						
-				github_identities {
-					connector_id = "github"
-					username     = "example"
-				}
-			
-				saml_identities {
-					connector_id = "saml"
-					username     = "example"
-				}		 
-			}
-		}
-	`
-
-	update := s.terraformConfig + `
-		resource "` + res + `" "test" {
-			metadata {
-				name    = "test"			
-				expires = "2022-10-12T07:20:50.3Z"
-				labels  = {
-				  	example = "yes"
-				}
-			}
-			
-			spec {
-				roles = ["admin"]
-			
-				traits {
-					key   = "logins2"
-					value = ["example"]
-				}
-
-				oidc_identities {
-					connector_id = "oidc-2"
-					username     = "example"
-				}						
-			}
-		}
-	`
 	checkUserDestroyed := func(state *terraform.State) error {
 		_, err := s.client.GetUser("test", false)
 		if trace.IsNotFound(err) {
@@ -100,51 +32,49 @@ func (s *TerraformSuite) TestUser() {
 		return err
 	}
 
-	name := res + ".test"
+	name := "teleport_user.test"
 
 	resource.Test(s.T(), resource.TestCase{
-		ProviderFactories: s.terraformProviders,
-		CheckDestroy:      checkUserDestroyed,
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkUserDestroyed,
 		Steps: []resource.TestStep{
 			{
-				Config: create,
+				Config: s.getFixture("user_0_create.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "user"),
-					resource.TestCheckResourceAttr(name, "metadata.0.expires", "2022-10-12T07:20:50.3Z"),
-					resource.TestCheckResourceAttr(name, "spec.0.roles.0", "admin"),
-					resource.TestCheckResourceAttr(name, "spec.0.traits.0.key", "logins1"),
-					resource.TestCheckResourceAttr(name, "spec.0.traits.0.value.0", "example"),
-					resource.TestCheckResourceAttr(name, "spec.0.traits.1.key", "logins2"),
-					resource.TestCheckResourceAttr(name, "spec.0.traits.1.value.0", "example"),
-					resource.TestCheckResourceAttr(name, "spec.0.oidc_identities.0.connector_id", "oidc"),
-					resource.TestCheckResourceAttr(name, "spec.0.oidc_identities.0.username", "example"),
-					resource.TestCheckResourceAttr(name, "spec.0.github_identities.0.connector_id", "github"),
-					resource.TestCheckResourceAttr(name, "spec.0.github_identities.0.username", "example"),
-					resource.TestCheckResourceAttr(name, "spec.0.saml_identities.0.connector_id", "saml"),
-					resource.TestCheckResourceAttr(name, "spec.0.saml_identities.0.username", "example"),
+					resource.TestCheckResourceAttr(name, "version", "v2"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2025-10-12T07:20:50Z"),
+					resource.TestCheckResourceAttr(name, "spec.roles.0", "terraform"),
+					resource.TestCheckResourceAttr(name, "spec.traits.logins1.0", "example"),
+					resource.TestCheckResourceAttr(name, "spec.traits.logins2.0", "example"),
+					resource.TestCheckResourceAttr(name, "spec.oidc_identities.0.connector_id", "oidc"),
+					resource.TestCheckResourceAttr(name, "spec.oidc_identities.0.username", "example"),
+					resource.TestCheckResourceAttr(name, "spec.github_identities.0.connector_id", "github"),
+					resource.TestCheckResourceAttr(name, "spec.github_identities.0.username", "example"),
+					resource.TestCheckResourceAttr(name, "spec.saml_identities.0.connector_id", "saml"),
+					resource.TestCheckResourceAttr(name, "spec.saml_identities.0.username", "example"),
 				),
 			},
 			{
-				Config:   create, // Check that there is no state drift
+				Config:   s.getFixture("user_0_create.tf"),
 				PlanOnly: true,
 			},
 			{
-				Config: update,
+				Config: s.getFixture("user_1_update.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "user"),
-					resource.TestCheckResourceAttr(name, "metadata.0.expires", "2022-10-12T07:20:50.3Z"),
-					resource.TestCheckResourceAttr(name, "spec.0.roles.0", "admin"),
-					resource.TestCheckResourceAttr(name, "spec.0.traits.0.key", "logins2"),
-					resource.TestCheckResourceAttr(name, "spec.0.traits.0.value.0", "example"),
-					resource.TestCheckNoResourceAttr(name, "spec.0.traits.1.key"),
-					resource.TestCheckResourceAttr(name, "spec.0.oidc_identities.0.connector_id", "oidc-2"),
-					resource.TestCheckResourceAttr(name, "spec.0.oidc_identities.0.username", "example"),
-					resource.TestCheckNoResourceAttr(name, "spec.0.github_identities.0"),
-					resource.TestCheckNoResourceAttr(name, "spec.0.saml_identities.0"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2025-10-12T07:20:52Z"),
+					resource.TestCheckResourceAttr(name, "spec.roles.0", "terraform"),
+					resource.TestCheckResourceAttr(name, "spec.traits.logins2.0", "example"),
+					resource.TestCheckNoResourceAttr(name, "spec.traits.logins1"),
+					resource.TestCheckResourceAttr(name, "spec.oidc_identities.0.connector_id", "oidc-2"),
+					resource.TestCheckResourceAttr(name, "spec.oidc_identities.0.username", "example"),
+					resource.TestCheckNoResourceAttr(name, "spec.github_identities"),
+					resource.TestCheckNoResourceAttr(name, "spec.saml_identities"),
 				),
 			},
 			{
-				Config:   update, // Check that there is no state drift
+				Config:   s.getFixture("user_1_update.tf"),
 				PlanOnly: true,
 			},
 		},

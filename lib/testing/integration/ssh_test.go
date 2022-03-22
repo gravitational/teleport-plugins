@@ -42,7 +42,7 @@ func (s *IntegrationSSHSuite) TestBench() {
 	me, err := user.Current()
 	require.NoError(t, err)
 	var bootstrap Bootstrap
-	role, err := bootstrap.AddRole(me.Username, types.RoleSpecV4{Allow: types.RoleConditions{Logins: []string{me.Username}}})
+	role, err := bootstrap.AddRole(me.Username, types.RoleSpecV5{Allow: types.RoleConditions{Logins: []string{me.Username}}})
 	require.NoError(t, err)
 	user, err := bootstrap.AddUserWithRoles(me.Username, role.GetName())
 	require.NoError(t, err)

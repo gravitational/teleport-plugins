@@ -17,42 +17,15 @@ limitations under the License.
 package test
 
 import (
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/stretchr/testify/require"
 )
 
-func (s *TerraformSuite) TestToken() {
-	res := "teleport_provision_token"
-
-	create := s.terraformConfig + `
-		resource "` + res + `" "test" {
-			metadata {
-				name = "test"
-				expires = "2023-01-01T00:00:00Z"
-				labels = {
-					example = "yes"
-				}
-			}
-			spec {
-				roles = ["Node", "Auth"]
-			}
-		}
-	`
-
-	update := s.terraformConfig + `
-		resource "` + res + `" "test" {
-			metadata {
-				name = "test"
-				expires = "2023-01-01T00:00:00Z"
-			}
-			spec {
-				roles = ["Node"]
-			}
-		}
-	`
-
-	checkTokenDestroyed := func(state *terraform.State) error {
+func (s *TerraformSuite) TestProvisionToken() {
+	checkRoleDestroyed := func(state *terraform.State) error {
 		_, err := s.client.GetToken(s.Context(), "test")
 		if trace.IsNotFound(err) {
 			return nil
@@ -61,41 +34,83 @@ func (s *TerraformSuite) TestToken() {
 		return err
 	}
 
-	name := res + ".test"
+	name := "teleport_provision_token.test"
 
 	resource.Test(s.T(), resource.TestCase{
-		ProviderFactories: s.terraformProviders,
-		CheckDestroy:      checkTokenDestroyed,
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkRoleDestroyed,
 		Steps: []resource.TestStep{
 			{
-				Config: create,
+				Config: s.getFixture("provision_token_0_create.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "token"),
-					resource.TestCheckResourceAttr(name, "metadata.0.name", "test"),
-					resource.TestCheckResourceAttr(name, "metadata.0.expires", "2023-01-01T00:00:00Z"),
-					resource.TestCheckResourceAttr(name, "metadata.0.labels.example", "yes"),
-					resource.TestCheckResourceAttr(name, "spec.0.roles.0", "Node"),
-					resource.TestCheckResourceAttr(name, "spec.0.roles.1", "Auth"),
+					resource.TestCheckResourceAttr(name, "metadata.name", "test"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2028-01-01T00:00:00Z"),
+					resource.TestCheckResourceAttr(name, "metadata.labels.example", "yes"),
+					resource.TestCheckResourceAttr(name, "spec.roles.0", "Node"),
+					resource.TestCheckResourceAttr(name, "spec.roles.1", "Auth"),
+
+					resource.TestCheckResourceAttr(name, "version", "v2"),
 				),
 			},
 			{
-				Config:   create, // Check that there is no state drift
+				Config:   s.getFixture("provision_token_0_create.tf"),
 				PlanOnly: true,
 			},
 			{
-				Config: update,
+				Config: s.getFixture("provision_token_1_update.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "token"),
-					resource.TestCheckResourceAttr(name, "metadata.0.name", "test"),
-					resource.TestCheckResourceAttr(name, "metadata.0.expires", "2023-01-01T00:00:00Z"),
-					resource.TestCheckNoResourceAttr(name, "metadata.0.labels.example"),
-					resource.TestCheckResourceAttr(name, "spec.0.roles.0", "Node"),
-					resource.TestCheckNoResourceAttr(name, "spec.0.roles.1"),
+					resource.TestCheckResourceAttr(name, "metadata.name", "test"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2028-01-01T00:00:00Z"),
+					resource.TestCheckNoResourceAttr(name, "metadata.labels.example"),
+					resource.TestCheckResourceAttr(name, "spec.roles.0", "Node"),
+					resource.TestCheckNoResourceAttr(name, "spec.roles.1"),
+
+					resource.TestCheckResourceAttr(name, "version", "v2"),
 				),
 			},
 			{
-				Config:   update, // Check that there is no state drift
+				Config:   s.getFixture("provision_token_1_update.tf"),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestImportProvisionToken() {
+	r := "teleport_provision_token"
+	id := "test_import"
+	name := r + "." + id
+
+	token := &types.ProvisionTokenV2{
+		Metadata: types.Metadata{
+			Name: id,
+		},
+		Spec: types.ProvisionTokenSpecV2{
+			Roles: []types.SystemRole{"Node", "Auth"},
+		},
+	}
+	err := token.CheckAndSetDefaults()
+	require.NoError(s.T(), err)
+
+	err = s.client.UpsertToken(s.Context(), token)
+	require.NoError(s.T(), err)
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
+				ResourceName:  name,
+				ImportState:   true,
+				ImportStateId: id,
+				ImportStateCheck: func(state []*terraform.InstanceState) error {
+					require.Equal(s.T(), state[0].Attributes["kind"], "token")
+					require.Equal(s.T(), state[0].Attributes["metadata.name"], "test_import")
+
+					return nil
+				},
 			},
 		},
 	})
