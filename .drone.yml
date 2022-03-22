@@ -40,48 +40,6 @@ steps:
 
 ---
 kind: pipeline
-type: exec
-name: tag-build-terraform-darwin
-
-concurrency:
-  limit: 1
-
-platform:
-  os: darwin
-  arch: amd64
-
-trigger:
-  event:
-    - tag
-  ref:
-    include:
-      - refs/tags/terraform-provider-teleport-v*
-
-steps:
-  - name: Build artifacts
-    commands:
-      - mkdir -p build/
-      - make release/terraform
-      - find terraform/ -iname "*.tar.gz" -print -exec cp {} build/ \;
-      - cd build
-      - for FILE in *.tar.gz; do shasum -a 256 $FILE > $FILE.sha256; done
-      - ls -l .
-
-  - name: Upload to S3
-    environment:
-      AWS_S3_BUCKET:
-        from_secret: AWS_S3_BUCKET
-      AWS_ACCESS_KEY_ID:
-        from_secret: AWS_ACCESS_KEY_ID
-      AWS_SECRET_ACCESS_KEY:
-        from_secret: AWS_SECRET_ACCESS_KEY
-      AWS_REGION: us-west-2
-    commands:
-      - cd build
-      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
-
----
-kind: pipeline
 type: kubernetes
 name: stage-terraform-provider-registry
 
@@ -94,7 +52,7 @@ trigger:
 
 depends_on:
   - tag-build-terraform-linux
-  - tag-build-terraform-darwin
+#  - tag-build-terraform-darwin
 
 concurrency:
   limit: 1
@@ -133,6 +91,6 @@ steps:
 
 ---
 kind: signature
-hmac: c411568d2cdc1b25c2d17dac15f7e9c09bebf4363bd3faa4f05ed335b8786fca
+hmac: a309996cfeafb57a6f1c7b377163f18d880ee45a013462736c35257fb64a7b36
 
 ...
