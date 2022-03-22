@@ -54,3 +54,7 @@ release: clean $(BINARY)
 .PHONY: docker-build
 docker-build: ## Build docker image with the plugin.
 	docker build ${DOCKER_BUILD_ARGS} -t ${DOCKER_IMAGE} -f ../Dockerfile ../..
+
+.PHONY: docker-push
+docker-push: 
+	docker push ${DOCKER_IMAGE}

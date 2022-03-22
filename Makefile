@@ -40,10 +40,19 @@ docker-build-access-plugins: docker-build-access-email \
  docker-build-access-pagerduty \
  docker-build-access-slack
 
+# Push specific access plugin with docker to ECR
+.PHONY: docker-push-access-%
+docker-push-access-%: docker-build-access-%
+	$(MAKE) -C access/$* docker-push
+
 # Build event-handler plugin with docker
 .PHONY: docker-build-event-handler
 docker-build-event-handler:
 	$(MAKE) -C event-handler docker-build
+
+.PHONY: docker-push-event-handler
+docker-push-event-handler: docker-build-event-handler
+	$(MAKE) -C event-handler docker-push
 
 .PHONY: terraform
 terraform:
