@@ -113,17 +113,11 @@ update-version:
 	# Make sure VERSION is set on the command line "make update-version VERSION=x.y.z".
 	@test $(VERSION)
 	sed -i '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
-	make -C event-handler version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' access/jira/Makefile
-	make -C access/jira version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' access/mattermost/Makefile
-	make -C access/mattermost version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' access/slack/Makefile
-	make -C access/slack version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
-	make -C access/pagerduty version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
-	make -C access/email version.go
 	sed -i '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
 
 .PHONY: update-tag
