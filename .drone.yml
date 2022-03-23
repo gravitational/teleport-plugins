@@ -70,7 +70,7 @@ steps:
         --name teleport
 
     environment:
-      STAGING_REGION: us-west-2
+      STAGING_REGION: us-east-2
       STAGING_BUCKET:
         from_secret: AWS_S3_BUCKET
       STAGING_ACCESS_KEY_ID:
@@ -78,13 +78,13 @@ steps:
       STAGING_SECRET_ACCESS_KEY:
         from_secret: AWS_SECRET_ACCESS_KEY
       
-      PRODUCTION_REGION: us-west-2
+      PRODUCTION_REGION: us-east-2
       PROD_BUCKET:
-        from_secret: AWS_S3_BUCKET
+        from_secret: AWS_TERRAFORM_STAGING_BUCKET
       PROD_ACCESS_KEY_ID:
-        from_secret: AWS_ACCESS_KEY_ID
+        from_secret: AWS_TERRAFORM_STAGING_ACCESS_KEY_ID
       PROD_SECRET_ACCESS_KEY:
-        from_secret: AWS_SECRET_ACCESS_KEY
+        from_secret: AWS_TERRAFORM_SECRET_ACCESS_KEY  # rename to AWS_TERRAFORM_STAGING_SECRET_ACCESS_KEY
       
       SIGNING_KEY:
         from_secret: TERRAFORM_REGISTRY_SIGNING_KEY
@@ -92,6 +92,6 @@ steps:
 
 ---
 kind: signature
-hmac: 5d193c5f00757e5d35c147696da8b09e6c09cd6012d080c1df1a2e1f6b91463a
+hmac: 212e3c224f4d500ce35063370bdf6adaf350dff5008ae56b6a566c05044ac43e
 
 ...
