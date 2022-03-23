@@ -42,7 +42,7 @@ should match the snapshot:
               name: config
               subPath: teleport-email.toml
             - mountPath: /var/lib/teleport/plugins/email/auth_id
-              name: config
+              name: auth-id
               subPath: auth_id
           securityContext: {}
           volumes:
@@ -50,3 +50,7 @@ should match the snapshot:
               defaultMode: 384
               name: RELEASE-NAME-teleport-plugin-email
             name: config
+          - name: auth-id
+            secret:
+              defaultMode: 384
+              secretName: ""
