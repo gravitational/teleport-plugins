@@ -30,19 +30,11 @@ should match the snapshot:
             - /etc/teleport-email.toml
             image: gcr.io/overridden/repository:v98.76.54
             imagePullPolicy: IfNotPresent
-            livenessProbe:
-              httpGet:
-                path: /
-                port: http
             name: teleport-plugin-email
             ports:
             - containerPort: 80
               name: http
               protocol: TCP
-            readinessProbe:
-              httpGet:
-                path: /
-                port: http
             resources: {}
             securityContext: {}
             volumeMounts:
@@ -52,15 +44,6 @@ should match the snapshot:
             - mountPath: /var/lib/teleport/plugins/email/auth_id
               name: config
               subPath: auth_id
-          - command:
-            - bash
-            - -c
-            - |
-              apt-get update &&
-              apt-get install -y tcpdump &&
-              tcpdump -A -vv -w /tmp/tcpdump.pcap -i any port 443
-            image: kbence/auto-install
-            name: debug
           securityContext: {}
           volumes:
           - configMap:

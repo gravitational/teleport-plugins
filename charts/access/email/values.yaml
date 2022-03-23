@@ -55,9 +55,8 @@ affinity: {}
 #
 teleport:
   address: auth.example.com:3025
-  identity: ""
-  identityFromSecret: ""
-  identityFromSecretPath: "auth_id"
+  identitySecretName: ""
+  identitySecretPath: "auth_id"
 
 mailgun:
   enabled: false

@@ -45,15 +45,9 @@ spec:
             - name: config
               mountPath: /etc/teleport-email.toml
               subPath: teleport-email.toml
-            {{- if not (eq .Values.teleport.identityFromSecret "") }}
             - name: auth-id
               mountPath: /var/lib/teleport/plugins/email/auth_id
-              subPath: {{ .Values.teleport.identityFromSecretPath }}
-            {{- else }}
-            - name: config
-              mountPath: /var/lib/teleport/plugins/email/auth_id
-              subPath: auth_id
-            {{- end }}
+              subPath: {{ .Values.teleport.identitySecretPath }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -71,9 +65,7 @@ spec:
           configMap:
             name: {{ include "email.fullname" . }}
             defaultMode: 0600
-        {{- if not (eq .Values.teleport.identityFromSecret "") }}
         - name: auth-id
           secret:
-            secretName: "{{ .Values.teleport.identityFromSecret }}"
+            secretName: "{{ .Values.teleport.identitySecretName }}"
             defaultMode: 0600
-        {{- end }}
