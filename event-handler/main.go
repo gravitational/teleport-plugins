@@ -64,7 +64,7 @@ func main() {
 
 	switch {
 	case ctx.Command() == "version":
-		lib.PrintVersion(pluginName, Version, Sha)
+		lib.PrintVersion(pluginName, Version, Gitref)
 	case strings.HasPrefix(ctx.Command(), "configure"):
 		err := RunConfigureCmd(&cli.Configure)
 		if err != nil {

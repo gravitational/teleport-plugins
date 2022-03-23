@@ -1,0 +1,17 @@
+terraform {
+  required_providers {
+    teleport = {
+      version = "9.0.1"
+      source  = "gravitational.com/teleport/teleport"
+    }
+  }
+}
+
+# Terraform Provider configuration. See provider.go for available options
+provider "teleport" {
+  # Path to Teleport identity file
+  identity_file_path = "/tmp/terraform-identity"
+
+  # Teleport proxy addr
+  addr = "localhost:3025"
+}

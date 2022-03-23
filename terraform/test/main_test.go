@@ -17,20 +17,26 @@ limitations under the License.
 package test
 
 import (
+	"embed"
+	"fmt"
 	"os/user"
+	"path/filepath"
 	"testing"
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
 	"github.com/gravitational/teleport-plugins/terraform/provider"
-	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/utils"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
+
+//go:embed fixtures/*
+var fixtures embed.FS
 
 type TerraformSuite struct {
 	integration.AuthSetup
@@ -45,9 +51,9 @@ type TerraformSuite struct {
 	// terraformConfig represents Terraform provider configuration
 	terraformConfig string
 	// terraformProvider represents an instance of a Terraform provider
-	terraformProvider *schema.Provider
+	terraformProvider tfsdk.Provider
 	// terraformProviders represents an array of provider factories that Terraform will use to instantiate the provider(s) under test.
-	terraformProviders map[string]func() (*schema.Provider, error)
+	terraformProviders map[string]func() (tfprotov6.ProviderServer, error)
 }
 
 func TestTerraform(t *testing.T) { suite.Run(t, &TerraformSuite{}) }
@@ -74,7 +80,7 @@ func (s *TerraformSuite) SetupSuite() {
 	var bootstrap integration.Bootstrap
 
 	unrestricted := []string{"list", "create", "read", "update", "delete"}
-	role, err := bootstrap.AddRole("terraform", types.RoleSpecV4{
+	role, err := bootstrap.AddRole("terraform", types.RoleSpecV5{
 		Allow: types.RoleConditions{
 			DatabaseLabels: types.Labels(map[string]utils.Strings{"*": []string{"*"}}),
 			AppLabels:      types.Labels(map[string]utils.Strings{"*": []string{"*"}}),
@@ -120,16 +126,16 @@ func (s *TerraformSuite) SetupSuite() {
 		}
 	`
 
-	s.terraformProvider = provider.Provider()
-	s.terraformProviders = make(map[string]func() (*schema.Provider, error))
-	s.terraformProviders["teleport"] = func() (*schema.Provider, error) {
+	s.terraformProvider = provider.New()
+	s.terraformProviders = make(map[string]func() (tfprotov6.ProviderServer, error))
+	s.terraformProviders["teleport"] = func() (tfprotov6.ProviderServer, error) {
 		// Terraform configures provider on every test step, but does not clean up previous one, which produces
 		// to "too many open files" at some point.
 		//
 		// With this statement we try to forcefully close previously opened client, which stays cached in
 		// the provider variable.
 		s.closeClient()
-		return s.terraformProvider, nil
+		return tfsdk.NewProtocol6Server(s.terraformProvider), nil
 	}
 }
 
@@ -141,9 +147,19 @@ func (s *TerraformSuite) SetupTest() {
 }
 
 func (s *TerraformSuite) closeClient() {
-	m := s.terraformProvider.Meta()
-	if m != nil {
-		c := m.(*client.Client)
-		require.NoError(s.T(), c.Close())
+	p, ok := s.terraformProvider.(*provider.Provider)
+	require.True(s.T(), ok)
+	if p != nil && p.Client != nil {
+		require.NoError(s.T(), p.Client.Close())
 	}
+}
+
+// getFixture loads fixture and returns it as string or <error> if failed
+func (s *TerraformSuite) getFixture(name string) string {
+	b, err := fixtures.ReadFile(filepath.Join("fixtures", name))
+	if err != nil {
+		return fmt.Sprintf("<error: %v fixture not found>", name)
+	}
+
+	return s.terraformConfig + "\n" + string(b)
 }
