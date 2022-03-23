@@ -33,7 +33,7 @@ steps:
         from_secret: AWS_ACCESS_KEY_ID
       secret_key:
         from_secret: AWS_SECRET_ACCESS_KEY
-      region: us-west-2
+      region: us-east-2
       source: /go/src/github.com/gravitational/teleport-plugins/build/*
       target: teleport-plugins/tag/${DRONE_TAG}
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/build
@@ -91,6 +91,6 @@ steps:
 
 ---
 kind: signature
-hmac: a309996cfeafb57a6f1c7b377163f18d880ee45a013462736c35257fb64a7b36
+hmac: 5d193c5f00757e5d35c147696da8b09e6c09cd6012d080c1df1a2e1f6b91463a
 
 ...
