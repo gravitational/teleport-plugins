@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "email.labels" . | nindent 4 }}
 spec:
-  replicas: 1 # {{ .Values.replicaCount }}
+  replicas: 1
   selector:
     matchLabels:
       {{- include "email.selectorLabels" . | nindent 6 }}
@@ -39,23 +39,21 @@ spec:
             - name: http
               containerPort: 80
               protocol: TCP
-          livenessProbe:
-            httpGet:
-              path: /
-              port: http
-          readinessProbe:
-            httpGet:
-              path: /
-              port: http
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: config
               mountPath: /etc/teleport-email.toml
               subPath: teleport-email.toml
+            {{- if not (eq .Values.teleport.identityFromSecret "") }}
+            - name: auth-id
+              mountPath: /var/lib/teleport/plugins/email/auth_id
+              subPath: {{ .Values.teleport.identityFromSecretPath }}
+            {{- else }}
             - name: config
               mountPath: /var/lib/teleport/plugins/email/auth_id
               subPath: auth_id
+            {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -73,3 +71,9 @@ spec:
           configMap:
             name: {{ include "email.fullname" . }}
             defaultMode: 0600
+        {{- if not (eq .Values.teleport.identityFromSecret "") }}
+        - name: auth-id
+          secret:
+            secretName: "{{ .Values.teleport.identityFromSecret }}"
+            defaultMode: 0600
+        {{- end }}

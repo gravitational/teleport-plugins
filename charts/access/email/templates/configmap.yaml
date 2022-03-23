@@ -33,5 +33,7 @@ data:
     [log]
     output = "{{ .Values.log.output }}"
     severity = "{{ .Values.log.severity }}"
+  {{- if eq .Values.teleport.identityFromSecret "" }}
   auth_id: |
     {{- .Values.teleport.identity | nindent 4 }}
+  {{- end }}
