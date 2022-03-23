@@ -62,7 +62,8 @@ steps:
     image: golang:1.17.5
     commands:
       - cd tooling
-      - go run ./cmd-promote-terraform \
+      - |
+        go run ./cmd/promote-terraform \
         --tag ${DRONE_TAG}             \
         -p 4.0 -p 5.1                  \
         --namespace gravitational      \
