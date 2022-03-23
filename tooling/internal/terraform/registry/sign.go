@@ -60,7 +60,7 @@ func RepackProvider(dstDir string, srcFileName string, signingEntity *openpgp.En
 		return nil, trace.Wrap(err, "Bad filename")
 	}
 
-	log.Infof("Provider platform: %s/%s/%s\n", info.Version, info.OS, info.Arch)
+	log.Infof("Provider platform: %s/%s/%s", info.Version, info.OS, info.Arch)
 
 	src, err := os.Open(srcFileName)
 	if err != nil {

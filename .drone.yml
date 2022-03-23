@@ -58,16 +58,16 @@ concurrency:
   limit: 1
 
 steps:
-  - name: Promote terraform provider to staging registry
+  - name: Upload terraform provider to staging registry
     image: golang:1.17.5
     commands:
       - cd tooling
       - |
-        go run ./cmd/promote-terraform \
-        --tag ${DRONE_TAG}             \
-        -p 4.0 -p 5.1                  \
-        --namespace gravitational      \
-        --name teleport
+        go run ./cmd/promote-terraform   \
+          --tag ${DRONE_TAG}             \
+          -p 4.0 -p 5.1                  \
+          --namespace gravitational      \
+          --name teleport
 
     environment:
       STAGING_REGION: us-east-2
@@ -80,18 +80,56 @@ steps:
       
       PRODUCTION_REGION: us-east-2
       PROD_BUCKET:
-        from_secret: AWS_TERRAFORM_STAGING_BUCKET
+        from_secret: STAGING_AWS_TERRAFORM_BUCKET
       PROD_ACCESS_KEY_ID:
-        from_secret: AWS_TERRAFORM_STAGING_ACCESS_KEY_ID
+        from_secret: STAGING_AWS_TERRAFORM_ACCESS_KEY_ID
       PROD_SECRET_ACCESS_KEY:
-        from_secret: AWS_TERRAFORM_SECRET_ACCESS_KEY  # rename to AWS_TERRAFORM_STAGING_SECRET_ACCESS_KEY
+        from_secret: STAGING_AWS_TERRAFORM_SECRET_ACCESS_KEY
       
       SIGNING_KEY:
-        from_secret: TERRAFORM_REGISTRY_SIGNING_KEY
+        from_secret: STAGING_TERRAFORM_REGISTRY_SIGNING_KEY
+---
+kind: pipeline
+type: kubernetes
+name: promote-terraform-provider
 
+concurrency:
+  limit: 1
+
+steps:
+  - name: Promote terraform provider to public registry
+    image: golang:1.17.5
+    commands:
+      - cd tooling
+      - |
+        go run ./cmd/promote-terraform   \
+          --tag ${DRONE_TAG}             \
+          -p 4.0 -p 5.1                  \
+          --namespace gravitational      \
+          --name teleport
+
+    environment:
+      STAGING_REGION: us-east-2
+      STAGING_BUCKET:
+        from_secret: AWS_S3_BUCKET
+      STAGING_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      STAGING_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      
+      PRODUCTION_REGION: ap-southeast-2
+      PROD_BUCKET:
+        from_secret: PRODUCTION_AWS_TERRAFORM_BUCKET
+      PROD_ACCESS_KEY_ID:
+        from_secret: PRODUCTION_AWS_TERRAFORM_ACCESS_KEY_ID
+      PROD_SECRET_ACCESS_KEY:
+        from_secret: PRODUCTION_AWS_TERRAFORM_SECRET_ACCESS_KEY 
+
+      SIGNING_KEY:
+        from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 
 ---
 kind: signature
-hmac: 212e3c224f4d500ce35063370bdf6adaf350dff5008ae56b6a566c05044ac43e
+hmac: 0da8f5b80ad340c206367ddc7b64f44b4c22ee0b81e4fe4179491c04754bb82a
 
 ...

@@ -33,7 +33,6 @@ const (
 
 func main() {
 	args := parseCommandLine()
-	log.Infof("Version tag is %s\n", args.providerTag)
 
 	workspace, err := ensureWorkspaceExists(args.workingDir)
 	if err != nil {

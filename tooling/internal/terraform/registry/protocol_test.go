@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/coreos/go-semver/semver"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,7 +32,6 @@ const validIndex = `
 		]
 	  }
 	]
-  
 } 
 `
 
@@ -39,7 +39,7 @@ func TestIndexJson(t *testing.T) {
 	uut := Versions{
 		Versions: []*Version{
 			{
-				Version:   "2.0.0",
+				Version:   semver.Version{Major: 2, Minor: 0, Patch: 0},
 				Protocols: []string{"4.0", "5.1"},
 				Platforms: []Platform{
 					{OS: "darwin", Arch: "amd64"},
@@ -49,7 +49,7 @@ func TestIndexJson(t *testing.T) {
 				},
 			},
 			{
-				Version:   "2.0.1",
+				Version:   semver.Version{Major: 2, Minor: 0, Patch: 1},
 				Protocols: []string{"5.2"},
 				Platforms: []Platform{
 					{OS: "darwin", Arch: "amd64"},
