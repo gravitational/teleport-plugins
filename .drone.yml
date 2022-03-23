@@ -93,6 +93,12 @@ kind: pipeline
 type: kubernetes
 name: promote-terraform-provider
 
+trigger:
+  event:
+  - promote
+  target:
+  - production
+
 concurrency:
   limit: 1
 
