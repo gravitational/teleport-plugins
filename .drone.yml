@@ -508,7 +508,116 @@ steps:
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/
 
 ---
+kind: pipeline
+type: kubernetes
+name: publish-access-images
+
+trigger:
+  event:
+    - promote
+  target:
+    - production
+    - publish-images
+    - publish-access-images
+  ref:
+    include:
+      - refs/tags/teleport-jira-v*
+      - refs/tags/teleport-mattermost-v*
+      - refs/tags/teleport-pagerduty-v*
+      - refs/tags/teleport-slack-v*
+      - refs/tags/teleport-email-v*
+
+clone:
+  disable: true
+
+steps:
+  - name: Promote image
+    image: docker:git
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: PLUGIN_DRONE_ECR_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: PLUGIN_DRONE_ECR_SECRET
+      AWS_DEFAULT_REGION: us-west-2
+      DOCKER_BUILDKIT: 1
+    volumes:
+      - name: dockersock
+        path: /var/run
+    commands:
+      - apk add --no-cache make aws-cli
+      - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
+      - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
+      - docker login -u="$QUAYIO_DOCKER_USERNAME" -p="$QUAYIO_DOCKER_PASSWORD" quay.io
+      - make docker-promote-access-${PLUGIN_TYPE}
+
+services:
+  - name: start docker
+    image: docker:dind
+    privileged: true
+    volumes:
+      - name: dockersock
+        path: /var/run
+
+volumes:
+  - name: dockersock
+    temp: {}
+
+---
+kind: pipeline
+type: kubernetes
+name: publish-event-handler-image
+
+trigger:
+  event:
+    - promote
+  target:
+    - production
+    - publish-images
+    - publish-event-handler-image
+  ref:
+    include:
+      - refs/tags/teleport-event-handler-v*
+
+clone:
+  disable: true
+
+steps:
+  - name: Promote image
+    image: docker:git
+    environment:
+      QUAYIO_DOCKER_USERNAME:
+        from_secret: PRODUCTION_QUAYIO_DOCKER_USERNAME
+      QUAYIO_DOCKER_PASSWORD:
+        from_secret: PRODUCTION_QUAYIO_DOCKER_PASSWORD
+      AWS_ACCESS_KEY_ID:
+        from_secret: PLUGIN_DRONE_ECR_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: PLUGIN_DRONE_ECR_SECRET
+      AWS_DEFAULT_REGION: us-west-2
+      DOCKER_BUILDKIT: 1
+    volumes:
+      - name: dockersock
+        path: /var/run
+    commands:
+      - apk add --no-cache make aws-cli
+      - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
+      - docker login -u="$QUAYIO_DOCKER_USERNAME" -p="$QUAYIO_DOCKER_PASSWORD" quay.io
+      - make docker-promote-event-handler
+
+services:
+  - name: start docker
+    image: docker:dind
+    privileged: true
+    volumes:
+      - name: dockersock
+        path: /var/run
+
+volumes:
+  - name: dockersock
+    temp: {}
+
+---
 kind: signature
-hmac: 7381b82e23954f22b26d90324d9219d7b1f2c0d81a4b9e2b27f868674beec197
+hmac: 13986f1874a8bb684f4bcab719979df3fa83b310643b056850302f01eac7b584
 
 ...
