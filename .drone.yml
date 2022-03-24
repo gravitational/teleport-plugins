@@ -534,6 +534,10 @@ steps:
   - name: Promote image
     image: docker:git
     environment:
+      QUAYIO_DOCKER_USERNAME:
+        from_secret: PRODUCTION_QUAYIO_DOCKER_USERNAME
+      QUAYIO_DOCKER_PASSWORD:
+        from_secret: PRODUCTION_QUAYIO_DOCKER_PASSWORD
       AWS_ACCESS_KEY_ID:
         from_secret: PLUGIN_DRONE_ECR_KEY
       AWS_SECRET_ACCESS_KEY:
