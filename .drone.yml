@@ -155,6 +155,32 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
+name: helm-unittests
+
+trigger:
+  branch:
+    - master
+    - branch/*
+  event:
+    include:
+      - push
+  repo:
+    include:
+      - gravitational/*
+
+workspace:
+  path: /tmp/teleport-plugins/helm-unittests
+
+steps:
+  - name: Run unittests
+    image: alpine/helm
+    commands:
+      - helm plugin install https://github.com/vbehar/helm3-unittest
+      - helm unittest ./charts/access/email
+
+---
+kind: pipeline
+type: kubernetes
 name: tag-build-plugins-linux
 
 trigger:
@@ -224,7 +250,7 @@ depends_on:
 steps:
   - name: fetch tags
     image: docker:git
-    commands: 
+    commands:
       - git fetch --tags
 
   - name: Build and push to ECR
@@ -397,7 +423,7 @@ workspace:
 steps:
   - name: fetch tags
     image: docker:git
-    commands: 
+    commands:
       - git fetch --tags
 
   - name: Build and push to ECR
@@ -626,6 +652,6 @@ volumes:
 
 ---
 kind: signature
-hmac: 9f4c1a36000b9b2637e790418a624a31c162e2bb248cc6718a1c28a82a8b10c4
+hmac: 3ffa554745f2b45da077989806994a50135b32b2c05cf4582c563ef6f68777f6
 
 ...
