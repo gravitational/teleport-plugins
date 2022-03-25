@@ -238,7 +238,7 @@ steps:
       - apk add --no-cache make aws-cli
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
       - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
-      - make docker-push-access-${PLUGIN_TYPE}
+      - make docker-push-access-$PLUGIN_TYPE
 
 services:
   - name: start docker
@@ -552,7 +552,7 @@ steps:
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
       - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
       - docker login -u="$QUAYIO_DOCKER_USERNAME" -p="$QUAYIO_DOCKER_PASSWORD" quay.io
-      - make docker-promote-access-${PLUGIN_TYPE}
+      - make docker-promote-access-$PLUGIN_TYPE
 
 services:
   - name: start docker
@@ -622,6 +622,6 @@ volumes:
 
 ---
 kind: signature
-hmac: 13986f1874a8bb684f4bcab719979df3fa83b310643b056850302f01eac7b584
+hmac: b49fd028380752b94905fa2598b96c1c5f4565b77feb09705537a8d90e44711e
 
 ...

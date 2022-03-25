@@ -1,4 +1,4 @@
-VERSION=9.0.2-dev.2
+VERSION=9.0.2-dev.3
 GO_VERSION=1.17.8
 
 BUILDDIR ?= build
