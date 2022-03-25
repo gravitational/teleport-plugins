@@ -4,7 +4,7 @@ GO_VERSION=1.17.8
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-gitlab
 GITTAG=v$(VERSION)
-GITREF = $(shell git describe --dirty --long --tags --match '*gitlab*')
+GITREF ?= $(shell git describe --dirty --long --tags --match '*gitlab*')
 ADDFLAGS ?=
 BUILDFLAGS ?= $(ADDFLAGS) -ldflags "-w -s -X main.Gitref=$(GITREF) -X main.Version=$(VERSION)"
 CGOFLAG ?= CGO_ENABLED=1
@@ -18,7 +18,7 @@ RELEASE_MESSAGE = "Building with GOOS=$(OS) GOARCH=$(ARCH)."
 
 DOCKER_NAME=access-plugin-gitlab
 DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/teleport/$(DOCKER_NAME):$(VERSION)
-DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg ACCESS_PLUGIN=gitlab
+DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg ACCESS_PLUGIN=gitlab --build-arg GITREF=$(GITREF)
 
 .PHONY: $(BINARY)
 $(BINARY):
