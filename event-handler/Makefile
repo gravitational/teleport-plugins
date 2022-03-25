@@ -10,7 +10,7 @@ GENTERRAFORMPATH := $(shell go env GOPATH)/bin
 
 BUILDDIR ?= build
 
-GITREF = $(shell git describe --dirty --long --tags --match '*event-handler*')
+GITREF ?= $(shell git describe --dirty --long --tags --match '*event-handler*')
 ADDFLAGS ?=
 BUILDFLAGS ?= $(ADDFLAGS) -ldflags "-w -s -X main.Gitref=$(GITREF) -X main.Version=$(VERSION)"
 CGOFLAG ?= CGO_ENABLED=1
@@ -25,7 +25,7 @@ IDENTITY_FILE=example/keys/identity
 DOCKER_NAME=event-handler-plugin
 DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/teleport/$(DOCKER_NAME):$(VERSION)
 DOCKER_IMAGE_QUAY = quay.io/gravitational/$(DOCKER_NAME):$(VERSION)
-DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION}
+DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg GITREF=$(GITREF)
 
 RELEASE = teleport-event-handler-v$(VERSION)-$(OS)-$(ARCH)-bin
 
