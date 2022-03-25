@@ -173,8 +173,10 @@ workspace:
 
 steps:
   - name: Run unittests
-    image: alpine/helm
+    image: alpine
     commands:
+      - apk add openssl curl bash git
+      - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
       - helm plugin install https://github.com/vbehar/helm3-unittest
       - helm unittest ./charts/access/email
 
