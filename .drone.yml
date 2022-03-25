@@ -222,6 +222,11 @@ depends_on:
   - test-linux
 
 steps:
+  - name: fetch tags
+    image: docker:git
+    commands: 
+      - git fetch --tags
+
   - name: Build and push to ECR
     image: docker:git
     environment:
@@ -390,6 +395,11 @@ workspace:
   path: /go/src/github.com/gravitational/teleport-plugins
 
 steps:
+  - name: fetch tags
+    image: docker:git
+    commands: 
+      - git fetch --tags
+
   - name: Build and push to ECR
     image: docker:git
     environment:
@@ -616,6 +626,6 @@ volumes:
 
 ---
 kind: signature
-hmac: b53664439ae69b842d61487aff67fc86c58f2df0d30f6622ddd9854dcbea07ce
+hmac: 9f4c1a36000b9b2637e790418a624a31c162e2bb248cc6718a1c28a82a8b10c4
 
 ...
