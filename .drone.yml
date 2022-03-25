@@ -222,6 +222,11 @@ depends_on:
   - test-linux
 
 steps:
+  - name: fetch tags
+    image: docker:git
+    commands: 
+      - git fetch --tags
+
   - name: Build and push to ECR
     image: docker:git
     environment:
@@ -238,7 +243,7 @@ steps:
       - apk add --no-cache make aws-cli
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
       - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
-      - make docker-push-access-${PLUGIN_TYPE}
+      - make docker-push-access-$PLUGIN_TYPE
 
 services:
   - name: start docker
@@ -390,6 +395,11 @@ workspace:
   path: /go/src/github.com/gravitational/teleport-plugins
 
 steps:
+  - name: fetch tags
+    image: docker:git
+    commands: 
+      - git fetch --tags
+
   - name: Build and push to ECR
     image: docker:git
     environment:
@@ -527,9 +537,6 @@ trigger:
       - refs/tags/teleport-slack-v*
       - refs/tags/teleport-email-v*
 
-clone:
-  disable: true
-
 steps:
   - name: Promote image
     image: docker:git
@@ -552,7 +559,7 @@ steps:
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
       - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
       - docker login -u="$QUAYIO_DOCKER_USERNAME" -p="$QUAYIO_DOCKER_PASSWORD" quay.io
-      - make docker-promote-access-${PLUGIN_TYPE}
+      - make docker-promote-access-$PLUGIN_TYPE
 
 services:
   - name: start docker
@@ -581,9 +588,6 @@ trigger:
   ref:
     include:
       - refs/tags/teleport-event-handler-v*
-
-clone:
-  disable: true
 
 steps:
   - name: Promote image
@@ -622,6 +626,6 @@ volumes:
 
 ---
 kind: signature
-hmac: 13986f1874a8bb684f4bcab719979df3fa83b310643b056850302f01eac7b584
+hmac: 9f4c1a36000b9b2637e790418a624a31c162e2bb248cc6718a1c28a82a8b10c4
 
 ...
