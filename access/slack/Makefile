@@ -62,6 +62,6 @@ docker-push: ## Push docker image with the plugin.
 
 .PHONY: docker-promote
 docker-promote:
-	docker pull ${DOCKER_IMAGE}
-	docker tag ${DOCKER_IMAGE} ${DOCKER_IMAGE_QUAY}
+	docker pull ${DOCKER_IMAGE} && \
+	docker tag ${DOCKER_IMAGE} ${DOCKER_IMAGE_QUAY} && \
 	docker push ${DOCKER_IMAGE_QUAY}
