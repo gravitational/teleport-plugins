@@ -24,6 +24,7 @@ IDENTITY_FILE=example/keys/identity
 
 DOCKER_NAME=event-handler-plugin
 DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/teleport/$(DOCKER_NAME):$(VERSION)
+DOCKER_IMAGE_QUAY = quay.io/gravitational/$(DOCKER_NAME):$(VERSION)
 DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION}
 
 RELEASE = teleport-event-handler-v$(VERSION)-$(OS)-$(ARCH)-bin
@@ -47,6 +48,12 @@ docker-build: ## Build docker image with the plugin.
 .PHONY: docker-push
 docker-push:
 	docker push ${DOCKER_IMAGE}
+
+.PHONY: docker-promote
+docker-promote:
+	docker pull ${DOCKER_IMAGE} && \
+	docker tag ${DOCKER_IMAGE} ${DOCKER_IMAGE_QUAY} && \
+	docker push ${DOCKER_IMAGE_QUAY}
 
 .PHONY: install
 install: build
