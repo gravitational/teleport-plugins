@@ -3,10 +3,9 @@ ARG GO_VERSION
 
 FROM golang:${GO_VERSION} as builder
 
-WORKDIR /workspace
+ARG GITREF
 
-# Copy .git directory needed for go build
-COPY .git .git
+WORKDIR /workspace
 
 # Copy the Go Modules manifests
 COPY go.mod go.mod
@@ -19,7 +18,7 @@ COPY event-handler event-handler
 COPY lib lib
 
 # Build
-RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build make -C event-handler
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build make -C event-handler GITREF=${GITREF}
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
