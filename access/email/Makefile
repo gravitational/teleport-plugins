@@ -1,4 +1,4 @@
-VERSION=9.0.1
+VERSION=9.0.2-dev.7
 GO_VERSION=1.17.8
 
 BUILDDIR ?= build
@@ -58,6 +58,7 @@ docker-build: ## Build docker image with the plugin.
 
 .PHONY: docker-push
 docker-push: 
+	git status 
 	docker push ${DOCKER_IMAGE}
 
 .PHONY: docker-promote

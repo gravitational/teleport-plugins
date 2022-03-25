@@ -226,6 +226,7 @@ steps:
     image: docker:git
     commands: 
       - git fetch --tags
+      - git status 
 
   - name: Build and push to ECR
     image: docker:git
