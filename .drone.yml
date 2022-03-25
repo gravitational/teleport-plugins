@@ -527,9 +527,6 @@ trigger:
       - refs/tags/teleport-slack-v*
       - refs/tags/teleport-email-v*
 
-clone:
-  disable: true
-
 steps:
   - name: Promote image
     image: docker:git
@@ -582,9 +579,6 @@ trigger:
     include:
       - refs/tags/teleport-event-handler-v*
 
-clone:
-  disable: true
-
 steps:
   - name: Promote image
     image: docker:git
@@ -622,6 +616,6 @@ volumes:
 
 ---
 kind: signature
-hmac: b49fd028380752b94905fa2598b96c1c5f4565b77feb09705537a8d90e44711e
+hmac: b53664439ae69b842d61487aff67fc86c58f2df0d30f6622ddd9854dcbea07ce
 
 ...
