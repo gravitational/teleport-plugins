@@ -161,24 +161,60 @@ We _could_ modify Houston to serve the required files, but as the service is
 already slated for retirement, that does not seem to be a good use of time
 & money.
 
-#### Overall architecture
+### Overall architecture
 
-The pre-built registry will be stored in an AWS S3 bucket, and exposed
-to the Internet via a CloudFront CDN service.
+In short:
 
-The storage bucket will be configured as per the Gold-class storage requirements
+* Separate _Staging_ and _Production_ registries.
+  * _Staging_ will serve pre-release provider packages, and will be updated on
+    every tag build,
+  * _Production_ will serve released provider versions, and will be updated
+    via promoting a specific tag build to production via Drone
+* Each registry will be stored by an AWS S3 bucket and served by AWS CloudFront
+* The storage bucket will be configured as per the Gold-class storage requirements
 described in the [Cloud Artifact Storage Standards](https://github.com/gravitational/cloud/blob/master/rfd/0017-artifact-storage-standards.md)
 RFD.
 
 #### Public naming
 
-I have assumed in this document that the public-facing address for the
-terraform registry host will follow the naming convention for other Teleport
-distribution points, and be `terraform.releases.teleport.dev`.
+##### Staging
+
+As the the staging registry is only intended for internal testing, we _could_
+simply use the CloudFront-assigned public domain name as the publicly-visible
+domain of the staging registry (e.g. `d1cqyxzpzj86o0.cloudfront.net`).
+
+We can also add an alternate domain name (e.g. `terraform.staging.teleport.dev`)
+by
+
+1. adding an alias record to our DNS config that points
+   `terraform.staging.teleport.dev` back to the CloudFront CCN, and
+2. configuring CloudFront to use a custom TLS certificate when serving
+  requests for `terraform.staging.teleport.dev`.
+
+##### Production
+
+In selecting the name for the production registry, there is a tension between
+having (arguably) the most memorable and obvious name for the registry (but
+having it's configuration split of several hosts), versus and having a registry
+with all of its configuration and data in one place.
+
+How we name the production registry ultimately comes down to deciding which
+side of this tension we care more about.
+
+If we want people to reference our provider as `goteleport.com/gravitational/teleport`,
+we will need to add the _discovery protocol_ hosted on `goteleport.com`, which
+would point directly back to the CloudFront CDN public domain name. This obviates
+the need for any special configuration for the production Terraform registry.
+
+If, on the other hand, we want the registry to be entirely self-contained
+(i.e. the protocol discovery file is hosted by the same system as the rest of
+the registry), then people will reference our provider via
+`terraform.releases.teleport.dev/gravitational/teleport`, and configure
+DNS + CloudFront as per the Staging section above.
 
 #### Bucket structure
 
-The S3 bucket backing the registry requires 3 main structures:
+The S3 bucket backing a registry requires 3 main structures:
 
 1. the **_discovery file_**,
 2. the **_registry_**, and
@@ -191,35 +227,15 @@ independent policies to be applied to each.
 
 This implements the Terraform Remote Service Discovery Protocol. This is
 essentially a static JSON file that redirects terraform where to the registry
-service on a given host.
+service on a given host. (Note that it's also possible for this file to be
+served from a completely different host.)
 
 For example, this discovery protocol file:
 
 ```json
 {
-    "providers.v1": "/registry/"
+    "providers.v1": "https://terraform.releases.teleport.dev/registry/"
 }
-```
-
-_**NOTE:**_ The address in the discovery protocol JSON need not be a relative
-path - it could _in theory_ point to a totally different host. It _should_ be
-possible to have the discovery protocol served by `goteleport.com` that would
-direct terraform to `terraform.releases.teleport.dev` for the actual registry,
-if that's the preferred branding.
-
-Note that I have not _personally_ tested this behaviour.
-
-The practical change this would make would be that the provider source would
-change from (in the example above):
-
-```terraform
-source = "terraform.releases.teleport.dev/gravitational/teleport"
-```
-
-to
-
-```terraform
-source = "goteleport.com/gravitational/teleport"
 ```
 
 ##### 2. The registry (key prefix `/registry`)
@@ -232,7 +248,7 @@ pair: the `versions` index, and the `download` metadata.
 For our purposes, with a namespace of `gravitational` and a provider name of
 `teleport`, the `versions` index file will be located at `/registry/gravitational/teleport/versions`
 
-This is the only object in the repository that need modification as part of
+This is the only object in the registry that needs modification as part of
 normal use.
 
 The `download` metadata for each version/OS/architecture triple is stored
@@ -253,11 +269,40 @@ provider artefact, together with its associated hash & signatures files.
 This section of the bucket should be write-only. No objects in this section
 should be modifiable or delete-able.
 
-#### Build trigger and inputs
+#### Build triggers
 
-By analogy with the main Teleport release system, the Terraform registry
-packaging and publishing will be happen during release _promotion_ task on
-Drone.
+##### Staging Trigger
+
+The staging registry will be updated on each _tag build_ (i.e. a build caused
+by adding a git tag matching `terraform-provider-teleport-v*`).
+
+**Note:** If there is a mismatch in the version number set in the plugins `Makefile` and
+the tag value supplied by the release engineer, it's possible that later builds
+will overwrite entries in the registry. (e.g. Makefile says `v1.2.3` and tags
+are `terraform-provider-teleport-v1.2.3-rc.1`, `terraform-provider-teleport-v1.2.3-rc.2`,
+etc). In this scenario, only the most recent build for a given `Makefile`-version
+will be available via the registry.
+
+##### Production Trigger
+
+The production registry will be updated when a release engineer promotes a
+given Drone build to production.
+
+The promotion process will perform the same actions as the staging script,
+just with a different target bucket.
+
+Ideally we would have been able to copy over the provider bundle from the
+staging bucket, rather than repackage the original tarball. Unfortunately,
+given the information available to us via Drone at promotion time, _and_ the
+possibility of a provider in the staging bucket having been overwritten (see
+[note above](staging-trigger)), it doesn't seem possible to guarantee that a
+binary we're picking from the staging registry is the _exact same_ binary
+originally constructed in the build to promote.
+
+Going back to the original artifact tarball and repackaging it for Terraform
+allows us to make that guarantee, so that is the process I've chosen.
+
+#### Build inputs
 
 ##### Release Tarball
 
@@ -282,14 +327,16 @@ is a danger that we will forget to modify this value should we upgrade the
 version of the Teleport Plugin framework we use, and mislabel a release in
 the registry.
 
-Any suggestions on an interlock for this value greatly appreciated.
-
 ##### Signing GPG Key
 
 Packaging for the registry requires a GPG signing key, including an
-identity. The Identity is displayed to the user when the provider is
-installed, so it should be an "official" teleport key rather than a
-self-signed one
+identity.
+
+Key is expected to be in PGP ASCII-armour format.
+
+The Identity is displayed to the user when the provider is installed, so it
+should be an "official" teleport key (or derived from one) rather than a
+self-signed key.
 
 For example (from my PoC):
 
@@ -299,9 +346,6 @@ Initializing provider plugins...
 - Installing terraform.clarke.mobi/gravitational/teleport v8.3.4...
 - Installed terraform.clarke.mobi/gravitational/teleport v8.3.4 (self-signed, key ID 7DA6C64E1701F9E4)
 ```
-
-My proof-of-concept cose expects the signing key in ASCII-armor format, but I
-am sure others are acceptable as well.
 
 #### Building the packages
 
@@ -367,13 +411,25 @@ provided by Drone.
 #### Build Security issues
 
 This process will require that the `teleport-plugins` promotion process have
-access to new secrets:
+access to new secrets & resources:
 
-1. Read access to a signing key, to sign the package (see note below)
-2. Write access to the AWS bucket storing the signed packages for distribution
+* Staging Registry Bucket
+* Staging Registry CloudFront
+* Staging Registry logs bucket
+* Staging IAM User with read/write access to Staging Registry Bucket
+* Staging signing key
+
+* Production Registry Bucket
+* Production Registry CloudFront
+* Production Registry logs bucket
+* Production IAM User with read/write access to Production Registry Bucket
+  * Modify permission required on `versions` file
+* Production signing key
 
 _**Note:**_ We currently expect to use the RPM signing key as the Terraform
-signing key as it already exists and is already used for a similar purpose.
+production signing key as it already exists and is already used for a similar
+purpose.
+
 That said, there is no technical reason why it _must_ be the RPM signing
 key. As long as the private key used to sign the package agrees with the a
 public key exposed via the registry, the signature should be deemed valid
@@ -384,3 +440,46 @@ by Terraform.
 The system will be tested by promoting to a "staging" environment. The
 staging environment will be selected during the Drone promotion process
 and will use a dummy bucket and signing key.
+
+## Open Questions
+
+### How should we name the provider?
+
+We have three names we need to pick, and these will change how users will
+include the Teleport provider in their terraform scripts:
+
+1) the registry host; options are `goteleport.com` or `terraform.releases.teleport.dev`,
+2) the provider namespace; options are `gravitational` or `teleport`,
+3) the provider name; the obvious choice is `teleport`, but mentioned for
+   completeness
+
+In short: which one of these do we want people to use?
+
+1. `terraform.releases.teleport.dev/gravitational/teleport`
+2. `terraform.releases.teleport.dev/teleport/teleport`
+3. `goteleport.com/gravitational/teleport`
+4. `goteleport.com/teleport/teleport`
+
+Note: the `goteleport.com` option requires adding a _discovery file_ to the
+main Teleport website (i.e., a small, static JSON file served at
+`/.well-known/terraform.json`).
+
+#### Recommendations
+
+Personally, I'd go with `goteleport.com/teleport/teleport`, as requires the
+least amount of configuration to get working _and_ is a more memorable name,
+but I am happy to be overruled.
+
+### Is there a safe way to deduce the Terraform Plugin API version
+
+In order to properly index the terraform plugins, the index needs to know the
+versions of the Terraform Plugin API supports. I haven't found a good way to
+extract the Plugin API version directly from the provider binary, so we are
+relying on the Drone trigger to pass in the correct versions.
+
+The API versions a provider supports may change over time, and we have no
+alternative but "just knowing" to know when to update the build trigger with
+a new Plugin API version.
+
+I would prefer to find some method for allowing the build to inform us of the
+supported version(s), to avoid having multiple sources of truth.
