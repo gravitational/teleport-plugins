@@ -133,7 +133,7 @@ func (s *PagerdutySuite) SetupSuite() {
 		conditions.Request.Thresholds = []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}}
 	}
 	// This is the role for testing notification incident creation.
-	role, err := bootstrap.AddRole("foo", types.RoleSpecV4{Allow: conditions})
+	role, err := bootstrap.AddRole("foo", types.RoleSpecV5{Allow: conditions})
 	require.NoError(t, err)
 
 	user, err := bootstrap.AddUserWithRoles(me.Username+"@example.com", role.GetName())
@@ -143,7 +143,7 @@ func (s *PagerdutySuite) SetupSuite() {
 	if teleportFeatures.AdvancedAccessWorkflows {
 		// Set up TWO users who can review access requests to role "editor".
 
-		role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV4{
+		role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV5{
 			Allow: types.RoleConditions{
 				ReviewRequests: &types.AccessReviewConditions{Roles: []string{"editor"}},
 			},
@@ -160,7 +160,7 @@ func (s *PagerdutySuite) SetupSuite() {
 
 		// This is the role that needs exactly one approval review for an access request to be approved.
 		// It's handy to test auto-approval scenarios so we also put "pagerduty_services" annotation.
-		role, err = bootstrap.AddRole("bar", types.RoleSpecV4{
+		role, err = bootstrap.AddRole("bar", types.RoleSpecV5{
 			Allow: types.RoleConditions{
 				Request: &types.AccessRequestConditions{
 					Roles: []string{"editor"},
@@ -178,7 +178,7 @@ func (s *PagerdutySuite) SetupSuite() {
 
 		// This is the role with a maximum possible setup: both "pagerduty_notify_service" and
 		// "pagerduty_services" annotations and threshold.
-		role, err = bootstrap.AddRole("foo-bar", types.RoleSpecV4{
+		role, err = bootstrap.AddRole("foo-bar", types.RoleSpecV5{
 			Allow: types.RoleConditions{
 				Request: &types.AccessRequestConditions{
 					Roles: []string{"editor"},
@@ -213,7 +213,7 @@ func (s *PagerdutySuite) SetupSuite() {
 
 	// Set up plugin user.
 
-	role, err = bootstrap.AddRole("access-pagerduty", types.RoleSpecV4{Allow: conditions})
+	role, err = bootstrap.AddRole("access-pagerduty", types.RoleSpecV5{Allow: conditions})
 	require.NoError(t, err)
 
 	user, err = bootstrap.AddUserWithRoles("access-pagerduty", role.GetName())

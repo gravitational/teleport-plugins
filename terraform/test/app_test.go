@@ -17,50 +17,15 @@ limitations under the License.
 package test
 
 import (
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/stretchr/testify/require"
 )
 
 func (s *TerraformSuite) TestApp() {
-	res := "teleport_app"
-
-	create := s.terraformConfig + `
-		resource "` + res + `" "test" {
-            metadata {
-                name = "example"
-                description = "Test app"
-                labels  = {
-                    example = "yes"
-                    "teleport.dev/origin" = "dynamic"
-                }    
-            }
-        
-            spec {
-                uri = "localhost:3000"
-            }
-        }
-
-	`
-
-	update := s.terraformConfig + `
-		resource "` + res + `" "test" {
-            metadata {
-                name = "example"
-                description = "Test app"
-                labels  = {
-                    example = "yes"
-                    "teleport.dev/origin" = "dynamic"
-                }    
-            }
-        
-            spec {
-                uri = "localhost:3000"
-            }
-		}
-	`
-
-	checkAppDestroyed := func(state *terraform.State) error {
+	checkDestroyed := func(state *terraform.State) error {
 		_, err := s.client.GetApp(s.Context(), "test")
 		if trace.IsNotFound(err) {
 			return nil
@@ -69,33 +34,71 @@ func (s *TerraformSuite) TestApp() {
 		return err
 	}
 
-	name := res + ".test"
+	name := "teleport_app.test"
 
 	resource.Test(s.T(), resource.TestCase{
-		ProviderFactories: s.terraformProviders,
-		CheckDestroy:      checkAppDestroyed,
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkDestroyed,
 		Steps: []resource.TestStep{
 			{
-				Config: create,
+				Config: s.getFixture("app_0_create.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "app"),
-					resource.TestCheckResourceAttr(name, "spec.0.uri", "localhost:3000"),
+					resource.TestCheckResourceAttr(name, "spec.uri", "localhost:3000"),
 				),
 			},
 			{
-				Config:   create, // Check that there is no state drift
+				Config:   s.getFixture("app_0_create.tf"),
 				PlanOnly: true,
 			},
 			{
-				Config: update,
+				Config: s.getFixture("app_1_update.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "app"),
-					resource.TestCheckResourceAttr(name, "spec.0.uri", "localhost:3000"),
+					resource.TestCheckResourceAttr(name, "spec.uri", "localhost:3000"),
 				),
 			},
 			{
-				Config:   update, // Check that there is no state drift
+				Config:   s.getFixture("app_1_update.tf"),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestImportApp() {
+	r := "teleport_app"
+	id := "test_import"
+	name := r + "." + id
+
+	app := &types.AppV3{
+		Metadata: types.Metadata{
+			Name: id,
+		},
+		Spec: types.AppSpecV3{
+			URI: "localhost:3000/test",
+		},
+	}
+	err := app.CheckAndSetDefaults()
+	require.NoError(s.T(), err)
+
+	err = s.client.CreateApp(s.Context(), app)
+	require.NoError(s.T(), err)
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
+				ResourceName:  name,
+				ImportState:   true,
+				ImportStateId: id,
+				ImportStateCheck: func(state []*terraform.InstanceState) error {
+					require.Equal(s.T(), state[0].Attributes["kind"], "app")
+					require.Equal(s.T(), state[0].Attributes["spec.uri"], "localhost:3000/test")
+
+					return nil
+				},
 			},
 		},
 	})

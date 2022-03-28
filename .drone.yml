@@ -28,7 +28,7 @@ steps:
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v8.0.5
+      TELEPORT_GET_VERSION: v9.0.1
     commands:
       - echo Testing plugins against Teleport $TELEPORT_GET_VERSION
       - make test
@@ -72,7 +72,7 @@ steps:
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v8.0.5
+      TELEPORT_GET_VERSION: v9.0.1
       GOPATH: /tmp/teleport-plugins/test-darwin/go
       GOCACHE: /tmp/teleport-plugins/test-darwin/go/cache
     commands:
@@ -204,6 +204,62 @@ steps:
 ---
 kind: pipeline
 type: kubernetes
+name: tag-build-plugins-docker
+
+trigger:
+  event:
+    - tag
+  ref:
+    include:
+      - refs/tags/teleport-gitlab-v*
+      - refs/tags/teleport-jira-v*
+      - refs/tags/teleport-mattermost-v*
+      - refs/tags/teleport-pagerduty-v*
+      - refs/tags/teleport-slack-v*
+      - refs/tags/teleport-email-v*
+
+depends_on:
+  - test-linux
+
+steps:
+  - name: fetch tags
+    image: docker:git
+    commands: 
+      - git fetch --tags
+
+  - name: Build and push to ECR
+    image: docker:git
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: PLUGIN_DRONE_ECR_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: PLUGIN_DRONE_ECR_SECRET
+      AWS_DEFAULT_REGION: us-west-2
+      DOCKER_BUILDKIT: 1
+    volumes:
+      - name: dockersock
+        path: /var/run
+    commands:
+      - apk add --no-cache make aws-cli
+      - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
+      - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
+      - make docker-push-access-$PLUGIN_TYPE
+
+services:
+  - name: start docker
+    image: docker:dind
+    privileged: true
+    volumes:
+      - name: dockersock
+        path: /var/run
+
+volumes:
+  - name: dockersock
+    temp: {}
+
+---
+kind: pipeline
+type: kubernetes
 name: tag-build-terraform-linux
 
 trigger:
@@ -325,6 +381,56 @@ steps:
 
 ---
 kind: pipeline
+type: kubernetes
+name: tag-build-event-handler-docker
+
+trigger:
+  event:
+    - tag
+  ref:
+    include:
+      - refs/tags/teleport-event-handler-v*
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+steps:
+  - name: fetch tags
+    image: docker:git
+    commands: 
+      - git fetch --tags
+
+  - name: Build and push to ECR
+    image: docker:git
+    environment:
+      AWS_ACCESS_KEY_ID:
+        from_secret: PLUGIN_DRONE_ECR_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: PLUGIN_DRONE_ECR_SECRET
+      AWS_DEFAULT_REGION: us-west-2
+      DOCKER_BUILDKIT: 1
+    volumes:
+      - name: dockersock
+        path: /var/run
+    commands:
+      - apk add --no-cache make aws-cli
+      - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
+      - make docker-push-event-handler
+
+services:
+  - name: start docker
+    image: docker:dind
+    privileged: true
+    volumes:
+      - name: dockersock
+        path: /var/run
+
+volumes:
+  - name: dockersock
+    temp: {}
+
+---
+kind: pipeline
 type: exec
 name: tag-build-event-handler-darwin
 
@@ -412,7 +518,114 @@ steps:
       strip_prefix: /go/src/github.com/gravitational/teleport-plugins/
 
 ---
+kind: pipeline
+type: kubernetes
+name: publish-access-images
+
+trigger:
+  event:
+    - promote
+  target:
+    - production
+    - publish-images
+    - publish-access-images
+  ref:
+    include:
+      - refs/tags/teleport-jira-v*
+      - refs/tags/teleport-mattermost-v*
+      - refs/tags/teleport-pagerduty-v*
+      - refs/tags/teleport-slack-v*
+      - refs/tags/teleport-email-v*
+
+steps:
+  - name: Promote image
+    image: docker:git
+    environment:
+      QUAYIO_DOCKER_USERNAME:
+        from_secret: PRODUCTION_QUAYIO_DOCKER_USERNAME
+      QUAYIO_DOCKER_PASSWORD:
+        from_secret: PRODUCTION_QUAYIO_DOCKER_PASSWORD
+      AWS_ACCESS_KEY_ID:
+        from_secret: PLUGIN_DRONE_ECR_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: PLUGIN_DRONE_ECR_SECRET
+      AWS_DEFAULT_REGION: us-west-2
+      DOCKER_BUILDKIT: 1
+    volumes:
+      - name: dockersock
+        path: /var/run
+    commands:
+      - apk add --no-cache make aws-cli
+      - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
+      - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
+      - docker login -u="$QUAYIO_DOCKER_USERNAME" -p="$QUAYIO_DOCKER_PASSWORD" quay.io
+      - make docker-promote-access-$PLUGIN_TYPE
+
+services:
+  - name: start docker
+    image: docker:dind
+    privileged: true
+    volumes:
+      - name: dockersock
+        path: /var/run
+
+volumes:
+  - name: dockersock
+    temp: {}
+
+---
+kind: pipeline
+type: kubernetes
+name: publish-event-handler-image
+
+trigger:
+  event:
+    - promote
+  target:
+    - production
+    - publish-images
+    - publish-event-handler-image
+  ref:
+    include:
+      - refs/tags/teleport-event-handler-v*
+
+steps:
+  - name: Promote image
+    image: docker:git
+    environment:
+      QUAYIO_DOCKER_USERNAME:
+        from_secret: PRODUCTION_QUAYIO_DOCKER_USERNAME
+      QUAYIO_DOCKER_PASSWORD:
+        from_secret: PRODUCTION_QUAYIO_DOCKER_PASSWORD
+      AWS_ACCESS_KEY_ID:
+        from_secret: PLUGIN_DRONE_ECR_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: PLUGIN_DRONE_ECR_SECRET
+      AWS_DEFAULT_REGION: us-west-2
+      DOCKER_BUILDKIT: 1
+    volumes:
+      - name: dockersock
+        path: /var/run
+    commands:
+      - apk add --no-cache make aws-cli
+      - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
+      - docker login -u="$QUAYIO_DOCKER_USERNAME" -p="$QUAYIO_DOCKER_PASSWORD" quay.io
+      - make docker-promote-event-handler
+
+services:
+  - name: start docker
+    image: docker:dind
+    privileged: true
+    volumes:
+      - name: dockersock
+        path: /var/run
+
+volumes:
+  - name: dockersock
+    temp: {}
+
+---
 kind: signature
-hmac: c427752b53eaa9eb47bf95e1c3aed04b4c8273f930ba4ab83c67f12052d37821
+hmac: 9f4c1a36000b9b2637e790418a624a31c162e2bb248cc6718a1c28a82a8b10c4
 
 ...
