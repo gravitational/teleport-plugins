@@ -45,6 +45,11 @@ docker-build-access-plugins: docker-build-access-email \
 docker-push-access-%: docker-build-access-%
 	$(MAKE) -C access/$* docker-push
 
+# Pulls and pushes image from ECR to quay.
+.PHONY: docker-promote-access-%
+docker-promote-access-%:
+	$(MAKE) -C access/$* docker-promote 
+
 # Build event-handler plugin with docker
 .PHONY: docker-build-event-handler
 docker-build-event-handler:
@@ -53,6 +58,10 @@ docker-build-event-handler:
 .PHONY: docker-push-event-handler
 docker-push-event-handler: docker-build-event-handler
 	$(MAKE) -C event-handler docker-push
+
+.PHONY: docker-promote-event-handler
+docker-promote-event-handler:
+	$(MAKE) -C event-handler docker-promote
 
 .PHONY: terraform
 terraform:
