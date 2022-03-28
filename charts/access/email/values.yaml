@@ -55,7 +55,7 @@ mailgun:
   private_key: xoxb-11xx
 
 smtp:
-  enabled: true
+  enabled: false
   host: smtp.example.com
   port: 587
   username: username@example.com
