@@ -66,9 +66,9 @@ should match the snapshot (smtp on, password file):
 
 
         [smtp]
-        host          = "smtp.example.com"
-        port          = 587
-        username      = "username@example.com"
+        host          = "smtp.someservice.com"
+        port          = 1234
+        username      = "mysmtpuser"
         password_file = "/etc/teleport/supersecretemailpw"
 
         [delivery]

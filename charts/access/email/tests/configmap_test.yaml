@@ -29,6 +29,10 @@ tests:
         address: teleport.example.com:1234
       maingun.enabled: false
       smtp:
+        enabled: true
+        host: smtp.someservice.com
+        port: 1234
+        username: mysmtpuser
         passwordFile: /etc/teleport/supersecretemailpw
     asserts:
       - matchSnapshot: {}
