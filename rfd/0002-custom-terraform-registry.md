@@ -413,11 +413,16 @@ provided by Drone.
 This process will require that the `teleport-plugins` promotion process have
 access to new secrets & resources:
 
+##### Staging Resources
+
 * Staging Registry Bucket
 * Staging Registry CloudFront
 * Staging Registry logs bucket
 * Staging IAM User with read/write access to Staging Registry Bucket
+  * Modify permission required on `versions` file
 * Staging signing key
+
+##### Production Resources
 
 * Production Registry Bucket
 * Production Registry CloudFront
@@ -434,6 +439,11 @@ That said, there is no technical reason why it _must_ be the RPM signing
 key. As long as the private key used to sign the package agrees with the a
 public key exposed via the registry, the signature should be deemed valid
 by Terraform.
+
+_**Also note**_ that we can rotate the key used for signing _new_ additions to
+the registry without having to re-sign the entire registry, meaning that we
+can get started using the existing RPM signing key and cheaply rotate it when
+a new key management structure is in place.
 
 ### Testing
 
@@ -493,9 +503,10 @@ Plugin API version.
 I would prefer to find some method for allowing the build to inform us of the
 supported version(s), to avoid having multiple sources of truth.
 
-I've looked into how Terraform itself does this.  Its baked into a bunch of
-`internal` packages used by the terraform command line tool. We probably
-_could_ extract the code we need to interrogate the binary for the API 
-version, but it would be an exceedingly fragile solution, to the point where
-manually updating the API version in the Drone file may be the more pragmatic
+I've looked into how Terraform itself does this.  The mechanism baked into a
+bunch of `internal` packages used by the terraform command line tool. We
+certainly _could_ extract the code we need to interrogate the binary for the
+API version, but it would be an exceedingly fragile solution.
+
+Manually updating the API version in the Drone file may be the more pragmatic
 option.
