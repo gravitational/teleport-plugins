@@ -55,27 +55,26 @@ volumeMounts: []
 # Plugin specific options
 #
 teleport:
-  address: auth.example.com:3025
+  address: ""
   identitySecretName: ""
   identitySecretPath: "auth_id"
 
 mailgun:
   enabled: false
-  domain: sandboxbd81caddef744a69be0e5b544ab0c3bd.mailgun.org
-  privateKey: xoxb-11xx
+  domain: ""
+  privateKey: ""
 
 smtp:
   enabled: false
-  host: smtp.example.com
+  host: ""
   port: 587
-  username: username@example.com
+  username: ""
   password: ""
   passwordFile: ""
 
 delivery:
-  sender: noreply@example.com
-  recipients:
-    - all@example.com
+  sender: ""
+  recipients: []
 
 log:
   output: stdout
