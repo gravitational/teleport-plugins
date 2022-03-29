@@ -266,8 +266,8 @@ a provider object is re-published.
 The object store is where all the release package files are stored. Each
 provider artefact, together with its associated hash & signatures files.
 
-This section of the bucket should be write-only. No objects in this section
-should be modifiable or delete-able.
+This section of the bucket needs only be write-once/read-many. No objects
+in this section should be modified or deleted.
 
 #### Build triggers
 
@@ -448,7 +448,11 @@ and will use a dummy bucket and signing key.
 We have three names we need to pick, and these will change how users will
 include the Teleport provider in their terraform scripts:
 
-1) the registry host; options are `goteleport.com` or `terraform.releases.teleport.dev`,
+1) the registry host; current options are:
+   * `goteleport.com`
+   * `terraform.releases.teleport.dev` (i.e. matching existing distribution site naming scheme)
+   * `terraform.goteleport.com` (something in-between)
+   * ... something else entirely?
 2) the provider namespace; options are `gravitational` or `teleport`,
 3) the provider name; the obvious choice is `teleport`, but mentioned for
    completeness
@@ -459,16 +463,21 @@ In short: which one of these do we want people to use?
 2. `terraform.releases.teleport.dev/teleport/teleport`
 3. `goteleport.com/gravitational/teleport`
 4. `goteleport.com/teleport/teleport`
+5. `terraform.goteleport.com/gravitational/teleport`
+6. `terraform.goteleport.com/teleport/teleport`
 
 Note: the `goteleport.com` option requires adding a _discovery file_ to the
 main Teleport website (i.e., a small, static JSON file served at
-`/.well-known/terraform.json`).
+`/.well-known/terraform.json`), but on the whole requires the least config to
+set up.
 
-#### Recommendations
+#### Recommendation
 
-Personally, I'd go with `goteleport.com/teleport/teleport`, as requires the
-least amount of configuration to get working _and_ is a more memorable name,
-but I am happy to be overruled.
+Personally I prefer options 5; it's punchy, disambiguates between Terraform and
+other distribution mechanisms _and_ avoids the error-prone reduplication of
+`teleport` in the path.
+
+I'm totally fine with being overruled in this case, though.
 
 ### Is there a safe way to deduce the Terraform Plugin API version
 
@@ -478,8 +487,15 @@ extract the Plugin API version directly from the provider binary, so we are
 relying on the Drone trigger to pass in the correct versions.
 
 The API versions a provider supports may change over time, and we have no
-alternative but "just knowing" to know when to update the build trigger with
-a new Plugin API version.
+alternative but "just knowing" when to update the build trigger with a new
+Plugin API version.
 
 I would prefer to find some method for allowing the build to inform us of the
 supported version(s), to avoid having multiple sources of truth.
+
+I've looked into how Terraform itself does this.  Its baked into a bunch of
+`internal` packages used by the terraform command line tool. We probably
+_could_ extract the code we need to interrogate the binary for the API 
+version, but it would be an exceedingly fragile solution, to the point where
+manually updating the API version in the Drone file may be the more pragmatic
+option.
