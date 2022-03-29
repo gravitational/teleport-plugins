@@ -62,7 +62,7 @@ teleport:
 mailgun:
   enabled: false
   domain: sandboxbd81caddef744a69be0e5b544ab0c3bd.mailgun.org
-  private_key: xoxb-11xx
+  privateKey: xoxb-11xx
 
 smtp:
   enabled: false
