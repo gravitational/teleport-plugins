@@ -65,6 +65,10 @@ sendind webhooks when a new request is created, or a request state is changed,
 and it allows optionally listening for the 3rd party app callbacks to facilitate
 the approval workdlow. See more in the [access/webhooks/README.md](/access/webhooks/README.md)
 
+## Event Handler
+
+The [Teleport Event Handler Plugin](./event-handler) is used to export audit log events to a fluentd service. For more information, visit the Fluentd setup guide at [goteleport.com](https://goteleport.com/docs/setup/guides/fluentd/) or checkout the [README](./event-handler/README.md).
+
 ## Terraform Provider
 
 The [Teleport Terraform Provider](./terraform) makes it easy to create resources using
