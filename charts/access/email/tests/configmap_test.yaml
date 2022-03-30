@@ -37,12 +37,12 @@ tests:
     asserts:
       - matchSnapshot: {}
 
-  - it: should match the snapshot (email on)
+  - it: should match the snapshot (mailgun on)
     set:
       teleport:
         address: teleport.example.com:1234
       smtp.enabled: false
-      maingun:
+      mailgun:
         enabled: true
         domain: mymailgunsubdomain.mailgun.org
         privateKey: xoxb-71d75f662b0eac53565a38c8cc0316f6

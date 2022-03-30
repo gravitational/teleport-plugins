@@ -1,4 +1,4 @@
-should match the snapshot (email on):
+should match the snapshot (mailgun on):
   1: |
     apiVersion: v1
     data:
@@ -7,9 +7,13 @@ should match the snapshot (email on):
         addr = "teleport.example.com:1234"
         identity = "/var/lib/teleport/plugins/email/auth_id"
 
+
+        [mailgun]
+        domain      = "mymailgunsubdomain.mailgun.org"
+        private_key = "xoxb-71d75f662b0eac53565a38c8cc0316f6"
         [delivery]
-        sender = "noreply@example.com"
-        recipients = ["all@example.com"]
+        sender = ""
+        recipients = []
 
         [log]
         output = "stdout"
@@ -72,8 +76,8 @@ should match the snapshot (smtp on, password file):
         password_file = "/etc/teleport/supersecretemailpw"
 
         [delivery]
-        sender = "noreply@example.com"
-        recipients = ["all@example.com"]
+        sender = ""
+        recipients = []
 
         [log]
         output = "stdout"
