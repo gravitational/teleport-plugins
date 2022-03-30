@@ -87,40 +87,6 @@ spec:
 version: v2
 ```
 
-#### Export access-plugin Certificate
-
-Teleport Plugin uses the `access-plugin`role and user to perform the approval.
-We export the identify files, using
-[`tctl auth sign`](https://goteleport.com/teleport/docs/cli-docs/#tctl-auth-sign).
-
-```
-$ tctl auth sign --format=tls --user=access-plugin --out=auth --ttl=8760h
-# ...
-```
-
-The above sequence should result in three PEM encoded files being generated:
-auth.crt, auth.key, and auth.cas (certificate, private key, and CA certs
-respectively). We'll reference these later in the Pagerduty integration config
-file.
-
-_Note: by default, tctl auth sign produces certificates with a relatively short
-lifetime. For production deployments, the --ttl flag can be used to ensure a
-more practical certificate lifetime. --ttl=8760h exports a 1 year token_
-
-#### Export access-plugin Certificate for use with Teleport Cloud
-
-Connection to Teleport Cloud is only possible with reverse tunnel. For this reason,
-we need the identity signed in a different format called `file` which exports
-SSH keys too.
-
-```bash
-$ tctl auth sign --auth-server=yourproxy.teleport.sh:443 --format=file --user=access-plugin --out=auth --ttl=8760h
-# ...
-```
-
-
-
-
 ## Generate the certificate
 
 For the plugin to connect to Auth Server, it needs an identity file containing TLS/SSH certificates. This can be obtained with tctl:
