@@ -10,7 +10,7 @@ import (
 	"github.com/gravitational/trace"
 )
 
-// Sha256Sum generates the equivalent contents of running `sha256sum` om some
+// sha256Sum generates the equivalent contents of running `sha256sum` on some
 // data and writes it to the supplied stream, returning the sha bytes.
 func sha256Sum(dst io.Writer, filename string, data []byte) ([]byte, error) {
 	sha := sha256.Sum256(data)
