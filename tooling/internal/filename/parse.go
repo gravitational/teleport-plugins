@@ -16,9 +16,13 @@ var (
 // Info holds information about a plugin, deduced from from its Houston-compatible
 // filename.
 type Info struct {
+	// Type represents the plugin type, e.g. "terraform-provider"
 	Type    string
+	// Version holds the parsed plugin version number
 	Version semver.Version
+	// OS is the operating system the plugin was built for
 	OS      string
+	// Arch is the CPU architecture the plugin was built for
 	Arch    string
 }
 
