@@ -106,6 +106,7 @@ func (p *Provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics)
 			},
 			"key_base64": {
 				Type:        types.StringType,
+				Sensitive:   true,
 				Optional:    true,
 				Description: "Base64 encoded TLS auth key.",
 			},
