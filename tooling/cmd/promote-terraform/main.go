@@ -77,6 +77,14 @@ func logLevel(args *args) log.Level {
 	}
 }
 
+// updateRegistry fetches the live registry and adds our new providers to it.
+// It's possible for another process to update the `versions` index in the
+// bucket while we are modifying it here, and unfortunately AWS doesn't give
+// us a nice way to prevent this simply with S3.
+//
+// We could layer a locking mechanism on top of another AWS service, but for
+// now we are relying on drone to honour its concurrency limits (i.e. 1) to
+// serialise access to the live `versions` file.
 func updateRegistry(ctx context.Context, prodBucket *bucketConfig, workspace *workspacePaths, namespace, provider string, newVersion registry.Version, files []string) error {
 	s3client, err := newS3ClientFromBucketConfig(ctx, prodBucket)
 	if err != nil {
