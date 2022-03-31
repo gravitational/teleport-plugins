@@ -3,6 +3,8 @@ package registry
 import (
 	"bytes"
 	"encoding/hex"
+	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -20,6 +22,8 @@ type FileNames struct {
 	Sig string
 }
 
+// IsProviderTarball tests if  a given string is a Hudson-compatible filename
+// indicating a terraform-provider plugin type
 func IsProviderTarball(fn string) bool {
 	info, err := filename.Parse(fn)
 	if err != nil {
@@ -46,6 +50,7 @@ type RepackResult struct {
 	SigningEntity *openpgp.Entity
 }
 
+// Sha256String formats the binary SHA256 as a hex string
 func (r *RepackResult) Sha256String() string {
 	return hex.EncodeToString(r.Sha256)
 }
@@ -54,13 +59,17 @@ func (r *RepackResult) Sha256String() string {
 // with a terraform provider registry, generating all the required sidecar files
 // as well. Returns a `RepackResult` instance containing the location of the
 // generated files and information about the packed plugin
+//
+// For more information on the output files, see the Terraform Provider Registry
+// Protocol documentation:
+//    https://www.terraform.io/internals/provider-registry-protocol
 func RepackProvider(dstDir string, srcFileName string, signingEntity *openpgp.Entity) (*RepackResult, error) {
 	info, err := filename.Parse(srcFileName)
 	if err != nil {
-		return nil, trace.Wrap(err, "Bad filename")
+		return nil, trace.Wrap(err, "bad filename %q", srcFileName)
 	}
 
-	log.Infof("Provider platform: %s/%s/%s", info.Version, info.OS, info.Arch)
+	log.Debugf("Provider platform: %s/%s/%s", info.Version, info.OS, info.Arch)
 
 	src, err := os.Open(srcFileName)
 	if err != nil {
@@ -68,11 +77,22 @@ func RepackProvider(dstDir string, srcFileName string, signingEntity *openpgp.En
 	}
 	defer src.Close()
 
-	// Create the zip archive in memory in order to make it easier to
-	// hash and sign
-	var zipArchive bytes.Buffer
+	tmpZipFile, err := os.CreateTemp("", "")
+	if err != nil {
+		return nil, trace.Wrap(err, "failed creating tempfile for zip archive")
+	}
+	defer func() {
+		// we will only want to clean up the tmp file in the failure case,
+		// because if RepackProvider has succeeded then the temp file has
+		// already been closed and moved into place in the output directory.
+		if err != nil {
+			tmpZipFile.Close()
+			os.Remove(tmpZipFile.Name())
+		}
+	}()
 
-	err = repack(&zipArchive, src)
+	log.Debugf("Repacking into zipfile: %s", tmpZipFile.Name())
+	err = repack(tmpZipFile, src)
 	if err != nil {
 		return nil, trace.Wrap(err, "failed repacking provider")
 	}
@@ -83,14 +103,27 @@ func RepackProvider(dstDir string, srcFileName string, signingEntity *openpgp.En
 		SigningEntity: signingEntity,
 	}
 
-	// compute sha256 and format the sha file as per sha256sum
+	// compute sha256 and format the SHA file as per sha256sum
+	_, err = tmpZipFile.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, trace.Wrap(err, "failed rewinding temp zipfile for summing")
+	}
+
 	var sums bytes.Buffer
-	result.Sha256, err = sha256Sum(&sums, result.Zip, zipArchive.Bytes())
+	result.Sha256, err = sha256Sum(&sums, result.Zip, tmpZipFile)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
-	// sign the sums with our private key and generate a signature file
+	// we're done with the temp archive for now, and we'll need the file to be
+	// closed to move it into place anyway...
+	tmpZipFileName := tmpZipFile.Name()
+	err = tmpZipFile.Close()
+	if err != nil {
+		return nil, trace.Wrap(err, "failed closing temp zipfile")
+	}
+
+	// sign the sums with our private key and generate a signature
 	var sig bytes.Buffer
 	err = openpgp.DetachSign(&sig, signingEntity, bytes.NewReader(sums.Bytes()), nil)
 	if err != nil {
@@ -98,7 +131,7 @@ func RepackProvider(dstDir string, srcFileName string, signingEntity *openpgp.En
 	}
 
 	// Write everything out to the dstdir
-	err = writeOutput(result, zipArchive.Bytes(), sums.Bytes(), sig.Bytes())
+	err = writeOutput(result, tmpZipFileName, sums.Bytes(), sig.Bytes())
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -106,38 +139,26 @@ func RepackProvider(dstDir string, srcFileName string, signingEntity *openpgp.En
 	return result, nil
 }
 
-func writeOutput(entry *RepackResult, zip, sums, sig []byte) error {
-	zipFile, err := os.Create(entry.Zip)
-	if err != nil {
-		return trace.Wrap(err, "opening zipfile failed")
-	}
-	defer zipFile.Close()
-
-	_, err = zipFile.Write(zip)
-	if err != nil {
-		return trace.Wrap(err, "writing zipfile failed")
-	}
-
-	sumFile, err := os.Create(entry.Sum)
-	if err != nil {
-		return trace.Wrap(err, "opening sum file failed")
-	}
-	defer sumFile.Close()
-
-	_, err = sumFile.Write(sums)
+// writeOutput writes the in-memory signature data to file, and moves the temporary
+// zip file into place
+func writeOutput(entry *RepackResult, zipFilePath string, sums, sig []byte) error {
+	log.Debugf("Writing sum file to %s", entry.Sum)
+	err := ioutil.WriteFile(entry.Sum, sums, 0644)
 	if err != nil {
 		return trace.Wrap(err, "writing sumfile failed")
 	}
 
-	sigFile, err := os.Create(entry.Sig)
+	log.Debugf("Writing signature file to %s", entry.Sig)
+	err = ioutil.WriteFile(entry.Sig, sig, 0644)
 	if err != nil {
-		return trace.Wrap(err, "opening sig file failed")
+		return trace.Wrap(err, "writing sumfile failed")
 	}
-	defer sigFile.Close()
 
-	_, err = sigFile.Write(sig)
+	// Do this _last_, as we want the temp file cleaned up if any of the above fails.
+	log.Debugf("Moving tmp zipfile %s into place at %s", zipFilePath, entry.Zip)
+	err = os.Rename(zipFilePath, entry.Zip)
 	if err != nil {
-		return trace.Wrap(err, "writing sigFile failed")
+		return trace.Wrap(err, "moving zipfile into place")
 	}
 
 	return nil

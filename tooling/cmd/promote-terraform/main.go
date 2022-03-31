@@ -58,7 +58,7 @@ func main() {
 		log.WithError(err).Fatalf("Failed repacking artifacts")
 	}
 
-	err = updateRegistry(context.Background(), &args.production, workspace, args.providerNamespace, args.providerName, &versionRecord, newFiles)
+	err = updateRegistry(context.Background(), &args.production, workspace, args.providerNamespace, args.providerName, versionRecord, newFiles)
 	if err != nil {
 		log.WithError(err).Fatal("Failed updating registry")
 	}
@@ -77,7 +77,7 @@ func logLevel(args *args) log.Level {
 	}
 }
 
-func updateRegistry(ctx context.Context, prodBucket *bucketConfig, workspace *workspacePaths, namespace, provider string, newVersion *registry.Version, files []string) error {
+func updateRegistry(ctx context.Context, prodBucket *bucketConfig, workspace *workspacePaths, namespace, provider string, newVersion registry.Version, files []string) error {
 	s3client, err := newS3ClientFromBucketConfig(ctx, prodBucket)
 	if err != nil {
 		return trace.Wrap(err)
@@ -89,7 +89,7 @@ func updateRegistry(ctx context.Context, prodBucket *bucketConfig, workspace *wo
 	// Try downloading the versions file. This may not exist in an empty/new
 	// registry, so if the download fails with a NotFound error we ignore it
 	// and use an empty index.
-	versions := registry.NewVersions()
+	versions := registry.Versions{}
 	err = download(ctx, s3client, versionsFilePath, prodBucket.bucketName, versionsFileKey)
 	switch {
 	case err == nil:
@@ -107,7 +107,7 @@ func updateRegistry(ctx context.Context, prodBucket *bucketConfig, workspace *wo
 
 	// Index the available version by their semver version, so that we can find the
 	// appropriate release if we're overwriting an existing version
-	versionIndex := map[semver.Version]*registry.Version{}
+	versionIndex := map[semver.Version]registry.Version{}
 	for _, v := range versions.Versions {
 		versionIndex[v.Version] = v
 	}
@@ -150,7 +150,7 @@ func uploadRegistry(ctx aws.Context, s3Client *s3.Client, bucketName string, pro
 		doUpload := func() error {
 			f, err := os.Open(f)
 			if err != nil {
-				return err
+				return trace.Wrap(err)
 			}
 			defer f.Close()
 
@@ -160,7 +160,7 @@ func uploadRegistry(ctx aws.Context, s3Client *s3.Client, bucketName string, pro
 				Body:   f,
 			})
 
-			return err
+			return trace.Wrap(err)
 		}
 
 		if err = doUpload(); err != nil {
@@ -171,7 +171,7 @@ func uploadRegistry(ctx aws.Context, s3Client *s3.Client, bucketName string, pro
 	return nil
 }
 
-func flattenVersionIndex(versionIndex map[semver.Version]*registry.Version) []*registry.Version {
+func flattenVersionIndex(versionIndex map[semver.Version]registry.Version) []registry.Version {
 
 	// We want to output a list of versions with semver ordering, so first we
 	// generate a sorted list of keys
@@ -183,7 +183,7 @@ func flattenVersionIndex(versionIndex map[semver.Version]*registry.Version) []*r
 
 	// Now we can simply walk the index using the sorted key list and we have
 	// our sorted output list
-	result := make([]*registry.Version, 0, len(keys))
+	result := make([]registry.Version, 0, len(keys))
 	for _, k := range keys {
 		result = append(result, versionIndex[k])
 	}

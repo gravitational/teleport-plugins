@@ -13,6 +13,8 @@ var (
 	filenamePattern *regexp.Regexp = regexp.MustCompile(`^(?P<plugin>.*)-teleport-v(?P<version>.*)-(?P<os>linux|darwin|windows)-(?P<arch>amd64|arm|aarch)-bin.tar.gz$`)
 )
 
+// Info holds information about a plugin, deduced from from its Houston-compatible
+// filename.
 type Info struct {
 	Type    string
 	Version semver.Version
@@ -20,6 +22,9 @@ type Info struct {
 	Arch    string
 }
 
+// Parse attempts to deduce information about a staged plugin from its (assumed
+// Houston-compatible) filename, returning an error if the filename can't be
+// parsed.
 func Parse(filename string) (Info, error) {
 	filename = filepath.Base(filename)
 
@@ -41,6 +46,9 @@ func Parse(filename string) (Info, error) {
 	}, nil
 }
 
+// Filename generates a Houston-compatible filename for the Info block, with a
+// given file extension (NB: the extension is expected to include the leading
+// dot).
 func (info *Info) Filename(extension string) string {
 	return fmt.Sprintf("%s-teleport-v%s-%s-%s-bin%s", info.Type, info.Version, info.OS, info.Arch, extension)
 }

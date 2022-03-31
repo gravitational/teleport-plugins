@@ -64,7 +64,7 @@ func newKey(t *testing.T) *openpgp.Entity {
 	return entity
 }
 
-func TestRepack(t *testing.T) {
+func TestRepackProvider(t *testing.T) {
 	signer := newKey(t)
 	timestamp := time.Now()
 	srcPkg := newPackage(t, timestamp, "1.2.3", "linux", "arm")

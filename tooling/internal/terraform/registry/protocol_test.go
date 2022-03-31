@@ -37,7 +37,7 @@ const validIndex = `
 
 func TestIndexJson(t *testing.T) {
 	uut := Versions{
-		Versions: []*Version{
+		Versions: []Version{
 			{
 				Version:   semver.Version{Major: 2, Minor: 0, Patch: 0},
 				Protocols: []string{"4.0", "5.1"},

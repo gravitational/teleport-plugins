@@ -9,11 +9,15 @@ import (
 	"github.com/gravitational/trace"
 )
 
+// repack copies the contents of a compressed tar archive into a
+// zip archive. Only regular  files are copied into the Zip
+// archive - symlinks, etc are discarded.
 func repack(dst io.Writer, src io.Reader) error {
 	uncompressedReader, err := gzip.NewReader(src)
 	if err != nil {
 		return trace.Wrap(err)
 	}
+	defer uncompressedReader.Close()
 	tarReader := tar.NewReader(uncompressedReader)
 
 	zipWriter := zip.NewWriter(dst)
@@ -28,6 +32,7 @@ func repack(dst io.Writer, src io.Reader) error {
 			return trace.Wrap(err)
 		}
 
+		// if the header represents a "regular file"...
 		if header.Typeflag == tar.TypeReg {
 			if err = copyfile(zipWriter, header, tarReader); err != nil {
 				return trace.Wrap(err, "failed repacking tar file item")
@@ -43,7 +48,7 @@ func repack(dst io.Writer, src io.Reader) error {
 func copyfile(zipfile *zip.Writer, header *tar.Header, src io.Reader) error {
 	zipHeader, err := zip.FileInfoHeader(header.FileInfo())
 	if err != nil {
-		return trace.Wrap(err, "failed initialising zipfile header")
+		return trace.Wrap(err, "failed initializing zipfile header")
 	}
 	zipHeader.Name = header.Name
 	zipHeader.Method = zip.Deflate
