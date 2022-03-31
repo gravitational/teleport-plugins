@@ -166,3 +166,10 @@ update-tag:
 lint: GO_LINT_FLAGS ?=
 lint:
 	golangci-lint run -c .golangci.yml $(GO_LINT_FLAGS)
+
+.PHONY: test-helm-access-email
+test-helm-access-email:
+	helm unittest ./charts/access/email
+
+.PHONY: test-helm
+test-helm: test-helm-access-email
