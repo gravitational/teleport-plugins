@@ -25,7 +25,7 @@ should match the snapshot (mailgun on):
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: access-plugin-email
         app.kubernetes.io/version: 9.0.0
-        helm.sh/chart: access-plugin-email-0.1.0
+        helm.sh/chart: access-plugin-email-1.0.0
       name: RELEASE-NAME-access-plugin-email
 should match the snapshot (smtp on):
   1: |
@@ -57,7 +57,7 @@ should match the snapshot (smtp on):
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: access-plugin-email
         app.kubernetes.io/version: 9.0.0
-        helm.sh/chart: access-plugin-email-0.1.0
+        helm.sh/chart: access-plugin-email-1.0.0
       name: RELEASE-NAME-access-plugin-email
 should match the snapshot (smtp on, password file):
   1: |
@@ -89,5 +89,5 @@ should match the snapshot (smtp on, password file):
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: access-plugin-email
         app.kubernetes.io/version: 9.0.0
-        helm.sh/chart: access-plugin-email-0.1.0
+        helm.sh/chart: access-plugin-email-1.0.0
       name: RELEASE-NAME-access-plugin-email

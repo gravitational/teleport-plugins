@@ -8,7 +8,7 @@ should match the snapshot:
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: access-plugin-email
         app.kubernetes.io/version: 9.0.0
-        helm.sh/chart: access-plugin-email-0.1.0
+        helm.sh/chart: access-plugin-email-1.0.0
       name: RELEASE-NAME-access-plugin-email
     spec:
       replicas: 1
