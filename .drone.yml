@@ -651,7 +651,7 @@ steps:
       - |
         go run ./cmd/promote-terraform   \
           --tag ${DRONE_TAG}             \
-          -p 4.0 -p 5.1                  \
+          -p 6                           \
           --namespace gravitational      \
           --name teleport
 
@@ -664,13 +664,14 @@ steps:
       STAGING_SECRET_ACCESS_KEY:
         from_secret: AWS_SECRET_ACCESS_KEY
       
-      PRODUCTION_REGION: us-east-2
+      PRODUCTION_REGION:
+        from_secret: STAGING_TERRAFORM_AWS_REGION
       PROD_BUCKET:
-        from_secret: STAGING_AWS_TERRAFORM_BUCKET
+        from_secret: STAGING_TERRAFORM_AWS_BUCKET
       PROD_ACCESS_KEY_ID:
-        from_secret: STAGING_AWS_TERRAFORM_ACCESS_KEY_ID
+        from_secret: STAGING_TERRAFORM_AWS_ACCESS_KEY_ID
       PROD_SECRET_ACCESS_KEY:
-        from_secret: STAGING_AWS_TERRAFORM_SECRET_ACCESS_KEY
+        from_secret: STAGING_TERRAFORM_AWS_SECRET_ACCESS_KEY
       
       SIGNING_KEY:
         from_secret: STAGING_TERRAFORM_REGISTRY_SIGNING_KEY
@@ -696,7 +697,7 @@ steps:
       - |
         go run ./cmd/promote-terraform   \
           --tag ${DRONE_TAG}             \
-          -p 4.0 -p 5.1                  \
+          -p 6                           \
           --namespace gravitational      \
           --name teleport
 
@@ -709,18 +710,19 @@ steps:
       STAGING_SECRET_ACCESS_KEY:
         from_secret: AWS_SECRET_ACCESS_KEY
       
-      PRODUCTION_REGION: ap-southeast-2
+      PRODUCTION_REGION:
+        from_secret: PRODUCTION_TERRAFORM_AWS_REGION
       PROD_BUCKET:
-        from_secret: PRODUCTION_AWS_TERRAFORM_BUCKET
+        from_secret: PRODUCTION_TERRAFORM_AWS_BUCKET
       PROD_ACCESS_KEY_ID:
-        from_secret: PRODUCTION_AWS_TERRAFORM_ACCESS_KEY_ID
+        from_secret: PRODUCTION_TERRAFORM_AWS_ACCESS_KEY_ID
       PROD_SECRET_ACCESS_KEY:
-        from_secret: PRODUCTION_AWS_TERRAFORM_SECRET_ACCESS_KEY 
+        from_secret: PRODUCTION_TERRAFORM_AWS_SECRET_ACCESS_KEY 
 
       SIGNING_KEY:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: 7c3217716b77812d57ebf5f3d6965dfef25aedcc6593bd50365903d65bd2b79f
+hmac: d453538bb4b8281960cff6363267944ebd5fd943bc95f9b095a5dddff33be7f6
 
 ...
