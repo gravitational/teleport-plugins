@@ -281,7 +281,7 @@ func (p *Provider) stringFromConfigOrEnv(value types.String, env string, def str
 	if value.Unknown || value.Null {
 		value := os.Getenv(env)
 		if value != "" {
-			return def
+			return value
 		}
 	}
 
