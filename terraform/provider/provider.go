@@ -299,6 +299,7 @@ func (p *Provider) validateAddr(addr string, resp *tfsdk.ConfigureProviderRespon
 	return true
 }
 
+// getCredentialsFromBase64 returns client.Credentials built from base64 encoded keys
 func (p *Provider) getCredentialsFromBase64(certBase64, keyBase64, caBase64 string, resp *tfsdk.ConfigureProviderResponse) (client.Credentials, bool) {
 	cert, err := base64.StdEncoding.DecodeString(certBase64)
 	if err != nil {
@@ -404,7 +405,7 @@ func (p *Provider) configureLog() {
 	}
 }
 
-// setupClientTLS
+// createTLSConfig returns tls.Config build from keys
 func createTLSConfig(cert, key, rootCa []byte) (*tls.Config, error) {
 	keyPair, err := tls.X509KeyPair(cert, key)
 	if err != nil {
