@@ -94,36 +94,51 @@ func (p *Provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics)
 				Optional:    true,
 				Description: "Path to Teleport auth certificate file.",
 			},
+			"cert_base64": {
+				Type:        types.StringType,
+				Optional:    true,
+				Description: "Base64 encoded TLS auth certificate.",
+			},
 			"key_path": {
 				Type:        types.StringType,
 				Optional:    true,
 				Description: "Path to Teleport auth key file.",
 			},
+			"key_base64": {
+				Type:        types.StringType,
+				Optional:    true,
+				Description: "Base64 encoded TLS auth key.",
+			},
 			"root_ca_path": {
 				Type:        types.StringType,
 				Optional:    true,
-				Description: "Path to Teleport Root CA",
+				Description: "Path to Teleport Root CA.",
+			},
+			"root_ca_base64": {
+				Type:        types.StringType,
+				Optional:    true,
+				Description: "Base64 encoded Root CA.",
 			},
 			"profile_name": {
 				Type:        types.StringType,
 				Optional:    true,
-				Description: "Teleport profile name",
+				Description: "Teleport profile name.",
 			},
 			"profile_dir": {
 				Type:        types.StringType,
 				Optional:    true,
-				Description: "Teleport profile path",
+				Description: "Teleport profile path.",
 			},
 			"identity_file_path": {
 				Type:        types.StringType,
 				Optional:    true,
-				Description: "Teleport identity file path",
+				Description: "Teleport identity file path.",
 			},
 			"identity_file": {
 				Type:        types.StringType,
 				Sensitive:   true,
 				Optional:    true,
-				Description: "Teleport identity file content",
+				Description: "Teleport identity file content.",
 			},
 		},
 	}, nil
