@@ -7,6 +7,7 @@ resource "teleport_session_recording_config" "test" {
     }
                     
     spec = {
+        mode = "node"
         proxy_checks_host_keys = true
     }		
 }
