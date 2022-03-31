@@ -5,5 +5,5 @@ steps:
       - -c
       - |
         apk add openssl curl bash git &&
-        helm plugin install https://github.com/vbehar/helm3-unittest &&
+        helm plugin install --version=v1.0.16 https://github.com/vbehar/helm3-unittest &&
         helm unittest ./charts/access/email
