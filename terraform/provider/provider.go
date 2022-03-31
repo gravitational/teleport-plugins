@@ -197,8 +197,7 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		}
 		creds = append(creds, cred)
 	} else if certBase64 != "" && keyBase64 != "" {
-		l := log.WithField("cert_base64", certBase64).WithField("key_base64", "sensitive-redacted").WithField("root_ca_base64", caPath)
-		l.Debug("Using auth with certificate, private key and (optionally) CA read from base64 encoded vars")
+		log.Debug("Using auth with certificate, private key and (optionally) CA read from base64 encoded vars")
 		cred, ok := p.getCredentialsFromBase64(certBase64, keyBase64, caBase64, resp)
 		if !ok {
 			return
@@ -348,7 +347,7 @@ func (p *Provider) getCredentialsFromBase64(certBase64, keyBase64, caBase64 stri
 		)
 		return nil, false
 	}
-	return client.LoadTLS(tlsConfig), false
+	return client.LoadTLS(tlsConfig), true
 }
 
 // getCredentialsFromKeyPair returns client.Credentials built from path to key files
