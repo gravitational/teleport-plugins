@@ -18,6 +18,9 @@ package provider
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"os"
@@ -52,10 +55,16 @@ type providerData struct {
 	Addr types.String `tfsdk:"addr"`
 	// CertPath path to TLS certificate file
 	CertPath types.String `tfsdk:"cert_path"`
+	// CertBase64 base64 encoded TLS certificate file
+	CertBase64 types.String `tfsdk:"cert_base64"`
 	// KeyPath path to TLS private key file
 	KeyPath types.String `tfsdk:"key_path"`
+	// KeyBase64 base64 encoded TLS private key
+	KeyBase64 types.String `tfsdk:"key_base64"`
 	// RootCAPath path to TLS root CA certificate file
 	RootCaPath types.String `tfsdk:"root_ca_path"`
+	// RootCaPath base64 encoded root CA certificate
+	RootCaBase64 types.String `tfsdk:"root_ca_base64"`
 	// ProfileName Teleport profile name
 	ProfileName types.String `tfsdk:"profile_name"`
 	// ProfileDir Teleport profile dir
@@ -147,8 +156,11 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 
 	addr := p.stringFromConfigOrEnv(config.Addr, "TF_TELEPORT_ADDR", "")
 	certPath := p.stringFromConfigOrEnv(config.CertPath, "TF_TELEPORT_CERT", "")
+	certBase64 := p.stringFromConfigOrEnv(config.CertBase64, "TF_TELEPORT_CERT_BASE64", "")
 	keyPath := p.stringFromConfigOrEnv(config.KeyPath, "TF_TELEPORT_KEY", "")
+	keyBase64 := p.stringFromConfigOrEnv(config.KeyBase64, "TF_TELEPORT_KEY_BASE64", "")
 	caPath := p.stringFromConfigOrEnv(config.RootCaPath, "TF_TELEPORT_ROOT_CA", "")
+	caBase64 := p.stringFromConfigOrEnv(config.RootCaBase64, "TF_TELEPORT_CA_BASE64", "")
 	profileName := p.stringFromConfigOrEnv(config.ProfileName, "TF_TELEPORT_PROFILE_NAME", "")
 	profileDir := p.stringFromConfigOrEnv(config.ProfileDir, "TF_TELEPORT_PROFILE_PATH", "")
 	identityFilePath := p.stringFromConfigOrEnv(config.IdentityFilePath, "TF_TELEPORT_IDENTITY_FILE_PATH", "")
@@ -162,9 +174,17 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 
 	if certPath != "" && keyPath != "" {
 		l := log.WithField("cert_path", certPath).WithField("key_path", keyPath).WithField("root_ca_path", caPath)
-		l.Debug("Using auth with certificate, private key and (optionally) CA")
+		l.Debug("Using auth with certificate, private key and (optionally) CA read from files")
 
 		cred, ok := p.getCredentialsFromKeyPair(certPath, keyPath, caPath, resp)
+		if !ok {
+			return
+		}
+		creds = append(creds, cred)
+	} else if certBase64 != "" && keyBase64 != "" {
+		l := log.WithField("cert_base64", certBase64).WithField("key_base64", "sensitive-redacted").WithField("root_ca_base64", caPath)
+		l.Debug("Using auth with certificate, private key and (optionally) CA read from base64 encoded vars")
+		cred, ok := p.getCredentialsFromBase64(certBase64, keyBase64, caBase64, resp)
 		if !ok {
 			return
 		}
@@ -279,6 +299,42 @@ func (p *Provider) validateAddr(addr string, resp *tfsdk.ConfigureProviderRespon
 	return true
 }
 
+func (p *Provider) getCredentialsFromBase64(certBase64, keyBase64, caBase64 string, resp *tfsdk.ConfigureProviderResponse) (client.Credentials, bool) {
+	cert, err := base64.StdEncoding.DecodeString(certBase64)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to base64 decode cert",
+			fmt.Sprintf("Error: %s", err),
+		)
+		return nil, false
+	}
+	key, err := base64.StdEncoding.DecodeString(keyBase64)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to base64 decode key",
+			fmt.Sprintf("Error: %s", err),
+		)
+		return nil, false
+	}
+	rootCa, err := base64.StdEncoding.DecodeString(caBase64)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to base64 decode root ca",
+			fmt.Sprintf("Error: %s", err),
+		)
+		return nil, false
+	}
+	tlsConfig, err := createTLSConfig(cert, key, rootCa)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to create TLS config",
+			fmt.Sprintf("Error: %s", err),
+		)
+		return nil, false
+	}
+	return client.LoadTLS(tlsConfig), false
+}
+
 // getCredentialsFromKeyPair returns client.Credentials built from path to key files
 func (p *Provider) getCredentialsFromKeyPair(certPath string, keyPath string, caPath string, resp *tfsdk.ConfigureProviderResponse) (client.Credentials, bool) {
 	if !p.fileExists(certPath) {
@@ -346,6 +402,21 @@ func (p *Provider) configureLog() {
 		l := grpclog.NewLoggerV2(log.StandardLogger().Out, log.StandardLogger().Out, log.StandardLogger().Out)
 		grpclog.SetLoggerV2(l)
 	}
+}
+
+// setupClientTLS
+func createTLSConfig(cert, key, rootCa []byte) (*tls.Config, error) {
+	keyPair, err := tls.X509KeyPair(cert, key)
+	if err != nil {
+		return nil, err
+	}
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(rootCa)
+
+	return &tls.Config{
+		Certificates: []tls.Certificate{keyPair},
+		RootCAs:      caCertPool,
+	}, nil
 }
 
 // GetResources returns the map of provider resources
