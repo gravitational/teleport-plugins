@@ -121,7 +121,7 @@ spec:
     rules:
       - resources: ['event','session']
         verbs: ['list','read']
-version: v4
+version: v5
 ```
 
 It defines `teleport-event-handler` role and user which has read-only access to the `event` API.

@@ -69,7 +69,7 @@ spec:
     rules:
       - resources: ['access_request']
         verbs: ['list', 'read', 'update']
-version: v4
+version: v5
 ```
 
 ### User
