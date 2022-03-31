@@ -108,8 +108,6 @@ Then, edit the config as needed.
 # Example slack plugin configuration TOML file
 
 [teleport]
-# This section 
-
 # Teleport Auth/Proxy Server address.
 # addr = "example.com:3025"
 #
