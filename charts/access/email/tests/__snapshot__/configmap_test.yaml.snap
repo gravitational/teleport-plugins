@@ -1,0 +1,93 @@
+should match the snapshot (mailgun on):
+  1: |
+    apiVersion: v1
+    data:
+      teleport-email.toml: |
+        [teleport]
+        addr = "teleport.example.com:1234"
+        identity = "/var/lib/teleport/plugins/email/auth_id"
+
+
+        [mailgun]
+        domain      = "mymailgunsubdomain.mailgun.org"
+        private_key = "xoxb-71d75f662b0eac53565a38c8cc0316f6"
+        [delivery]
+        sender = ""
+        recipients = []
+
+        [log]
+        output = "stdout"
+        severity = "INFO"
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: access-plugin-email
+        app.kubernetes.io/version: 9.0.0
+        helm.sh/chart: access-plugin-email-1.0.0
+      name: RELEASE-NAME-access-plugin-email
+should match the snapshot (smtp on):
+  1: |
+    apiVersion: v1
+    data:
+      teleport-email.toml: |
+        [teleport]
+        addr = "teleport.example.com:1234"
+        identity = "/var/lib/teleport/plugins/email/auth_id"
+
+
+        [smtp]
+        host          = "smtp.someservice.com"
+        port          = 1234
+        username      = "mysmtpuser"
+        password      = "mysmtppasswd"
+
+        [delivery]
+        sender = "teleport@example.com"
+        recipients = ["security@mycompany.com"]
+
+        [log]
+        output = "/var/log/teleport-email.log"
+        severity = "DEBUG"
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: access-plugin-email
+        app.kubernetes.io/version: 9.0.0
+        helm.sh/chart: access-plugin-email-1.0.0
+      name: RELEASE-NAME-access-plugin-email
+should match the snapshot (smtp on, password file):
+  1: |
+    apiVersion: v1
+    data:
+      teleport-email.toml: |
+        [teleport]
+        addr = "teleport.example.com:1234"
+        identity = "/var/lib/teleport/plugins/email/auth_id"
+
+
+        [smtp]
+        host          = "smtp.someservice.com"
+        port          = 1234
+        username      = "mysmtpuser"
+        password_file = "/etc/teleport/supersecretemailpw"
+
+        [delivery]
+        sender = ""
+        recipients = []
+
+        [log]
+        output = "stdout"
+        severity = "INFO"
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: access-plugin-email
+        app.kubernetes.io/version: 9.0.0
+        helm.sh/chart: access-plugin-email-1.0.0
+      name: RELEASE-NAME-access-plugin-email

@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "email.fullname" . }}
+  labels:
+    {{- include "email.labels" . | nindent 4 }}
+data:
+  teleport-email.toml: |
+    [teleport]
+    addr = "{{ .Values.teleport.address }}"
+    identity = "/var/lib/teleport/plugins/email/auth_id"
+
+    {{ if .Values.mailgun.enabled }}
+    [mailgun]
+    domain      = "{{ .Values.mailgun.domain }}"
+    private_key = "{{ .Values.mailgun.privateKey }}"
+    {{ else if .Values.smtp.enabled }}
+    [smtp]
+    host          = "{{ .Values.smtp.host }}"
+    port          = {{ .Values.smtp.port }}
+    username      = "{{ .Values.smtp.username }}"
+    {{ if eq .Values.smtp.passwordFile "" -}}
+    password      = "{{ .Values.smtp.password }}"
+    {{ else -}}
+    password_file = "{{ .Values.smtp.passwordFile }}"
+    {{ end }}
+    {{ end -}}
+
+    [delivery]
+    sender = "{{ .Values.delivery.sender }}"
+    recipients = {{ .Values.delivery.recipients | toJson }}
+
+    [log]
+    output = "{{ .Values.log.output }}"
+    severity = "{{ .Values.log.severity }}"
