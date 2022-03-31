@@ -43,7 +43,7 @@ For a list of available tags, visit [https://quay.io/](https://quay.io/repositor
 
 ### Building from source
 
-To build the plugin from source you need Go >= 1.16 and `make`.
+To build the plugin from source you need [Go](https://go.dev/) and `make`.
 
 ```bash
 $ git clone https://github.com/gravitational/teleport-plugins.git
