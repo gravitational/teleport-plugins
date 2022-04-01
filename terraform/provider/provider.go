@@ -197,7 +197,9 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 			return
 		}
 		creds = append(creds, cred)
-	} else if certBase64 != "" && keyBase64 != "" {
+	}
+
+	if certBase64 != "" && keyBase64 != "" {
 		log.Debug("Using auth with certificate, private key and (optionally) CA read from base64 encoded vars")
 		cred, ok := p.getCredentialsFromBase64(certBase64, keyBase64, caBase64, resp)
 		if !ok {
