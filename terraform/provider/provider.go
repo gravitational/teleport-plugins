@@ -320,7 +320,7 @@ func (p *Provider) getCredentialsFromBase64(certBase64, keyBase64, caBase64 stri
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Failed to base64 decode cert",
-			fmt.Sprintf("Error: %s", err),
+			fmt.Sprintf("Please check if cert_base64 (or TF_TELEPORT_CERT_BASE64) is set correctly. Error: %s", err),
 		)
 		return nil, false
 	}
@@ -328,7 +328,7 @@ func (p *Provider) getCredentialsFromBase64(certBase64, keyBase64, caBase64 stri
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Failed to base64 decode key",
-			fmt.Sprintf("Error: %s", err),
+			fmt.Sprintf("Please check if key_base64 (or TF_TELEPORT_KEY_BASE64) is set correctly. Error: %s", err),
 		)
 		return nil, false
 	}
@@ -336,7 +336,7 @@ func (p *Provider) getCredentialsFromBase64(certBase64, keyBase64, caBase64 stri
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Failed to base64 decode root ca",
-			fmt.Sprintf("Error: %s", err),
+			fmt.Sprintf("Please check if root_ca_base64 (or TF_TELEPORT_CA_BASE64) is set correctly. Error: %s", err),
 		)
 		return nil, false
 	}
