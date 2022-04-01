@@ -251,7 +251,6 @@ required_fields:
     # SAML connector
     - "SAMLConnectorV2.Spec"
     - "SAMLConnectorV2.Spec.AssertionConsumerService"
-    - "SAMLConnectorV2.Spec.EntityDescriptor"
     - "SAMLConnectorV2.Spec.AttributesToRoles"
     - "SAMLConnectorV2.Metadata.Name"    
 
@@ -317,6 +316,8 @@ validators:
     - UseVersionBetween(3,5)
   SAMLConnectorV2.Version:
     - UseVersionBetween(2,2)
+  SAMLConnectorV2.Spec:
+    - UseOneOfValidator("entity_descriptor", "entity_descriptor_url")
   SessionRecordingConfigV2.Version:
     - UseVersionBetween(2,2)
   SessionRecordingConfigV2.Metadata.Labels:

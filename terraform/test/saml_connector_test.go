@@ -17,6 +17,8 @@ limitations under the License.
 package test
 
 import (
+	"regexp"
+
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -133,6 +135,18 @@ func (s *TerraformSuite) TestSAMLConnectorWithEntityDescriptorURL() {
 		Steps: []resource.TestStep{
 			{
 				Config: s.getFixture("saml_connector_0_create_with_entitydescriptorurl.tf"),
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestSAMLConnectorWithoutEntityDescriptor() {
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      s.getFixture("saml_connector_0_create_without_entitydescriptor.tf"),
+				ExpectError: regexp.MustCompile("OneOf 'entity_descriptor, entity_descriptor_url' keys must be present"),
 			},
 		},
 	})
