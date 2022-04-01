@@ -20,7 +20,7 @@ TELEPORT_FLAGS ?=
 PLUGIN_FLAGS ?=
 
 # Which plugins to run on make up?
-PLUGINS ?= teleport-slack teleport-jira teleport-mattermost teleport-gitlab teleport-pagerduty teleport-webhooks
+PLUGINS ?= teleport-slack teleport-jira teleport-mattermost teleport-pagerduty teleport-webhooks
 
 #
 # Default target starts a teleport cluster with a single node,
