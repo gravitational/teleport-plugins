@@ -126,3 +126,14 @@ func (s *TerraformSuite) TestImportSAMLConnector() {
 		},
 	})
 }
+
+func (s *TerraformSuite) TestSAMLConnectorWithEntityDescriptorURL() {
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("saml_connector_0_create_with_entitydescriptorurl.tf"),
+			},
+		},
+	})
+}
