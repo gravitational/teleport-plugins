@@ -41,6 +41,10 @@ func getObjectWithTwoKeys() types.Object {
 				Unknown: false,
 			},
 		},
+		AttrTypes: map[string]attr.Type{
+			"key1": types.StringType,
+			"key2": types.StringType,
+		},
 	}
 }
 
