@@ -2050,7 +2050,7 @@ func GenSchemaSAMLConnectorV2(ctx context.Context) (github_com_hashicorp_terrafo
 			}),
 			Description: "Spec is an SAML connector specification.",
 			Required:    true,
-			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseOneOfValidator("entity_descriptor", "entity_descriptor_url")},
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseAnyOfValidator("entity_descriptor", "entity_descriptor_url")},
 		},
 		"sub_kind": {
 			Description: "SubKind is an optional resource sub kind, used in some resources.",

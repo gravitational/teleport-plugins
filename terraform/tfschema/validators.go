@@ -165,30 +165,30 @@ OUTER:
 
 }
 
-// OneOfValidator validates that at least one of the attributes is set (known and not null)
-type OneOfValidator struct {
+// AnyOfValidator validates that at least one of the attributes is set (known and not null)
+type AnyOfValidator struct {
 	Keys []string
 }
 
-// UseOneOfValidator creates OneOfValidator
-func UseOneOfValidator(keys ...string) tfsdk.AttributeValidator {
-	return OneOfValidator{
+// UseAnyOfValidator creates AnyOfValidator
+func UseAnyOfValidator(keys ...string) tfsdk.AttributeValidator {
+	return AnyOfValidator{
 		Keys: keys,
 	}
 }
 
 // Description returns validator description
-func (v OneOfValidator) Description(_ context.Context) string {
-	return fmt.Sprintf("OneOf '%s' attributes must be present", strings.Join(v.Keys, ", "))
+func (v AnyOfValidator) Description(_ context.Context) string {
+	return fmt.Sprintf("AnyOf '%s' attributes must be present", strings.Join(v.Keys, ", "))
 }
 
 // MarkdownDescription returns validator markdown description
-func (v OneOfValidator) MarkdownDescription(_ context.Context) string {
-	return fmt.Sprintf("OneOf `%s` attributes must be present", strings.Join(v.Keys, ", "))
+func (v AnyOfValidator) MarkdownDescription(_ context.Context) string {
+	return fmt.Sprintf("AnyOf `%s` attributes must be present", strings.Join(v.Keys, ", "))
 }
 
 // Validate performs the validation.
-func (v OneOfValidator) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
+func (v AnyOfValidator) Validate(ctx context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
 	if req.AttributeConfig == nil {
 		return
 	}
@@ -196,7 +196,7 @@ func (v OneOfValidator) Validate(ctx context.Context, req tfsdk.ValidateAttribut
 	value, ok := req.AttributeConfig.(types.Object)
 	if !ok {
 		resp.Diagnostics.AddError(
-			"OneOf Object validation error",
+			"AnyOf Object validation error",
 			fmt.Sprintf("Attribute %v can not be converted to Object", req.AttributePath.String()),
 		)
 		return
@@ -212,7 +212,7 @@ func (v OneOfValidator) Validate(ctx context.Context, req tfsdk.ValidateAttribut
 			tfVal, err := attr.ToTerraformValue(ctx)
 			if err != nil {
 				resp.Diagnostics.AddError(
-					"OneOf keys validation error",
+					"AnyOf keys validation error",
 					fmt.Sprintf("Failed to convert ToTerraformValue attribute with key '%s': %v", key, err),
 				)
 				return
@@ -224,7 +224,7 @@ func (v OneOfValidator) Validate(ctx context.Context, req tfsdk.ValidateAttribut
 	}
 
 	resp.Diagnostics.AddError(
-		"OneOf keys validation error",
-		fmt.Sprintf("OneOf '%s' keys must be present", strings.Join(v.Keys, ", ")),
+		"AnyOf keys validation error",
+		fmt.Sprintf("AnyOf '%s' keys must be present", strings.Join(v.Keys, ", ")),
 	)
 }

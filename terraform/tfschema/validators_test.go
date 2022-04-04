@@ -48,26 +48,26 @@ func getObjectWithTwoKeys() types.Object {
 	}
 }
 
-func TestOneOfValidator(t *testing.T) {
+func TestAnyOfValidator(t *testing.T) {
 	type testCase struct {
 		input       types.Object
-		oneOfValues []string
+		anyOfValues []string
 		expectError bool
 	}
 	tests := map[string]testCase{
 		"one-of-two": {
 			input:       getObjectWithTwoKeys(),
-			oneOfValues: []string{"key1"},
+			anyOfValues: []string{"key1"},
 			expectError: false,
 		},
 		"two-of-two": {
 			input:       getObjectWithTwoKeys(),
-			oneOfValues: []string{"key1", "key2"},
+			anyOfValues: []string{"key1", "key2"},
 			expectError: false,
 		},
 		"none-of-two": {
 			input:       getObjectWithTwoKeys(),
-			oneOfValues: []string{"key3"},
+			anyOfValues: []string{"key3"},
 			expectError: true,
 		},
 	}
@@ -83,7 +83,7 @@ func TestOneOfValidator(t *testing.T) {
 			req := tfsdk.ValidateAttributeRequest{
 				AttributeConfig: test.input,
 			}
-			UseOneOfValidator(test.oneOfValues...).Validate(ctx, req, resp)
+			UseAnyOfValidator(test.anyOfValues...).Validate(ctx, req, resp)
 			require.Equal(t, test.expectError, resp.Diagnostics.HasError())
 		})
 	}

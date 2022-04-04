@@ -146,7 +146,7 @@ func (s *TerraformSuite) TestSAMLConnectorWithoutEntityDescriptor() {
 		Steps: []resource.TestStep{
 			{
 				Config:      s.getFixture("saml_connector_0_create_without_entitydescriptor.tf"),
-				ExpectError: regexp.MustCompile("OneOf 'entity_descriptor, entity_descriptor_url' keys must be present"),
+				ExpectError: regexp.MustCompile("AnyOf 'entity_descriptor, entity_descriptor_url' keys must be present"),
 			},
 		},
 	})

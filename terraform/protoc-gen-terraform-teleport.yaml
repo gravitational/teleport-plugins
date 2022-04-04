@@ -317,7 +317,7 @@ validators:
   SAMLConnectorV2.Version:
     - UseVersionBetween(2,2)
   SAMLConnectorV2.Spec:
-    - UseOneOfValidator("entity_descriptor", "entity_descriptor_url")
+    - UseAnyOfValidator("entity_descriptor", "entity_descriptor_url")
   SessionRecordingConfigV2.Version:
     - UseVersionBetween(2,2)
   SessionRecordingConfigV2.Metadata.Labels:
