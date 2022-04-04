@@ -1989,7 +1989,7 @@ func GenSchemaSAMLConnectorV2(ctx context.Context) (github_com_hashicorp_terrafo
 				},
 				"entity_descriptor": {
 					Description: "EntityDescriptor is XML with descriptor. It can be used to supply configuration parameters in one XML file rather than supplying them in the individual elements.",
-					Required:    true,
+					Optional:    true,
 					Sensitive:   true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
@@ -2050,6 +2050,7 @@ func GenSchemaSAMLConnectorV2(ctx context.Context) (github_com_hashicorp_terrafo
 			}),
 			Description: "Spec is an SAML connector specification.",
 			Required:    true,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseAnyOfValidator("entity_descriptor", "entity_descriptor_url")},
 		},
 		"sub_kind": {
 			Description: "SubKind is an optional resource sub kind, used in some resources.",
