@@ -35,24 +35,31 @@ const (
 	loginType = "user.login"
 )
 
-// TeleportEvent represents helper struct around main audit log event
+// TeleportEvent represents teleport event with cursor and generated ID (if blank)
 type TeleportEvent struct {
-	// event is the event
-	Event interface{}
-	// cursor is the event ID (real/generated when empty)
+	// ID is the event ID (real/generated when empty)
 	ID string
-	// cursor is the current cursor value
+	// Cursor is the current cursor value
 	Cursor string
+	// Event is the original event
+	Event events.AuditEvent
+	// Index is an event index within session
+	Index int64
 	// Type is an event type
 	Type string
 	// Time is an event timestamp
 	Time time.Time
-	// Index is an event index within session
-	Index int64
-	// IsSessionEnd is true when this event is session.end
-	IsSessionEnd bool
 	// SessionID is the session ID this event belongs to
 	SessionID string
+}
+
+// SanitizedTeleportEvent represents helper struct around main audit log event
+type SanitizedTeleportEvent struct {
+	*TeleportEvent
+	// SanitizedEvent is the sanitized event to send to fluentd
+	SanitizedEvent interface{}
+	// IsSessionEnd is true when this event is session.end
+	IsSessionEnd bool
 	// IsFailedLogin is true when this event is the failed login event
 	IsFailedLogin bool
 	// FailedLoginData represents failed login user data
@@ -80,23 +87,24 @@ type printEvent struct {
 	UID         string    `json:"uid"`
 }
 
-// NewTeleportEvent creates TeleportEvent using AuditEvent as a source
-func NewTeleportEvent(e events.AuditEvent, cursor string) (*TeleportEvent, error) {
+func NewTeleportEvent(e events.AuditEvent, cursor string, sid string) (*TeleportEvent, error) {
 	evt := &TeleportEvent{
-		Cursor: cursor,
-		Type:   e.GetType(),
-		Time:   e.GetTime(),
-		Index:  e.GetIndex(),
+		Cursor:    cursor,
+		Event:     e,
+		Index:     e.GetIndex(),
+		Type:      e.GetType(),
+		Time:      e.GetTime(),
+		SessionID: sid,
+	}
+
+	if evt.Type == sessionEndType && sid == "" {
+		evt.SessionID = events.MustToOneOf(e).GetSessionUpload().SessionID
 	}
 
 	err := evt.setID(e)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-
-	evt.setSessionID(e)
-	evt.setEvent(e)
-	evt.setLoginData(e)
 
 	return evt, nil
 }
@@ -120,16 +128,29 @@ func (e *TeleportEvent) setID(evt events.AuditEvent) error {
 	return nil
 }
 
+// NewSanitizedTeleportEvent creates SanitizedTeleportEvent using TeleportEvent as a source
+func NewSanitizedTeleportEvent(e *TeleportEvent) *SanitizedTeleportEvent {
+	evt := &SanitizedTeleportEvent{
+		TeleportEvent: e,
+	}
+
+	evt.setSessionEnd(e.Event)
+	evt.setEvent(e.Event)
+	evt.setLoginData(e.Event)
+
+	return evt
+}
+
 // setEvent sets TeleportEvent.Event
-func (e *TeleportEvent) setEvent(evt events.AuditEvent) {
+func (e *SanitizedTeleportEvent) setEvent(evt events.AuditEvent) {
 	if e.Type != printType {
-		e.Event = evt
+		e.SanitizedEvent = evt
 		return
 	}
 
 	p := events.MustToOneOf(evt).GetSessionPrint()
 
-	e.Event = &printEvent{
+	e.SanitizedEvent = &printEvent{
 		EI:          p.GetIndex(),
 		Event:       printType,
 		Data:        p.Data,
@@ -143,21 +164,17 @@ func (e *TeleportEvent) setEvent(evt events.AuditEvent) {
 	}
 }
 
-// setSessionID sets session id for session end event
-func (e *TeleportEvent) setSessionID(evt events.AuditEvent) {
+// setSessionEnd sets flag session end event
+func (e *SanitizedTeleportEvent) setSessionEnd(evt events.AuditEvent) {
 	if e.Type != sessionEndType {
 		return
 	}
 
-	sid := events.MustToOneOf(evt).GetSessionUpload().SessionID
-
 	e.IsSessionEnd = true
-	e.SessionID = sid
-
 }
 
 // setLoginValues sets values related to login event
-func (e *TeleportEvent) setLoginData(evt events.AuditEvent) {
+func (e *SanitizedTeleportEvent) setLoginData(evt events.AuditEvent) {
 	if e.Type != loginType {
 		return
 	}

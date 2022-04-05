@@ -104,7 +104,7 @@ func (t *TeleportEventsWatcher) Close() {
 
 // flipPage flips the current page
 func (t *TeleportEventsWatcher) flipPage() bool {
-	if t.nextCursor == "" {
+	if (t.nextCursor == "") || (t.nextCursor == t.cursor) {
 		return false
 	}
 
@@ -144,7 +144,7 @@ func (t *TeleportEventsWatcher) fetch(ctx context.Context) error {
 
 	// Convert batch to TeleportEvent
 	for i, e := range b {
-		evt, err := NewTeleportEvent(e, t.cursor)
+		evt, err := NewTeleportEvent(e, t.cursor, "")
 		if err != nil {
 			return trace.Wrap(err)
 		}

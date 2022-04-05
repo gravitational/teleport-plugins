@@ -182,7 +182,7 @@ Loop:
 				break Loop // Break the main loop
 			}
 
-			e, err := NewTeleportEvent(evt, "")
+			e, err := NewTeleportEvent(evt, "", s.ID)
 			if err != nil {
 				return false, trace.Wrap(err)
 			}

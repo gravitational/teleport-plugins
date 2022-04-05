@@ -29,9 +29,22 @@ DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg GITREF=$(GI
 
 RELEASE = teleport-event-handler-v$(VERSION)-$(OS)-$(ARCH)-bin
 
+CUSTOM_WASMER_RUNTIME_DIR ?= $(LOCALDIR)/wasmer-go
+
+ifneq ($(CUSTOM_WASMER_RUNTIME),)
+	CGO_CFLAGS ?= "-I$(CUSTOM_WASMER_RUNTIME_DIR)/wasmer/packaged/include/"
+	CGO_LDFLAGS ?= "-Wl,-rpath,$(CUSTOM_WASMER_RUNTIME_DIR)/target/release/ -L$(CUSTOM_WASMER_RUNTIME_DIR)/target/release/ -lwasmer_go"
+	TAGS ?= --tags custom_wasmer_runtime 
+endif
+
+# Downloads custom wasmer runtime to current directory
+.PHONY: get-custom-wasmer-runtime
+get-custom-wasmer-runtime:
+	git clone git@github.com:wasmerio/wasmer-go.git && cd wasmer-go && cargo build --release && cd ..
+
 .PHONY: build
 build: clean
-	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/teleport-event-handler $(BUILDFLAGS)
+	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) CGO_CFLAGS=$(CGO_CFLAGS) CGO_LDFLAGS=$(CGO_LDFLAGS) go build -o $(BUILDDIR)/teleport-event-handler $(BUILDFLAGS) $(TAGS)
 
 .PHONY: release
 release: build

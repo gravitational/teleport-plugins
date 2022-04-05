@@ -110,12 +110,24 @@ type LockConfig struct {
 	LockFor time.Duration `help:"Time period for which user gets lock" name:"lock-for" env:"FDFWD_LOCKING_FOR"`
 }
 
+type WASMConfig struct {
+	// WASMTimeout represents WASM method timeout
+	WASMTimeout time.Duration `help:"WASM method timeout" default:"2s" env:"WASM_TIMEOUT"`
+	// WASMConcurrency represents WASM method execution concurrency
+	WASMConcurrency int `help:"WASM method execution concurrency" default:"5" env:"WASM_CONCURRENCY"`
+	// WASMHandleEventFn is the handle event method name
+	WASMHandleEvent string `help:"WASM method name for handleEvent function name" default:"handleEvent" env:"WASM_FN"`
+	// WASMPluginName is the WASM plugin file name
+	WASMPlugin string `help:"WASM plugin binary file name" type:"existingfile" env:"WASM_PLUGIN_FILE"`
+}
+
 // StartCmdConfig is start command description
 type StartCmdConfig struct {
 	FluentdConfig
 	TeleportConfig
 	IngestConfig
 	LockConfig
+	WASMConfig
 }
 
 // ConfigureCmdConfig holds CLI options for teleport-event-handler configure
@@ -218,5 +230,13 @@ func (c *StartCmdConfig) Dump(ctx context.Context) {
 
 	if c.DryRun {
 		log.Warn("Dry run! Events are not sent to Fluentd. Separate storage is used.")
+	}
+
+	if c.WASMPlugin != "" {
+		log.WithField("plugin", c.WASMPlugin).Info("WASM plugin")
+		log.WithField("base", c.WASMHandleEvent).Info("WASM handleEvent functions")
+		log.WithField("concurrency", c.WASMConcurrency).WithField("timeout", c.WASMTimeout).Info("WASM arguments")
+	} else {
+		log.Info("WASM plugin is not activated")
 	}
 }

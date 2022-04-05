@@ -18,8 +18,11 @@ package main
 
 import (
 	"context"
+	"os"
 	"time"
 
+	"github.com/dgraph-io/badger/v3"
+	"github.com/gravitational/teleport-plugin-framework/lib/wasm"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/lib/logger"
@@ -42,6 +45,12 @@ type App struct {
 	eventsJob *EventsJob
 	// sessionEventsJob represents session events consumer job
 	sessionEventsJob *SessionEventsJob
+	// WASM execution context pool
+	wasmPool *wasm.ExecutionContextPool
+	// wasmHandleEvent represents HandleEvent wasm bindings
+	wasmHandleEvent *wasm.HandleEvent
+	// badgerDB badger db
+	badgerDB *badger.DB
 	// Process
 	*lib.Process
 }
@@ -191,6 +200,74 @@ func (a *App) init(ctx context.Context) error {
 	log.WithField("cursor", latestCursor).Info("Using initial cursor value")
 	log.WithField("id", latestID).Info("Using initial ID value")
 	log.WithField("value", startTime).Info("Using start time from state")
+
+	err = a.initWasm(ctx)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	return nil
+}
+
+// initWasm initializes WASM host and loads WASM plugin
+func (a *App) initWasm(ctx context.Context) error {
+	var err error
+
+	log := logger.Get(ctx)
+
+	if a.Config.WASMPlugin == "" {
+		return nil
+	}
+
+	b, err := os.ReadFile(a.Config.WASMPlugin)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	a.badgerDB, err = badger.Open(badger.DefaultOptions("").WithInMemory(true))
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	// Spawn badger cleanup job
+	a.SpawnCritical(func(ctx context.Context) error {
+		log := logger.Get(ctx)
+		ticker := time.NewTicker(5 * time.Minute)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return trace.Wrap(ctx.Err())
+			case <-ticker.C:
+				log.Debug("Cleaning up badger database...")
+				err := a.badgerDB.RunValueLogGC(0.7)
+				if err != nil {
+					return trace.Wrap(err)
+				}
+			}
+		}
+	})
+
+	e := wasm.NewAssemblyScriptEnv(log)
+	pb := wasm.NewProtobufInterop()
+	s := wasm.NewStore(wasm.NewBadgerPersistentStore(a.badgerDB), wasm.DecodeAssemblyScriptString)
+	a.wasmHandleEvent = wasm.NewHandleEvent(a.Config.WASMHandleEvent, pb)
+	api := wasm.NewTeleportAPI(log, a.EventWatcher.client, pb)
+
+	opts := wasm.ExecutionContextPoolOptions{
+		Bytes:       b,
+		Timeout:     a.Config.WASMTimeout,
+		Concurrency: a.Config.WASMConcurrency,
+		TraitFactories: []wasm.TraitFactory{
+			e, pb, a.wasmHandleEvent, s, api,
+		},
+	}
+
+	a.wasmPool, err = wasm.NewExecutionContextPool(opts)
+
+	if err != nil {
+		return trace.Wrap(err)
+	}
 
 	return nil
 }
