@@ -34,7 +34,7 @@ func (s *TerraformSuite) TestSessionRecordingConfig() {
 				Config: s.getFixture("session_recording_config_0_set.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "session_recording_config"),
-					resource.TestCheckResourceAttr(name, "spec.proxy_checks_host_keys", "true"),
+					resource.TestCheckResourceAttr(name, "spec.mode", "node"),
 				),
 			},
 			{
@@ -45,7 +45,7 @@ func (s *TerraformSuite) TestSessionRecordingConfig() {
 				Config: s.getFixture("session_recording_config_1_update.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "session_recording_config"),
-					resource.TestCheckResourceAttr(name, "spec.proxy_checks_host_keys", "false"),
+					resource.TestCheckResourceAttr(name, "spec.mode", "off"),
 				),
 			},
 			{
@@ -64,7 +64,7 @@ func (s *TerraformSuite) TestImportSessionRecordingConfig() {
 	sessionrRecordingConfig := &types.SessionRecordingConfigV2{
 		Metadata: types.Metadata{},
 		Spec: types.SessionRecordingConfigSpecV2{
-			ProxyChecksHostKeys: types.NewBoolOption(true),
+			Mode: "off",
 		},
 	}
 	err := sessionrRecordingConfig.CheckAndSetDefaults()
@@ -83,7 +83,7 @@ func (s *TerraformSuite) TestImportSessionRecordingConfig() {
 				ImportStateId: id,
 				ImportStateCheck: func(state []*terraform.InstanceState) error {
 					require.Equal(s.T(), state[0].Attributes["kind"], "session_recording_config")
-					require.Equal(s.T(), state[0].Attributes["spec.proxy_checks_host_keys"], "true")
+					require.Equal(s.T(), state[0].Attributes["spec.mode"], "off")
 
 					return nil
 				},
