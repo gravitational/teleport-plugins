@@ -116,7 +116,7 @@ The following values can be set for the Helm chart:
     <td><code>log.output</code></td>
     <td>
       Logger output. Could be <code>"stdout"</code>, <code>"stderr"</code> or a file name,
-      eg. <code>"/var/lib/teleport/gitlab.log"</code>
+      eg. <code>"/var/lib/teleport/email.log"</code>
     </td>
     <td>string</td>
     <td><code>"stdout"</code></td>
