@@ -20,10 +20,6 @@ tunnels:
     addr: 8042
     proto: http
     host_header: teleport-mattermost.cluster.local
-  teleport-gitlab:
-    addr: 8044
-    proto: http
-    host_header: teleport-gitlab.cluster.local
   teleport-jira-cloud:
     addr: 8045
     proto: http

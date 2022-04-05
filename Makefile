@@ -14,10 +14,6 @@ access-mattermost:
 access-pagerduty:
 	make -C access/pagerduty
 
-.PHONY: access-gitlab
-access-gitlab:
-	make -C access/gitlab
-
 .PHONY: access-example
 access-example:
 	go build -o build/access-example ./access/example
@@ -34,7 +30,6 @@ docker-build-access-%:
 # Build all access plugins with docker
 .PHONY: docker-build-access-plugins
 docker-build-access-plugins: docker-build-access-email \
- docker-build-access-gitlab \
  docker-build-access-jira \
  docker-build-access-mattermost \
  docker-build-access-pagerduty \
@@ -94,10 +89,6 @@ release/access-mattermost:
 release/access-pagerduty:
 	make -C access/pagerduty clean release
 
-.PHONY: release/access-gitlab
-release/access-gitlab:
-	make -C access/gitlab clean release
-
 .PHONY: release/access-email
 release/access-email:
 	make -C access/email clean release
@@ -112,10 +103,10 @@ release/event-handler:
 
 # Run all releases
 .PHONY: releases
-releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-gitlab release/access-email
+releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-email
 
 .PHONY: build-all
-build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab access-email terraform event-handler
+build-all: access-slack access-jira access-mattermost access-pagerduty access-email terraform event-handler
 
 .PHONY: update-version
 update-version:
