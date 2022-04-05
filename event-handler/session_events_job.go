@@ -182,7 +182,12 @@ Loop:
 				break Loop // Break the main loop
 			}
 
-			e, err := NewTeleportEvent(evt, "", s.ID)
+			ec, err := NewTeleportEvent(evt, "", s.ID)
+			if err != nil {
+				return false, trace.Wrap(err)
+			}
+
+			e, err := j.app.CallWASMPlugin(ctx, ec)
 			if err != nil {
 				return false, trace.Wrap(err)
 			}

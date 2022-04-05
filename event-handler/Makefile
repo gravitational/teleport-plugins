@@ -29,9 +29,10 @@ DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg GITREF=$(GI
 
 RELEASE = teleport-event-handler-v$(VERSION)-$(OS)-$(ARCH)-bin
 
-CUSTOM_WASMER_RUNTIME_DIR ?= $(LOCALDIR)/wasmer-go
+CUSTOM_WASMER_RUNTIME_DIR ?= $(LOCALDIR)wasmer-go
 
-ifneq ($(CUSTOM_WASMER_RUNTIME),)
+# If a custom wasmer runtime exists - use it
+ifneq ($(wildcard $(CUSTOM_WASMER_RUNTIME_DIR)/.*),)
 	CGO_CFLAGS ?= "-I$(CUSTOM_WASMER_RUNTIME_DIR)/wasmer/packaged/include/"
 	CGO_LDFLAGS ?= "-Wl,-rpath,$(CUSTOM_WASMER_RUNTIME_DIR)/target/release/ -L$(CUSTOM_WASMER_RUNTIME_DIR)/target/release/ -lwasmer_go"
 	TAGS ?= --tags custom_wasmer_runtime 

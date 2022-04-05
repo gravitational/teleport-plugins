@@ -3,10 +3,8 @@ package main
 import (
 	"context"
 
-	"github.com/gravitational/teleport-plugin-framework/lib/wasm"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
 	limiter "github.com/sethvargo/go-limiter"
 	"github.com/sethvargo/go-limiter/memorystore"
@@ -102,7 +100,7 @@ func (j *EventsJob) runPolling(ctx context.Context) error {
 
 // handleEvent processes an event
 func (j *EventsJob) handleEvent(ctx context.Context, evt *TeleportEvent) error {
-	e, err := j.callPlugin(ctx, evt)
+	e, err := j.app.CallWASMPlugin(ctx, evt)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -112,14 +110,14 @@ func (j *EventsJob) handleEvent(ctx context.Context, evt *TeleportEvent) error {
 	}
 
 	// Send event to Teleport
-	err = j.sendEvent(ctx, evt)
+	err = j.sendEvent(ctx, e)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
 	// Start session ingestion if needed
 	if e.IsSessionEnd {
-		j.app.RegisterSession(ctx, evt)
+		j.app.RegisterSession(ctx, e.TeleportEvent)
 	}
 
 	// If the event is login event
@@ -137,58 +135,8 @@ func (j *EventsJob) handleEvent(ctx context.Context, evt *TeleportEvent) error {
 	return nil
 }
 
-// callPlugin calls WASM plugin on an event
-func (j *EventsJob) callPlugin(ctx context.Context, evt *TeleportEvent) (*SanitizedTeleportEvent, error) {
-	if j.app.wasmHandleEvent == nil {
-		return NewSanitizedTeleportEvent(evt), nil
-	}
-
-	r, err := j.app.wasmPool.Execute(ctx, func(ectx *wasm.ExecutionContext) (interface{}, error) {
-		handleEvent, err := j.app.wasmHandleEvent.For(ectx)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-
-		response, err := handleEvent.HandleEvent(evt.Event)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-
-		if response.Success == false {
-			return nil, trace.Errorf(response.Error)
-		}
-
-		if response.Event == nil {
-			return nil, nil
-		}
-
-		targetEvt, err := events.FromOneOf(*response.Event)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-
-		te, err := NewTeleportEvent(targetEvt, evt.Cursor, "")
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-
-		return NewSanitizedTeleportEvent(te), nil
-	})
-
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	sanitized, ok := r.(*SanitizedTeleportEvent)
-	if !ok {
-		return nil, trace.Errorf("Can not convert %T to *SanitizedTeleportEvent", r)
-	}
-
-	return sanitized, nil
-}
-
 // sendEvent sends an event to Teleport
-func (j *EventsJob) sendEvent(ctx context.Context, evt *TeleportEvent) error {
+func (j *EventsJob) sendEvent(ctx context.Context, evt *SanitizedTeleportEvent) error {
 	return j.app.SendEvent(ctx, j.app.Config.FluentdURL, evt)
 }
 

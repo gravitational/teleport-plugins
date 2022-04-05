@@ -26,6 +26,7 @@ import (
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
 	"github.com/sirupsen/logrus"
@@ -111,7 +112,7 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 }
 
 // SendEvent sends an event to fluentd. Shared method used by jobs.
-func (a *App) SendEvent(ctx context.Context, url string, e *TeleportEvent) error {
+func (a *App) SendEvent(ctx context.Context, url string, e *SanitizedTeleportEvent) error {
 	log := logger.Get(ctx)
 
 	if !a.Config.DryRun {
@@ -119,7 +120,7 @@ func (a *App) SendEvent(ctx context.Context, url string, e *TeleportEvent) error
 		backoffCount := sendBackoffNumTries
 
 		for {
-			err := a.Fluentd.Send(ctx, url, e.Event)
+			err := a.Fluentd.Send(ctx, url, e.SanitizedEvent)
 			if err == nil {
 				break
 			}
@@ -305,4 +306,54 @@ func (a *App) setStartTime(ctx context.Context, s *State) error {
 // RegisterSession registers new session
 func (a *App) RegisterSession(ctx context.Context, e *TeleportEvent) {
 	a.sessionEventsJob.RegisterSession(ctx, e)
+}
+
+// CallWASMPlugin calls WASM plugin if present and returns modified event
+func (a *App) CallWASMPlugin(ctx context.Context, evt *TeleportEvent) (*SanitizedTeleportEvent, error) {
+	if a.wasmHandleEvent == nil {
+		return NewSanitizedTeleportEvent(evt), nil
+	}
+
+	r, err := a.wasmPool.Execute(ctx, func(ectx *wasm.ExecutionContext) (interface{}, error) {
+		handleEvent, err := a.wasmHandleEvent.For(ectx)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		response, err := handleEvent.HandleEvent(evt.Event)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		if response.Success == false {
+			return nil, trace.Errorf(response.Error)
+		}
+
+		if response.Event == nil {
+			return nil, nil
+		}
+
+		targetEvt, err := events.FromOneOf(*response.Event)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		te, err := NewTeleportEvent(targetEvt, evt.Cursor, "")
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		return NewSanitizedTeleportEvent(te), nil
+	})
+
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	sanitized, ok := r.(*SanitizedTeleportEvent)
+	if !ok {
+		return nil, trace.Errorf("Can not convert %T to *SanitizedTeleportEvent", r)
+	}
+
+	return sanitized, nil
 }
