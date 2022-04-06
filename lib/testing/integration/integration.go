@@ -87,6 +87,12 @@ type Version struct {
 	IsEnterprise bool
 }
 
+type SignTLSPaths struct {
+	CertPath   string
+	KeyPath    string
+	RootCAPath string
+}
+
 const serviceShutdownTimeout = 10 * time.Second
 
 // New initializes a Teleport installation.
@@ -420,10 +426,31 @@ func (integration *Integration) Sign(ctx context.Context, auth *AuthService, use
 		return "", trace.Wrap(err)
 	}
 	outPath := outFile.Name()
-	if err := integration.tctl(auth).Sign(ctx, userName, outPath); err != nil {
+	if err := integration.tctl(auth).Sign(ctx, userName, "file", outPath); err != nil {
 		return "", trace.Wrap(err)
 	}
 	return outPath, nil
+}
+
+// SignTLS generates a set of files to be used for generating the TLS Config: Cert, Key and RootCAs
+func (integration *Integration) SignTLS(ctx context.Context, auth *AuthService, userName string) (*SignTLSPaths, error) {
+	outFile, err := integration.tempFile(fmt.Sprintf("credentials-%s-*", userName))
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	if err := outFile.Close(); err != nil {
+		return nil, trace.Wrap(err)
+	}
+	outPath := outFile.Name()
+	if err := integration.tctl(auth).Sign(ctx, userName, "tls", outPath); err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return &SignTLSPaths{
+		CertPath:   outPath + ".crt",
+		KeyPath:    outPath + ".key",
+		RootCAPath: outPath + ".cas",
+	}, nil
 }
 
 // SetCAPin sets integration with the auth service's CA Pin.
