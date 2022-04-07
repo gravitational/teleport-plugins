@@ -380,7 +380,7 @@ previous step and
 2. Add entries for the new providers in to the index
 3. Create the `download` entries for each file
 
-I expect this process to be implemented a sa small Go program (or a small suite
+I expect this process to be implemented as a small Go program (or a small suite
 of them), rather than a shell script. Using small Go programs for build tasks
 has shown itself to be a useful, flexible and above all _legible_ tool for
 scripting build tasks in the mainline Teleport repository, and we should
