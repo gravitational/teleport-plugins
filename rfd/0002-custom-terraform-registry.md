@@ -198,7 +198,7 @@ by
 
 In selecting the name for the production registry, there is a tension between
 having (arguably) the most memorable and obvious name for the registry (but
-having it's configuration split of several hosts), versus and having a registry
+having its configuration split over several hosts), versus and having a registry
 with all of its configuration and data in one place.
 
 How we name the production registry ultimately comes down to deciding which
