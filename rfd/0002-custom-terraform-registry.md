@@ -46,8 +46,12 @@ Cloud RFD 004 as far as possible.
 
 ### Why not use the public Hashicorp registry?
 
-This conflicts with goal #2 (i.e. maintaining close control of the
-distribution of our software).
+This conflicts with goal #2 (i.e. maintaining close control of the distribution 
+of our software).
+
+Specifically, using the public Hashicorp registry requires that we grant Hashicorp
+access to the Gravitational GitHub organisation via OAuth, and allow them to 
+manipulate the webhooks in our repositories.
 
 ### Will using a custom registry be onerous on our users?
 
