@@ -4,6 +4,9 @@ state: draft
 ---
 
 # RFD 2 - Custom Terraform Registry
+# Required Approvers
+* Engineering: @r0mant && @klizhentas
+* Product: (@klizhentas || @xinding33)
 
 ## What
 
