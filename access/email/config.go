@@ -19,8 +19,10 @@ package main
 import (
 	_ "embed"
 
+	"github.com/gravitational/teleport-plugins/access/config"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/pelletier/go-toml"
 )
@@ -50,11 +52,12 @@ type SMTPConfig struct {
 
 // Config stores the full configuration for the teleport-email plugin to run.
 type Config struct {
-	Teleport lib.TeleportConfig `toml:"teleport"`
-	Mailgun  *MailgunConfig     `toml:"mailgun"`
-	SMTP     *SMTPConfig        `toml:"smtp"`
-	Delivery DeliveryConfig     `toml:"delivery"`
-	Log      logger.Config      `toml:"log"`
+	Teleport         lib.TeleportConfig   `toml:"teleport"`
+	Mailgun          *MailgunConfig       `toml:"mailgun"`
+	SMTP             *SMTPConfig          `toml:"smtp"`
+	Delivery         DeliveryConfig       `toml:"delivery"`
+	RoleToRecipients config.RecipientsMap `toml:"role_to_recipients"`
+	Log              logger.Config        `toml:"log"`
 }
 
 // TODO: Replace auth_server with addr once it is merged
@@ -84,8 +87,11 @@ password = ""
 # password_file = "/var/lib/teleport/plugins/email/smtp_password"
 
 [delivery]
-sender = "noreply@example.com"    # From: email address
-recipients = ["person@gmail.com"] # These recipients will receive all review requests
+sender = "noreply@example.com" # From: email address
+
+[role_to_recipients]
+"dev" = "dev-manager@example.com" # All requests to 'dev' role will be sent to this address
+"*" = ["root@example.com", "admin@example.com"] # These recipients will receive review requests not handled by the roles above
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/email.log"
@@ -183,11 +189,36 @@ func (c *Config) CheckAndSetDefaults() error {
 		c.Log.Severity = "info"
 	}
 
+	if len(c.Delivery.Recipients) > 0 {
+		if len(c.RoleToRecipients) > 0 {
+			return trace.BadParameter("provide either delivery.recipients or role_to_recipients, not both.")
+		}
+
+		c.RoleToRecipients = config.RecipientsMap{
+			types.Wildcard: c.Delivery.Recipients,
+		}
+		c.Delivery.Recipients = nil
+	}
+
 	// Validate emails in user aliases
 	for _, e := range c.Delivery.Recipients {
 		if !lib.IsEmail(e) {
-			return trace.BadParameter("Invalid email address %v in users.recipients", e)
+			return trace.BadParameter("Invalid email address %v in delivery.recipients", e)
 		}
+	}
+
+	for role, recipientsList := range c.RoleToRecipients {
+		for _, recipient := range recipientsList {
+			if !lib.IsEmail(recipient) {
+				return trace.BadParameter("Invalid email address %v in role_to_recipients.%s", recipient, role)
+			}
+		}
+	}
+
+	if len(c.RoleToRecipients) == 0 {
+		return trace.BadParameter("missing required value role_to_recipients.")
+	} else if len(c.RoleToRecipients[types.Wildcard]) == 0 {
+		return trace.BadParameter("missing required value role_to_recipients[%v].", types.Wildcard)
 	}
 
 	// Validate mailer settings

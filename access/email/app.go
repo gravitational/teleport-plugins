@@ -242,7 +242,7 @@ func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) err
 	}
 
 	if isNew {
-		if recipients := a.getEmailRecipients(ctx, req.GetSuggestedReviewers()); len(recipients) > 0 {
+		if recipients := a.getEmailRecipients(ctx, req.GetRoles(), req.GetSuggestedReviewers()); len(recipients) > 0 {
 			if err := a.sendNewThreads(ctx, recipients, reqID, reqData); err != nil {
 				return trace.Wrap(err)
 			}
@@ -293,11 +293,20 @@ func (a *App) onDeletedRequest(ctx context.Context, reqID string) error {
 }
 
 // getEmailRecipients converts suggested reviewers to email recipients
-func (a *App) getEmailRecipients(ctx context.Context, suggestedReviewers []string) []string {
+func (a *App) getEmailRecipients(ctx context.Context, roles []string, suggestedReviewers []string) []string {
 	log := logger.Get(ctx)
 	recipients := stringset.NewWithCap(len(suggestedReviewers) + len(a.conf.Delivery.Recipients))
 
 	recipients.Add(a.conf.Delivery.Recipients...)
+
+	for _, role := range roles {
+		roleRecipients := a.conf.RoleToRecipients[role]
+		if len(roleRecipients) == 0 {
+			roleRecipients = a.conf.RoleToRecipients[types.Wildcard]
+		}
+
+		recipients.Add(roleRecipients...)
+	}
 
 	for _, reviewer := range suggestedReviewers {
 		if !lib.IsEmail(reviewer) {

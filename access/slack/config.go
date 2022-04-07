@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"strings"
 
+	"github.com/gravitational/teleport-plugins/access/config"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport/api/types"
@@ -15,7 +15,7 @@ import (
 type Config struct {
 	Teleport   lib.TeleportConfig
 	Slack      SlackConfig
-	Recipients RecipientsMap `toml:"role_to_recipients"`
+	Recipients config.RecipientsMap `toml:"role_to_recipients"`
 	Log        logger.Config
 }
 
@@ -25,37 +25,6 @@ type SlackConfig struct {
 	// DELETE IN 11.0.0 (Joerger) - use "role_to_recipients["*"]" instead
 	Recipients []string
 	APIURL     string
-}
-
-// RecipientsMap is a mapping of roles to recipient(s).
-type RecipientsMap map[string][]string
-
-func (r *RecipientsMap) UnmarshalTOML(in interface{}) error {
-	*r = make(RecipientsMap)
-
-	recipientsMap, ok := in.(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("unexpected type for recipients %T", in)
-	}
-
-	for k, v := range recipientsMap {
-		switch val := v.(type) {
-		case string:
-			(*r)[k] = []string{val}
-		case []interface{}:
-			for _, str := range val {
-				str, ok := str.(string)
-				if !ok {
-					return fmt.Errorf("unexpected type for recipients value %T", v)
-				}
-				(*r)[k] = append((*r)[k], str)
-			}
-		default:
-			return fmt.Errorf("unexpected type for recipients value %T", v)
-		}
-	}
-
-	return nil
 }
 
 // LoadConfig reads the config file, initializes a new Config struct object, and returns it.
@@ -106,7 +75,7 @@ func (c *Config) CheckAndSetDefaults() error {
 			return trace.BadParameter("provide either slack.recipients or role_to_recipients, not both.")
 		}
 
-		c.Recipients = RecipientsMap{
+		c.Recipients = config.RecipientsMap{
 			types.Wildcard: c.Slack.Recipients,
 		}
 	}

@@ -199,7 +199,9 @@ func (s *EmailSuite) SetupTest() {
 		APIBase:    s.mockMailgun.GetURL(),
 	}
 	conf.Delivery.Sender = sender
-	conf.Delivery.Recipients = []string{allRecipient}
+	conf.RoleToRecipients = map[string][]string{
+		types.Wildcard: []string{allRecipient},
+	}
 
 	s.appConfig = conf
 	s.SetContextTimeout(5 * time.Minute)
