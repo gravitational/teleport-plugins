@@ -200,7 +200,7 @@ func (s *EmailSuite) SetupTest() {
 	}
 	conf.Delivery.Sender = sender
 	conf.RoleToRecipients = map[string][]string{
-		types.Wildcard: []string{allRecipient},
+		types.Wildcard: {allRecipient},
 	}
 
 	s.appConfig = conf

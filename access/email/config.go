@@ -200,11 +200,11 @@ func (c *Config) CheckAndSetDefaults() error {
 		c.Delivery.Recipients = nil
 	}
 
-	// Validate emails in user aliases
-	for _, e := range c.Delivery.Recipients {
-		if !lib.IsEmail(e) {
-			return trace.BadParameter("Invalid email address %v in delivery.recipients", e)
-		}
+	if len(c.RoleToRecipients) == 0 {
+		return trace.BadParameter("missing required value role_to_recipients.")
+	}
+	if len(c.RoleToRecipients[types.Wildcard]) == 0 {
+		return trace.BadParameter("missing required value role_to_recipients[%v].", types.Wildcard)
 	}
 
 	for role, recipientsList := range c.RoleToRecipients {
@@ -213,12 +213,6 @@ func (c *Config) CheckAndSetDefaults() error {
 				return trace.BadParameter("Invalid email address %v in role_to_recipients.%s", recipient, role)
 			}
 		}
-	}
-
-	if len(c.RoleToRecipients) == 0 {
-		return trace.BadParameter("missing required value role_to_recipients.")
-	} else if len(c.RoleToRecipients[types.Wildcard]) == 0 {
-		return trace.BadParameter("missing required value role_to_recipients[%v].", types.Wildcard)
 	}
 
 	// Validate mailer settings
