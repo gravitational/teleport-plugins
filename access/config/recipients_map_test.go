@@ -98,3 +98,50 @@ func TestRecipientsMap(t *testing.T) {
 		})
 	}
 }
+
+func TestRecipientsMapGetRecipients(t *testing.T) {
+	testCases := []struct {
+		desc               string
+		m                  RecipientsMap
+		roles              []string
+		suggestedReviewers []string
+		output             []string
+	}{
+		{
+			desc: "test match exact role",
+			m: RecipientsMap{
+				"dev": []string{"chanDev"},
+				"*":   []string{"chanA", "chanB"},
+			},
+			roles:              []string{"dev"},
+			suggestedReviewers: []string{},
+			output:             []string{"chanDev"},
+		},
+		{
+			desc: "test only default recipient",
+			m: RecipientsMap{
+				"*": []string{"chanA", "chanB"},
+			},
+			roles:              []string{"dev"},
+			suggestedReviewers: []string{},
+			output:             []string{"chanA", "chanB"},
+		},
+		{
+			desc: "test deduplicate recipients",
+			m: RecipientsMap{
+				"dev": []string{"chanA", "chanB"},
+				"*":   []string{"chanC"},
+			},
+			roles:              []string{"dev"},
+			suggestedReviewers: []string{"chanA", "chanB"},
+			output:             []string{"chanA", "chanB"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.desc, func(t *testing.T) {
+			recipients := tc.m.GetRecipientsFor(tc.roles, tc.suggestedReviewers)
+			require.ElementsMatch(t, recipients, tc.output)
+		})
+	}
+}

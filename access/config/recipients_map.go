@@ -15,7 +15,12 @@ limitations under the License.
 */
 package config
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/gravitational/teleport-plugins/lib/stringset"
+	"github.com/gravitational/teleport/api/types"
+)
 
 // RecipientsMap is a mapping of roles to recipient(s).
 type RecipientsMap map[string][]string
@@ -50,4 +55,21 @@ func (r *RecipientsMap) UnmarshalTOML(in interface{}) error {
 	}
 
 	return nil
+}
+
+func (r RecipientsMap) GetRecipientsFor(roles, suggestedReviewers []string) []string {
+	recipients := stringset.New()
+
+	for _, role := range roles {
+		roleRecipients := r[role]
+		if len(roleRecipients) == 0 {
+			roleRecipients = r[types.Wildcard]
+		}
+
+		recipients.Add(roleRecipients...)
+	}
+
+	recipients.Add(suggestedReviewers...)
+
+	return recipients.ToSlice()
 }

@@ -365,33 +365,23 @@ func (a *App) tryLookupDirectChannelByEmail(ctx context.Context, userEmail strin
 func (a *App) getMessageRecipients(ctx context.Context, req types.AccessRequest) []string {
 	log := logger.Get(ctx)
 
-	var recipients []string
-	for _, role := range req.GetRoles() {
-		recipients = append(recipients, a.conf.Recipients[role]...)
-	}
+	// We receive a set from the method above but we still might end up with duplicate channel names
+	// This can happen if this set contains the channel `C` and the email for channel `C`
+	channelSet := stringset.New()
 
-	// If there are no recipient map entries for the requested roles, default to wildcard.
-	if len(recipients) == 0 {
-		recipients = a.conf.Recipients[types.Wildcard]
-	}
-
-	channelSet := stringset.NewWithCap(len(req.GetSuggestedReviewers()) + len(recipients))
-
-	for _, recipient := range req.GetSuggestedReviewers() {
-		// We require SuggestedReviewers to contain email-like data. Anything else is not supported.
-		if !lib.IsEmail(recipient) {
-			log.Warningf("Failed to notify a suggested reviewer: %q does not look like a valid email", recipient)
+	validEmaislSuggReviewers := []string{}
+	for _, reviewer := range req.GetSuggestedReviewers() {
+		if !lib.IsEmail(reviewer) {
+			log.Warningf("Failed to notify a suggested reviewer: %q does not look like a valid email", reviewer)
 			continue
 		}
 
-		channel := a.tryLookupDirectChannelByEmail(ctx, recipient)
-		if channel != "" {
-			channelSet.Add(channel)
-		}
+		validEmaislSuggReviewers = append(validEmaislSuggReviewers, reviewer)
 	}
 
+	recipients := a.conf.Recipients.GetRecipientsFor(req.GetRoles(), validEmaislSuggReviewers)
 	for _, recipient := range recipients {
-		// Recipients from config file could contain either email or channel name or channel ID. It's up to user what format to use.
+		// Recipients could contain either email or channel name or channel ID. It's up to user what format to use.
 		channel := recipient
 		if lib.IsEmail(recipient) {
 			channel = a.tryLookupDirectChannelByEmail(ctx, recipient)

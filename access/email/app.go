@@ -22,7 +22,6 @@ import (
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	"github.com/gravitational/teleport-plugins/lib/stringset"
 	"github.com/gravitational/teleport-plugins/lib/watcherjob"
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
@@ -295,27 +294,20 @@ func (a *App) onDeletedRequest(ctx context.Context, reqID string) error {
 // getEmailRecipients converts suggested reviewers to email recipients
 func (a *App) getEmailRecipients(ctx context.Context, roles []string, suggestedReviewers []string) []string {
 	log := logger.Get(ctx)
-	recipients := stringset.New()
+	validEmailRecipients := []string{}
 
-	for _, role := range roles {
-		roleRecipients := a.conf.RoleToRecipients[role]
-		if len(roleRecipients) == 0 {
-			roleRecipients = a.conf.RoleToRecipients[types.Wildcard]
-		}
+	recipients := a.conf.RoleToRecipients.GetRecipientsFor(roles, suggestedReviewers)
 
-		recipients.Add(roleRecipients...)
-	}
-
-	for _, reviewer := range suggestedReviewers {
-		if !lib.IsEmail(reviewer) {
-			log.Warningf("Failed to notify a suggested reviewer: %q does not look like a valid email", reviewer)
+	for _, recipient := range recipients {
+		if !lib.IsEmail(recipient) {
+			log.Warningf("Failed to notify a reviewer: %q does not look like a valid email", recipient)
 			continue
 		}
 
-		recipients.Add(reviewer)
+		validEmailRecipients = append(validEmailRecipients, recipient)
 	}
 
-	return recipients.ToSlice()
+	return validEmailRecipients
 }
 
 // broadcastNewThreads sends notifications on a new request
