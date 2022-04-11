@@ -6,21 +6,21 @@ should match the snapshot:
       labels:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: access-plugin-email
+        app.kubernetes.io/name: teleport-plugin-email
         app.kubernetes.io/version: 9.0.0
-        helm.sh/chart: access-plugin-email-1.0.0
-      name: RELEASE-NAME-access-plugin-email
+        helm.sh/chart: teleport-plugin-email-1.0.0
+      name: RELEASE-NAME-teleport-plugin-email
     spec:
       replicas: 1
       selector:
         matchLabels:
           app.kubernetes.io/instance: RELEASE-NAME
-          app.kubernetes.io/name: access-plugin-email
+          app.kubernetes.io/name: teleport-plugin-email
       template:
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
-            app.kubernetes.io/name: access-plugin-email
+            app.kubernetes.io/name: teleport-plugin-email
         spec:
           containers:
           - command:
@@ -30,7 +30,7 @@ should match the snapshot:
             - /etc/teleport-email.toml
             image: gcr.io/overridden/repository:v98.76.54
             imagePullPolicy: IfNotPresent
-            name: access-plugin-email
+            name: teleport-plugin-email
             ports:
             - containerPort: 80
               name: http
@@ -48,7 +48,7 @@ should match the snapshot:
           volumes:
           - configMap:
               defaultMode: 384
-              name: RELEASE-NAME-access-plugin-email
+              name: RELEASE-NAME-teleport-plugin-email
             name: config
           - name: auth-id
             secret:
