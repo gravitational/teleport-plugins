@@ -31,15 +31,15 @@ $ ./install
 
 ### Docker Image
 ```bash
-$ docker pull quay.io/gravitational/access-plugin-slack:9.0.2
+$ docker pull quay.io/gravitational/teleport-plugin-slack:9.0.2
 ```
 
 ```bash
-$ docker run quay.io/gravitational/access-plugin-slack:9.0.2 version
+$ docker run quay.io/gravitational/teleport-plugin-slack:9.0.2 version
 teleport-slack v9.0.2 git:teleport-slack-v9.0.2-0-g9e149895 go1.17.8
 ```
 
-For a list of available tags, visit [https://quay.io/](https://quay.io/repository/gravitational/access-plugin-slack?tab=tags)
+For a list of available tags, visit [https://quay.io/](https://quay.io/repository/gravitational/teleport-plugin-slack?tab=tags)
 
 ### Building from source
 
@@ -154,7 +154,7 @@ $ teleport-slack start
 or with docker:
 
 ```bash
-$ docker run -v <path/to/config>:/etc/teleport-slack.toml quay.io/gravitational/access-plugin-slack:9.0.2 start
+$ docker run -v <path/to/config>:/etc/teleport-slack.toml quay.io/gravitational/teleport-plugin-slack:9.0.2 start
 ```
 
 ## Usage
