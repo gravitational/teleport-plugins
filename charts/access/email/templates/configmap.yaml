@@ -10,21 +10,21 @@ data:
     addr = "{{ .Values.teleport.address }}"
     identity = "/var/lib/teleport/plugins/email/auth_id"
 
-    {{ if .Values.mailgun.enabled }}
+    {{ if .Values.mailgun.enabled -}}
     [mailgun]
     domain      = "{{ .Values.mailgun.domain }}"
     private_key = "{{ .Values.mailgun.privateKey }}"
-    {{ else if .Values.smtp.enabled }}
+    {{- else if .Values.smtp.enabled -}}
     [smtp]
     host          = "{{ .Values.smtp.host }}"
     port          = {{ .Values.smtp.port }}
     username      = "{{ .Values.smtp.username }}"
-    {{ if eq .Values.smtp.passwordFile "" -}}
+    {{- if eq .Values.smtp.passwordFile "" }}
     password      = "{{ .Values.smtp.password }}"
-    {{ else -}}
+    {{- else }}
     password_file = "{{ .Values.smtp.passwordFile }}"
-    {{ end }}
-    {{ end -}}
+    {{- end }}
+    {{- end }}
 
     [delivery]
     sender = "{{ .Values.delivery.sender }}"
