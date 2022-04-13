@@ -8,7 +8,6 @@ TFDIR ?= example
 
 ADDFLAGS ?=
 BUILDFLAGS ?= $(ADDFLAGS) -ldflags '-w -s'
-CGOFLAG ?= CGO_ENABLED=1
 
 RELEASE = terraform-provider-teleport-v$(VERSION)-$(OS)-$(ARCH)-bin
 
@@ -28,7 +27,7 @@ clean: tfclean
 
 .PHONY: build
 build: clean
-	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/terraform-provider-teleport $(BUILDFLAGS)
+	GOOS=$(OS) GOARCH=$(ARCH) go build -o $(BUILDDIR)/terraform-provider-teleport $(BUILDFLAGS)
 
 CUSTOM_IMPORTS_TMP_DIR ?= /tmp/protoc-gen-terraform/custom-imports
 PROTOC_GEN_TERRAFORM_VERSION ?= v1.0.0
