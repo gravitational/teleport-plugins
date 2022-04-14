@@ -1,0 +1,74 @@
+# Default values for slack.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+# replicaCount: 1
+
+image:
+  repository: 146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/teleport-plugin-slack
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+resources: {}
+  # limits:
+  #   cpu: 100m
+  #   memory: 128Mi
+  # requests:
+  #   cpu: 100m
+  #   memory: 128Mi
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+volumes: []
+  # - name: password-file
+  #   secret:
+  #     secretName: teleport-slack-plugin-password-file
+  #     defaultMode: 0600
+
+volumeMounts: []
+  # - name: password-file
+  #   mountPath: /var/lib/teleport/plugins/slack/smtp_password
+
+#
+# Plugin specific options
+#
+teleport:
+  address: ""
+  identitySecretName: ""
+  identitySecretPath: "auth_id"
+
+slack:
+  token: ""
+
+roleToRecipients:
+  "*":
+    - "recipient1@example.com"
+    - "recipient2@example.com"
+  dev:
+    - "another-recipient@example.com"
+
+log:
+  output: stdout
+  severity: INFO
