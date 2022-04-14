@@ -22,7 +22,6 @@ import (
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	"github.com/gravitational/teleport-plugins/lib/stringset"
 	"github.com/gravitational/teleport-plugins/lib/watcherjob"
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
@@ -242,7 +241,7 @@ func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) err
 	}
 
 	if isNew {
-		if recipients := a.getEmailRecipients(ctx, req.GetSuggestedReviewers()); len(recipients) > 0 {
+		if recipients := a.getEmailRecipients(ctx, req.GetRoles(), req.GetSuggestedReviewers()); len(recipients) > 0 {
 			if err := a.sendNewThreads(ctx, recipients, reqID, reqData); err != nil {
 				return trace.Wrap(err)
 			}
@@ -293,22 +292,22 @@ func (a *App) onDeletedRequest(ctx context.Context, reqID string) error {
 }
 
 // getEmailRecipients converts suggested reviewers to email recipients
-func (a *App) getEmailRecipients(ctx context.Context, suggestedReviewers []string) []string {
+func (a *App) getEmailRecipients(ctx context.Context, roles, suggestedReviewers []string) []string {
 	log := logger.Get(ctx)
-	recipients := stringset.NewWithCap(len(suggestedReviewers) + len(a.conf.Delivery.Recipients))
+	validEmailRecipients := []string{}
 
-	recipients.Add(a.conf.Delivery.Recipients...)
+	recipients := a.conf.RoleToRecipients.GetRecipientsFor(roles, suggestedReviewers)
 
-	for _, reviewer := range suggestedReviewers {
-		if !lib.IsEmail(reviewer) {
-			log.Warningf("Failed to notify a suggested reviewer: %q does not look like a valid email", reviewer)
+	for _, recipient := range recipients {
+		if !lib.IsEmail(recipient) {
+			log.Warningf("Failed to notify a reviewer: %q does not look like a valid email", recipient)
 			continue
 		}
 
-		recipients.Add(reviewer)
+		validEmailRecipients = append(validEmailRecipients, recipient)
 	}
 
-	return recipients.ToSlice()
+	return validEmailRecipients
 }
 
 // broadcastNewThreads sends notifications on a new request
