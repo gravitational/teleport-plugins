@@ -65,7 +65,7 @@ steps:
       # This will remove subdirectories under pkg/mod which 0400 permissions.
       # See for more details: https://github.com/golang/go/issues/27455
       - go clean -modcache
-      - chmod -R u+rw /tmp/teleport-plugins/build-darwin/go
+      - chmod -R u+rw /tmp/teleport-plugins/test-darwin/go
       - rm -rf /tmp/teleport-plugins/test-darwin/go
       - mkdir -p /tmp/teleport-plugins/test-darwin/go
 
@@ -628,6 +628,6 @@ volumes:
 
 ---
 kind: signature
-hmac: 47fcd1903112ba7c637bcf5e33d91e956d0c09da75b40698f6e0891b2ef165c4
+hmac: 2a080aaa88a5b3e244732c5a062231300a14b6b3d789833b3fa0a1728dfa727b
 
 ...
