@@ -365,8 +365,8 @@ func (a *App) tryLookupDirectChannelByEmail(ctx context.Context, userEmail strin
 func (a *App) getMessageRecipients(ctx context.Context, req types.AccessRequest) []string {
 	log := logger.Get(ctx)
 
-	// We receive a set from the method above but we still might end up with duplicate channel names
-	// This can happen if this set contains the channel `C` and the email for channel `C`
+	// We receive a set from GetRecipientsFor but we still might end up with duplicate channel names.
+	// This can happen if this set contains the channel `C` and the email for channel `C`.
 	channelSet := stringset.New()
 
 	validEmaislSuggReviewers := []string{}

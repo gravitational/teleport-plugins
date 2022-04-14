@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package config
 
 import (
@@ -57,6 +58,11 @@ func (r *RecipientsMap) UnmarshalTOML(in interface{}) error {
 	return nil
 }
 
+// GetRecipientsFor will return the set of recipients given a list of roles and suggested reviewers.
+// We create a unique list based on:
+// - the list of suggestedReviewers
+// - for each role, the list of reviewers
+//   - if the role doesn't exist in the map (or it's empty), we add the list of recipients for the default role ("*") instead
 func (r RecipientsMap) GetRecipientsFor(roles, suggestedReviewers []string) []string {
 	recipients := stringset.New()
 

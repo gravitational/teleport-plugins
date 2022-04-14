@@ -292,7 +292,7 @@ func (a *App) onDeletedRequest(ctx context.Context, reqID string) error {
 }
 
 // getEmailRecipients converts suggested reviewers to email recipients
-func (a *App) getEmailRecipients(ctx context.Context, roles []string, suggestedReviewers []string) []string {
+func (a *App) getEmailRecipients(ctx context.Context, roles, suggestedReviewers []string) []string {
 	log := logger.Get(ctx)
 	validEmailRecipients := []string{}
 
