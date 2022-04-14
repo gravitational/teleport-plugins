@@ -24,11 +24,11 @@ steps:
       - make lint
 
   - name: Run tests
-    image: golang:1.17.5
+    image: golang:1.17.9
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v9.0.1
+      TELEPORT_GET_VERSION: v9.0.4
     commands:
       - echo Testing plugins against Teleport $TELEPORT_GET_VERSION
       - make test
@@ -103,7 +103,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.5
+    image: golang:1.17.9
     commands:
       - make build-all
 
@@ -177,7 +177,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.5
+    image: golang:1.17.9
     commands:
       - mkdir -p build/
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
@@ -274,7 +274,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.5
+    image: golang:1.17.9
     commands:
       - mkdir -p build/
       - make release/terraform
@@ -356,7 +356,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.5
+    image: golang:1.17.9
     commands:
       - mkdir -p build/
       - make release/event-handler
@@ -626,6 +626,6 @@ volumes:
 
 ---
 kind: signature
-hmac: 9f4c1a36000b9b2637e790418a624a31c162e2bb248cc6718a1c28a82a8b10c4
+hmac: 4393ffb49dba5c0789d1f925c4e78f89d10e235dc86d476cb760afd524ec18ea
 
 ...
