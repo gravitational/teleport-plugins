@@ -48,12 +48,12 @@ type downloadVersion struct {
 }
 
 var downloadVersions = map[downloadVersionKey]downloadVersion{
-	// Teleport v9.0.1 Enterprise binaries
+	// Teleport v9.0.4 Enterprise binaries
 	{"v9.0.4", "darwin", "amd64", true}: {sha256: lib.MustHexSHA256("a6fa9c515e2b3daf97b5649453f0ce059567d1d8f731e24b7ba24b2386026215")},
 	{"v9.0.4", "linux", "amd64", true}:  {sha256: lib.MustHexSHA256("804353458a99510eaf62b3de48e6737f9dec40df5abe0e2259cc32780e51d6ed")},
 	{"v9.0.4", "linux", "arm64", true}:  {sha256: lib.MustHexSHA256("33657413d90e7a84e1a05af646c7ca9169dfb0807a4110f37168cb2750d1c9c3")},
 	{"v9.0.4", "linux", "arm", true}:    {sha256: lib.MustHexSHA256("e0fa5435bc0e71d883d23f5211f1bc0dd0c821b3533b5dec7b198409bbd99914")},
-	// Teleport v9.0.1 OSS binaries
+	// Teleport v9.0.4 OSS binaries
 	{"v9.0.4", "darwin", "amd64", false}: {sha256: lib.MustHexSHA256("2d61469e2b64dab19fe5f7471181a0f417a32f80831280c7ffdb8ea6035bd831")},
 	{"v9.0.4", "linux", "amd64", false}:  {sha256: lib.MustHexSHA256("76fbaec6def758b7d24fb6aae63a83f47f9a74c59fad5af4a9cf3455b7d1774c")},
 	{"v9.0.4", "linux", "arm64", false}:  {sha256: lib.MustHexSHA256("597108095e04751a02e3b355662f7520b8cfdc0015318ef41178026defaa3406")},
