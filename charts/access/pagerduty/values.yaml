@@ -41,16 +41,6 @@ tolerations: []
 
 affinity: {}
 
-volumes: []
-  # - name: password-file
-  #   secret:
-  #     secretName: teleport-pagerduty-plugin-password-file
-  #     defaultMode: 0600
-
-volumeMounts: []
-  # - name: password-file
-  #   mountPath: /var/lib/teleport/plugins/pagerduty/smtp_password
-
 #
 # Plugin specific options
 #
