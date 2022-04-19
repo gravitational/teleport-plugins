@@ -73,7 +73,7 @@ steps:
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v9.0.1
+      TELEPORT_GET_VERSION: v9.0.4
       GOPATH: /tmp/teleport-plugins/test-darwin/go
       GOCACHE: /tmp/teleport-plugins/test-darwin/go/cache
     commands:
@@ -628,6 +628,6 @@ volumes:
 
 ---
 kind: signature
-hmac: 2a080aaa88a5b3e244732c5a062231300a14b6b3d789833b3fa0a1728dfa727b
+hmac: d5a5c8557a0903baf070be22b6fb54bf1e830ba388a32cb8d46cc519015b0585
 
 ...
