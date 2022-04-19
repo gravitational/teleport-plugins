@@ -241,26 +241,6 @@
             "default": {},
             "additionalProperties": true
         },
-        "volumes": {
-            "$id": "#/properties/volumes",
-            "type": "array",
-            "default": [],
-            "items": {
-                "$id": "#/properties/volumes/items",
-                "type": "object",
-                "additionalItems": true
-            }
-        },
-        "volumeMounts": {
-            "$id": "#/properties/volumeMounts",
-            "type": "array",
-            "default": [],
-            "items": {
-                "$id": "#/properties/volumeMounts/items",
-                "type": "object",
-                "additionalItems": true
-            }
-        },
         "teleport": {
             "$id": "#/properties/teleport",
             "type": "object",

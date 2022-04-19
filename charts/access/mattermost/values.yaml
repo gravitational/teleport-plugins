@@ -41,16 +41,6 @@ tolerations: []
 
 affinity: {}
 
-volumes: []
-  # - name: password-file
-  #   secret:
-  #     secretName: teleport-mattermost-plugin-password-file
-  #     defaultMode: 0600
-
-volumeMounts: []
-  # - name: password-file
-  #   mountPath: /var/lib/teleport/plugins/mattermost/smtp_password
-
 #
 # Plugin specific options
 #
