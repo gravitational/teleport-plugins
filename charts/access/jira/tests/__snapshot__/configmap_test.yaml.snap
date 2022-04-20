@@ -15,13 +15,15 @@ should match the snapshot (smtp on):
         issue_type = "Task"
 
         [http]
-        listen_addr = ":8443"
-        public_addr = ""
+        listen_addr = ":1234"
+        public_addr = "jira-plugin.example.com"
+        https_key_file = "server.key"
+        https_cert_file = "server.crt"
 
 
 
         [https.tls]
-        verify_client_cert = false
+        verify_client_cert = true
 
         [log]
         output = "/var/log/teleport-jira.log"
