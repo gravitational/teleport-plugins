@@ -27,12 +27,14 @@ The following values can be set for the Helm chart:
     <td>Name of the Kubernetes secret that contains the credentials for the connection</td>
     <td>string</td>
     <td><code>""</code></td>
+    <td>yes</td>
   </tr>
   <tr>
     <td><code>teleport.identitySecretPath</code></td>
     <td>Key of the field in the secret specified by <code>teleport.identitySecretName</code></td>
     <td>string</td>
     <td><code>"auth_id"</code></td>
+    <td>yes</td>
   </tr>
 
   <tr>
@@ -40,12 +42,14 @@ The following values can be set for the Helm chart:
     <td>PagerDuty API Key</td>
     <td>string</td>
     <td><code></code></td>
+    <td>yes</td>
   </tr>
   <tr>
     <td><code>pagerduty.userEmail</code></td>
     <td>PagerDuty bot user email</td>
     <td>string</td>
     <td><code>""</code></td>
+    <td>yes</td>
   </tr>
 
   <tr>
@@ -56,6 +60,7 @@ The following values can be set for the Helm chart:
     </td>
     <td>string</td>
     <td><code>"stdout"</code></td>
+    <td>no</td>
   </tr>
   <tr>
     <td><code>log.severity</code></td>
@@ -65,5 +70,6 @@ The following values can be set for the Helm chart:
     </td>
     <td>string</td>
     <td><code>"INFO"</code></td>
+    <td>no</td>
   </tr>
 </table>
