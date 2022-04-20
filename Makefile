@@ -146,12 +146,19 @@ update-version:
 	$(MAKE) update-helm-version
 	$(MAKE) terraform-gen-tfschema
 
+# Update all charts to VERSION
 .PHONY: update-helm-version
 update-helm-version:
-	$(SED) 's/appVersion: .*/appVersion: "$(VERSION)"/' charts/access/email/Chart.yaml
-	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/access/email/Chart.yaml
+	$(MAKE) update-helm-version-access-email
+	$(MAKE) update-helm-version-access-slack
+
+# Update specific chart
+.PHONY: update-helm-version-%
+update-helm-version-access-%:
+	$(SED) 's/appVersion: .*/appVersion: "$(VERSION)"/' charts/access/$*/Chart.yaml
+	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/access/$*/Chart.yaml
 	# Update snapshots
-	@helm unittest -u charts/access/email || { echo "Please install unittest as described in .cloudbuild/ci/helm-unittest.yaml" ; exit 1; }
+	@helm unittest -u charts/access/$* || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
 
 .PHONY: update-tag
 update-tag:
