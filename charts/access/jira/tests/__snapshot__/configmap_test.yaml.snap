@@ -1,0 +1,37 @@
+should match the snapshot (smtp on):
+  1: |
+    apiVersion: v1
+    data:
+      teleport-jira.toml: |
+        [teleport]
+        addr = "teleport.example.com:1234"
+        identity = "/var/lib/teleport/plugins/jira/auth_id"
+
+        [jira]
+        url = "https://jira.example.com"
+        username = "user@example.com"
+        api_token = "examplejiratoken"
+        project = "ACC"
+        issue_type = "Task"
+
+        [http]
+        listen_addr = ":8443"
+        public_addr = ""
+
+
+
+        [https.tls]
+        verify_client_cert = false
+
+        [log]
+        output = "/var/log/teleport-jira.log"
+        severity = "DEBUG"
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: teleport-plugin-jira
+        app.kubernetes.io/version: 9.0.4
+        helm.sh/chart: teleport-plugin-jira-1.0.0
+      name: RELEASE-NAME-teleport-plugin-jira

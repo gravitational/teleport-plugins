@@ -1,0 +1,15 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: {{ include "jira.fullname" . }}
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb
+spec:
+  selector:
+    {{- include "jira.selectorLabels" . | nindent 4 }}
+  type: LoadBalancer
+  ports:
+  - name: https
+    port: 443
+    targetPort: 8443

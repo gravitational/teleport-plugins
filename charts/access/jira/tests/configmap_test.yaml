@@ -1,0 +1,29 @@
+suite: Test deployment
+templates:
+  - configmap.yaml
+tests:
+  - it: should match the snapshot (smtp on)
+    set:
+      teleport:
+        address: teleport.example.com:1234
+      jira:
+        url: https://jira.example.com
+        username: user@example.com
+        apiToken: examplejiratoken
+        project: ACC
+        Task: Bug
+      http:
+        listenAddress: ":1234"
+        publicAddress: "jira-plugin.example.com"
+        keyFile: "server.key"
+        certFile: "server.crt"
+        verifyClientCert: true
+
+        basicAuth:
+          user: "testuser"
+          password: "testpassword"
+      log:
+        output: /var/log/teleport-jira.log
+        severity: DEBUG
+    asserts:
+      - matchSnapshot: {}
