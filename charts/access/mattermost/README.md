@@ -27,12 +27,14 @@ The following values can be set for the Helm chart:
     <td>Name of the Kubernetes secret that contains the credentials for the connection</td>
     <td>string</td>
     <td><code>""</code></td>
+    <td>yes</td>
   </tr>
   <tr>
     <td><code>teleport.identitySecretPath</code></td>
     <td>Key of the field in the secret specified by <code>teleport.identitySecretName</code></td>
     <td>string</td>
     <td><code>"auth_id"</code></td>
+    <td>yes</td>
   </tr>
 
   <tr>
@@ -40,18 +42,21 @@ The following values can be set for the Helm chart:
     <td>URL of the Mattermost server</td>
     <td>string</td>
     <td><code>""</code></td>
+    <td>yes</td>
   </tr>
   <tr>
     <td><code>mattermost.token</code></td>
     <td>Token to be used to authenticate with Mattermost</td>
     <td>string</td>
     <td><code>""</code></td>
+    <td>yes</td>
   </tr>
   <tr>
     <td><code>mattermost.recipients</code></td>
-    <td>Array of the recipients the plugin should send emails.</td>
+    <td>Array of the recipients the plugin should send access requests to.</td>
     <td>array</td>
     <td><code>[]</code></td>
+    <td>yes</td>
   </tr>
 
   <tr>
@@ -62,6 +67,7 @@ The following values can be set for the Helm chart:
     </td>
     <td>string</td>
     <td><code>"stdout"</code></td>
+    <td>no</td>
   </tr>
   <tr>
     <td><code>log.severity</code></td>
@@ -71,5 +77,6 @@ The following values can be set for the Helm chart:
     </td>
     <td>string</td>
     <td><code>"INFO"</code></td>
+    <td>no</td>
   </tr>
 </table>

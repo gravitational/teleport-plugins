@@ -10,7 +10,7 @@ tests:
         url: https://my.mattermost.com
         token: test-mattermost-token
         recipients:
-          - security@mycompany.com
+          - security@example.com
       log:
         output: /var/log/teleport-mattermost.log
         severity: DEBUG
