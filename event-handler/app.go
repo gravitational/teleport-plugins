@@ -249,17 +249,19 @@ func (a *App) initWasm(ctx context.Context) error {
 		}
 	})
 
-	e := wasm.NewAssemblyScriptEnv(log)
+	e := wasm.NewAssemblyScriptEnv()
 	pb := wasm.NewProtobufInterop()
-	s := wasm.NewStore(wasm.NewBadgerPersistentStore(a.badgerDB), wasm.DecodeAssemblyScriptString)
+	s := wasm.NewStore(wasm.NewBadgerPersistentStore(a.badgerDB))
 	a.wasmHandleEvent = wasm.NewHandleEvent(a.Config.WASMHandleEvent, pb)
-	api := wasm.NewTeleportAPI(log, a.EventWatcher.client, pb)
+	api := wasm.NewTeleportAPI(a.EventWatcher.client, pb)
 
 	opts := wasm.ExecutionContextPoolOptions{
-		Bytes:       b,
-		Timeout:     a.Config.WASMTimeout,
-		Concurrency: a.Config.WASMConcurrency,
-		TraitFactories: []wasm.TraitFactory{
+		Log:           log.WithField("service", "WASM"),
+		MemoryInterop: wasm.NewAssemblyScriptMemoryInterop(),
+		PluginBytes:   b,
+		Timeout:       a.Config.WASMTimeout,
+		Concurrency:   a.Config.WASMConcurrency,
+		Traits: []interface{}{
 			e, pb, a.wasmHandleEvent, s, api,
 		},
 	}
@@ -315,12 +317,7 @@ func (a *App) CallWASMPlugin(ctx context.Context, evt *TeleportEvent) (*Sanitize
 	}
 
 	r, err := a.wasmPool.Execute(ctx, func(ectx *wasm.ExecutionContext) (interface{}, error) {
-		handleEvent, err := a.wasmHandleEvent.For(ectx)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-
-		response, err := handleEvent.HandleEvent(evt.Event)
+		response, err := a.wasmHandleEvent.HandleEvent(ectx, evt.Event)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
@@ -348,6 +345,10 @@ func (a *App) CallWASMPlugin(ctx context.Context, evt *TeleportEvent) (*Sanitize
 
 	if err != nil {
 		return nil, trace.Wrap(err)
+	}
+
+	if r == nil {
+		return nil, nil
 	}
 
 	sanitized, ok := r.(*SanitizedTeleportEvent)

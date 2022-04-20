@@ -192,6 +192,10 @@ Loop:
 				return false, trace.Wrap(err)
 			}
 
+			if e == nil {
+				break
+			}
+
 			_, ok := j.app.Config.SkipSessionTypes[e.Type]
 			if !ok {
 				err := j.app.SendEvent(ctx, url, e)
