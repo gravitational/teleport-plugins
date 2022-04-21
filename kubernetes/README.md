@@ -9,39 +9,87 @@ For more details, read the corresponding [RFD](https://github.com/gravitational/
 It's currently possible to run the operator using the sidecar approach.
 Operator sidecar container is already integrated into [teleport-cluster](https://github.com/gravitational/teleport/tree/master/examples/chart/teleport-cluster) helm chart.
 
-TODO: Neither the operator image nor the helm chart are released yet, so in order to try it out you should use [`marshall-lee/plugin-charts` branch](https://github.com/marshall-lee/teleport/tree/marshall-lee/plugin-charts).
-See the instructions below on how to deploy the chart with a custom container image.
+TODO: Neither the operator image nor the helm chart are released yet, so in order to try it out you should use `marco/plugins-teleport-operator-charts` [branch](https://github.com/gravitational/teleport/tree/marco/plugins-teleport-operator-charts).
 
 ## Development
 
-First of all, you need to install CRDs to your Kubernetes cluster.
-There's a command for this that calls `install-crds` subcommand of the operator binary.
+We can set up the environment locally to speed up the testing.
 
-```
-bash
-% make install
-go run . -- install-crds
-{"level":"info","ts":1639510407.7697349,"logger":"setup","msg":"successfully installed CRD to the cluster","name":"identities.auth.teleport.dev","result":"created","old-operator-version":"","new-operator-version":"8.0.0","existing-crd-versions":[],"new-crd-versions":["v8"]}
-{"level":"info","ts":1639510407.7702131,"logger":"setup","msg":"successfully installed CRD to the cluster","name":"roles.resources.teleport.dev","result":"created","old-operator-version":"","new-operator-version":"8.0.0","existing-crd-versions":[],"new-crd-versions":["v5"]}
-{"level":"info","ts":1639510407.770255,"logger":"setup","msg":"successfully installed CRD to the cluster","name":"users.resources.teleport.dev","result":"created","old-operator-version":"","new-operator-version":"8.0.0","existing-crd-versions":[],"new-crd-versions":["v2"]}
-```
+We've created a little script which does the entire setup using minikube.
+- starts minikube
+- builds and tags the teleport operator into minikube's registry
+- installs teleport-cluster helm chart with the operator and waits for the deployment to complete
+- creates a tunnel so that we are able to interact with Teleport's UI
+- opens the K8S dashboard (minikube dashboard)
 
-Now you have some options how you can run the operator. The first and most convenient one is to run the operator on the host, outside of the Kubernetes cluster. In this mode you should also have Teleport running on the same host.
+
+Please note that we are deleting minikube's state, be careful when doing this as it might break your current "experiments".
 
 ```bash
-% make run
+#!/usr/bin/env bash
+set -e # stop script when a command fails
+set -o xtrace # print every line from now on
+
+CLUSTER_NAME="teleport-cluster.teleport-cluster.svc.cluster.local"
+NAMESPACE="teleport-cluster"
+CLUSTER_SHORT="teleport-cluster"
+CHART_LOCATION="$HOME/teleport/teleport/examples/chart/teleport-cluster" # gravitation/teleport at marco/plugins-teleport-operator-charts branch
+IMG="teleport-operator:latest"
+TELEPORT_VERSION="9.0.4"
+
+minikube delete # clean up before starting
+minikube start
+
+# You must have the following tools available:
+helm version
+kubectl version
+docker version
+
+# build the teleport operator
+pushd ~/teleport/teleport-plugins/kubernetes
+
+# Build and tag our images to the registry
+eval $(minikube docker-env --shell bash)
+docker build --build-arg version=${TELEPORT_VERSION} -t ${IMG} -f ./Dockerfile ..
+
+# install the CRDs
+make install
+
+# install the teleport-cluster chart with the sidecar operator
+helm install --create-namespace -n ${NAMESPACE?} \
+	--set clusterName=teleport-cluster.teleport-cluster.svc.cluster.local \
+	--set teleportVersionOverride=${TELEPORT_VERSION} \
+	--set operatorImage=${IMG} \
+	--set operator=true \
+	${CLUSTER_SHORT} ${CHART_LOCATION}
+
+kubectl config set-context --current --namespace ${NAMESPACE?}
+kubectl wait --for=condition=available deployment/${CLUSTER_SHORT} --timeout=2m
+
+read -p "Run 'minikube tunnel' on another terminal and press enter"
+
+PROXY_POD=$(kubectl get po -l app=teleport-cluster -o jsonpath='{.items[0].metadata.name}')
+kubectl exec $PROXY_POD teleport -- tctl users add --roles=access,editor teleoperator
+echo "open the following url (replace the invite id) and configure the user"
+TP_CLUSTER_IP=$(kubectl get service teleport-cluster -o jsonpath='{ .status.loadBalancer.ingress[0].ip }')
+echo "https://${TP_CLUSTER_IP}/web/invite/<id>"
+
+minikube dashboard
 ```
 
-Of course, at some point you'll need to test your code in a real Kubernetes cluster. To do so, you need to build a custom container image and push it to some registry e.g. Docker Hub or [you can run the registry on a host machine](https://hub.docker.com/_/registry) to save some time without network round-trips.
+Now you can interact with Kubernetes dashboard, Teleport UI and the usual k8s tools.
+As an example, we can create a role using the following:
 
-To build the container image and push it to your registry:
-
-```bash
-% IMG=YOUR-REGISTRY/teleport-operator:10.0.0 make docker-build docker-push
+```yaml
+apiVersion: "resources.teleport.dev/v5"
+kind: Role
+metadata:
+  name: rolefromk
+spec:
+  allow:
+    rules: []
 ```
 
-To deploy the `teleport-cluster` helm chart with your custom operator image:
-
-```bash
-% helm install -n YOUR-NAMESPACE --set clusterName=YOUR-CLUSTER.local --set enterprise=true --set teleportVersionOverride=10.0.0 --set operatorImage=YOUR-REGISTRY/teleport-operator YOUR-DEPLOYMENT ~/code/go/teleport/examples/chart/teleport-cluster
+```
+$ kubectl apply -f <fila_above>
 ```
