@@ -36,15 +36,15 @@ $ ./install
 
 ### Docker Image
 ```bash
-$ docker pull quay.io/gravitational/access-plugin-mattermost:9.0.2
+$ docker pull quay.io/gravitational/teleport-plugin-mattermost:9.0.2
 ```
 
 ```bash
-$ docker run quay.io/gravitational/access-plugin-mattermost:9.0.2 version
+$ docker run quay.io/gravitational/teleport-plugin-mattermost:9.0.2 version
 teleport-mattermost v9.0.2 git:teleport-mattermost-v9.0.2-0-g9e149895 go1.17.8
 ```
 
-For a list of available tags, visit [https://quay.io/](https://quay.io/repository/gravitational/access-plugin-mattermost?tab=tags)
+For a list of available tags, visit [https://quay.io/](https://quay.io/repository/gravitational/teleport-plugin-mattermost?tab=tags)
 
 ### Building from source
 
@@ -171,7 +171,7 @@ $ teleport-mattermost start
 or with docker:
 
 ```bash
-$ docker run -v <path/to/config>:/etc/teleport-mattermost.toml quay.io/gravitational/access-plugin-mattermost:9.0.2 start
+$ docker run -v <path/to/config>:/etc/teleport-mattermost.toml quay.io/gravitational/teleport-plugin-mattermost:9.0.2 start
 ```
 
 ## The Workflow

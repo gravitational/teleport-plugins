@@ -42,7 +42,7 @@ func (tctl Tctl) CheckExecutable() error {
 }
 
 // Sign generates Teleport client credentials at a given path.
-func (tctl Tctl) Sign(ctx context.Context, username, outPath string) error {
+func (tctl Tctl) Sign(ctx context.Context, username, format, outPath string) error {
 	log := logger.Get(ctx)
 	args := append(tctl.baseArgs(),
 		"auth",
@@ -50,7 +50,7 @@ func (tctl Tctl) Sign(ctx context.Context, username, outPath string) error {
 		"--user",
 		username,
 		"--format",
-		"file",
+		format,
 		"--overwrite",
 		"--out",
 		outPath,

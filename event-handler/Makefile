@@ -1,5 +1,5 @@
-VERSION=9.0.3
-GO_VERSION=1.17.8
+VERSION=9.1.0
+GO_VERSION=1.17.9
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
@@ -22,8 +22,8 @@ KEYLEN = 1024
 CLOUD_ADDR=evilmartians.teleport.sh:443
 IDENTITY_FILE=example/keys/identity
 
-DOCKER_NAME=event-handler-plugin
-DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/teleport/$(DOCKER_NAME):$(VERSION)
+DOCKER_NAME=teleport-plugin-event-handler
+DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/$(DOCKER_NAME):$(VERSION)
 DOCKER_IMAGE_QUAY = quay.io/gravitational/$(DOCKER_NAME):$(VERSION)
 DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg GITREF=$(GITREF)
 

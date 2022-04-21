@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/gravitational/teleport-plugins/access/config"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/stretchr/testify/require"
@@ -15,7 +16,7 @@ func TestRecipients(t *testing.T) {
 		desc             string
 		in               string
 		expectErr        require.ErrorAssertionFunc
-		expectRecipients RecipientsMap
+		expectRecipients config.RecipientsMap
 	}{
 		{
 			desc: "test recipients",
@@ -24,7 +25,7 @@ func TestRecipients(t *testing.T) {
 			token = "token"
 			recipients = ["dev-channel","admin-channel"]
 			`,
-			expectRecipients: RecipientsMap{
+			expectRecipients: config.RecipientsMap{
 				types.Wildcard: []string{"dev-channel", "admin-channel"},
 			},
 		},
@@ -38,7 +39,7 @@ func TestRecipients(t *testing.T) {
 			"dev" = ["dev-channel","admin-channel"]
 			"*" = "admin-channel"
 			`,
-			expectRecipients: RecipientsMap{
+			expectRecipients: config.RecipientsMap{
 				"dev":          []string{"dev-channel", "admin-channel"},
 				types.Wildcard: []string{"admin-channel"},
 			},
