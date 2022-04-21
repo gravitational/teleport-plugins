@@ -25,6 +25,7 @@ import (
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/mail.v2"
 )
 
 func TestRecipients(t *testing.T) {
@@ -147,6 +148,99 @@ func TestRecipients(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Equal(t, tc.expectRecipients, c.RoleToRecipients)
+		})
+	}
+}
+
+func TestSMTPStartTLSPolicy(t *testing.T) {
+	for _, tc := range []struct {
+		desc           string
+		in             string
+		expectErr      require.ErrorAssertionFunc
+		expectedPolicy mail.StartTLSPolicy
+	}{
+		{
+			desc: "test no policy should fallback to mandatory",
+			in: `
+			[smtp]
+			host = "http://example.org/"
+			username = "user1"
+			password = "hidden"
+			[role_to_recipients]
+			"*" = "admin@example.org"
+			`,
+			expectedPolicy: mail.MandatoryStartTLS,
+		},
+		{
+			desc: "test mandatory policy should return Mandatory policy",
+			in: `
+			[smtp]
+			host = "http://example.org/"
+			username = "user1"
+			password = "hidden"
+			starttls_policy = "mandatory"
+			[role_to_recipients]
+			"*" = "admin@example.org"
+			`,
+			expectedPolicy: mail.MandatoryStartTLS,
+		},
+		{
+			desc: "test opportunistic policy should return Opportunistic policy",
+			in: `
+			[smtp]
+			host = "http://example.org/"
+			username = "user1"
+			password = "hidden"
+			starttls_policy = "opportunistic"
+			[role_to_recipients]
+			"*" = "admin@example.org"
+			`,
+			expectedPolicy: mail.OpportunisticStartTLS,
+		},
+		{
+			desc: "test disabled policy should return NoStartTLS policy",
+			in: `
+			[smtp]
+			host = "http://example.org/"
+			username = "user1"
+			password = "hidden"
+			starttls_policy = "disabled"
+			[role_to_recipients]
+			"*" = "admin@example.org"
+			`,
+			expectedPolicy: mail.NoStartTLS,
+		},
+		{
+			desc: "test invalid policy should return an error",
+			in: `
+			[smtp]
+			host = "http://example.org/"
+			username = "user1"
+			password = "hidden"
+			starttls_policy = "insecure"
+			[role_to_recipients]
+			"*" = "admin@example.org"
+			`,
+			expectErr: func(tt require.TestingT, e error, i ...interface{}) {
+				require.Error(t, e)
+				require.True(t, trace.IsBadParameter(e))
+				require.Contains(t, e.Error(), "mandatory, opportunistic or disabled")
+			},
+		},
+	} {
+		t.Run(tc.desc, func(t *testing.T) {
+			filePath := filepath.Join(t.TempDir(), "config_test.toml")
+			err := os.WriteFile(filePath, []byte(tc.in), 0777)
+			require.NoError(t, err)
+
+			c, err := LoadConfig(filePath)
+			if tc.expectErr != nil {
+				tc.expectErr(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedPolicy, c.SMTP.MailStartTLSPolicy)
 		})
 	}
 }

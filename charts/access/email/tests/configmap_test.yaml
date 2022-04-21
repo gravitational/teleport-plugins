@@ -13,6 +13,7 @@ tests:
         port: 1234
         username: mysmtpuser
         password: mysmtppasswd
+        starttlsPolicy: mandatory
       delivery:
         sender: teleport@example.com
         recipients:
@@ -24,6 +25,36 @@ tests:
       - matchSnapshot: {}
 
   - it: should match the snapshot (smtp on, password file)
+    set:
+      teleport:
+        address: teleport.example.com:1234
+      maingun.enabled: false
+      smtp:
+        enabled: true
+        host: smtp.someservice.com
+        port: 1234
+        username: mysmtpuser
+        passwordFile: /etc/teleport/supersecretemailpw
+        starttlsPolicy: mandatory
+    asserts:
+      - matchSnapshot: {}
+
+  - it: should match the snapshot (smtp on, starttls disabled)
+    set:
+      teleport:
+        address: teleport.example.com:1234
+      maingun.enabled: false
+      smtp:
+        enabled: true
+        host: smtp.someservice.com
+        port: 1234
+        username: mysmtpuser
+        passwordFile: /etc/teleport/supersecretemailpw
+        starttlsPolicy: disabled
+    asserts:
+      - matchSnapshot: {}
+
+  - it: should match the snapshot (smtp on, no starttls)
     set:
       teleport:
         address: teleport.example.com:1234

@@ -98,6 +98,12 @@ The following values can be set for the Helm chart:
     <td>string</td>
     <td><code>""</code></td>
   </tr>
+  <tr>
+    <td><code>smtp.starttlsPolicy</code></td>
+    <td>Which policy to use for secure communications: mandatory, opportunistic or disabled.</td>
+    <td>string</td>
+    <td><code>"mandatory"</code></td>
+  </tr>
 
   <tr>
     <td><code>delivery.sender</code></td>
