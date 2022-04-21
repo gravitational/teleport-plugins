@@ -12,6 +12,7 @@ type bucketConfig struct {
 	bucketName      string
 	accessKeyID     string
 	secretAccessKey string
+	roleARN         string
 }
 
 type args struct {
@@ -60,9 +61,14 @@ func parseCommandLine() *args {
 		StringVar(&result.production.bucketName)
 
 	app.Flag("prod-region", "AWS region the production bucket is in").
-		Envar("PRODUCTION_REGION").
-		Default("us-east-1").
+		Envar("PROD_REGION").
+		Default("us-west-2").
 		StringVar(&result.production.region)
+
+	app.Flag("prod-role", "AWS role to use when interacting with the deployment bucket.").
+		Required().
+		PlaceHolder("ARN").
+		StringVar(&result.production.roleARN)
 
 	app.Flag("prod-access-key-id", "AWS access key id for production bucket").
 		Envar("PROD_ACCESS_KEY_ID").

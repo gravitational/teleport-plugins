@@ -12,12 +12,14 @@ import (
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/coreos/go-semver/semver"
 	"github.com/gravitational/teleport-plugins/tooling/internal/staging"
 	"github.com/gravitational/teleport-plugins/tooling/internal/terraform/registry"
@@ -138,7 +140,7 @@ func updateRegistry(ctx context.Context, prodBucket *bucketConfig, workspace *wo
 	return nil
 }
 
-func uploadRegistry(ctx aws.Context, s3Client *s3.Client, bucketName string, productionDir string, files []string) error {
+func uploadRegistry(ctx context.Context, s3Client *s3.Client, bucketName string, productionDir string, files []string) error {
 	uploader := manager.NewUploader(s3Client)
 	log.Infof("Production dir: %s", productionDir)
 	for _, f := range files {
@@ -325,7 +327,8 @@ func ensureWorkspaceExists(workspaceDir string) (*workspacePaths, error) {
 }
 
 func downloadStagedArtifacts(ctx context.Context, tag string, dstDir string, stagingBucket *bucketConfig) ([]string, error) {
-
+	log.Debugf("listing plugins in %s %s", stagingBucket.region, stagingBucket.bucketName)
+	log.Debugf("listing plugins as %s", stagingBucket.accessKeyID)
 	client, err := newS3ClientFromBucketConfig(ctx, stagingBucket)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -335,6 +338,7 @@ func downloadStagedArtifacts(ctx context.Context, tag string, dstDir string, sta
 }
 
 func newS3ClientFromBucketConfig(ctx context.Context, bucket *bucketConfig) (*s3.Client, error) {
+
 	creds := credentials.NewStaticCredentialsProvider(
 		bucket.accessKeyID, bucket.secretAccessKey, "")
 
@@ -345,7 +349,23 @@ func newS3ClientFromBucketConfig(ctx context.Context, bucket *bucketConfig) (*s3
 		return nil, trace.Wrap(err)
 	}
 
-	return s3.NewFromConfig(cfg), nil
+	if bucket.roleARN == "" {
+		return s3.NewFromConfig(cfg), nil
+	}
+
+	log.Debugf("Configuring deployment role %q", bucket.roleARN)
+
+	stsClient := sts.NewFromConfig(cfg)
+	stsCreds := stscreds.NewAssumeRoleProvider(stsClient, bucket.roleARN)
+	stsAwareCfg, err := config.LoadDefaultConfig(ctx,
+		config.WithRegion(bucket.region),
+		config.WithCredentialsProvider(stsCreds))
+
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return s3.NewFromConfig(stsAwareCfg), nil
 }
 
 func loadSigningEntity(keyText string) (*openpgp.Entity, error) {

@@ -710,7 +710,7 @@ steps:
       STAGING_SECRET_ACCESS_KEY:
         from_secret: AWS_SECRET_ACCESS_KEY
       
-      PRODUCTION_REGION:
+      PROD_REGION:
         from_secret: PRODUCTION_TERRAFORM_AWS_REGION
       PROD_BUCKET:
         from_secret: PRODUCTION_TERRAFORM_AWS_BUCKET
@@ -723,6 +723,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: d453538bb4b8281960cff6363267944ebd5fd943bc95f9b095a5dddff33be7f6
+hmac: f6ad25a38eda9195f3af3a9e3e10f8c17f879aff7a3d0362f49acc9887924e63
 
 ...
