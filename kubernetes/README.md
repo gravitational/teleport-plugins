@@ -1,16 +1,21 @@
 # Teleport Kubernetes Operator
 
-This package implements [an operator for Kubernetes](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/). This operator is useful to bootstrap Teleport resources e.g. users and roles from [Kubernetes custom resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/) and it's also capable of orchestrating the credentials for Teleport plugins running in Kubernetes. For more details, read the corresponding [RFD](https://github.com/gravitational/teleport-plugins/blob/master/rfd/0001-kubernetes-manager.md).
+This package implements [an operator for Kubernetes](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
+This operator is useful to bootstrap Teleport resources e.g. users and roles from [Kubernetes custom resources](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
+For more details, read the corresponding [RFD](https://github.com/gravitational/teleport-plugins/blob/master/rfd/0001-kubernetes-manager.md).
 
 ## Running
 
-For now, the only supported mode of running the operator is a sidecar mode. Operator sidecar container is already integrated into [teleport-cluster](https://github.com/gravitational/teleport/tree/master/examples/chart/teleport-cluster) helm chart.
+It's currently possible to run the operator using the sidecar approach.
+Operator sidecar container is already integrated into [teleport-cluster](https://github.com/gravitational/teleport/tree/master/examples/chart/teleport-cluster) helm chart.
 
-TODO: Neither the operator image nor the helm chart are released yet, so in order to try it out you should use [`marshall-lee/plugin-charts` branch](https://github.com/marshall-lee/teleport/tree/marshall-lee/plugin-charts). See the instructions below on how to deploy the chart with a custom container image.
+TODO: Neither the operator image nor the helm chart are released yet, so in order to try it out you should use [`marshall-lee/plugin-charts` branch](https://github.com/marshall-lee/teleport/tree/marshall-lee/plugin-charts).
+See the instructions below on how to deploy the chart with a custom container image.
 
 ## Development
 
-First of all, you need to install CRDs to your Kubernetes cluster. There's a command for this that calls `install-crds` subcommand of the operator binary.
+First of all, you need to install CRDs to your Kubernetes cluster.
+There's a command for this that calls `install-crds` subcommand of the operator binary.
 
 ```
 bash
