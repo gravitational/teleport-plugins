@@ -112,11 +112,17 @@ func (s *TerraformSuite) SetupSuite() {
 	identityPath, err := s.Integration.Sign(ctx, s.Auth, s.plugin)
 	require.NoError(t, err)
 
+	tlsPaths, err := s.Integration.SignTLS(ctx, s.Auth, s.plugin)
+	require.NoError(t, err)
+
 	s.client, err = s.Integration.NewClient(ctx, s.Auth, s.plugin)
 	require.NoError(t, err)
 
 	s.teleportConfig.Addr = s.Auth.AuthAddr().String()
 	s.teleportConfig.Identity = identityPath
+	s.teleportConfig.ClientCrt = tlsPaths.CertPath
+	s.teleportConfig.ClientKey = tlsPaths.KeyPath
+	s.teleportConfig.RootCAs = tlsPaths.RootCAPath
 	s.teleportFeatures = teleportFeatures
 
 	s.terraformConfig = `
@@ -156,10 +162,14 @@ func (s *TerraformSuite) closeClient() {
 
 // getFixture loads fixture and returns it as string or <error> if failed
 func (s *TerraformSuite) getFixture(name string) string {
+	return s.getFixtureWithCustomConfig(name, s.terraformConfig)
+}
+
+// getFixtureWithCustomConfig loads fixture and returns it as string or <error> if failed
+func (s *TerraformSuite) getFixtureWithCustomConfig(name string, config string) string {
 	b, err := fixtures.ReadFile(filepath.Join("fixtures", name))
 	if err != nil {
 		return fmt.Sprintf("<error: %v fixture not found>", name)
 	}
-
-	return s.terraformConfig + "\n" + string(b)
+	return config + "\n" + string(b)
 }

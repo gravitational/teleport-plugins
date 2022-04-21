@@ -13,18 +13,47 @@ This guide assumes that you have:
 
 The required Fluentd version for production setup is v1.12.4 or newer. Lower versions do not support TLS.
 
-## Installing the plugin
+## Install the plugin
 
-We recommend installing the Teleport Plugins alongside the Teleport Proxy. This is an ideal location as plugins have a low memory footprint, and will require both public internet access and Teleport Auth access. We currently only provide linux-amd64 binaries, you can also compile these plugins from source.
+There are several methods to installing and using the Teleport Event Handler Plugin:
 
-### Install the plugin from source
+1. Use a [precompiled binary](#precompiled-binary)
+
+2. Use a [docker image](#docker-image)
+
+3. Install from [source](#building-from-source)
+
+### Precompiled Binary
+
+Get the plugin distribution.
+
+```bash
+$ curl -L https://get.gravitational.com/teleport-event-handler-v7.0.2-linux-amd64-bin.tar.gz
+$ tar -xzf teleport-event-handler-v7.0.2-linux-amd64-bin.tar.gz
+$ cd teleport-event-handler
+$ ./install
+```
+
+### Docker Image
+```bash
+$ docker pull quay.io/gravitational/teleport-plugin-event-handler:9.0.2
+```
+
+```bash
+$ docker run quay.io/gravitational/teleport-plugin-event-handler:9.0.2 version
+Teleport event handler v9.0.2 git:teleport-event-handler-v9.0.2-0-g9e149895 go1.17.8
+```
+
+For a list of available tags, visit [https://quay.io/](https://quay.io/gravitational/teleport-plugin-event-handler?tab=tags)
+
+### Building from source
 
 Please ensure that Docker is running!
 
 ```sh
-git clone https://github.com/gravitational/teleport-plugins.git --depth 1
-cd teleport-plugins/event-handler/build.assets
-make install
+$ git clone https://github.com/gravitational/teleport-plugins.git --depth 1
+$ cd teleport-plugins/event-handler/build.assets
+$ make install
 ```
 
 This command will build `build/teleport-event-handler` executable and place it to `/usr/local/bin` folder. The following error means that you do not have write permissions on target folder:
@@ -36,45 +65,43 @@ cp: /usr/local/bin/teleport-event-handler: Operation not permitted
 To fix this, you can either set target folder to something listed in your `$PATH`:
 
 ```sh
-make install BINDIR=/tmp/test-fluentd-setup
+$ make install BINDIR=/tmp/test-fluentd-setup
 ```
 
 or copy binary file manually with `sudo`:
 
 ```sh
-sudo cp build/teleport-event-handler /usr/local/bin
+$ sudo cp build/teleport-event-handler /usr/local/bin
 ```
-
-In sections below we assume that you have `teleport-event-handler` executable available in your `$PATH` or cwd.
 
 ## Generate example configuration
 
 Run:
 
 ```sh
-teleport-event-handler configure .
+$ teleport-event-handler configure .
 ```
 
 You'll see the following output:
 
 ```sh
-Teleport event handler 0.0.1 07617b0ad0829db043fe779faf1669defdc8d84e
+Teleport event handler 9.0.2 teleport-event-handler-v9.0.2-0-g9e149895
 
-[1] mTLS Fluentd certificates generated and saved to ca.crt, ca.key, server.crt, server.key, client.crt, client.key
+[1] Generated mTLS Fluentd certificates ca.crt, ca.key, server.crt, server.key, client.crt, client.key
 [2] Generated sample teleport-event-handler role and user file teleport-event-handler-role.yaml
 [3] Generated sample fluentd configuration file fluent.conf
 [4] Generated plugin configuration file teleport-event-handler.toml
 
 Follow-along with our getting started guide:
 
-https://goteleport.com/setup/guides/fluentd
+https://goteleport.com/docs/setup/guides/fluentd
 ```
 
 Where `ca.crt` and `ca.key` would be Fluentd self-signed CA certificate and private key, `server.crt` and `server.key` would be fluentd server certificate and key, `client.crt` and `client.key` would be Fluentd client certificate and key, all signed by the generated CA.
 
 Check ```teleport-event-handler configure --help``` usage instructions. You may set several configuration options, including key/cert file names, server key encryption password and Teleport auth proxy address.
 
-### Create user and role for access audit log events
+## Create user and role for access audit log events
 
 The generated `teleport-event-handler-role.yaml` would contain the following content:
 
@@ -94,7 +121,7 @@ spec:
     rules:
       - resources: ['event','session']
         verbs: ['list','read']
-version: v4
+version: v5
 ```
 
 It defines `teleport-event-handler` role and user which has read-only access to the `event` API.
@@ -105,7 +132,7 @@ Log into Teleport Authentication Server, this is where you normally run `tctl`. 
 tctl create -f teleport-event-handler-role.yaml
 ```
 
-### <a name="export"></a>Export teleport-event-handler identity file
+## <a name="export"></a>Export teleport-event-handler identity file
 
 Teleport Plugin use the fluentd role and user to read the events. We export the identity files, using tctl auth sign.
 
@@ -115,7 +142,7 @@ tctl auth sign --out identity --user teleport-event-handler
 
 This will generate `identity` which contains TLS certificates and will be used to connect plugin to your Teleport instance.
 
-### Run fluentd
+## Run fluentd
 
 The plugin will send events to the fluentd instance using keys generated on the previous step. Generated `fluent.conf` file would contain the following content:
 
@@ -161,7 +188,7 @@ Start fluentd instance:
 docker run -p 8888:8888 -v $(pwd):/keys -v $(pwd)/fluent.conf:/fluentd/etc/fluent.conf fluent/fluentd:edge 
 ```
 
-### Configure the plugin
+## Configure the plugin
 
 The generated `teleport-event-handler.toml` would contain the following plugin configuration:
 
@@ -183,10 +210,16 @@ addr = "localhost:3025" # Default local Teleport instance address
 identity = "identity"   # Identity file exported on previous step
 ```
 
-### Start the plugin
+## Start the plugin
 
 ```sh
-teleport-event-handler start --config teleport-event-handler.toml --start-time 2021-01-01T00:00:00Z
+$ teleport-event-handler start --config teleport-event-handler.toml --start-time 2021-01-01T00:00:00Z
+```
+
+or with docker:
+
+```sh
+$ docker run -v </path/to/config>:/etc/teleport-event-handler quay.io/gravitational/teleport-plugin-event-handler:9.0.2 start --config /etc/teleport-event-handler/teleport-event-handler.toml --start-time 2021-01-01T00:00:00Z
 ```
 
 Note that here we used start time at the beginning of year 2021. Supposedly you have some events at the Teleport instance you are connecting to. Otherwise, you can omit `--start-time` flag, start the service and generate an events using `tctl create -f teleport-event-handler.yaml` then from the first step. `teleport-event-handler` will wait for that new events to appear and will send them to the fluentd.
@@ -263,13 +296,13 @@ You could use `--dry-run` argument if you want event handler to simulate event e
 ### Login to Teleport cloud:
 
 ```sh
- tsh login --proxy test.teleport.sh:443 --user test@evilmartians.com
- ```
+$ tsh login --proxy test.teleport.sh:443 --user test@evilmartians.com
+```
 
 ### Generate sample configuration using the cloud address:
 
 ```sh
-teleport-event-handler configure . test.teleport.sh:443
+$ teleport-event-handler configure . test.teleport.sh:443
 ```
 
 Then follow the manual starting at ["Export teleport-event-handler identity file"](#export) section.

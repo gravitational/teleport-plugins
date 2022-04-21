@@ -24,11 +24,11 @@ steps:
       - make lint
 
   - name: Run tests
-    image: golang:1.17.5
+    image: golang:1.17.9
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v9.0.1
+      TELEPORT_GET_VERSION: v9.0.4
     commands:
       - echo Testing plugins against Teleport $TELEPORT_GET_VERSION
       - make test
@@ -65,6 +65,7 @@ steps:
       # This will remove subdirectories under pkg/mod which 0400 permissions.
       # See for more details: https://github.com/golang/go/issues/27455
       - go clean -modcache
+      - chmod -R u+rw /tmp/teleport-plugins/test-darwin/go
       - rm -rf /tmp/teleport-plugins/test-darwin/go
       - mkdir -p /tmp/teleport-plugins/test-darwin/go
 
@@ -72,7 +73,7 @@ steps:
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v9.0.1
+      TELEPORT_GET_VERSION: v9.0.4
       GOPATH: /tmp/teleport-plugins/test-darwin/go
       GOCACHE: /tmp/teleport-plugins/test-darwin/go/cache
     commands:
@@ -103,7 +104,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.5
+    image: golang:1.17.9
     commands:
       - make build-all
 
@@ -142,6 +143,7 @@ steps:
       # This will remove subdirectories under pkg/mod which 0400 permissions.
       # See for more details: https://github.com/golang/go/issues/27455
       - go clean -modcache
+      - chmod -R u+rw /tmp/teleport-plugins/build-darwin/go
       - rm -rf /tmp/teleport-plugins/build-darwin/go
       - mkdir -p /tmp/teleport-plugins/build-darwin/go/cache
 
@@ -177,7 +179,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.5
+    image: golang:1.17.9
     commands:
       - mkdir -p build/
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
@@ -274,7 +276,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.5
+    image: golang:1.17.9
     commands:
       - mkdir -p build/
       - make release/terraform
@@ -356,7 +358,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.5
+    image: golang:1.17.9
     commands:
       - mkdir -p build/
       - make release/event-handler
@@ -645,7 +647,7 @@ concurrency:
 
 steps:
   - name: Upload terraform provider to staging registry
-    image: golang:1.17.5
+    image: golang:1.17.9
     commands:
       - cd tooling
       - |
@@ -691,7 +693,7 @@ concurrency:
 
 steps:
   - name: Promote terraform provider to public registry
-    image: golang:1.17.5
+    image: golang:1.17.9
     commands:
       - cd tooling
       - |
@@ -723,6 +725,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: f6ad25a38eda9195f3af3a9e3e10f8c17f879aff7a3d0362f49acc9887924e63
+hmac: 9f4c1a36000b9b2637e790418a624a31c162e2bb248cc6718a1c28a82a8b10c4
 
 ...

@@ -23,10 +23,10 @@ should match the snapshot (mailgun on):
       labels:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: access-plugin-email
-        app.kubernetes.io/version: 9.0.0
-        helm.sh/chart: access-plugin-email-1.0.0
-      name: RELEASE-NAME-access-plugin-email
+        app.kubernetes.io/name: teleport-plugin-email
+        app.kubernetes.io/version: 9.0.4
+        helm.sh/chart: teleport-plugin-email-1.0.0
+      name: RELEASE-NAME-teleport-plugin-email
 should match the snapshot (smtp on):
   1: |
     apiVersion: v1
@@ -55,10 +55,10 @@ should match the snapshot (smtp on):
       labels:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: access-plugin-email
-        app.kubernetes.io/version: 9.0.0
-        helm.sh/chart: access-plugin-email-1.0.0
-      name: RELEASE-NAME-access-plugin-email
+        app.kubernetes.io/name: teleport-plugin-email
+        app.kubernetes.io/version: 9.0.4
+        helm.sh/chart: teleport-plugin-email-1.0.0
+      name: RELEASE-NAME-teleport-plugin-email
 should match the snapshot (smtp on, password file):
   1: |
     apiVersion: v1
@@ -87,7 +87,7 @@ should match the snapshot (smtp on, password file):
       labels:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: access-plugin-email
-        app.kubernetes.io/version: 9.0.0
-        helm.sh/chart: access-plugin-email-1.0.0
-      name: RELEASE-NAME-access-plugin-email
+        app.kubernetes.io/name: teleport-plugin-email
+        app.kubernetes.io/version: 9.0.4
+        helm.sh/chart: teleport-plugin-email-1.0.0
+      name: RELEASE-NAME-teleport-plugin-email
