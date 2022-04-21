@@ -4,6 +4,7 @@ gitref.go
 debug
 default.etcd
 darwin
+cover.out
 
 node_modules
 
@@ -20,6 +21,7 @@ web/dist/app/app
 # Compiled binaries, Object files, Static and Dynamic libs (Shared Objects)
 out
 build
+bin
 *.o#
 *.a
 *.so

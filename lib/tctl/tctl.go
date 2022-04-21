@@ -18,8 +18,12 @@ package tctl
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"regexp"
+	"time"
 
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport/api/types"
@@ -42,7 +46,7 @@ func (tctl Tctl) CheckExecutable() error {
 }
 
 // Sign generates Teleport client credentials at a given path.
-func (tctl Tctl) Sign(ctx context.Context, username, format, outPath string) error {
+func (tctl Tctl) Sign(ctx context.Context, username, format, outPath string, ttl time.Duration) error {
 	log := logger.Get(ctx)
 	args := append(tctl.baseArgs(),
 		"auth",
@@ -55,6 +59,9 @@ func (tctl Tctl) Sign(ctx context.Context, username, format, outPath string) err
 		"--out",
 		outPath,
 	)
+	if ttl > 0 {
+		args = append(args, "--ttl", fmt.Sprintf("%v", ttl))
+	}
 	cmd := exec.CommandContext(ctx, tctl.cmd(), args...)
 	log.Debugf("Running %s", cmd)
 	output, err := cmd.CombinedOutput()
@@ -65,10 +72,38 @@ func (tctl Tctl) Sign(ctx context.Context, username, format, outPath string) err
 	return nil
 }
 
+// SignToString generate Teleport client credentials and returns them as a string.
+func (tctl Tctl) SignToString(ctx context.Context, username string, ttl time.Duration) (string, error) {
+	identityFile, err := os.CreateTemp("", username+"-identity-*")
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+	if err := identityFile.Close(); err != nil {
+		return "", trace.NewAggregate(
+			trace.Wrap(err),
+			os.Remove(identityFile.Name()),
+		)
+	}
+	if err := tctl.Sign(ctx, username, "file", identityFile.Name(), ttl); err != nil {
+		return "", trace.NewAggregate(
+			trace.Wrap(err),
+			os.Remove(identityFile.Name()),
+		)
+	}
+	bytes, err := ioutil.ReadFile(identityFile.Name())
+	return string(bytes), trace.NewAggregate(
+		trace.Wrap(err),
+		os.Remove(identityFile.Name()),
+	)
+}
+
 // Create creates or updates a set of Teleport resources.
-func (tctl Tctl) Create(ctx context.Context, resources []types.Resource) error {
+func (tctl Tctl) Create(ctx context.Context, resources []types.Resource, force bool) error {
 	log := logger.Get(ctx)
 	args := append(tctl.baseArgs(), "create")
+	if force {
+		args = append(args, "--force")
+	}
 	cmd := exec.CommandContext(ctx, tctl.cmd(), args...)
 	log.Debugf("Running %s", cmd)
 	stdinPipe, err := cmd.StdinPipe()
@@ -148,6 +183,22 @@ func (tctl Tctl) GetCAPin(ctx context.Context) (string, error) {
 		return "", trace.Errorf("failed to find CA Pin in auth status")
 	}
 	return submatch[1], nil
+}
+
+func (tctl Tctl) GetCAs(ctx context.Context) ([]types.CertAuthority, error) {
+	resources, err := tctl.GetAll(ctx, types.KindCertAuthority)
+	if err != nil {
+		return nil, trace.Wrap(err, "failed to load cert authorities")
+	}
+	cas := make([]types.CertAuthority, 0, len(resources))
+	for _, resource := range resources {
+		ca, ok := resource.(types.CertAuthority)
+		if !ok {
+			return nil, trace.Errorf("unknown cert authority type %T", ca)
+		}
+		cas = append(cas, ca)
+	}
+	return cas, nil
 }
 
 func (tctl Tctl) cmd() string {

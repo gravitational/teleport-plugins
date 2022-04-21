@@ -79,7 +79,8 @@ event-handler:
 .PHONY: test
 test:
 	@echo Testing plugins against Teleport $(TELEPORT_GET_VERSION)
-	go test -race -count 1 ./...
+	go test -race -count 1 $(shell go list ./... | grep -v /kubernetes/)
+	make -C kubernetes test
 
 # Individual releases
 .PHONY: release/access-slack

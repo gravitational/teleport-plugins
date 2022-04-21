@@ -84,6 +84,9 @@ func NewProcess(ctx context.Context) *Process {
 			jcancel()
 			jobs.Done()
 			if err != nil && critical {
+				process.Lock()
+				process.criticalErrors = append(process.criticalErrors, trace.Wrap(err))
+				process.Unlock()
 				process.Terminate()
 			}
 		}()
