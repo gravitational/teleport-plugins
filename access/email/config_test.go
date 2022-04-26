@@ -224,7 +224,8 @@ func TestSMTPStartTLSPolicy(t *testing.T) {
 			expectErr: func(tt require.TestingT, e error, i ...interface{}) {
 				require.Error(t, e)
 				require.True(t, trace.IsBadParameter(e))
-				require.Contains(t, e.Error(), "mandatory, opportunistic or disabled")
+				require.Contains(t, e.Error(), "invalid smtp.starttls_policy")
+				require.Contains(t, e.Error(), "mandatory, opportunistic, disabled")
 			},
 		},
 	} {
