@@ -71,6 +71,7 @@ smtp:
   username: ""
   password: ""
   passwordFile: ""
+  starttlsPolicy: "mandatory"
 
 delivery:
   sender: ""

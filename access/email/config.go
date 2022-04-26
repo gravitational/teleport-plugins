@@ -18,6 +18,7 @@ package main
 
 import (
 	_ "embed"
+	"fmt"
 
 	"github.com/gravitational/teleport-plugins/access/config"
 	"github.com/gravitational/teleport-plugins/lib"
@@ -25,6 +26,7 @@ import (
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/pelletier/go-toml"
+	"gopkg.in/mail.v2"
 )
 
 // DeliveryConfig represents email recipients config
@@ -43,11 +45,13 @@ type MailgunConfig struct {
 
 // SMTPConfig is SMTP-specific configuration options
 type SMTPConfig struct {
-	Host         string
-	Port         int
-	Username     string
-	Password     string
-	PasswordFile string `toml:"password_file"`
+	Host               string
+	Port               int
+	Username           string
+	Password           string
+	PasswordFile       string `toml:"password_file"`
+	StartTLSPolicy     string `toml:"starttls_policy"`
+	MailStartTLSPolicy mail.StartTLSPolicy
 }
 
 // Config stores the full configuration for the teleport-email plugin to run.
@@ -85,6 +89,7 @@ port = 587
 username = "username@gmail.com"
 password = ""
 # password_file = "/var/lib/teleport/plugins/email/smtp_password"
+starttls_policy = "mandatory" # mandatory|opportunistic|disabled
 
 [delivery]
 sender = "noreply@example.com" # From: email address
@@ -175,7 +180,24 @@ func (c *SMTPConfig) CheckAndSetDefaults() error {
 		}
 	}
 
+	if c.MailStartTLSPolicy, err = mailStartTLSPolicy(c.StartTLSPolicy); err != nil {
+		return trace.BadParameter("invalid smtp.starttls_policy: %v", err)
+	}
+
 	return nil
+}
+
+func mailStartTLSPolicy(p string) (mail.StartTLSPolicy, error) {
+	switch p {
+	case "mandatory", "":
+		return mail.MandatoryStartTLS, nil
+	case "opportunistic":
+		return mail.OpportunisticStartTLS, nil
+	case "disabled":
+		return mail.NoStartTLS, nil
+	default:
+		return mail.MandatoryStartTLS, fmt.Errorf("unsupported starttls_policy %q - provide one of mandatory, opportunistic, disabled or leave empty to default to mandatory", p)
+	}
 }
 
 // CheckAndSetDefaults checks the config struct for any logical errors, and sets default values
