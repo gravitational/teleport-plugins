@@ -196,7 +196,7 @@ func mailStartTLSPolicy(p string) (mail.StartTLSPolicy, error) {
 	case "disabled":
 		return mail.NoStartTLS, nil
 	default:
-		return mail.MandatoryStartTLS, fmt.Errorf("wrong value '%s' - provide one of mandatory, opportunistic or disabled", p)
+		return mail.MandatoryStartTLS, fmt.Errorf("unsupported starttls_policy %q - provide one of mandatory, opportunistic, disabled or leave empty to default to mandatory", p)
 	}
 }
 
