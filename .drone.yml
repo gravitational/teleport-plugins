@@ -233,9 +233,9 @@ steps:
     image: docker:git
     environment:
       AWS_ACCESS_KEY_ID:
-        from_secret: PLUGIN_DRONE_ECR_KEY
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
       AWS_SECRET_ACCESS_KEY:
-        from_secret: PLUGIN_DRONE_ECR_SECRET
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
       AWS_DEFAULT_REGION: us-west-2
       DOCKER_BUILDKIT: 1
     volumes:
@@ -406,9 +406,9 @@ steps:
     image: docker:git
     environment:
       AWS_ACCESS_KEY_ID:
-        from_secret: PLUGIN_DRONE_ECR_KEY
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
       AWS_SECRET_ACCESS_KEY:
-        from_secret: PLUGIN_DRONE_ECR_SECRET
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
       AWS_DEFAULT_REGION: us-west-2
       DOCKER_BUILDKIT: 1
     volumes:
@@ -548,9 +548,9 @@ steps:
       QUAYIO_DOCKER_PASSWORD:
         from_secret: PRODUCTION_QUAYIO_DOCKER_PASSWORD
       AWS_ACCESS_KEY_ID:
-        from_secret: PLUGIN_DRONE_ECR_KEY
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
       AWS_SECRET_ACCESS_KEY:
-        from_secret: PLUGIN_DRONE_ECR_SECRET
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
       AWS_DEFAULT_REGION: us-west-2
       DOCKER_BUILDKIT: 1
     volumes:
@@ -600,9 +600,9 @@ steps:
       QUAYIO_DOCKER_PASSWORD:
         from_secret: PRODUCTION_QUAYIO_DOCKER_PASSWORD
       AWS_ACCESS_KEY_ID:
-        from_secret: PLUGIN_DRONE_ECR_KEY
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
       AWS_SECRET_ACCESS_KEY:
-        from_secret: PLUGIN_DRONE_ECR_SECRET
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
       AWS_DEFAULT_REGION: us-west-2
       DOCKER_BUILDKIT: 1
     volumes:
@@ -782,6 +782,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: 0266dc0a6a16e89a6d0e453e03aa0449596e463a125f507165e3bfc5e2bd505c
+hmac: ca2146a3d75fd1978286d3c2ee088338134a96a0a0455a818a193d31c999ebce
 
 ...

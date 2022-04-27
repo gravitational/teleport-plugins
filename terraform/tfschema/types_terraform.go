@@ -2277,6 +2277,7 @@ func GenSchemaTrustedClusterV2(ctx context.Context) (github_com_hashicorp_terraf
 				"token": {
 					Description: "Token is the authorization token provided by another cluster needed by this cluster to join.",
 					Optional:    true,
+					Sensitive:   true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
 				"tunnel_addr": {
