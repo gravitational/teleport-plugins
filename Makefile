@@ -1,3 +1,12 @@
+# Set up a system-agnostic in-place sed command
+IS_GNU_SED = $(shell sed --version 1>/dev/null 2>&1 && echo true || echo false)
+
+ifeq ($(IS_GNU_SED),true)
+	SED = sed -i
+else
+	SED = sed -i ''
+endif
+
 .PHONY: access-slack
 access-slack:
 	make -C access/slack
@@ -43,7 +52,7 @@ docker-push-access-%: docker-build-access-%
 # Pulls and pushes image from ECR to quay.
 .PHONY: docker-promote-access-%
 docker-promote-access-%:
-	$(MAKE) -C access/$* docker-promote 
+	$(MAKE) -C access/$* docker-promote
 
 # Build event-handler plugin with docker
 .PHONY: docker-build-event-handler
@@ -117,13 +126,13 @@ build-all: access-slack access-jira access-mattermost access-pagerduty access-em
 update-version:
 	# Make sure VERSION is set on the command line "make update-version VERSION=x.y.z".
 	@test $(VERSION)
-	sed -i '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/jira/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/mattermost/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/slack/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
+	$(SED) '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/jira/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/mattermost/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/slack/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
 
 .PHONY: update-tag
 update-tag:
