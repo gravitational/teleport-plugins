@@ -53,7 +53,7 @@ type MailgunMailer struct {
 // NewSMTPMailer inits new SMTP mailer
 func NewSMTPMailer(c SMTPConfig, sender, clusterName string) Mailer {
 	dialer := mail.NewDialer(c.Host, c.Port, c.Username, c.Password)
-	dialer.StartTLSPolicy = mail.MandatoryStartTLS
+	dialer.StartTLSPolicy = c.MailStartTLSPolicy
 
 	return &SMTPMailer{dialer, sender, clusterName}
 }

@@ -359,7 +359,8 @@
                     "port": 587,
                     "username": "username@example.com",
                     "password": "",
-                    "passwordFile": ""
+                    "passwordFile": "",
+                    "starttlsPolicy": "mandatory"
                 }
             ],
             "required": [
@@ -410,6 +411,11 @@
                     "$id": "#/properties/smtp/properties/passwordFile",
                     "type": "string",
                     "default": ""
+                },
+                "starttlsPolicy": {
+                    "$id": "#/properties/smtp/properties/starttlsPolicy",
+                    "type": "string",
+                    "default": "mandatory"
                 }
             },
             "additionalProperties": true

@@ -627,7 +627,161 @@ volumes:
     temp: {}
 
 ---
+kind: pipeline
+type: kubernetes
+name: tag-stage-terraform-provider
+
+trigger:
+  event:
+    - tag
+  ref:
+    include:
+      - refs/tags/terraform-provider-teleport-v*
+
+depends_on:
+  - tag-build-terraform-linux
+  - tag-build-terraform-darwin
+
+concurrency:
+  limit: 1
+
+steps:
+  - name: Upload terraform provider to staging registry
+    image: golang:1.17.9
+    commands:
+      - cd tooling
+      - |
+        go run ./cmd/promote-terraform                                         \
+          --tag ${DRONE_TAG}                                                   \
+          -p 6                                                                 \
+          --registry-url https://terraform-staging.releases.teleport.dev/      \
+          --namespace gravitational                                            \
+          --name teleport                                                      \
+          --deployment-role ${DEPLOYMENT_ROLE}
+
+    environment:
+      STAGING_REGION: us-east-2
+      STAGING_BUCKET:
+        from_secret: AWS_S3_BUCKET
+      STAGING_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      STAGING_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      
+      PROD_REGION:
+        from_secret: STAGING_TERRAFORM_AWS_REGION
+      PROD_BUCKET:
+        from_secret: STAGING_TERRAFORM_AWS_BUCKET
+      PROD_ACCESS_KEY_ID:
+        from_secret: STAGING_TERRAFORM_AWS_ACCESS_KEY_ID
+      PROD_SECRET_ACCESS_KEY:
+        from_secret: STAGING_TERRAFORM_AWS_SECRET_ACCESS_KEY
+      DEPLOYMENT_ROLE:
+        from_secret: STAGING_TERRAFORM_AWS_DEPLOYMENT_ROLE
+      SIGNING_KEY:
+        from_secret: STAGING_TERRAFORM_REGISTRY_SIGNING_KEY
+---
+kind: pipeline
+type: kubernetes
+name: promote-staging-terraform-provider
+
+trigger:
+  event:
+  - promote
+  target:
+  - staging
+  - staging-terraform
+
+concurrency:
+  limit: 1
+
+steps:
+  - name: Upload terraform provider to staging registry
+    image: golang:1.17.9
+    commands:
+      - cd tooling
+      - |
+        go run ./cmd/promote-terraform                                         \
+          --tag ${DRONE_TAG}                                                   \
+          -p 6                                                                 \
+          --registry-url https://terraform-staging.releases.teleport.dev/      \
+          --namespace gravitational                                            \
+          --name teleport                                                      \
+          --deployment-role ${DEPLOYMENT_ROLE}
+
+    environment:
+      STAGING_REGION: us-east-2
+      STAGING_BUCKET:
+        from_secret: AWS_S3_BUCKET
+      STAGING_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      STAGING_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      
+      PROD_REGION:
+        from_secret: STAGING_TERRAFORM_AWS_REGION
+      PROD_BUCKET:
+        from_secret: STAGING_TERRAFORM_AWS_BUCKET
+      PROD_ACCESS_KEY_ID:
+        from_secret: STAGING_TERRAFORM_AWS_ACCESS_KEY_ID
+      PROD_SECRET_ACCESS_KEY:
+        from_secret: STAGING_TERRAFORM_AWS_SECRET_ACCESS_KEY
+      DEPLOYMENT_ROLE:
+        from_secret: STAGING_TERRAFORM_AWS_DEPLOYMENT_ROLE
+      SIGNING_KEY:
+        from_secret: STAGING_TERRAFORM_REGISTRY_SIGNING_KEY
+---
+kind: pipeline
+type: kubernetes
+name: promote-terraform-provider
+
+trigger:
+  event:
+  - promote
+  target:
+  - production
+  - production-terraform
+
+concurrency:
+  limit: 1
+
+steps:
+  - name: Promote terraform provider to public registry
+    image: golang:1.17.9
+    commands:
+      - cd tooling
+      - |
+        go run ./cmd/promote-terraform                                 \
+          --tag ${DRONE_TAG}                                           \
+          -p 6                                                         \
+          --registry-url https://terraform.releases.teleport.dev/      \
+          --namespace gravitational                                    \
+          --name teleport                                              \
+          --deployment-role ${DEPLOYMENT_ROLE}
+
+    environment:
+      STAGING_REGION: us-east-2
+      STAGING_BUCKET:
+        from_secret: AWS_S3_BUCKET
+      STAGING_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      STAGING_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      
+      PROD_REGION:
+        from_secret: PRODUCTION_TERRAFORM_AWS_REGION
+      PROD_BUCKET:
+        from_secret: PRODUCTION_TERRAFORM_AWS_BUCKET
+      PROD_ACCESS_KEY_ID:
+        from_secret: PRODUCTION_TERRAFORM_AWS_ACCESS_KEY_ID
+      PROD_SECRET_ACCESS_KEY:
+        from_secret: PRODUCTION_TERRAFORM_AWS_SECRET_ACCESS_KEY 
+      DEPLOYMENT_ROLE:
+        from_secret: PRODUCTION_TERRAFORM_AWS_DEPLOYMENT_ROLE 
+      SIGNING_KEY:
+        from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
+---
 kind: signature
-hmac: 5cfe82e8c35ed3e6fbfbada4e08648e4ca3ea2af9e950ab0d2f98c6a30f00414
+hmac: ca2146a3d75fd1978286d3c2ee088338134a96a0a0455a818a193d31c999ebce
 
 ...

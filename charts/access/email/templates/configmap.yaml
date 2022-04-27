@@ -24,6 +24,7 @@ data:
     {{ else -}}
     password_file = "{{ .Values.smtp.passwordFile }}"
     {{ end }}
+    starttls_policy = "{{ .Values.smtp.starttlsPolicy }}"
     {{ end -}}
 
     [delivery]
