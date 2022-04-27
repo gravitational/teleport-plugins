@@ -77,9 +77,14 @@ event-handler:
 
 # Run all tests
 .PHONY: test
-test:
+test: test-tooling
 	@echo Testing plugins against Teleport $(TELEPORT_GET_VERSION)
-	go test -race -count 1 ./...
+	go test -race -count 1 $(shell go list ./...)
+
+
+.PHONY: test-tooling
+test-tooling:
+	(cd tooling; go test -v -race ./...)
 
 # Individual releases
 .PHONY: release/access-slack
