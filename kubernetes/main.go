@@ -68,8 +68,8 @@ func init() {
 
 var CLI struct {
 	StartSidecar struct {
-		Config string `kong:"help='The operator will load its initial configuration from this file. Omit this flag to use the default configuration values.',placeholder='/etc/teleport-sidecar.yaml',default='/etc/teleport-operator.yaml'"`
-	} `kong:"cmd,help='Runs Teleport Kubernetes Operator in a sidecar mode'"`
+		Config string `kong:"help='The operator will load its initial configuration from this file. Omit this flag to use the default configuration values.',placeholder='/etc/teleport/operator.yaml',default='/etc/teleport/operator.yaml'"`
+	} `kong:"cmd,help='Runs Teleport Operator in a sidecar mode'"`
 	InstallCRDs struct {
 		Force bool `kong:"help='Overwrite existing CRDs anyway'"`
 	} `kong:"cmd,name=install-crds,help='Installs Custom Resource Definitions to your Kubernetes cluster'"`

@@ -16,7 +16,7 @@ COPY kubernetes kubernetes
 COPY lib lib
 
 # Build
-RUN CGO_ENABLED=1 GOOS=linux GOARCH=amd64 make -C ./kubernetes go-build
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 make -C ./kubernetes go-build
 
 FROM quay.io/gravitational/teleport:${version} as teleport
 

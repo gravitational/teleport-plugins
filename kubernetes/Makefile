@@ -1,4 +1,4 @@
-VERSION=10.0.0
+VERSION=9.1.2
 RELEASE_NAME=teleport-operator
 
 # Image URL to use all building/pushing image targets
@@ -84,7 +84,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: test
-test: manifests generate fmt vet envtest $(VERSRC) ## Run tests.
+test: fmt vet envtest $(VERSRC) ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
 ##@ Build
