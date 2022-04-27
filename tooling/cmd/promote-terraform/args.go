@@ -65,7 +65,7 @@ func parseCommandLine() *args {
 		Default("us-west-2").
 		StringVar(&result.production.region)
 
-	app.Flag("prod-role", "AWS role to use when interacting with the deployment bucket.").
+	app.Flag("deployment-role", "AWS role to use when interacting with the deployment bucket.").
 		Required().
 		PlaceHolder("ARN").
 		StringVar(&result.production.roleARN)
