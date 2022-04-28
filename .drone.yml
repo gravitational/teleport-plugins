@@ -233,9 +233,9 @@ steps:
     image: docker:git
     environment:
       AWS_ACCESS_KEY_ID:
-        from_secret: PLUGIN_DRONE_ECR_KEY
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
       AWS_SECRET_ACCESS_KEY:
-        from_secret: PLUGIN_DRONE_ECR_SECRET
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
       AWS_DEFAULT_REGION: us-west-2
       DOCKER_BUILDKIT: 1
     volumes:
@@ -406,9 +406,9 @@ steps:
     image: docker:git
     environment:
       AWS_ACCESS_KEY_ID:
-        from_secret: PLUGIN_DRONE_ECR_KEY
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
       AWS_SECRET_ACCESS_KEY:
-        from_secret: PLUGIN_DRONE_ECR_SECRET
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
       AWS_DEFAULT_REGION: us-west-2
       DOCKER_BUILDKIT: 1
     volumes:
@@ -548,9 +548,9 @@ steps:
       QUAYIO_DOCKER_PASSWORD:
         from_secret: PRODUCTION_QUAYIO_DOCKER_PASSWORD
       AWS_ACCESS_KEY_ID:
-        from_secret: PLUGIN_DRONE_ECR_KEY
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
       AWS_SECRET_ACCESS_KEY:
-        from_secret: PLUGIN_DRONE_ECR_SECRET
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
       AWS_DEFAULT_REGION: us-west-2
       DOCKER_BUILDKIT: 1
     volumes:
@@ -600,9 +600,9 @@ steps:
       QUAYIO_DOCKER_PASSWORD:
         from_secret: PRODUCTION_QUAYIO_DOCKER_PASSWORD
       AWS_ACCESS_KEY_ID:
-        from_secret: PLUGIN_DRONE_ECR_KEY
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
       AWS_SECRET_ACCESS_KEY:
-        from_secret: PLUGIN_DRONE_ECR_SECRET
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
       AWS_DEFAULT_REGION: us-west-2
       DOCKER_BUILDKIT: 1
     volumes:
@@ -657,10 +657,10 @@ steps:
           --registry-url https://terraform-staging.releases.teleport.dev/      \
           --namespace gravitational                                            \
           --name teleport                                                      \
-          --deployment-role ${DEPLOYMENT_ROLE}
+          --deployment-role $DEPLOYMENT_ROLE
 
     environment:
-      STAGING_REGION: us-east-2
+      STAGING_REGION: us-west-2
       STAGING_BUCKET:
         from_secret: AWS_S3_BUCKET
       STAGING_ACCESS_KEY_ID:
@@ -691,6 +691,9 @@ trigger:
   target:
   - staging
   - staging-terraform
+  ref:
+    include:
+      - refs/tags/terraform-provider-teleport-v*
 
 concurrency:
   limit: 1
@@ -707,10 +710,10 @@ steps:
           --registry-url https://terraform-staging.releases.teleport.dev/      \
           --namespace gravitational                                            \
           --name teleport                                                      \
-          --deployment-role ${DEPLOYMENT_ROLE}
+          --deployment-role $DEPLOYMENT_ROLE
 
     environment:
-      STAGING_REGION: us-east-2
+      STAGING_REGION: us-west-2
       STAGING_BUCKET:
         from_secret: AWS_S3_BUCKET
       STAGING_ACCESS_KEY_ID:
@@ -741,7 +744,10 @@ trigger:
   target:
   - production
   - production-terraform
-
+  ref:
+    include:
+      - refs/tags/terraform-provider-teleport-v*
+      
 concurrency:
   limit: 1
 
@@ -757,10 +763,10 @@ steps:
           --registry-url https://terraform.releases.teleport.dev/      \
           --namespace gravitational                                    \
           --name teleport                                              \
-          --deployment-role ${DEPLOYMENT_ROLE}
+          --deployment-role $DEPLOYMENT_ROLE
 
     environment:
-      STAGING_REGION: us-east-2
+      STAGING_REGION: us-west-2
       STAGING_BUCKET:
         from_secret: AWS_S3_BUCKET
       STAGING_ACCESS_KEY_ID:
@@ -782,6 +788,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: ca2146a3d75fd1978286d3c2ee088338134a96a0a0455a818a193d31c999ebce
+hmac: 36eb337a8b7f47150cfbbbc0ca5ca6b6f6510fdc755536de6e28fe3e6f5f4c57
 
 ...
