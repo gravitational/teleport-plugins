@@ -3,7 +3,7 @@
 # To re-generate a bundle for another specific version without changing the standard setup, you can:
 # - use the VERSION as arg of the bundle target (e.g make bundle VERSION=0.0.2)
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
-VERSION ?= 0.0.1
+VERSION ?= 9.1.2
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -86,9 +86,29 @@ help: ## Display this help.
 
 ##@ Development
 
+.PHONY: crdgen
+crdgen: ## Generate CRDs
+	make -C crdgen
+
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+manifests: crdgen controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+# Generate CRDs for apis/resources (custom generation through protoc plugin).
+
+# The wrappers.proto file needed for this generator exist only inside the go mod cache,
+# so we retrieve the file path for the cached proto files with go mod tools.
+	$(eval API_MOD_PATH := $(shell go mod download --json github.com/gravitational/teleport/api | jq -r .Dir))
+	$(eval PROTOBUF_MOD_PATH := $(shell go mod download --json github.com/gogo/protobuf | jq -r .Dir))
+	$(eval CUSTOM_IMPORTS_TMP_DIR := $(shell mktemp -d))
+	mkdir -p $(CUSTOM_IMPORTS_TMP_DIR)/github.com/gravitational/teleport/api/types/wrappers
+	cp $(API_MOD_PATH)/types/wrappers/wrappers.proto $(CUSTOM_IMPORTS_TMP_DIR)/github.com/gravitational/teleport/api/types/wrappers
+	protoc \
+		-I=$(API_MOD_PATH)/types \
+		-I=$(PROTOBUF_MOD_PATH) \
+		-I=$(CUSTOM_IMPORTS_TMP_DIR) \
+		--plugin=./crdgen/protoc-gen-crd \
+		--crd_out=:./config/crd/bases \
+		types.proto
+# $(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -103,7 +123,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
+test: fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./... -coverprofile cover.out
 
 ##@ Build

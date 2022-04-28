@@ -19,7 +19,7 @@ workspace:
 
 steps:
   - name: Run linter
-    image: golangci/golangci-lint:v1.39.0
+    image: golangci/golangci-lint:v1.46.2
     commands:
       - make lint
 

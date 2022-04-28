@@ -1,5 +1,5 @@
 /*
-Copyright 2022.
+Copyright 2022 Gravitational, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,20 +17,17 @@ limitations under the License.
 package v2
 
 import (
+	"github.com/gravitational/teleport/api/types"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+const DescriptionKey = "description"
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // UserSpec defines the desired state of User
-type UserSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of User. Edit user_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
-}
+type UserSpec types.UserSpecV2
 
 // UserStatus defines the observed state of User
 type UserStatus struct {
@@ -61,4 +58,40 @@ type UserList struct {
 
 func init() {
 	SchemeBuilder.Register(&User{}, &UserList{})
+}
+
+func (u User) ToTeleport() types.User {
+	return &types.UserV2{
+		Kind:    types.KindUser,
+		Version: types.V2,
+		Metadata: types.Metadata{
+			Name:        u.Name,
+			Labels:      u.Labels,
+			Description: u.Annotations[DescriptionKey],
+		},
+		Spec: types.UserSpecV2(u.Spec),
+	}
+}
+
+// Marshal serializes a spec into binary data.
+func (spec *UserSpec) Marshal() ([]byte, error) {
+	return (*types.UserSpecV2)(spec).Marshal()
+}
+
+// Unmarshal deserializes a spec from binary data.
+func (spec *UserSpec) Unmarshal(data []byte) error {
+	return (*types.UserSpecV2)(spec).Unmarshal(data)
+}
+
+// DeepCopyInto deep-copies one user spec into another.
+// Required to satisfy runtime.Object interface.
+func (spec *UserSpec) DeepCopyInto(out *UserSpec) {
+	data, err := spec.Marshal()
+	if err != nil {
+		panic(err)
+	}
+	*out = UserSpec{}
+	if err = out.Unmarshal(data); err != nil {
+		panic(err)
+	}
 }
