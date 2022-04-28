@@ -101,7 +101,7 @@ kubernetes-install:
 	$(MAKE) -C kubernetes install
 
 .PHONY: test-kubernetes
-test-kubernetes:
+kubernetes-test:
 	$(MAKE) -C kubernetes test
 
 .PHONY: event-handler
