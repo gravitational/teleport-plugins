@@ -318,7 +318,7 @@ steps:
       - mkdir -p packages
       - cd packages
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
-      - helm package /drone/src/charts/access/$PLUGIN_TYPE
+      - helm package /drone/src/charts/access/email
 
   - name: "Helm: Publish chart repository to S3"
     image: plugins/s3
