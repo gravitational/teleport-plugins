@@ -292,6 +292,51 @@ volumes:
 ---
 kind: pipeline
 type: kubernetes
+name: tag-build-plugins-helm
+
+trigger:
+  branch:
+    - logan/release-helm-charts
+  event:
+    include:
+      - push
+  # event:
+  #   - tag
+  # ref:
+  #   include:
+  #     - refs/tags/teleport-gitlab-v*
+  #     - refs/tags/teleport-jira-v*
+  #     - refs/tags/teleport-mattermost-v*
+  #     - refs/tags/teleport-pagerduty-v*
+  #     - refs/tags/teleport-slack-v*
+  #     - refs/tags/teleport-email-v*
+
+steps:
+  - name: "Helm: Package chart repository"
+    image: alpine/helm:latest
+    commands: 
+      - mkdir -p packages
+      - cd packages
+      - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
+      - helm package /drone/src/charts/access/$PLUGIN_TYPE
+
+  - name: "Helm: Publish chart repository to S3"
+    image: plugins/s3
+    settings:
+      bucket:
+        from_secret: HELM_CHART_STAGING_BUCKET
+      access_key:
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
+      secret_key:
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
+      region: us-west-2
+      source: packages/*
+      target: /
+      strip_prefix: /drone/src/packages
+
+---
+kind: pipeline
+type: kubernetes
 name: tag-build-terraform-linux
 
 trigger:
