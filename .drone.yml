@@ -691,6 +691,9 @@ trigger:
   target:
   - staging
   - staging-terraform
+  ref:
+    include:
+      - refs/tags/terraform-provider-teleport-v*
 
 concurrency:
   limit: 1
@@ -741,7 +744,10 @@ trigger:
   target:
   - production
   - production-terraform
-
+  ref:
+    include:
+      - refs/tags/terraform-provider-teleport-v*
+      
 concurrency:
   limit: 1
 
@@ -782,6 +788,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: 1aff78ebd0419452eaff394d387770aab39ba61abbf3d54d045f79c92709a603
+hmac: 36eb337a8b7f47150cfbbbc0ca5ca6b6f6510fdc755536de6e28fe3e6f5f4c57
 
 ...
