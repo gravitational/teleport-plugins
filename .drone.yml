@@ -332,7 +332,7 @@ steps:
       region: us-west-2
       source: packages/*
       target: /
-      strip_prefix: /drone/src/packages
+      strip_prefix: packages
 
 ---
 kind: pipeline
