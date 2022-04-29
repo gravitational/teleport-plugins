@@ -59,14 +59,11 @@ trigger:
 workspace:
   path: /tmp/teleport-plugins/test-darwin
 
-environment:
-  GO_VERSION: go1.17.9
-  GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
-  GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
-  TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
-
 steps:
   - name: Install Go Toolchain
+    environment:
+      GO_VERSION: go1.17.9
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
       - set -u
       - mkdir -p $TOOLCHAIN_DIR
@@ -79,6 +76,9 @@ steps:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
       TELEPORT_GET_VERSION: v9.0.4
+      GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
+      GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
       - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
       - go version
@@ -92,8 +92,7 @@ steps:
       - failure
     commands:
       - set -u
-      - rm -rf $TOOLCHAIN_DIR
-      - rm -rf $GOPATH
+      - rm -rf /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
 
 ---
 kind: pipeline
@@ -154,26 +153,26 @@ workspace:
 
 steps:
   - name: Install Go Toolchain
+    environment:
+      GO_VERSION: go1.17.9
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
       - set -u
       - mkdir -p $TOOLCHAIN_DIR
       - curl --silent -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
       - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
       - rm -rf $GO_VERSION.darwin-amd64.tar.gz
-    environment:
-      GO_VERSION: go1.17.9
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
 
   - name: Build artifacts (darwin)
+    environment:
+      GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
+      GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains 
     commands:
       - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
       - go version
       - go clean
       - make build-all
-    environment:
-      GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
-      GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains 
 
   - name: Clean up toolchains (post)
     when:
