@@ -59,14 +59,11 @@ trigger:
 workspace:
   path: /tmp/teleport-plugins/test-darwin
 
-environment:
-  GO_VERSION: go1.17.9
-  GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
-  GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
-  TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
-
 steps:
   - name: Install Go Toolchain
+    environment:
+      GO_VERSION: go1.17.9
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
       - set -u
       - mkdir -p $TOOLCHAIN_DIR
@@ -79,6 +76,9 @@ steps:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
       TELEPORT_GET_VERSION: v9.0.4
+      GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
+      GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
       - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
       - go version
@@ -92,8 +92,7 @@ steps:
       - failure
     commands:
       - set -u
-      - rm -rf $TOOLCHAIN_DIR
-      - rm -rf $GOPATH
+      - rm -rf /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
 
 ---
 kind: pipeline
@@ -152,14 +151,11 @@ depends_on:
 workspace:
   path: /tmp/teleport-plugins/build-darwin
 
-environment:
-  GO_VERSION: go1.17.9
-  GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
-  GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
-  TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
-
 steps:
   - name: Install Go Toolchain
+    environment:
+      GO_VERSION: go1.17.9
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
       - set -u
       - mkdir -p $TOOLCHAIN_DIR
@@ -168,6 +164,10 @@ steps:
       - rm -rf $GO_VERSION.darwin-amd64.tar.gz
 
   - name: Build artifacts (darwin)
+    environment:
+      GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
+      GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains 
     commands:
       - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
       - go version
@@ -182,7 +182,6 @@ steps:
     commands:
       - set -u
       - rm -rf /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
-
 ---
 kind: pipeline
 type: kubernetes
@@ -817,6 +816,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: efc14a6c143161ae7402910942d4828174a267c835aa49cda72266350e4150b7
+hmac: 38075e46f325da3618d2bdeb1527c2c491bf4c59ed3611a3b85a2d00995f273b
 
 ...
