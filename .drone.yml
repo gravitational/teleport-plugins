@@ -152,12 +152,6 @@ depends_on:
 workspace:
   path: /tmp/teleport-plugins/build-darwin
 
-environment:
-  GO_VERSION: go1.17.9
-  GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
-  GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
-  TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
-
 steps:
   - name: Install Go Toolchain
     commands:
@@ -166,6 +160,9 @@ steps:
       - curl --silent -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
       - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
       - rm -rf $GO_VERSION.darwin-amd64.tar.gz
+    environment:
+      GO_VERSION: go1.17.9
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
 
   - name: Build artifacts (darwin)
     commands:
@@ -173,6 +170,10 @@ steps:
       - go version
       - go clean
       - make build-all
+    environment:
+      GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
+      GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains 
 
   - name: Clean up toolchains (post)
     when:
@@ -182,7 +183,6 @@ steps:
     commands:
       - set -u
       - rm -rf /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
-
 ---
 kind: pipeline
 type: kubernetes
@@ -817,6 +817,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: efc14a6c143161ae7402910942d4828174a267c835aa49cda72266350e4150b7
+hmac: b39c6a344620c2c093d615b072397008faa9bd79bdf870daee35fb39f1ae1c55
 
 ...
