@@ -295,21 +295,15 @@ type: kubernetes
 name: tag-build-plugins-helm
 
 trigger:
-  branch:
-    - logan/release-helm-charts
   event:
+    - tag
+  ref:
     include:
-      - push
-  # event:
-  #   - tag
-  # ref:
-  #   include:
-  #     - refs/tags/teleport-gitlab-v*
-  #     - refs/tags/teleport-jira-v*
-  #     - refs/tags/teleport-mattermost-v*
-  #     - refs/tags/teleport-pagerduty-v*
-  #     - refs/tags/teleport-slack-v*
-  #     - refs/tags/teleport-email-v*
+      - refs/tags/teleport-jira-v*
+      - refs/tags/teleport-mattermost-v*
+      - refs/tags/teleport-pagerduty-v*
+      - refs/tags/teleport-slack-v*
+      - refs/tags/teleport-email-v*
 
 steps:
   - name: "Helm: Package chart repository"
@@ -318,7 +312,7 @@ steps:
       - mkdir -p packages
       - cd packages
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
-      - helm package /drone/src/charts/access/email
+      - helm package /drone/src/charts/access/$PLUGIN_TYPE
 
   - name: "Helm: Publish chart repository to S3"
     image: plugins/s3
@@ -863,6 +857,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: 4b48b90b416387809afaa8df92ff3ebe43e45baf6a83aa37082166b649d9a6f1
+hmac: 4f816fa2be568256f4dd9703f8326f5a9d5d158a8212a98ea5631d8339ed7b37
 
 ...
