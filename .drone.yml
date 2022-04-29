@@ -60,7 +60,7 @@ workspace:
   path: /tmp/teleport-plugins/test-darwin
 
 environment:
-  GOLANG_VERSION: go1.17.9
+  GO_VERSION: go1.17.9
   GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
   GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
   TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
@@ -70,9 +70,9 @@ steps:
     commands:
       - set -u
       - mkdir -p $TOOLCHAIN_DIR
-      - curl --silent -O https://dl.google.com/go/$GOLANG_VERSION.darwin-amd64.tar.gz
-      - tar -C  $TOOLCHAIN_DIR -xzf $GOLANG_VERSION.darwin-amd64.tar.gz
-      - rm -rf $GOLANG_VERSION.darwin-amd64.tar.gz
+      - curl --silent -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
+      - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
+      - rm -rf $GO_VERSION.darwin-amd64.tar.gz
 
   - name: Run tests
     environment:
@@ -153,7 +153,7 @@ workspace:
   path: /tmp/teleport-plugins/build-darwin
 
 environment:
-  GOLANG_VERSION: go1.17.9
+  GO_VERSION: go1.17.9
   GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
   GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
   TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
@@ -163,9 +163,9 @@ steps:
     commands:
       - set -u
       - mkdir -p $TOOLCHAIN_DIR
-      - curl --silent -O https://dl.google.com/go/$GOLANG_VERSION.darwin-amd64.tar.gz
-      - tar -C  $TOOLCHAIN_DIR -xzf $GOLANG_VERSION.darwin-amd64.tar.gz
-      - rm -rf $GOLANG_VERSION.darwin-amd64.tar.gz
+      - curl --silent -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
+      - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
+      - rm -rf $GO_VERSION.darwin-amd64.tar.gz
 
   - name: Build artifacts (darwin)
     commands:
@@ -817,6 +817,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: cc769493c8154bff0faf7b6d1b5120d011e1102ff25d406e9e040e39bf5b17b6
+hmac: efc14a6c143161ae7402910942d4828174a267c835aa49cda72266350e4150b7
 
 ...

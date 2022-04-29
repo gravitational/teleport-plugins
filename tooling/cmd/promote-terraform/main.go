@@ -31,7 +31,13 @@ import (
 const (
 	objectStoreKeyPrefix = "store"
 	registryKeyPrefix    = "registry"
+	jsonContentType      = "application/json"
 )
+
+type fileInfo struct {
+	name        string
+	contentType string
+}
 
 func main() {
 	args := parseCommandLine()
@@ -87,7 +93,7 @@ func logLevel(args *args) log.Level {
 // We could layer a locking mechanism on top of another AWS service, but for
 // now we are relying on drone to honour its concurrency limits (i.e. 1) to
 // serialise access to the live `versions` file.
-func updateRegistry(ctx context.Context, prodBucket *bucketConfig, workspace *workspacePaths, namespace, provider string, newVersion registry.Version, files []string) error {
+func updateRegistry(ctx context.Context, prodBucket *bucketConfig, workspace *workspacePaths, namespace, provider string, newVersion registry.Version, files []fileInfo) error {
 	s3client, err := newS3ClientFromBucketConfig(ctx, prodBucket)
 	if err != nil {
 		return trace.Wrap(err)
@@ -129,7 +135,7 @@ func updateRegistry(ctx context.Context, prodBucket *bucketConfig, workspace *wo
 	if err = versions.Save(versionsFilePath); err != nil {
 		return trace.Wrap(err, "failed saving index file")
 	}
-	files = append(files, versionsFilePath)
+	files = append(files, fileInfo{name: versionsFilePath, contentType: jsonContentType})
 
 	// Finally, push the new index files to the production bucket
 	err = uploadRegistry(ctx, s3client, prodBucket.bucketName, workspace.productionDir, files)
@@ -140,40 +146,47 @@ func updateRegistry(ctx context.Context, prodBucket *bucketConfig, workspace *wo
 	return nil
 }
 
-func uploadRegistry(ctx context.Context, s3Client *s3.Client, bucketName string, productionDir string, files []string) error {
+func uploadRegistry(ctx context.Context, s3Client *s3.Client, bucketName string, productionDir string, files []fileInfo) error {
 	uploader := manager.NewUploader(s3Client)
 	log.Infof("Production dir: %s", productionDir)
+
+	doUpload := func(key string, f fileInfo) error {
+		src, err := os.Open(f.name)
+		if err != nil {
+			return trace.Wrap(err)
+		}
+		defer src.Close()
+
+		input := s3.PutObjectInput{
+			Bucket: aws.String(bucketName),
+			Key:    aws.String(key),
+			Body:   src,
+		}
+
+		if f.contentType != "" {
+			input.ContentType = aws.String(f.contentType)
+		}
+
+		_, err = uploader.Upload(ctx, &input)
+
+		return trace.Wrap(err)
+	}
+
 	for _, f := range files {
 		log.Infof("Uploading %s", f)
 
-		if !strings.HasPrefix(f, productionDir) {
+		if !strings.HasPrefix(f.name, productionDir) {
 			return trace.Errorf("file outside of registry dir")
 		}
 
-		key, err := filepath.Rel(productionDir, f)
+		key, err := filepath.Rel(productionDir, f.name)
 		if err != nil {
 			return trace.Wrap(err, "failed to extract key")
 		}
 
 		log.Tracef("... to %s", key)
 
-		doUpload := func() error {
-			f, err := os.Open(f)
-			if err != nil {
-				return trace.Wrap(err)
-			}
-			defer f.Close()
-
-			_, err = uploader.Upload(ctx, &s3.PutObjectInput{
-				Bucket: aws.String(bucketName),
-				Key:    aws.String(key),
-				Body:   f,
-			})
-
-			return trace.Wrap(err)
-		}
-
-		if err = doUpload(); err != nil {
+		if err = doUpload(key, f); err != nil {
 			return trace.Wrap(err, "failed uploading registry file")
 		}
 	}
@@ -201,13 +214,13 @@ func flattenVersionIndex(versionIndex map[semver.Version]registry.Version) []reg
 	return result
 }
 
-func repackProviders(candidateFilenames []string, workspace *workspacePaths, objectStoreUrl string, signingEntity *openpgp.Entity, protocolVersions []string, providerNamespace, providerName string) (registry.Version, []string, error) {
+func repackProviders(candidateFilenames []string, workspace *workspacePaths, objectStoreUrl string, signingEntity *openpgp.Entity, protocolVersions []string, providerNamespace, providerName string) (registry.Version, []fileInfo, error) {
 
 	versionRecord := registry.Version{
 		Protocols: protocolVersions,
 	}
 
-	newFiles := []string{}
+	newFiles := []fileInfo{}
 
 	unsetVersion := semver.Version{}
 
@@ -224,7 +237,10 @@ func repackProviders(candidateFilenames []string, workspace *workspacePaths, obj
 		}
 
 		log.Infof("Provider repacked to %s/%s", workspace.objectStoreDir, registryInfo.Zip)
-		newFiles = append(newFiles, registryInfo.Zip, registryInfo.Sum, registryInfo.Sig)
+		newFiles = append(newFiles,
+			fileInfo{name: registryInfo.Zip},
+			fileInfo{name: registryInfo.Sum},
+			fileInfo{name: registryInfo.Sig})
 
 		if versionRecord.Version == unsetVersion {
 			versionRecord.Version = registryInfo.Version
@@ -241,7 +257,7 @@ func repackProviders(candidateFilenames []string, workspace *workspacePaths, obj
 		if err != nil {
 			return registry.Version{}, nil, trace.Wrap(err, "Failed saving download info record")
 		}
-		newFiles = append(newFiles, filename)
+		newFiles = append(newFiles, fileInfo{name: filename, contentType: jsonContentType})
 
 		versionRecord.Platforms = append(versionRecord.Platforms, registry.Platform{
 			OS:   registryInfo.OS,
