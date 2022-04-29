@@ -92,6 +92,7 @@ steps:
       - failure
     commands:
       - set -u
+      - chmod -R u+rw /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
       - rm -rf /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
 
 ---
@@ -181,6 +182,7 @@ steps:
       - failure
     commands:
       - set -u
+      - chmod -R u+rw /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
       - rm -rf /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
 ---
 kind: pipeline
@@ -816,6 +818,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: f64a78d2c4dcf19445e3b123eb30aff2d51b3d00133e6501b0a17f4a9dd513e2
+hmac: 4b48b90b416387809afaa8df92ff3ebe43e45baf6a83aa37082166b649d9a6f1
 
 ...
