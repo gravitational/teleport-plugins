@@ -82,7 +82,7 @@ steps:
     commands:
       - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
       - go version
-      - make clean
+      - go clean
       - make test
 
   - name: Clean up toolchains (post)
@@ -816,6 +816,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: 38075e46f325da3618d2bdeb1527c2c491bf4c59ed3611a3b85a2d00995f273b
+hmac: f64a78d2c4dcf19445e3b123eb30aff2d51b3d00133e6501b0a17f4a9dd513e2
 
 ...
