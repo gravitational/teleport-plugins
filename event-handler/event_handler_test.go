@@ -217,6 +217,8 @@ func (s *EventHandlerSuite) TestEvents() {
 	// Test session ingestion
 	tshCmd := s.Integration.NewTsh(s.Proxy.WebAndSSHProxyAddr(), s.teleportConfig.Identity)
 	cmd := tshCmd.SSHCommand(s.Context(), s.me.Username+"@localhost")
+	cmd.Stdout = logger.Standard().WithField("tsh", "stdout").Writer()
+	cmd.Stderr = logger.Standard().WithField("tsh", "stderr").Writer()
 
 	stdinPipe, err := cmd.StdinPipe()
 	require.NoError(t, err)
