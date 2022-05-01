@@ -77,7 +77,14 @@ func RepackProvider(dstDir string, srcFileName string, signingEntity *openpgp.En
 	}
 	defer src.Close()
 
-	tmpZipFile, err := os.CreateTemp("", "")
+	// Create a temporary zipfile to repack the tarball into, which will be moved
+	// into place at the end of a successful repack.
+	//
+	// Note that we want to create the temporary zip file in the same directory
+	// where the final zip file will end up, otherwise moving the completed
+	// zipfile into place may fail due to the source and destination files being
+	// on different devices.
+	tmpZipFile, err := os.CreateTemp(dstDir, "")
 	if err != nil {
 		return nil, trace.Wrap(err, "failed creating tempfile for zip archive")
 	}
