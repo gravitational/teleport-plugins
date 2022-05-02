@@ -4,9 +4,9 @@ package staging
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 
@@ -54,7 +54,7 @@ type downloader interface {
 }
 
 func tagPrefix(tag string) string {
-	return path.Join(keyPrefix, tag)
+	return fmt.Sprintf("%s%s/", keyPrefix, tag)
 }
 
 func fetchObject(ctx context.Context, client downloader, dstDirRoot string, bucket, key string, keyPrefix string) (string, error) {
