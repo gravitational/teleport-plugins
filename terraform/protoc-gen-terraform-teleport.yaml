@@ -251,7 +251,6 @@ required_fields:
     # SAML connector
     - "SAMLConnectorV2.Spec"
     - "SAMLConnectorV2.Spec.AssertionConsumerService"
-    - "SAMLConnectorV2.Spec.EntityDescriptor"
     - "SAMLConnectorV2.Spec.AttributesToRoles"
     - "SAMLConnectorV2.Metadata.Name"    
 
@@ -273,6 +272,7 @@ sensitive_fields:
     - "GithubConnectorV3.Spec.ClientSecret"
     - "OIDCConnectorV3.Spec.ClientSecret"
     - "OIDCConnectorV3.Spec.GoogleServiceAccount"
+    - "TrustedClusterV2.Spec.Token"
 
 # These suffixes for custom methods called when field has custom_type flag. By default they might be weird.
 suffixes:
@@ -317,6 +317,8 @@ validators:
     - UseVersionBetween(3,5)
   SAMLConnectorV2.Version:
     - UseVersionBetween(2,2)
+  SAMLConnectorV2.Spec:
+    - UseAnyOfValidator("entity_descriptor", "entity_descriptor_url")
   SessionRecordingConfigV2.Version:
     - UseVersionBetween(2,2)
   SessionRecordingConfigV2.Metadata.Labels:

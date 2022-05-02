@@ -10,7 +10,7 @@ MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 # enterprise version, but has to be available on get.gravitational.com
 RELEASE ?= teleport-ent-v6.0.2-linux-amd64-bin
 
-RUNTIME ?= go1.17.5
+RUNTIME ?= go1.17.9
 BBOX ?= quay.io/gravitational/teleport-buildbox:$(RUNTIME)
 
 # Teleport CLI and plugins CLI flags to pass to them on start
@@ -20,7 +20,7 @@ TELEPORT_FLAGS ?=
 PLUGIN_FLAGS ?=
 
 # Which plugins to run on make up?
-PLUGINS ?= teleport-slack teleport-jira teleport-mattermost teleport-gitlab teleport-pagerduty teleport-webhooks
+PLUGINS ?= teleport-slack teleport-jira teleport-mattermost teleport-pagerduty teleport-webhooks
 
 #
 # Default target starts a teleport cluster with a single node,

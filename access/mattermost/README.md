@@ -3,11 +3,9 @@
 This package provides Teleport <-> Mattermost integrataion that allows teams to
 get notified about new access requests in Mattermost.
 
-## Setup
-
 [See setup instructions on Teleport's website](https://goteleport.com/teleport/docs/enterprise/workflow/ssh_approval_mattermost/)
 
-### Prerequisites
+## Prerequisites
 
 This guide assumes that you have:
 
@@ -15,7 +13,51 @@ This guide assumes that you have:
 - Admin privileges with access to `tctl`
 - Mattermost account with admin privileges.
 
-#### Setting up a sandbox Mattermost instance for testing
+## Install the plugin
+
+There are several methods to installing and using the Teleport Mattermost Plugin:
+
+1. Use a [precompiled binary](#precompiled-binary)
+
+2. Use a [docker image](#docker-image)
+
+3. Install from [source](#building-from-source)
+
+### Precompiled Binary
+
+Get the plugin distribution.
+
+```bash
+$ curl -L https://get.gravitational.com/teleport-access-mattermost-v7.0.2-linux-amd64-bin.tar.gz
+$ tar -xzf teleport-access-mattermost-v7.0.2-linux-amd64-bin.tar.gz
+$ cd teleport-access-mattermost
+$ ./install
+```
+
+### Docker Image
+```bash
+$ docker pull quay.io/gravitational/teleport-plugin-mattermost:9.0.2
+```
+
+```bash
+$ docker run quay.io/gravitational/teleport-plugin-mattermost:9.0.2 version
+teleport-mattermost v9.0.2 git:teleport-mattermost-v9.0.2-0-g9e149895 go1.17.8
+```
+
+For a list of available tags, visit [https://quay.io/](https://quay.io/repository/gravitational/teleport-plugin-mattermost?tab=tags)
+
+### Building from source
+
+To build the plugin from source you need [Go](https://go.dev/) and `make`.
+
+```bash
+$ git clone https://github.com/gravitational/teleport-plugins.git
+$ cd teleport-plugins/access/mattermost
+$ make
+$ ./build/teleport-mattermost start
+```
+
+## Setting up a sandbox Mattermost instance for testing
 
 If you want to build the plugin and test it with Mattermost, the easiest way to
 get Mattermost running is with the docker image:
@@ -27,7 +69,7 @@ docker run --name mattermost-preview -d --publish 8065:8065 --add-host dockerhos
 Check out
 [more documentation on running Mattermost](https://docs.mattermost.com/install/docker-local-machine.html).
 
-#### Setting up Mattermost to work with the plugin
+### Setting up Mattermost to work with the plugin
 
 In Mattermost, go to System Console -> Integrations -> Enable Bot Account
 Creation -> Set to True. This will allow us to create a new bot account that the
@@ -40,100 +82,52 @@ The new bot account will need Post All permission.
 The confirmation screen after you've created the bot will give you the access
 token. We'll use this in the config later.
 
-#### Create an access-plugin role and user within Teleport
+## Teleport User and Role
 
-First off, using an existing Teleport Cluster, we are going to create a new
-Teleport User and Role to access Teleport.
+Using Web UI or `tctl` CLI utility, create the role `access-mattermost` and the user `access-mattermost` belonging to the role `access-mattermost`. You may use the following YAML declarations.
 
-#### Create User and Role for access.
+### Role
 
-Log into Teleport Authentication Server, this is where you normally run `tctl`.
-Don't change the username and the role name, it should be `access-plugin` for
-the plugin to work correctly.
-
-```bash
-$ cat > rscs.yaml <<EOF
-kind: user
-metadata:
-  name: access-plugin
-spec:
-  roles: ['access-plugin']
-version: v2
----
+```yaml
 kind: role
 metadata:
-  name: access-plugin
+  name: access-mattermost
 spec:
   allow:
     rules:
       - resources: ['access_request']
-        verbs: ['list', 'read']
-      - resources: ['access_plugin_data']
-        verbs: ['update']
-    # teleport currently refuses to issue certs for a user with 0 logins,
-    # this restriction may be lifted in future versions.
-    logins: ['access-plugin']
-version: v3
-EOF
-
-# ...
-$ tctl create -f rscs.yaml
+        verbs: ['list', 'read', 'update']
+version: v5
 ```
 
-#### Export access-plugin Certificate
+### User
 
-Teleport Plugin uses the `access-plugin` role and user to peform the approval. We
-export the identify files, using
-[`tctl auth sign`](https://goteleport.com/teleport/docs/cli-docs/#tctl-auth-sign).
+```yaml
+kind: user
+metadata:
+  name: access-mattermost
+spec:
+  roles: ['access-mattermost']
+version: v2
+```
+
+## Generate the certificate
+
+For the plugin to connect to Auth Server, it needs an identity file containing TLS/SSH certificates. This can be obtained with tctl:
 
 ```bash
-$ tctl auth sign --format=tls --user=access-plugin --out=auth --ttl=8760h
-# ...
+$ tctl auth sign --auth-server=AUTH-SERVER:PORT --format=file --user=access-mattermost --out=/var/lib/teleport/plugins/mattermost/auth_id --ttl=8760h
 ```
 
-The above sequence should result in three PEM encoded files being generated:
-auth.crt, auth.key, and auth.cas (certificate, private key, and CA certs
-respectively). We'll reference these later in the bot config, and move them to
-an appropriate directory.
+Here, `AUTH-SERVER:PORT` could be `localhost:3025`, `your-in-cluster-auth.example.com:3025`, `your-remote-proxy.example.com:3080` or `your-teleport-cloud.teleport.sh:443`. For non-localhost connections, you might want to pass the `--identity=...` option to authenticate yourself to Auth Server.
 
-_Note: by default, tctl auth sign produces certificates with a relatively short
-lifetime. For production deployments, the --ttl flag can be used to ensure a
-more practical certificate lifetime. --ttl=8760h exports a 1 year token_
-
-#### Export access-plugin Certificate for use with Teleport Cloud
-
-Connection to Teleport Cloud is only possible with reverse tunnel. For this reason,
-we need the identity signed in a different format called `file` which exports
-SSH keys too.
-
-```bash
-$ tctl auth sign --auth-server=yourproxy.teleport.sh:443 --format=file --user=access-plugin --out=auth --ttl=8760h
-# ...
-```
-
-## Downloading and installing the plugin
-
-[See our Mattermost plugin docs for [download links](https://goteleport.com/docs/enterprise/workflow/ssh-approval-mattermost/#downloading-and-installing-the-plugin).
-
-### Building from source
-
-```bash
-
-# Checkout teleport-plugins
-git clone git@github.com:gravitational/teleport-plugins.git
-cd teleport-plugins
-
-cd access/mattermost
-make
-```
-
-### Configuring Mattermost Plugin
+## Configuring Mattermost Plugin
 
 Mattermost Plugin uses a config file in TOML format. Generate a boilerplate config
 by running the following command:
 
 ```
-teleport-mattermost configure > /etc/teleport-mattermost.yml
+$ teleport-mattermost configure > /etc/teleport-mattermost.yml
 ```
 
 Then, edit the config as needed.
@@ -141,10 +135,21 @@ Then, edit the config as needed.
 ```TOML
 # example mattermost configuration TOML file
 [teleport]
-addr = "example.com:3025" # Teleport Auth Server GRPC API address
-client_key = "/var/lib/teleport/plugins/mattermost/auth.key" # Teleport GRPC client secret key
-client_crt = "/var/lib/teleport/plugins/mattermost/auth.crt" # Teleport GRPC client certificate
-root_cas = "/var/lib/teleport/plugins/mattermost/auth.cas"   # Teleport cluster CA certs
+# Teleport Auth/Proxy Server address.
+#
+# Should be port 3025 for Auth Server and 3080 or 443 for Proxy.
+# For Teleport Cloud, should be in the form "your-account.teleport.sh:443".
+addr = "example.com:3025"
+
+# Credentials.
+#
+# When using --format=file:
+# identity = "/var/lib/teleport/plugins/mattermost/auth_id"    # Identity file
+#
+# When using --format=tls:
+# client_key = "/var/lib/teleport/plugins/mattermost/auth.key" # Teleport TLS secret key
+# client_crt = "/var/lib/teleport/plugins/mattermost/auth.crt" # Teleport TLS certificate
+# root_cas = "/var/lib/teleport/plugins/mattermost/auth.cas"   # Teleport CA certs
 
 [mattermost]
 url = "https://mattermost.example.com" # Mattermost Server URL
@@ -155,22 +160,23 @@ output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/tele
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
 ```
 
-To use with Teleport Cloud, you should set a path to identity file exported with `--format=file` option.
-
-```TOML
-[teleport]
-addr = "yourproxy.teleport.sh:443"                     # Teleport proxy address
-identity = "/var/lib/teleport/plugins/mattermost/auth" # Teleport identity file
-```
-
-### Running the plugin
+## Running the plugin
 
 With the config above, you should be able to run the bot invoking
-`teleport-mattermost start`
 
-### The Workflow
+```bash
+$ teleport-mattermost start
+```
 
-#### Create an access request
+or with docker:
+
+```bash
+$ docker run -v <path/to/config>:/etc/teleport-mattermost.toml quay.io/gravitational/teleport-plugin-mattermost:9.0.2 start
+```
+
+## The Workflow
+
+### Create an access request
 
 You can create an access request using Web UI going to
 `https://your-proxy.example.com/web/requests/new` where your-proxy.example.com
@@ -180,11 +186,11 @@ Check that you see a request message on Mattermost.
 
 It should look like this: %image%
 
-#### Review the request
+### Review the request
 
 Open the Link in message and choose to either approve or deny the request. The messages should automatically get updated to reflect the action you just did.
 
-### Teleport OSS edition
+## Teleport OSS edition
 
 Currently, Teleport OSS edition does not have an "Access Requests" page at Web UI. Alternatively, you can create an access request using tsh:
 

@@ -24,11 +24,11 @@ steps:
       - make lint
 
   - name: Run tests
-    image: golang:1.17.5
+    image: golang:1.17.9
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v9.0.1
+      TELEPORT_GET_VERSION: v9.0.4
     commands:
       - echo Testing plugins against Teleport $TELEPORT_GET_VERSION
       - make test
@@ -60,24 +60,40 @@ workspace:
   path: /tmp/teleport-plugins/test-darwin
 
 steps:
-  - name: Clean up exec runner storage
+  - name: Install Go Toolchain
+    environment:
+      GO_VERSION: go1.17.9
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
-      # This will remove subdirectories under pkg/mod which 0400 permissions.
-      # See for more details: https://github.com/golang/go/issues/27455
-      - go clean -modcache
-      - rm -rf /tmp/teleport-plugins/test-darwin/go
-      - mkdir -p /tmp/teleport-plugins/test-darwin/go
+      - set -u
+      - mkdir -p $TOOLCHAIN_DIR
+      - curl --silent -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
+      - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
+      - rm -rf $GO_VERSION.darwin-amd64.tar.gz
 
   - name: Run tests
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v9.0.1
-      GOPATH: /tmp/teleport-plugins/test-darwin/go
-      GOCACHE: /tmp/teleport-plugins/test-darwin/go/cache
+      TELEPORT_GET_VERSION: v9.0.4
+      GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
+      GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
+      - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
       - go version
+      - go clean
       - make test
+
+  - name: Clean up toolchains (post)
+    when:
+      status:
+      - success
+      - failure
+    commands:
+      - set -u
+      - chmod -R u+rw /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
+      - rm -rf /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
 
 ---
 kind: pipeline
@@ -103,7 +119,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.5
+    image: golang:1.17.9
     commands:
       - make build-all
 
@@ -137,21 +153,37 @@ workspace:
   path: /tmp/teleport-plugins/build-darwin
 
 steps:
-  - name: Clean up exec runner storage (pre)
+  - name: Install Go Toolchain
+    environment:
+      GO_VERSION: go1.17.9
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
-      # This will remove subdirectories under pkg/mod which 0400 permissions.
-      # See for more details: https://github.com/golang/go/issues/27455
-      - go clean -modcache
-      - rm -rf /tmp/teleport-plugins/build-darwin/go
-      - mkdir -p /tmp/teleport-plugins/build-darwin/go/cache
+      - set -u
+      - mkdir -p $TOOLCHAIN_DIR
+      - curl --silent -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
+      - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
+      - rm -rf $GO_VERSION.darwin-amd64.tar.gz
 
   - name: Build artifacts (darwin)
     environment:
-      GOPATH: /tmp/teleport-plugins/build-darwin/go
-      GOCACHE: /tmp/teleport-plugins/build-darwin/go/cache
+      GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
+      GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains 
     commands:
+      - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
+      - go version
+      - go clean
       - make build-all
 
+  - name: Clean up toolchains (post)
+    when:
+      status:
+      - success
+      - failure
+    commands:
+      - set -u
+      - chmod -R u+rw /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
+      - rm -rf /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
 ---
 kind: pipeline
 type: kubernetes
@@ -177,7 +209,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.5
+    image: golang:1.17.9
     commands:
       - mkdir -p build/
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
@@ -231,9 +263,9 @@ steps:
     image: docker:git
     environment:
       AWS_ACCESS_KEY_ID:
-        from_secret: PLUGIN_DRONE_ECR_KEY
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
       AWS_SECRET_ACCESS_KEY:
-        from_secret: PLUGIN_DRONE_ECR_SECRET
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
       AWS_DEFAULT_REGION: us-west-2
       DOCKER_BUILDKIT: 1
     volumes:
@@ -274,7 +306,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.5
+    image: golang:1.17.9
     commands:
       - mkdir -p build/
       - make release/terraform
@@ -356,7 +388,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.5
+    image: golang:1.17.9
     commands:
       - mkdir -p build/
       - make release/event-handler
@@ -404,9 +436,9 @@ steps:
     image: docker:git
     environment:
       AWS_ACCESS_KEY_ID:
-        from_secret: PLUGIN_DRONE_ECR_KEY
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
       AWS_SECRET_ACCESS_KEY:
-        from_secret: PLUGIN_DRONE_ECR_SECRET
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
       AWS_DEFAULT_REGION: us-west-2
       DOCKER_BUILDKIT: 1
     volumes:
@@ -546,9 +578,9 @@ steps:
       QUAYIO_DOCKER_PASSWORD:
         from_secret: PRODUCTION_QUAYIO_DOCKER_PASSWORD
       AWS_ACCESS_KEY_ID:
-        from_secret: PLUGIN_DRONE_ECR_KEY
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
       AWS_SECRET_ACCESS_KEY:
-        from_secret: PLUGIN_DRONE_ECR_SECRET
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
       AWS_DEFAULT_REGION: us-west-2
       DOCKER_BUILDKIT: 1
     volumes:
@@ -598,9 +630,9 @@ steps:
       QUAYIO_DOCKER_PASSWORD:
         from_secret: PRODUCTION_QUAYIO_DOCKER_PASSWORD
       AWS_ACCESS_KEY_ID:
-        from_secret: PLUGIN_DRONE_ECR_KEY
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
       AWS_SECRET_ACCESS_KEY:
-        from_secret: PLUGIN_DRONE_ECR_SECRET
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
       AWS_DEFAULT_REGION: us-west-2
       DOCKER_BUILDKIT: 1
     volumes:
@@ -625,7 +657,167 @@ volumes:
     temp: {}
 
 ---
+kind: pipeline
+type: kubernetes
+name: tag-stage-terraform-provider
+
+trigger:
+  event:
+    - tag
+  ref:
+    include:
+      - refs/tags/terraform-provider-teleport-v*
+
+depends_on:
+  - tag-build-terraform-linux
+  - tag-build-terraform-darwin
+
+concurrency:
+  limit: 1
+
+steps:
+  - name: Upload terraform provider to staging registry
+    image: golang:1.17.9
+    commands:
+      - cd tooling
+      - |
+        go run ./cmd/promote-terraform                                         \
+          --tag ${DRONE_TAG}                                                   \
+          -p 6                                                                 \
+          --registry-url https://terraform-staging.releases.teleport.dev/      \
+          --namespace gravitational                                            \
+          --name teleport                                                      \
+          --deployment-role $DEPLOYMENT_ROLE
+
+    environment:
+      STAGING_REGION: us-west-2
+      STAGING_BUCKET:
+        from_secret: AWS_S3_BUCKET
+      STAGING_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      STAGING_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      
+      PROD_REGION:
+        from_secret: STAGING_TERRAFORM_AWS_REGION
+      PROD_BUCKET:
+        from_secret: STAGING_TERRAFORM_AWS_BUCKET
+      PROD_ACCESS_KEY_ID:
+        from_secret: STAGING_TERRAFORM_AWS_ACCESS_KEY_ID
+      PROD_SECRET_ACCESS_KEY:
+        from_secret: STAGING_TERRAFORM_AWS_SECRET_ACCESS_KEY
+      DEPLOYMENT_ROLE:
+        from_secret: STAGING_TERRAFORM_AWS_DEPLOYMENT_ROLE
+      SIGNING_KEY:
+        from_secret: STAGING_TERRAFORM_REGISTRY_SIGNING_KEY
+---
+kind: pipeline
+type: kubernetes
+name: promote-staging-terraform-provider
+
+trigger:
+  event:
+  - promote
+  target:
+  - staging
+  - staging-terraform
+  ref:
+    include:
+      - refs/tags/terraform-provider-teleport-v*
+
+concurrency:
+  limit: 1
+
+steps:
+  - name: Upload terraform provider to staging registry
+    image: golang:1.17.9
+    commands:
+      - cd tooling
+      - |
+        go run ./cmd/promote-terraform                                         \
+          --tag ${DRONE_TAG}                                                   \
+          -p 6                                                                 \
+          --registry-url https://terraform-staging.releases.teleport.dev/      \
+          --namespace gravitational                                            \
+          --name teleport                                                      \
+          --deployment-role $DEPLOYMENT_ROLE
+
+    environment:
+      STAGING_REGION: us-west-2
+      STAGING_BUCKET:
+        from_secret: AWS_S3_BUCKET
+      STAGING_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      STAGING_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      
+      PROD_REGION:
+        from_secret: STAGING_TERRAFORM_AWS_REGION
+      PROD_BUCKET:
+        from_secret: STAGING_TERRAFORM_AWS_BUCKET
+      PROD_ACCESS_KEY_ID:
+        from_secret: STAGING_TERRAFORM_AWS_ACCESS_KEY_ID
+      PROD_SECRET_ACCESS_KEY:
+        from_secret: STAGING_TERRAFORM_AWS_SECRET_ACCESS_KEY
+      DEPLOYMENT_ROLE:
+        from_secret: STAGING_TERRAFORM_AWS_DEPLOYMENT_ROLE
+      SIGNING_KEY:
+        from_secret: STAGING_TERRAFORM_REGISTRY_SIGNING_KEY
+---
+kind: pipeline
+type: kubernetes
+name: promote-terraform-provider
+
+trigger:
+  event:
+  - promote
+  target:
+  - production
+  - production-terraform
+  ref:
+    include:
+      - refs/tags/terraform-provider-teleport-v*
+      
+concurrency:
+  limit: 1
+
+steps:
+  - name: Promote terraform provider to public registry
+    image: golang:1.17.9
+    commands:
+      - cd tooling
+      - |
+        go run ./cmd/promote-terraform                                 \
+          --tag ${DRONE_TAG}                                           \
+          -p 6                                                         \
+          --registry-url https://terraform.releases.teleport.dev/      \
+          --namespace gravitational                                    \
+          --name teleport                                              \
+          --deployment-role $DEPLOYMENT_ROLE
+
+    environment:
+      STAGING_REGION: us-west-2
+      STAGING_BUCKET:
+        from_secret: AWS_S3_BUCKET
+      STAGING_ACCESS_KEY_ID:
+        from_secret: AWS_ACCESS_KEY_ID
+      STAGING_SECRET_ACCESS_KEY:
+        from_secret: AWS_SECRET_ACCESS_KEY
+      
+      PROD_REGION:
+        from_secret: PRODUCTION_TERRAFORM_AWS_REGION
+      PROD_BUCKET:
+        from_secret: PRODUCTION_TERRAFORM_AWS_BUCKET
+      PROD_ACCESS_KEY_ID:
+        from_secret: PRODUCTION_TERRAFORM_AWS_ACCESS_KEY_ID
+      PROD_SECRET_ACCESS_KEY:
+        from_secret: PRODUCTION_TERRAFORM_AWS_SECRET_ACCESS_KEY 
+      DEPLOYMENT_ROLE:
+        from_secret: PRODUCTION_TERRAFORM_AWS_DEPLOYMENT_ROLE 
+      SIGNING_KEY:
+        from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
+---
 kind: signature
-hmac: 9f4c1a36000b9b2637e790418a624a31c162e2bb248cc6718a1c28a82a8b10c4
+hmac: 4b48b90b416387809afaa8df92ff3ebe43e45baf6a83aa37082166b649d9a6f1
 
 ...

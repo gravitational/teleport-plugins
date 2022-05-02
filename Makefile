@@ -1,3 +1,12 @@
+# Set up a system-agnostic in-place sed command
+IS_GNU_SED = $(shell sed --version 1>/dev/null 2>&1 && echo true || echo false)
+
+ifeq ($(IS_GNU_SED),true)
+	SED = sed -i
+else
+	SED = sed -i ''
+endif
+
 .PHONY: access-slack
 access-slack:
 	make -C access/slack
@@ -13,10 +22,6 @@ access-mattermost:
 .PHONY: access-pagerduty
 access-pagerduty:
 	make -C access/pagerduty
-
-.PHONY: access-gitlab
-access-gitlab:
-	make -C access/gitlab
 
 .PHONY: access-example
 access-example:
@@ -34,7 +39,6 @@ docker-build-access-%:
 # Build all access plugins with docker
 .PHONY: docker-build-access-plugins
 docker-build-access-plugins: docker-build-access-email \
- docker-build-access-gitlab \
  docker-build-access-jira \
  docker-build-access-mattermost \
  docker-build-access-pagerduty \
@@ -48,7 +52,7 @@ docker-push-access-%: docker-build-access-%
 # Pulls and pushes image from ECR to quay.
 .PHONY: docker-promote-access-%
 docker-promote-access-%:
-	$(MAKE) -C access/$* docker-promote 
+	$(MAKE) -C access/$* docker-promote
 
 # Build event-handler plugin with docker
 .PHONY: docker-build-event-handler
@@ -73,9 +77,14 @@ event-handler:
 
 # Run all tests
 .PHONY: test
-test:
+test: test-tooling
 	@echo Testing plugins against Teleport $(TELEPORT_GET_VERSION)
-	go test -race -count 1 ./...
+	go test -race -count 1 $(shell go list ./...)
+
+
+.PHONY: test-tooling
+test-tooling:
+	(cd tooling; go test -v -race ./...)
 
 # Individual releases
 .PHONY: release/access-slack
@@ -94,10 +103,6 @@ release/access-mattermost:
 release/access-pagerduty:
 	make -C access/pagerduty clean release
 
-.PHONY: release/access-gitlab
-release/access-gitlab:
-	make -C access/gitlab clean release
-
 .PHONY: release/access-email
 release/access-email:
 	make -C access/email clean release
@@ -112,22 +117,22 @@ release/event-handler:
 
 # Run all releases
 .PHONY: releases
-releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-gitlab release/access-email
+releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-email
 
 .PHONY: build-all
-build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab access-email terraform event-handler
+build-all: access-slack access-jira access-mattermost access-pagerduty access-email terraform event-handler
 
 .PHONY: update-version
 update-version:
 	# Make sure VERSION is set on the command line "make update-version VERSION=x.y.z".
 	@test $(VERSION)
-	sed -i '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/jira/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/mattermost/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/slack/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
-	sed -i '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
+	$(SED) '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/jira/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/mattermost/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/slack/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
 
 .PHONY: update-tag
 update-tag:
@@ -161,3 +166,10 @@ update-tag:
 lint: GO_LINT_FLAGS ?=
 lint:
 	golangci-lint run -c .golangci.yml $(GO_LINT_FLAGS)
+
+.PHONY: test-helm-access-email
+test-helm-access-email:
+	helm unittest ./charts/access/email
+
+.PHONY: test-helm
+test-helm: test-helm-access-email

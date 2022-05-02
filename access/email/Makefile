@@ -1,5 +1,5 @@
-VERSION=9.0.2
-GO_VERSION=1.17.8
+VERSION=9.1.2
+GO_VERSION=1.17.9
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-email
@@ -16,8 +16,8 @@ RELEASE=$(RELEASE_NAME)-$(GITTAG)-$(OS)-$(ARCH)-bin
 
 RELEASE_MESSAGE = "Building with GOOS=$(OS) GOARCH=$(ARCH)."
 
-DOCKER_NAME = access-plugin-email
-DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/teleport/$(DOCKER_NAME):$(VERSION)
+DOCKER_NAME = teleport-plugin-email
+DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/$(DOCKER_NAME):$(VERSION)
 DOCKER_IMAGE_QUAY = quay.io/gravitational/$(DOCKER_NAME):$(VERSION)
 DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg ACCESS_PLUGIN=email --build-arg GITREF=$(GITREF)
 
