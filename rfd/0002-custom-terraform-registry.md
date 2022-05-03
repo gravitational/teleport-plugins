@@ -46,11 +46,11 @@ Cloud RFD 004 as far as possible.
 
 ### Why not use the public Hashicorp registry?
 
-This conflicts with goal #2 (i.e. maintaining close control of the distribution 
+This conflicts with goal #2 (i.e. maintaining close control of the distribution
 of our software).
 
 Specifically, using the public Hashicorp registry requires that we grant Hashicorp
-access to the Gravitational GitHub organisation via OAuth, and allow them to 
+access to the Gravitational GitHub organisation via OAuth, and allow them to
 manipulate the webhooks in our repositories.
 
 ### Will using a custom registry be onerous on our users?
@@ -89,8 +89,8 @@ The terminology used in the Terraform documentation has changed over time and
 is not always consistent. For the sake of this discussion, I will be using the
 following definitions:
 
-* **Provider**: The interface between Terraform and an arbitrary resource to
-                be managed.
+* **Provider**: The interface between Terraform and services and/or
+                infrastructure to be managed.
 
 * **State**: The Terraform representation of the current configuration of a
              resource. Used by Terraform to decide if a resource needs
@@ -184,40 +184,12 @@ RFD.
 
 #### Public naming
 
-##### Staging
+All of the other Teleport distribution points ate subdomains of
+`releases.teleport.dev`, so it makes sense for the production and staging
+registries to live under this domain as well.
 
-As the the staging registry is only intended for internal testing, we _could_
-simply use the CloudFront-assigned public domain name as the publicly-visible
-domain of the staging registry (e.g. `d1cqyxzpzj86o0.cloudfront.net`).
-
-We can also add an alternate domain name (e.g. `terraform.staging.teleport.dev`)
-by
-
-1. adding an alias record to our DNS config that points
-   `terraform.staging.teleport.dev` back to the CloudFront CCN, and
-2. configuring CloudFront to use a custom TLS certificate when serving
-  requests for `terraform.staging.teleport.dev`.
-
-##### Production
-
-In selecting the name for the production registry, there is a tension between
-having (arguably) the most memorable and obvious name for the registry (but
-having its configuration split over several hosts), versus and having a registry
-with all of its configuration and data in one place.
-
-How we name the production registry ultimately comes down to deciding which
-side of this tension we care more about.
-
-If we want people to reference our provider as `goteleport.com/gravitational/teleport`,
-we will need to add the _discovery protocol_ hosted on `goteleport.com`, which
-would point directly back to the CloudFront CDN public domain name. This obviates
-the need for any special configuration for the production Terraform registry.
-
-If, on the other hand, we want the registry to be entirely self-contained
-(i.e. the protocol discovery file is hosted by the same system as the rest of
-the registry), then people will reference our provider via
-`terraform.releases.teleport.dev/gravitational/teleport`, and configure
-DNS + CloudFront as per the Staging section above.
+Staging: `terraform-staging.releases.teleport.dev`
+Production: `terraform.releases.teleport.dev`
 
 #### Bucket structure
 
@@ -293,7 +265,7 @@ will be available via the registry.
 ##### Production Trigger
 
 The production registry will be updated when a release engineer promotes a
-given Drone build to production.
+given Drone build to either `production` or `production-terraform`.
 
 The promotion process will perform the same actions as the staging script,
 just with a different target bucket.
@@ -341,18 +313,12 @@ identity.
 
 Key is expected to be in PGP ASCII-armour format.
 
-The Identity is displayed to the user when the provider is installed, so it
-should be an "official" teleport key (or derived from one) rather than a
-self-signed key.
+There is a discussion to be had about exact keys we should use for the staging
+and production registries, but this is beyond the scope of this RFD.
 
-For example (from my PoC):
-
-```shell
-Initializing provider plugins...
-- Finding terraform.clarke.mobi/gravitational/teleport versions matching "~> 8.3"...
-- Installing terraform.clarke.mobi/gravitational/teleport v8.3.4...
-- Installed terraform.clarke.mobi/gravitational/teleport v8.3.4 (self-signed, key ID 7DA6C64E1701F9E4)
-```
+Note that it's possible to change the keys that sign _new_ provider releases,
+without having to go back and re-sign all of the previous releases, so changing
+keys in future should be a straightforward operation.
 
 #### Building the packages
 
@@ -458,62 +424,24 @@ The system will be tested by promoting to a "staging" environment. The
 staging environment will be selected during the Drone promotion process
 and will use a dummy bucket and signing key.
 
-## Open Questions
+## Apendices
 
-### How should we name the provider?
+### Terraform Plugin API version
 
-We have three names we need to pick, and these will change how users will
-include the Teleport provider in their terraform scripts:
+Hashicorp versions the API that Terraform uses to communicate with providers,
+and (very) occasionally it increases the version number and breaks
+compatibility with older versions of Terraform.
 
-1) the registry host; current options are:
-   * `goteleport.com`
-   * `terraform.releases.teleport.dev` (i.e. matching existing distribution site naming scheme)
-   * `terraform.goteleport.com` (something in-between)
-   * ... something else entirely?
-2) the provider namespace; options are `gravitational` or `teleport`,
-3) the provider name; the obvious choice is `teleport`, but mentioned for
-   completeness
+In order to properly index the terraform plugins, a provider registry needs
+to know the versions of the Terraform Plugin API supports. I haven't found
+a good way to extract the Plugin API version directly from the provider binary,
+so we are relying on the Drone trigger to pass in the correct versions.
 
-In short: which one of these do we want people to use?
-
-1. `terraform.releases.teleport.dev/gravitational/teleport`
-2. `terraform.releases.teleport.dev/teleport/teleport`
-3. `goteleport.com/gravitational/teleport`
-4. `goteleport.com/teleport/teleport`
-5. `terraform.goteleport.com/gravitational/teleport`
-6. `terraform.goteleport.com/teleport/teleport`
-
-Note: the `goteleport.com` option requires adding a _discovery file_ to the
-main Teleport website (i.e., a small, static JSON file served at
-`/.well-known/terraform.json`), but on the whole requires the least config to
-set up.
-
-#### Recommendation
-
-Personally I prefer options 5; it's punchy, disambiguates between Terraform and
-other distribution mechanisms _and_ avoids the error-prone reduplication of
-`teleport` in the path.
-
-I'm totally fine with being overruled in this case, though.
-
-### Is there a safe way to deduce the Terraform Plugin API version
-
-In order to properly index the terraform plugins, the index needs to know the
-versions of the Terraform Plugin API supports. I haven't found a good way to
-extract the Plugin API version directly from the provider binary, so we are
-relying on the Drone trigger to pass in the correct versions.
-
-The API versions a provider supports may change over time, and we have no
-alternative but "just knowing" when to update the build trigger with a new
-Plugin API version.
-
-I would prefer to find some method for allowing the build to inform us of the
-supported version(s), to avoid having multiple sources of truth.
-
-I've looked into how Terraform itself does this.  The mechanism baked into a
+I've looked into how Terraform itself does this. The mechanism is baked into a
 bunch of `internal` packages used by the terraform command line tool. We
 certainly _could_ extract the code we need to interrogate the binary for the
 API version, but it would be an exceedingly fragile solution.
 
-Manually updating the API version in the Drone file may be the more pragmatic
-option.
+Manually updating the API version in the Drone file is probably the most
+pragmatic way of dealing with API changes, given how infrequently this
+number changes.
