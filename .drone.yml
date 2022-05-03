@@ -295,11 +295,17 @@ type: kubernetes
 name: tag-build-plugins-helm
 
 trigger:
+  branch:
+    - master
+    - branch/*
   event:
-    - tag
-  ref:
     include:
-      - refs/tags/v*
+      - push
+  # event:
+  #   - tag
+  # ref:
+  #   include:
+  #     - refs/tags/v*
 steps:
   - name: "Helm: Package charts"
     image: alpine/helm:latest
@@ -910,6 +916,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: e693babb61334535795d4e33909610faa1bb08572b1121293f344bd45c5f2b1e
+hmac: 78e2372981fc75c8baa9b4578abf3126fbd9967ff634da669e8a6a52721dce87
 
 ...
