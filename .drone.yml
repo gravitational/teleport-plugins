@@ -299,22 +299,15 @@ trigger:
     - tag
   ref:
     include:
-      - refs/tags/teleport-jira-v*
-      - refs/tags/teleport-mattermost-v*
-      - refs/tags/teleport-pagerduty-v*
-      - refs/tags/teleport-slack-v*
-      - refs/tags/teleport-email-v*
-
+      - refs/tags/v*
 steps:
-  - name: "Helm: Package chart repository"
+  - name: "Helm: Package charts"
     image: alpine/helm:latest
     commands: 
-      - mkdir -p packages
-      - cd packages
-      - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
-      - helm package /drone/src/charts/access/$PLUGIN_TYPE
+      - apk add --no-cache make
+      - make helm-package-charts
 
-  - name: "Helm: Publish chart repository to S3"
+  - name: "Helm: Publish charts to staging S3"
     image: plugins/s3
     settings:
       bucket:
@@ -698,6 +691,66 @@ volumes:
 ---
 kind: pipeline
 type: kubernetes
+name: publish-helm-charts
+
+trigger:
+  event:
+    - promote
+  target:
+    - production
+    - publish-helm-charts
+  ref:
+    include:
+      - refs/tags/v*
+
+steps:
+  - name: "Helm: Download production chart repositories"
+    image: amazon/aws-cli
+    environment:
+      AWS_S3_BUCKET:
+        from_secret: HELM_CHART_PRODUCTION_BUCKET
+      AWS_ACCESS_KEY_ID:
+        from_secret: HELM_CHART_PRODUCTION_BUCKET_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: HELM_CHART_PRODUCTION_BUCKET_SECRET
+    commands:
+      - mkdir -p packages
+      - aws s3 sync s3://$AWS_S3_BUCKET/ packages/
+
+  - name: "Helm: Download staging chart repositories"
+    image: amazon/aws-cli
+    environment:
+      AWS_S3_BUCKET:
+        from_secret: HELM_CHART_STAGING_BUCKET
+      AWS_ACCESS_KEY_ID:
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
+    commands:
+      - aws s3 sync s3://$AWS_S3_BUCKET/ packages/
+
+  - name: "Helm: Generate index file"
+    image: alpine/helm:latest
+    commands:
+      - helm repo index packages/
+
+  - name: "Helm: Publish chart repository to S3"
+    images: plugins/s3 
+    settings:
+      bucket:
+        from_secret: HELM_CHART_STAGING_BUCKET
+      access_key:
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
+      secret_key:
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
+      region: us-west-2
+      source: packages/index.yaml
+      strip_prefix: packages
+    
+
+---
+kind: pipeline
+type: kubernetes
 name: tag-stage-terraform-provider
 
 trigger:
@@ -857,6 +910,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: 97dd85adcd5e97134591dd0b2c67f0e17f040e8afbd84c4b10c1d6d1acef3943
+hmac: e693babb61334535795d4e33909610faa1bb08572b1121293f344bd45c5f2b1e
 
 ...
