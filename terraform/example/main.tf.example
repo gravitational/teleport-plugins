@@ -1,8 +1,8 @@
 terraform {
   required_providers {
     teleport = {
-      version = "9.0.1"
-      source  = "gravitational.com/teleport/teleport"
+      version = "9.1.3"
+      source  = "terraform.releases.teleport.dev/gravitational/teleport"
     }
   }
 }
@@ -13,5 +13,5 @@ provider "teleport" {
   identity_file_path = "/tmp/terraform-identity"
 
   # Teleport proxy addr
-  addr = "localhost:3025"
+  addr = "teleport.example.com:443"
 }
