@@ -295,16 +295,12 @@ type: kubernetes
 name: tag-build-plugins-helm
 
 trigger:
-  branch:
-    - logan/release-helm-charts
   event:
+    - tag
+  ref:
     include:
-      - push
-  # event:
-  #   - tag
-  # ref:
-  #   include:
-  #     - refs/tags/v*
+      - refs/tags/v*
+
 steps:
   - name: "Helm: Package charts"
     image: alpine/helm:latest
@@ -740,13 +736,13 @@ steps:
     image: plugins/s3 
     settings:
       bucket:
-        from_secret: HELM_CHART_STAGING_BUCKET
+        from_secret: HELM_CHART_PRODUCTION_BUCKET
       access_key:
-        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
+        from_secret: HELM_CHART_PRODUCTION_BUCKET_KEY
       secret_key:
-        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
-      region: us-west-2
-      source: packages/index.yaml
+        from_secret: HELM_CHART_PRODUCTION_BUCKET_SECRET
+      region: us-east-2
+      source: packages/*
       strip_prefix: packages
     
 
@@ -912,6 +908,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: f19ff06f74211e67581f28c40b74e621e63f57897af62d64ddc3a480964e9e5a
+hmac: 5e16a868d2c077e457ed5554e62ab82b0b307738a251a768bcbb1c72f71680f3
 
 ...
