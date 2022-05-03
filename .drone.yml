@@ -745,7 +745,6 @@ steps:
       source: packages/*
       strip_prefix: packages
     
-
 ---
 kind: pipeline
 type: kubernetes
@@ -908,6 +907,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: 5e16a868d2c077e457ed5554e62ab82b0b307738a251a768bcbb1c72f71680f3
+hmac: aadba22a5eb8175d4b08404bea82b7d7a1643a789f233b0d8c24cd1fbe682479
 
 ...
