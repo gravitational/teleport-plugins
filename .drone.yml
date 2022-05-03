@@ -737,7 +737,7 @@ steps:
       - helm repo index packages/
 
   - name: "Helm: Publish chart repository to S3"
-    images: plugins/s3 
+    image: plugins/s3 
     settings:
       bucket:
         from_secret: HELM_CHART_STAGING_BUCKET
@@ -912,6 +912,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: 9d7d1a920e9a9e71657bccf4f85125052258093263a05580844db1fe49cc850c
+hmac: f19ff06f74211e67581f28c40b74e621e63f57897af62d64ddc3a480964e9e5a
 
 ...
