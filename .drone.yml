@@ -296,8 +296,7 @@ name: tag-build-plugins-helm
 
 trigger:
   branch:
-    - master
-    - branch/*
+    - logan/release-helm-charts
   event:
     include:
       - push
@@ -916,6 +915,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: 78e2372981fc75c8baa9b4578abf3126fbd9967ff634da669e8a6a52721dce87
+hmac: e8a1baca48ef49b4be1528d579241f46c39778ca44d73afe3d5d3873e1d74295
 
 ...
