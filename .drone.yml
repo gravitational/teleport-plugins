@@ -704,9 +704,6 @@ trigger:
   target:
     - production
     - publish-helm-charts
-  ref:
-    include:
-      - refs/tags/v*
 
 steps:
   - name: "Helm: Download production chart repositories"
@@ -915,6 +912,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: e8a1baca48ef49b4be1528d579241f46c39778ca44d73afe3d5d3873e1d74295
+hmac: 9d7d1a920e9a9e71657bccf4f85125052258093263a05580844db1fe49cc850c
 
 ...
