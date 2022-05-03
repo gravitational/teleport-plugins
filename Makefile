@@ -67,6 +67,12 @@ docker-push-event-handler: docker-build-event-handler
 docker-promote-event-handler:
 	$(MAKE) -C event-handler docker-promote
 
+
+.PHONY: helm-package-charts
+helm-package-charts:
+	mkdir -p packages
+	helm package -d packages charts/access/email
+
 .PHONY: terraform
 terraform:
 	make -C terraform
