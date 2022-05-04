@@ -12,8 +12,6 @@ description: A Helm chart for Kubernetes
 # pipeline. Library charts do not define any templates and therefore cannot be deployed.
 type: application
 
-# This is the chart version. This version number should be incremented each time you make changes
-# to the chart and its templates, including the app version.
 # Versions are expected to follow Semantic Versioning (https://semver.org/)
 version: "9.1.3"
 
