@@ -193,9 +193,11 @@ lint: GO_LINT_FLAGS ?=
 lint:
 	golangci-lint run -c .golangci.yml $(GO_LINT_FLAGS)
 
-.PHONY: test-helm-access-email
-test-helm-access-email:
-	helm unittest ./charts/access/email
+.PHONY: test-helm-access-%
+test-helm-access-%:
+	helm unittest ./charts/access/$*
 
 .PHONY: test-helm
-test-helm: test-helm-access-email
+test-helm: 
+	$(MAKE) test-helm-access-email
+	$(MAKE) test-helm-access-slack
