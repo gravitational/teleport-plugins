@@ -72,6 +72,7 @@ docker-promote-event-handler:
 helm-package-charts:
 	mkdir -p packages
 	helm package -d packages charts/access/email
+	helm package -d packages charts/access/slack
 
 .PHONY: terraform
 terraform:
