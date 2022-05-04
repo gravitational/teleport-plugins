@@ -25,7 +25,7 @@
             "default": {},
             "examples": [
                 {
-                    "repository": "146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/teleport-plugin-slack",
+                    "repository": "quay.io/gravitational/teleport-plugin-slack",
                     "pullPolicy": "IfNotPresent",
                     "tag": ""
                 }
@@ -39,9 +39,9 @@
                 "repository": {
                     "$id": "#/properties/image/properties/repository",
                     "type": "string",
-                    "default": "146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/teleport-plugin-slack",
+                    "default": "quay.io/gravitational/teleport-plugin-slack",
                     "examples": [
-                        "146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/teleport-plugin-slack"
+                        "quay.io/gravitational/teleport-plugin-slack"
                     ]
                 },
                 "pullPolicy": {

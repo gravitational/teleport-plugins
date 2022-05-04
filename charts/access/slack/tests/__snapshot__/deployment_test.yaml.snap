@@ -31,10 +31,6 @@ should match the snapshot:
             image: gcr.io/overridden/repository:v98.76.54
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-slack
-            ports:
-            - containerPort: 80
-              name: http
-              protocol: TCP
             resources: {}
             securityContext: {}
             volumeMounts:
