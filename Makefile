@@ -67,6 +67,12 @@ docker-push-event-handler: docker-build-event-handler
 docker-promote-event-handler:
 	$(MAKE) -C event-handler docker-promote
 
+
+.PHONY: helm-package-charts
+helm-package-charts:
+	mkdir -p packages
+	helm package -d packages charts/access/email
+
 .PHONY: terraform
 terraform:
 	make -C terraform
@@ -133,6 +139,14 @@ update-version:
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
+	$(MAKE) update-helm-version
+
+.PHONY: update-helm-version
+update-helm-version:
+	$(SED) 's/appVersion: .*/appVersion: "$(VERSION)"/' charts/access/email/Chart.yaml
+	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/access/email/Chart.yaml
+	# Update snapshots
+	@helm unittest -u charts/access/email || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
 
 .PHONY: update-tag
 update-tag:
