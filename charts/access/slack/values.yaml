@@ -51,6 +51,8 @@ teleport:
 
 slack:
   token: ""
+  tokenSecretName: ""
+  tokenSecretPath: ""
 
 roleToRecipients:
   "*":
