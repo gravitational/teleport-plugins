@@ -75,6 +75,7 @@ helm-package-charts:
 	helm package -d packages charts/access/slack
 	helm package -d packages charts/access/pagerduty
 	helm package -d packages charts/access/mattermost
+	helm package -d packages charts/event-handler
 
 .PHONY: terraform
 terraform:
@@ -159,9 +160,18 @@ update-helm-version:
 	$(MAKE) update-helm-version-access-slack
 	$(MAKE) update-helm-version-access-pagerduty
 	$(MAKE) update-helm-version-access-mattermost
+	$(MAKE) update-helm-version-plugin-event-handler
 
 # Update specific chart
-.PHONY: update-helm-version-%
+.PHONY: update-helm-version-plugin-%
+update-helm-version-plugin-%:
+	# Update snapshots
+	$(SED) 's/appVersion: .*/appVersion: "$(VERSION)"/' charts/$*/Chart.yaml
+	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/$*/Chart.yaml
+	# Update snapshots
+	@helm unittest -u charts/$* || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
+
+.PHONY: update-helm-version-access-%
 update-helm-version-access-%:
 	$(SED) 's/appVersion: .*/appVersion: "$(VERSION)"/' charts/access/$*/Chart.yaml
 	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/access/$*/Chart.yaml
@@ -222,9 +232,15 @@ lint:
 test-helm-access-%:
 	helm unittest ./charts/access/$*
 
+.PHONY: test-helm-plugin-%
+test-helm-plugin-%:
+	helm unittest ./charts/$*
+
 .PHONY: test-helm
 test-helm:
 	$(MAKE) test-helm-access-email
 	$(MAKE) test-helm-access-slack
 	$(MAKE) test-helm-access-pagerduty
 	$(MAKE) test-helm-access-mattermost
+	$(MAKE) test-helm-access-email
+	$(MAKE) test-helm-plugin-event-handler
