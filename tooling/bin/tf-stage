@@ -1,0 +1,25 @@
+#! /bin/bash
+
+export STAGING_REGION=us-west-2
+export STAGING_BUCKET=$AWS_S3_BUCKET
+export STAGING_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+export STAGING_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+    
+export PROD_REGION=$STAGING_TERRAFORM_AWS_REGION
+export PROD_BUCKET=$STAGING_TERRAFORM_AWS_BUCKET
+export PROD_ACCESS_KEY_ID=$STAGING_TERRAFORM_AWS_ACCESS_KEY_ID
+export PROD_SECRET_ACCESS_KEY=$STAGING_TERRAFORM_AWS_SECRET_ACCESS_KEY
+export DEPLOYMENT_ROLE=$STAGING_TERRAFORM_AWS_DEPLOYMENT_ROLE
+export SIGNING_KEY=$STAGING_TERRAFORM_REGISTRY_SIGNING_KEY
+
+export DRONE_TAG=$1
+
+cd tooling
+go run ./cmd/promote-terraform                                         \
+  -d workspace-staging                                                 \
+  --tag $DRONE_TAG                                                     \
+  -p 6                                                                 \
+  --registry-url https://terraform-staging.releases.teleport.dev/      \
+  --namespace gravitational                                            \
+  --name teleport                                                      \
+  --deployment-role $DEPLOYMENT_ROLE

@@ -10,11 +10,13 @@ require (
 	github.com/aws/aws-sdk-go-v2/credentials v1.10.0
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.11.0
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.26.0
+	github.com/aws/aws-sdk-go-v2/service/sts v1.16.0
 	github.com/coreos/go-semver v0.3.0
 	github.com/gravitational/kingpin v2.1.10+incompatible
 	github.com/gravitational/trace v1.1.18
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.1
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
@@ -31,7 +33,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.13.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.11.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.16.0 // indirect
 	github.com/aws/smithy-go v1.11.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
