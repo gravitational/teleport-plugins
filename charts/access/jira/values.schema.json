@@ -24,7 +24,7 @@
             "default": {},
             "examples": [
                 {
-                    "repository": "146628656107.dkr.ecr.us-west-2.amazonaws.com/teleport/access-plugin-email",
+                    "repository": "quay.io/teleport/access-plugin-email",
                     "pullPolicy": "IfNotPresent",
                     "tag": ""
                 }
@@ -38,9 +38,9 @@
                 "repository": {
                     "$id": "#/properties/image/properties/repository",
                     "type": "string",
-                    "default": "146628656107.dkr.ecr.us-west-2.amazonaws.com/teleport/access-plugin-email",
+                    "default": "quay.io/teleport/access-plugin-email",
                     "examples": [
-                        "146628656107.dkr.ecr.us-west-2.amazonaws.com/teleport/access-plugin-email"
+                        "quay.io/teleport/access-plugin-email"
                     ]
                 },
                 "pullPolicy": {
