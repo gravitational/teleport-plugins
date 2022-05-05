@@ -293,7 +293,9 @@
                 }
             ],
             "required": [
-                "token"
+                "token",
+                "tokenSecretName",
+                "tokenSecretPath"
             ],
             "properties": {
                 "token": {
@@ -302,6 +304,22 @@
                     "default": "",
                     "examples": [
                         "example-api-token"
+                    ]
+                },
+                "tokenSecretName": {
+                    "$id": "#/properties/slack/properties/tokenSecretName",
+                    "type": "string",
+                    "default": "",
+                    "examples": [
+                        "slack-token"
+                    ]
+                },
+                "tokenSecretPath": {
+                    "$id": "#/properties/slack/properties/tokenSecretPath",
+                    "type": "string",
+                    "default": "",
+                    "examples": [
+                        "token"
                     ]
                 }
             },
