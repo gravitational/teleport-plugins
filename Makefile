@@ -74,6 +74,7 @@ helm-package-charts:
 	helm package -d packages charts/access/email
 	helm package -d packages charts/access/slack
 	helm package -d packages charts/access/pagerduty
+	helm package -d packages charts/access/mattermost
 
 .PHONY: terraform
 terraform:
@@ -92,7 +93,6 @@ event-handler:
 test: test-tooling
 	@echo Testing plugins against Teleport $(TELEPORT_GET_VERSION)
 	go test -race -count 1 $(shell go list ./...)
-
 
 .PHONY: test-tooling
 test-tooling:
@@ -153,6 +153,8 @@ update-version:
 update-helm-version:
 	$(MAKE) update-helm-version-access-email
 	$(MAKE) update-helm-version-access-slack
+	$(MAKE) update-helm-version-access-pagerduty
+	$(MAKE) update-helm-version-access-mattermost
 
 # Update specific chart
 .PHONY: update-helm-version-%
@@ -204,3 +206,4 @@ test-helm:
 	$(MAKE) test-helm-access-email
 	$(MAKE) test-helm-access-slack
 	$(MAKE) test-helm-access-pagerduty
+	$(MAKE) test-helm-access-mattermost
