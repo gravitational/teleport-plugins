@@ -1,5 +1,9 @@
 #! /bin/bash
 
+# NOTE: The variable mappings here need to match those in the
+#       promote-terraform-provider Drone pipeline. Any change here should
+#       be reflected there, and vice versa.
+
 export STAGING_REGION=us-west-2
 export STAGING_BUCKET=$AWS_S3_BUCKET
 export STAGING_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID

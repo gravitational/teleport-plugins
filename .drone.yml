@@ -746,6 +746,8 @@ steps:
       strip_prefix: packages
     
 ---
+# NOTE: Any changes here need to be reflected in the emergency deployment 
+#       scripts in tooling/bin
 kind: pipeline
 type: kubernetes
 name: tag-stage-terraform-provider
@@ -800,6 +802,8 @@ steps:
       SIGNING_KEY:
         from_secret: STAGING_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
+# NOTE: Any changes here need to be reflected in the emergency deployment 
+#       scripts in tooling/bin
 kind: pipeline
 type: kubernetes
 name: promote-staging-terraform-provider
@@ -853,6 +857,8 @@ steps:
       SIGNING_KEY:
         from_secret: STAGING_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
+# NOTE: Any changes here need to be reflected in the emergency deployment 
+#       scripts in tooling/bin
 kind: pipeline
 type: kubernetes
 name: promote-terraform-provider
@@ -907,6 +913,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: aadba22a5eb8175d4b08404bea82b7d7a1643a789f233b0d8c24cd1fbe682479
+hmac: 00f6ab1621124f81ccb6d4b60f2697851b2a7c11e7c2d5cadca9c234ff4da49c
 
 ...
