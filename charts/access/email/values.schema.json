@@ -26,7 +26,7 @@
             "default": {},
             "examples": [
                 {
-                    "repository": "146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/teleport-plugin-email",
+                    "repository": "quay.io/gravitational/teleport-plugin-email",
                     "pullPolicy": "IfNotPresent",
                     "tag": ""
                 }
@@ -40,9 +40,9 @@
                 "repository": {
                     "$id": "#/properties/image/properties/repository",
                     "type": "string",
-                    "default": "146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/teleport-plugin-email",
+                    "default": "quay.io/gravitational/teleport-plugin-email",
                     "examples": [
-                        "146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/teleport-plugin-email"
+                        "quay.io/gravitational/teleport-plugin-email"
                     ]
                 },
                 "pullPolicy": {

@@ -292,6 +292,39 @@ volumes:
 ---
 kind: pipeline
 type: kubernetes
+name: tag-build-plugins-helm
+
+trigger:
+  event:
+    - tag
+  ref:
+    include:
+      - refs/tags/v*
+
+steps:
+  - name: "Helm: Package charts"
+    image: alpine/helm:latest
+    commands: 
+      - apk add --no-cache make
+      - make helm-package-charts
+
+  - name: "Helm: Publish charts to staging S3"
+    image: plugins/s3
+    settings:
+      bucket:
+        from_secret: HELM_CHART_STAGING_BUCKET
+      access_key:
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
+      secret_key:
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
+      region: us-west-2
+      source: packages/*
+      target: /
+      strip_prefix: packages
+
+---
+kind: pipeline
+type: kubernetes
 name: tag-build-terraform-linux
 
 trigger:
@@ -659,6 +692,64 @@ volumes:
 ---
 kind: pipeline
 type: kubernetes
+name: publish-helm-charts
+
+trigger:
+  event:
+    - promote
+  target:
+    - production
+    - publish-helm-charts
+
+steps:
+  - name: "Helm: Download production chart repositories"
+    image: amazon/aws-cli
+    environment:
+      AWS_S3_BUCKET:
+        from_secret: HELM_CHART_PRODUCTION_BUCKET
+      AWS_ACCESS_KEY_ID:
+        from_secret: HELM_CHART_PRODUCTION_BUCKET_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: HELM_CHART_PRODUCTION_BUCKET_SECRET
+    commands:
+      - mkdir -p packages
+      - aws s3 sync s3://$AWS_S3_BUCKET/ packages/
+
+  - name: "Helm: Download staging chart repositories"
+    image: amazon/aws-cli
+    environment:
+      AWS_S3_BUCKET:
+        from_secret: HELM_CHART_STAGING_BUCKET
+      AWS_ACCESS_KEY_ID:
+        from_secret: PLUGIN_BUILD_USER_STAGING_KEY
+      AWS_SECRET_ACCESS_KEY:
+        from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
+    commands:
+      - aws s3 sync s3://$AWS_S3_BUCKET/ packages/
+
+  - name: "Helm: Generate index file"
+    image: alpine/helm:latest
+    commands:
+      - helm repo index packages/
+
+  - name: "Helm: Publish chart repository to S3"
+    image: plugins/s3 
+    settings:
+      bucket:
+        from_secret: HELM_CHART_PRODUCTION_BUCKET
+      access_key:
+        from_secret: HELM_CHART_PRODUCTION_BUCKET_KEY
+      secret_key:
+        from_secret: HELM_CHART_PRODUCTION_BUCKET_SECRET
+      region: us-east-2
+      source: packages/*
+      strip_prefix: packages
+    
+---
+# NOTE: Any changes here need to be reflected in the emergency deployment 
+#       scripts in tooling/bin
+kind: pipeline
+type: kubernetes
 name: tag-stage-terraform-provider
 
 trigger:
@@ -711,6 +802,8 @@ steps:
       SIGNING_KEY:
         from_secret: STAGING_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
+# NOTE: Any changes here need to be reflected in the emergency deployment 
+#       scripts in tooling/bin
 kind: pipeline
 type: kubernetes
 name: promote-staging-terraform-provider
@@ -764,6 +857,8 @@ steps:
       SIGNING_KEY:
         from_secret: STAGING_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
+# NOTE: Any changes here need to be reflected in the emergency deployment 
+#       scripts in tooling/bin
 kind: pipeline
 type: kubernetes
 name: promote-terraform-provider
@@ -818,6 +913,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: 4b48b90b416387809afaa8df92ff3ebe43e45baf6a83aa37082166b649d9a6f1
+hmac: 00f6ab1621124f81ccb6d4b60f2697851b2a7c11e7c2d5cadca9c234ff4da49c
 
 ...
