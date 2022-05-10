@@ -2,6 +2,104 @@
 
 This chart sets up and configures a Deployment for the Access Request Email plugin.
 
+## Installation
+
+### Prerequisites
+
+First, you'll need to create a Teleport user and role for the plugin. The following file contains a minimal user that's needed for the plugin to work:
+
+```yaml
+---
+kind: role
+version: v4
+metadata:
+  name: teleport-plugin-email
+spec:
+  allow:
+    logins:
+    - teleport-plugin-email
+    rules:
+    - resources:
+      - access_request
+      verbs:
+      - list
+      - read
+      - update
+  options:
+    forward_agent: false
+    max_session_ttl: 8h0m0s
+    port_forwarding: false
+---
+kind: user
+version: v2
+metadata:
+  name: teleport-plugin-email
+spec:
+  roles:
+    - teleport-plugin-email
+```
+
+You can either create the user and the roles by putting the YAML above to a file and issuing the following command  (you must be logged in with `tsh`):
+
+```
+tctl create user.yaml
+```
+
+or by navigating to the Teleport Web UI under `https://<yourserver>/web/users` and `https://<yourserver>/web/roles` respectively.
+
+The next step is to create an identity file, which contains a private/public key pair and a certificate that'll identify us as the user above. To do this, use the following command:
+
+```
+tctl auth sign --user teleport-plugin-email --ttl 8760h --out teleport-plugin-email-identity
+```
+
+You'll need to be logged in and have the privileges to impersonate that user. Alternatively, you can execute the command above on one of the `auth` instances/pods (if you have access to them).
+
+The last step is to create the secret. The following command will create a secret with the name `teleport-plugin-email-identity` with the key `auth_id` in it holding the contents of the file `teleport-plugin-email-identity`:
+
+```
+kubectl create secret generic teleport-plugin-email-identity --from-file=auth_id=teleport-plugin-email-identity
+```
+
+### Installing the plugin
+
+```
+helm repo add teleport https://charts.teleport.sh/
+```
+
+```shell
+helm install teleport-plugin-email teleport/teleport-plugin-email --values teleport-plugin-email-values.yaml
+```
+
+Example `teleport-plugin-email-values.yaml` for using MailGun:
+
+```yaml
+teleport:
+  address: teleport.example.com:443
+  identitySecretName: teleport-plugin-email-identity
+
+mailgun:
+  enabled: true
+  domain: sandboxbd81caddef744a69be0e5b544ab0c3bd.mailgun.org
+  privateKey: supersecretprivatekey
+
+role_to_recipients:
+  '*': access-requests@example.com
+```
+
+Alternatively, you can pass arguments from the command line (useful for one-liners or scripts):
+
+```
+helm install teleport-plugin-email teleport/teleport-plugin-email \
+  --set 'teleport.address=teleport.example.com:443' \
+  --set 'teleport.identitySecretName=teleport-plugin-email-identity' \
+  --set 'mailgun.enabled=true' \
+  --set 'mailgun.domain=sandboxbd81caddef744a69be0e5b544ab0c3b'd.mailgun.org \
+  --set 'mailgun.privateKey=supersecretprivatekey' \
+  --set 'roleToRecipients.*=access-requests@example.com'
+```
+
+See [Settings](#settings) for more details.
 ## Settings
 
 The following values can be set for the Helm chart:
