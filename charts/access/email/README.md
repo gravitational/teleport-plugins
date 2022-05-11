@@ -121,10 +121,10 @@ The following values can be set for the Helm chart:
   <tr>
     <td><code>roleToRecipients</code></td>
     <td>
-      Mapping of roles to a list of channels and Slack emails. <br />
+      Mapping of roles to a list of emails. <br />
       Example:
       <pre>
-"dev" = ["dev-access-requests", "user@example.com"]
+"dev" = ["developers@example.com", "user@example.com"]
 "*" = ["access-requests"]</pre>
     </td>
     <td>map</td>
