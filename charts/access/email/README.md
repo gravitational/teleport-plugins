@@ -119,6 +119,20 @@ The following values can be set for the Helm chart:
   </tr>
 
   <tr>
+    <td><code>roleToRecipients</code></td>
+    <td>
+      Mapping of roles to a list of channels and Slack emails. <br />
+      Example:
+      <pre>
+"dev" = ["dev-access-requests", "user@example.com"]
+"*" = ["access-requests"]</pre>
+    </td>
+    <td>map</td>
+    <td><code>{}</code></td>
+    <td>yes</td>
+  </tr>
+
+  <tr>
     <td><code>log.output</code></td>
     <td>
       Logger output. Could be <code>"stdout"</code>, <code>"stderr"</code> or a file name,

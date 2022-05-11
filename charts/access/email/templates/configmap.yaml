@@ -10,11 +10,11 @@ data:
     addr = "{{ .Values.teleport.address }}"
     identity = "/var/lib/teleport/plugins/email/auth_id"
 
-    {{ if .Values.mailgun.enabled }}
+    {{ if .Values.mailgun.enabled -}}
     [mailgun]
     domain      = "{{ .Values.mailgun.domain }}"
     private_key = "{{ .Values.mailgun.privateKey }}"
-    {{ else if .Values.smtp.enabled }}
+    {{ else if .Values.smtp.enabled -}}
     [smtp]
     host          = "{{ .Values.smtp.host }}"
     port          = {{ .Values.smtp.port }}
@@ -25,11 +25,19 @@ data:
     password_file = "{{ .Values.smtp.passwordFile }}"
     {{ end }}
     starttls_policy = "{{ .Values.smtp.starttlsPolicy }}"
-    {{ end -}}
+    {{- end }}
 
     [delivery]
     sender = "{{ .Values.delivery.sender }}"
+    {{- if (not .Values.roleToRecipients) }}
     recipients = {{ .Values.delivery.recipients | toJson }}
+    {{- else }}
+
+    [role_to_recipients]
+    {{- range $role, $recipients := .Values.roleToRecipients }}
+    {{ $role | toJson }} = {{ $recipients | toJson }}
+    {{- end }}
+    {{- end }}
 
     [log]
     output = "{{ .Values.log.output }}"
