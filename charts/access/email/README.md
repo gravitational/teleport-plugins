@@ -11,7 +11,7 @@ First, you'll need to create a Teleport user and role for the plugin. The follow
 ```yaml
 ---
 kind: role
-version: v4
+version: v5
 metadata:
   name: teleport-plugin-email
 spec:
@@ -39,7 +39,7 @@ spec:
     - teleport-plugin-email
 ```
 
-You can either create the user and the roles by putting the YAML above to a file and issuing the following command  (you must be logged in with `tsh`):
+You can either create the user and the roles by putting the YAML above into a file and issuing the following command  (you must be logged in with `tsh`):
 
 ```
 tctl create user.yaml
