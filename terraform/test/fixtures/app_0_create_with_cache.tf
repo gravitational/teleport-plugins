@@ -1,4 +1,4 @@
-resource "teleport_app" "test_without_cache" {
+resource "teleport_app" "test_with_cache" {
     metadata = {
         name = "example"
         description = "Test app"

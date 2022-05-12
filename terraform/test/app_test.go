@@ -114,21 +114,21 @@ func (s *TerraformSuiteWithCache) TestAppWithCache() {
 		return err
 	}
 
-	name := "teleport_app.test_without_cache"
+	name := "teleport_app.test_with_cache"
 
 	resource.Test(s.T(), resource.TestCase{
 		ProtoV6ProviderFactories: s.terraformProviders,
 		CheckDestroy:             checkDestroyed,
 		Steps: []resource.TestStep{
 			{
-				Config: s.getFixture("app_0_create_without_cache.tf"),
+				Config: s.getFixture("app_0_create_with_cache.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "app"),
 					resource.TestCheckResourceAttr(name, "spec.uri", "localhost:3000"),
 				),
 			},
 			{
-				Config:   s.getFixture("app_0_create_without_cache.tf"),
+				Config:   s.getFixture("app_0_create_with_cache.tf"),
 				PlanOnly: true,
 			},
 		},
