@@ -32,7 +32,8 @@ type BaseSetup struct {
 
 type AuthSetup struct {
 	BaseSetup
-	Auth *AuthService
+	Auth         *AuthService
+	CacheEnabled bool
 }
 
 type ProxySetup struct {
@@ -64,13 +65,14 @@ func (s *BaseSetup) SetupService() {
 }
 
 func (s *AuthSetup) SetupSuite() {
+	s.CacheEnabled = false
 	s.BaseSetup.SetupSuite()
 }
 
 func (s *AuthSetup) SetupService() {
 	s.BaseSetup.SetupService()
 	t := s.T()
-	auth, err := s.Integration.NewAuthService()
+	auth, err := s.Integration.NewAuthService(s.CacheEnabled)
 	require.NoError(t, err)
 	s.StartApp(auth)
 	s.Auth = auth

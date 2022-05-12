@@ -103,3 +103,34 @@ func (s *TerraformSuite) TestImportApp() {
 		},
 	})
 }
+
+func (s *TerraformSuiteWithCache) TestAppWithCache() {
+	checkDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetApp(s.Context(), "test")
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := "teleport_app.test_without_cache"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("app_0_create_without_cache.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "app"),
+					resource.TestCheckResourceAttr(name, "spec.uri", "localhost:3000"),
+				),
+			},
+			{
+				Config:   s.getFixture("app_0_create_without_cache.tf"),
+				PlanOnly: true,
+			},
+		},
+	})
+}

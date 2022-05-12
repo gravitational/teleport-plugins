@@ -264,7 +264,7 @@ func (integration *Integration) Version() Version {
 }
 
 // NewAuthService creates a new auth server instance.
-func (integration *Integration) NewAuthService() (*AuthService, error) {
+func (integration *Integration) NewAuthService(cacheEnabled bool) (*AuthService, error) {
 	dataDir, err := integration.tempDir("data-auth-*")
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to initialize data directory")
@@ -274,7 +274,14 @@ func (integration *Integration) NewAuthService() (*AuthService, error) {
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to write config file")
 	}
+
+	teleportCacheEnabled := "false"
+	if cacheEnabled {
+		teleportCacheEnabled = "true"
+	}
+
 	yaml := strings.ReplaceAll(teleportAuthYAML, "{{TELEPORT_DATA_DIR}}", dataDir)
+	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_CACHE_ENABLED}}", teleportCacheEnabled)
 	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_LICENSE_FILE}}", integration.paths.license)
 	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_TOKEN}}", integration.token)
 	if _, err := configFile.WriteString(yaml); err != nil {
