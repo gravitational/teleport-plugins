@@ -1,6 +1,6 @@
-# Teleport Access Request Email Plugin
+# Teleport Access Request Jira Plugin
 
-This chart sets up and configures a Deployment for the Access Request Email plugin.
+This chart sets up and configures a Deployment for the Access Request Jira plugin.
 
 ## Settings
 

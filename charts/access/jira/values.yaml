@@ -1,11 +1,11 @@
-# Default values for access-plugin-jira.
+# Default values for teleport-plugin-jira.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
 # replicaCount: 1
 
 image:
-  repository: quay.io/teleport/access-plugin-jira
+  repository: quay.io/gravitational/teleport-plugin-jira
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
