@@ -116,6 +116,7 @@ helm install teleport-plugin-email teleport/teleport-plugin-email \
 ```
 
 See [Settings](#settings) for more details.
+
 ## Settings
 
 The following values can be set for the Helm chart:
