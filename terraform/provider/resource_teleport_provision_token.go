@@ -20,16 +20,16 @@ package provider
 import (
 	"context"
 	"fmt"
-	
 	"crypto/rand"
 	"encoding/hex"
-	
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
+	"github.com/jonboulle/clockwork"
 
+	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
@@ -114,7 +114,21 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 	}
 
 	id := provisionToken.Metadata.Name
-	provisionTokenI, err := r.p.Client.GetToken(ctx, id)
+	var provisionTokenI apitypes.ProvisionToken
+
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		provisionTokenI, err = r.p.Client.GetToken(ctx, id)
+		if trace.IsNotFound(err) {
+			if bErr := backoff.Do(ctx); bErr != nil {
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))
+				return
+			}
+			continue
+		}
+		break
+	}
+
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))
 		return

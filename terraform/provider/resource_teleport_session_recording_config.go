@@ -23,7 +23,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/jonboulle/clockwork"
 
+	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
@@ -83,7 +85,20 @@ func (r resourceTeleportSessionRecordingConfig) Create(ctx context.Context, req 
 		return
 	}
 
-	sessionRecordingConfigI, err := r.p.Client.GetSessionRecordingConfig(ctx)
+	var sessionRecordingConfigI apitypes.SessionRecordingConfig
+
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		sessionRecordingConfigI, err = r.p.Client.GetSessionRecordingConfig(ctx)
+		if trace.IsNotFound(err) {
+			if bErr := backoff.Do(ctx); bErr != nil {
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
+				return
+			}
+			continue
+		}
+		break
+	}
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
 		return

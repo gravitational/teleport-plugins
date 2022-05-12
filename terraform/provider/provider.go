@@ -25,6 +25,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport/api/client"
@@ -43,10 +44,16 @@ const (
 	minServerVersion = "6.1.0-beta.1"
 )
 
+type RetryConfig struct {
+	Base time.Duration
+	Cap  time.Duration
+}
+
 // Provider Teleport Provider
 type Provider struct {
-	configured bool
-	Client     *client.Client
+	configured  bool
+	Client      *client.Client
+	RetryConfig RetryConfig
 }
 
 // providerData provider schema struct
@@ -73,6 +80,10 @@ type providerData struct {
 	IdentityFilePath types.String `tfsdk:"identity_file_path"`
 	// IdentityFile identity file content
 	IdentityFile types.String `tfsdk:"identity_file"`
+	// RetryBaseDuration is used to setup the retry algorithm when the API returns 'not found'
+	RetryBaseDuration types.String `tfsdk:"retry_base_duration"`
+	// RetryCapDuration is used to setup the retry algorithm when the API returns 'not found'
+	RetryCapDuration types.String `tfsdk:"retry_cap_duration"`
 }
 
 // New returns an empty provider struct
@@ -141,6 +152,18 @@ func (p *Provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics)
 				Optional:    true,
 				Description: "Teleport identity file content.",
 			},
+			"retry_base_duration": {
+				Type:        types.StringType,
+				Sensitive:   false,
+				Optional:    true,
+				Description: "Retry algorithm when the API returns 'not found': base duration between retries (https://pkg.go.dev/time#ParseDuration).",
+			},
+			"retry_cap_duration": {
+				Type:        types.StringType,
+				Sensitive:   false,
+				Optional:    true,
+				Description: "Retry algorithm when the API returns 'not found': max duration between retries (https://pkg.go.dev/time#ParseDuration).",
+			},
 		},
 	}, nil
 }
@@ -181,6 +204,8 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 	profileDir := p.stringFromConfigOrEnv(config.ProfileDir, "TF_TELEPORT_PROFILE_PATH", "")
 	identityFilePath := p.stringFromConfigOrEnv(config.IdentityFilePath, "TF_TELEPORT_IDENTITY_FILE_PATH", "")
 	identityFile := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_IDENTITY_FILE", "")
+	retryBaseDurationStr := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_RETRY_BASE_DURATION", "1ms")
+	retryCapDurationStr := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_RETRY_CAP_DURATION", "1s")
 
 	if !p.validateAddr(addr, resp) {
 		return
@@ -249,6 +274,27 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		return
 	}
 
+	retryBaseDuration, err := time.ParseDuration(retryBaseDurationStr)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to parse Retry Base Duration",
+			fmt.Sprintf("Please check if retry_cap_duration (or TF_TELEPORT_RETRY_BASE_DURATION) is set correctly. Error: %s", err),
+		)
+		return
+	}
+	retryCapDuration, err := time.ParseDuration(retryCapDurationStr)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to parse Retry Cap Duration",
+			fmt.Sprintf("Please check if retry_cap_duration (or TF_TELEPORT_RETRY_CAP_DURATION) is set correctly. Error: %s", err),
+		)
+		return
+	}
+
+	p.RetryConfig = RetryConfig{
+		Base: retryBaseDuration,
+		Cap:  retryCapDuration,
+	}
 	p.Client = client
 	p.configured = true
 }
