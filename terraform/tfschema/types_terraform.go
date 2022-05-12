@@ -225,6 +225,15 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 					Description: "GCP contains parameters specific to GCP Cloud SQL databases.",
 					Optional:    true,
 				},
+				"mysql": {
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"server_version": {
+						Description: "ServerVersion is the server version reported by DB proxy if the runtime information is not available.",
+						Optional:    true,
+						Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+					}}),
+					Description: "MySQL is an additional section with MySQL database options.",
+					Optional:    true,
+				},
 				"protocol": {
 					Description: "Protocol is the database protocol: postgres, mysql, mongodb, etc.",
 					Required:    true,
@@ -3037,6 +3046,40 @@ func CopyDatabaseV3FromTerraform(_ context.Context, tf github_com_hashicorp_terr
 							}
 						}
 					}
+					{
+						a, ok := tf.Attrs["mysql"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.MySQL"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.MySQL", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+							} else {
+								obj.MySQL = github_com_gravitational_teleport_api_types.MySQLOptions{}
+								if !v.Null && !v.Unknown {
+									tf := v
+									obj := &obj.MySQL
+									{
+										a, ok := tf.Attrs["server_version"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.MySQL.ServerVersion"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.MySQL.ServerVersion", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.ServerVersion = t
+											}
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -4109,6 +4152,58 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 								}
 								v.Unknown = false
 								tf.Attrs["ad"] = v
+							}
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["mysql"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.MySQL"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.MySQL", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+							} else {
+								v, ok := tf.Attrs["mysql"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+								if !ok {
+									v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+										AttrTypes: o.AttrTypes,
+										Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+									}
+								} else {
+									if v.Attrs == nil {
+										v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+									}
+								}
+								{
+									obj := obj.MySQL
+									tf := &v
+									{
+										t, ok := tf.AttrTypes["server_version"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.MySQL.ServerVersion"})
+										} else {
+											v, ok := tf.Attrs["server_version"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"DatabaseV3.Spec.MySQL.ServerVersion", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.MySQL.ServerVersion", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.ServerVersion) == ""
+											}
+											v.Value = string(obj.ServerVersion)
+											v.Unknown = false
+											tf.Attrs["server_version"] = v
+										}
+									}
+								}
+								v.Unknown = false
+								tf.Attrs["mysql"] = v
 							}
 						}
 					}
