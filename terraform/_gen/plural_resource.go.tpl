@@ -124,12 +124,19 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 	id := {{.VarName}}.Metadata.Name
 	var {{.VarName}}I apitypes.{{ if ne .IfaceName ""}}{{.IfaceName}}{{else}}{{.Name}}{{end}}
 
+	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
+		tries = tries + 1
 		{{.VarName}}I, err = r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}id{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
 				resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
+				return
+			}
+			if tries >= r.p.RetryConfig.MaxTries {
+				diagMessage := fmt.Sprintf("Error reading {{.Name}} (tried %d times)", tries)
+				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "{{.Kind}}"))
 				return
 			}
 			continue

@@ -105,12 +105,19 @@ func (r resourceTeleportTrustedCluster) Create(ctx context.Context, req tfsdk.Cr
 	id := trustedCluster.Metadata.Name
 	var trustedClusterI apitypes.TrustedCluster
 
+	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
+		tries = tries + 1
 		trustedClusterI, err = r.p.Client.GetTrustedCluster(ctx, id)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
 				resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))
+				return
+			}
+			if tries >= r.p.RetryConfig.MaxTries {
+				diagMessage := fmt.Sprintf("Error reading TrustedCluster (tried %d times)", tries)
+				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "trusted_cluster"))
 				return
 			}
 			continue

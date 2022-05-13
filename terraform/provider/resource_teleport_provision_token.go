@@ -116,12 +116,19 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 	id := provisionToken.Metadata.Name
 	var provisionTokenI apitypes.ProvisionToken
 
+	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
+		tries = tries + 1
 		provisionTokenI, err = r.p.Client.GetToken(ctx, id)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
 				resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))
+				return
+			}
+			if tries >= r.p.RetryConfig.MaxTries {
+				diagMessage := fmt.Sprintf("Error reading ProvisionToken (tried %d times)", tries)
+				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "token"))
 				return
 			}
 			continue

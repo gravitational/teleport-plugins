@@ -105,12 +105,19 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 	id := user.Metadata.Name
 	var userI apitypes.User
 
+	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
+		tries = tries + 1
 		userI, err = r.p.Client.GetUser(id, false)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
 				resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
+				return
+			}
+			if tries >= r.p.RetryConfig.MaxTries {
+				diagMessage := fmt.Sprintf("Error reading User (tried %d times)", tries)
+				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "user"))
 				return
 			}
 			continue

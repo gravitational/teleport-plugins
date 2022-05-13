@@ -105,12 +105,19 @@ func (r resourceTeleportOIDCConnector) Create(ctx context.Context, req tfsdk.Cre
 	id := oidcConnector.Metadata.Name
 	var oidcConnectorI apitypes.OIDCConnector
 
+	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
+		tries = tries + 1
 		oidcConnectorI, err = r.p.Client.GetOIDCConnector(ctx, id, true)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
 				resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(err), "oidc"))
+				return
+			}
+			if tries >= r.p.RetryConfig.MaxTries {
+				diagMessage := fmt.Sprintf("Error reading OIDCConnector (tried %d times)", tries)
+				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "oidc"))
 				return
 			}
 			continue

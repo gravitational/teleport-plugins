@@ -107,12 +107,19 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 	id := role.Metadata.Name
 	var roleI apitypes.Role
 
+	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
+		tries = tries + 1
 		roleI, err = r.p.Client.GetRole(ctx, id)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
 				resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
+				return
+			}
+			if tries >= r.p.RetryConfig.MaxTries {
+				diagMessage := fmt.Sprintf("Error reading Role (tried %d times)", tries)
+				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "role"))
 				return
 			}
 			continue

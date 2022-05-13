@@ -25,6 +25,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib"
@@ -45,8 +46,9 @@ const (
 )
 
 type RetryConfig struct {
-	Base time.Duration
-	Cap  time.Duration
+	Base     time.Duration
+	Cap      time.Duration
+	MaxTries int
 }
 
 // Provider Teleport Provider
@@ -206,6 +208,7 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 	identityFile := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_IDENTITY_FILE", "")
 	retryBaseDurationStr := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_RETRY_BASE_DURATION", "1s")
 	retryCapDurationStr := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_RETRY_CAP_DURATION", "5s")
+	maxTriesStr := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_RETRY_MAX_TRIES", "4")
 
 	if !p.validateAddr(addr, resp) {
 		return
@@ -282,6 +285,7 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		)
 		return
 	}
+
 	retryCapDuration, err := time.ParseDuration(retryCapDurationStr)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -291,9 +295,19 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		return
 	}
 
+	maxTries, err := strconv.ParseUint(maxTriesStr, 10, 32)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Failed to parse Retry Max Tries",
+			fmt.Sprintf("Please check if retry_max_tries (or TF_TELEPORT_RETRY_MAX_TRIES) is set correctly. Error: %s", err),
+		)
+		return
+	}
+
 	p.RetryConfig = RetryConfig{
-		Base: retryBaseDuration,
-		Cap:  retryCapDuration,
+		Base:     retryBaseDuration,
+		Cap:      retryCapDuration,
+		MaxTries: int(maxTries),
 	}
 	p.Client = client
 	p.configured = true
