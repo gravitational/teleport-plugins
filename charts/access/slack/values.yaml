@@ -54,12 +54,7 @@ slack:
   tokenSecretName: ""
   tokenSecretPath: ""
 
-roleToRecipients:
-  "*":
-    - "recipient1@example.com"
-    - "recipient2@example.com"
-  dev:
-    - "another-recipient@example.com"
+roleToRecipients: {}
 
 log:
   output: stdout
