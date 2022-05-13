@@ -69,10 +69,10 @@ func (s *AuthSetup) SetupSuite() {
 	s.BaseSetup.SetupSuite()
 }
 
-func (s *AuthSetup) SetupService() {
+func (s *AuthSetup) SetupService(authServiceOptions ...AuthServiceOption) {
 	s.BaseSetup.SetupService()
 	t := s.T()
-	auth, err := s.Integration.NewAuthService(s.CacheEnabled)
+	auth, err := s.Integration.NewAuthService(authServiceOptions...)
 	require.NoError(t, err)
 	s.StartApp(auth)
 	s.Auth = auth

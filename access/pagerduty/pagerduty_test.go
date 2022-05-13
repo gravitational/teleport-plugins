@@ -98,7 +98,7 @@ func (s *PagerdutySuite) SetupSuite() {
 	require.NoError(t, err)
 	t.Cleanup(teleport.Close)
 
-	auth, err := teleport.NewAuthService(false)
+	auth, err := teleport.NewAuthService()
 	require.NoError(t, err)
 	s.StartApp(auth)
 

@@ -18,7 +18,7 @@ teleport, err := integration.NewFromEnv(ctx)
 require.NoError(t, err)
 defer teleport.Close()
 
-auth, err := teleport.NewAuthService(false) // cacheEnabled = false
+auth, err := teleport.NewAuthService()
 require.NoError(t, err)
 
 pong, err := api.Ping(ctx)

@@ -87,8 +87,11 @@ func (s *TerraformBaseSuite) SetupSuite() {
 	t := s.T()
 
 	s.AuthSetup.SetupSuite()
-	s.AuthSetup.CacheEnabled = s.cacheEnabled
-	s.AuthSetup.SetupService()
+	authOptions := []integration.AuthServiceOption{}
+	if s.cacheEnabled {
+		authOptions = append(authOptions, integration.WithCache())
+	}
+	s.AuthSetup.SetupService(authOptions...)
 
 	ctx := s.Context()
 
