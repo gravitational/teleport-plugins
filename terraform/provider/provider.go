@@ -204,8 +204,8 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 	profileDir := p.stringFromConfigOrEnv(config.ProfileDir, "TF_TELEPORT_PROFILE_PATH", "")
 	identityFilePath := p.stringFromConfigOrEnv(config.IdentityFilePath, "TF_TELEPORT_IDENTITY_FILE_PATH", "")
 	identityFile := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_IDENTITY_FILE", "")
-	retryBaseDurationStr := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_RETRY_BASE_DURATION", "1ms")
-	retryCapDurationStr := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_RETRY_CAP_DURATION", "1s")
+	retryBaseDurationStr := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_RETRY_BASE_DURATION", "1s")
+	retryCapDurationStr := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_RETRY_CAP_DURATION", "5s")
 
 	if !p.validateAddr(addr, resp) {
 		return
