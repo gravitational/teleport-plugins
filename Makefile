@@ -77,6 +77,10 @@ helm-package-charts:
 terraform:
 	make -C terraform
 
+.PHONY: terraform-gen-tfschema
+terraform-gen-tfschema:
+	make -C terraform gen-tfschema
+
 .PHONY: event-handler
 event-handler:
 	make -C event-handler
@@ -140,6 +144,7 @@ update-version:
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
 	$(MAKE) update-helm-version
+	$(MAKE) terraform-gen-tfschema
 
 .PHONY: update-helm-version
 update-helm-version:
