@@ -146,7 +146,7 @@ update-helm-version:
 	$(SED) 's/appVersion: .*/appVersion: "$(VERSION)"/' charts/access/email/Chart.yaml
 	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/access/email/Chart.yaml
 	# Update snapshots
-	@helm unittest -u charts/access/email || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
+	@helm unittest -u charts/access/email || { echo "Please install unittest as described in .cloudbuild/ci/helm-unittest.yaml" ; exit 1; }
 
 .PHONY: update-tag
 update-tag:

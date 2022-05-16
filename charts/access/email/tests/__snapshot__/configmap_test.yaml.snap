@@ -160,8 +160,8 @@ should match the snapshot (smtp on, roleToRecipients set):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 9.2.1
-        helm.sh/chart: teleport-plugin-email-9.2.1
+        app.kubernetes.io/version: 9.2.3
+        helm.sh/chart: teleport-plugin-email-9.2.3
       name: RELEASE-NAME-teleport-plugin-email
 should match the snapshot (smtp on, starttls disabled):
   1: |
