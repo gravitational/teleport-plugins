@@ -263,8 +263,16 @@ func (integration *Integration) Version() Version {
 	return integration.version
 }
 
+type AuthServiceOption func(yaml string) string
+
+func WithCache() AuthServiceOption {
+	return func(yaml string) string {
+		return strings.ReplaceAll(yaml, "{{TELEPORT_CACHE_ENABLED}}", "true")
+	}
+}
+
 // NewAuthService creates a new auth server instance.
-func (integration *Integration) NewAuthService() (*AuthService, error) {
+func (integration *Integration) NewAuthService(opts ...AuthServiceOption) (*AuthService, error) {
 	dataDir, err := integration.tempDir("data-auth-*")
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to initialize data directory")
@@ -274,7 +282,14 @@ func (integration *Integration) NewAuthService() (*AuthService, error) {
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to write config file")
 	}
-	yaml := strings.ReplaceAll(teleportAuthYAML, "{{TELEPORT_DATA_DIR}}", dataDir)
+
+	yaml := teleportAuthYAML
+	for _, o := range opts {
+		yaml = o(yaml)
+	}
+
+	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_DATA_DIR}}", dataDir)
+	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_CACHE_ENABLED}}", "false")
 	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_LICENSE_FILE}}", integration.paths.license)
 	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_TOKEN}}", integration.token)
 	if _, err := configFile.WriteString(yaml); err != nil {

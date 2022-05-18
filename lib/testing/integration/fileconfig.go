@@ -21,7 +21,7 @@ teleport:
   data_dir: {{TELEPORT_DATA_DIR}}
   auth_token: {{TELEPORT_AUTH_TOKEN}}
   cache:
-    enabled: false
+    enabled: {{TELEPORT_CACHE_ENABLED}}
   log:
     output: stdout
 
