@@ -104,6 +104,44 @@ func (s *TerraformSuite) TestRole() {
 	})
 }
 
+func (s *TerraformSuiteWithCache) TestRoleMultipleReviewers() {
+	checkDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetRole(s.Context(), "test_multiple_reviewers")
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := "teleport_role.test_decrease_reviewers"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("role_reviewers_0_two_roles.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "role"),
+					resource.TestCheckNoResourceAttr(name, "spec.options"),
+					resource.TestCheckResourceAttr(name, "spec.allow.review_requests.roles.0", "rolea"),
+					resource.TestCheckResourceAttr(name, "spec.allow.review_requests.roles.1", "roleb"),
+				),
+			},
+			{
+				Config: s.getFixture("role_reviewers_1_one_role.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "role"),
+					resource.TestCheckNoResourceAttr(name, "spec.options"),
+					resource.TestCheckResourceAttr(name, "spec.allow.review_requests.roles.0", "roleb"),
+					resource.TestCheckNoResourceAttr(name, "spec.allow.review_requests.roles.1"),
+				),
+			},
+		},
+	})
+}
+
 func (s *TerraformSuite) TestImportRole() {
 	r := "teleport_role"
 	id := "test_import"
