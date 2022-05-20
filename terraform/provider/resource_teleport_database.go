@@ -221,15 +221,45 @@ func (r resourceTeleportDatabase) Update(ctx context.Context, req tfsdk.UpdateRe
 		return
 	}
 
+	databaseBefore, err := r.p.Client.GetDatabase(ctx, name)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", err, "db"))
+		return
+	}
+
 	err = r.p.Client.UpdateDatabase(ctx, database)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating Database", err, "db"))
 		return
 	}
 
-	databaseI, err := r.p.Client.GetDatabase(ctx, name)
+	var databaseI apitypes.Database
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		databaseI, err = r.p.Client.GetDatabase(ctx, name)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", err, "db"))
+			return
+		}
+		if databaseBefore.GetMetadata().ID != databaseI.GetMetadata().ID {
+			break
+		}
+
+		if bErr := backoff.Do(ctx); bErr != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading Database (tried %d times)", tries)
+			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "db"))
+			return
+		}
+	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", err, "db"))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))	
 		return
 	}
 

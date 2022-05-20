@@ -240,15 +240,45 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 		return
 	}
 
+	{{.VarName}}Before, err := r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}name{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", err, "{{.Kind}}"))
+		return
+	}
+
 	{{if eq .UpsertMethodArity 2}}_, {{end}}err = r.p.Client.{{.UpdateMethod}}(ctx, {{.VarName}})
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating {{.Name}}", err, "{{.Kind}}"))
 		return
 	}
 
-	{{.VarName}}I, err := r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}name{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
+	var {{.VarName}}I apitypes.{{ if ne .IfaceName ""}}{{.IfaceName}}{{else}}{{.Name}}{{end}}
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		{{.VarName}}I, err = r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}name{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", err, "{{.Kind}}"))
+			return
+		}
+		if {{.VarName}}Before.GetMetadata().ID != {{.VarName}}I.GetMetadata().ID {
+			break
+		}
+
+		if bErr := backoff.Do(ctx); bErr != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading {{.Name}} (tried %d times)", tries)
+			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "{{.Kind}}"))
+			return
+		}
+	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", err, "{{.Kind}}"))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))	
 		return
 	}
 

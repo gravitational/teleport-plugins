@@ -187,19 +187,48 @@ func (r resourceTeleportAuthPreference) Update(ctx context.Context, req tfsdk.Up
 
 	err := authPreference.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error updating AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
+		return
+	}
+
+	authPreferenceBefore, err := r.p.Client.GetAuthPreference(ctx)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
 		return
 	}
 
 	err = r.p.Client.SetAuthPreference(ctx, authPreference)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error updating AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
 		return
 	}
 
-	authPreferenceI, err := r.p.Client.GetAuthPreference(ctx)
+	var authPreferenceI apitypes.AuthPreference
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		authPreferenceI, err = r.p.Client.GetAuthPreference(ctx)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
+			return
+		}
+		if authPreferenceBefore.GetMetadata().ID != authPreferenceI.GetMetadata().ID {
+			break
+		}
+		if bErr := backoff.Do(ctx); bErr != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading AuthPreference (tried %d times)", tries)
+			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "cluster_auth_preference"))
+			return
+		}
+	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error updating AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
 		return
 	}
 

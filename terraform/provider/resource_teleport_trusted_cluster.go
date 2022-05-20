@@ -221,15 +221,45 @@ func (r resourceTeleportTrustedCluster) Update(ctx context.Context, req tfsdk.Up
 		return
 	}
 
+	trustedClusterBefore, err := r.p.Client.GetTrustedCluster(ctx, name)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", err, "trusted_cluster"))
+		return
+	}
+
 	_, err = r.p.Client.UpsertTrustedCluster(ctx, trustedCluster)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating TrustedCluster", err, "trusted_cluster"))
 		return
 	}
 
-	trustedClusterI, err := r.p.Client.GetTrustedCluster(ctx, name)
+	var trustedClusterI apitypes.TrustedCluster
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		trustedClusterI, err = r.p.Client.GetTrustedCluster(ctx, name)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", err, "trusted_cluster"))
+			return
+		}
+		if trustedClusterBefore.GetMetadata().ID != trustedClusterI.GetMetadata().ID {
+			break
+		}
+
+		if bErr := backoff.Do(ctx); bErr != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading TrustedCluster (tried %d times)", tries)
+			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "trusted_cluster"))
+			return
+		}
+	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", err, "trusted_cluster"))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))	
 		return
 	}
 

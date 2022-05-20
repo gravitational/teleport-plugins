@@ -223,15 +223,45 @@ func (r resourceTeleportRole) Update(ctx context.Context, req tfsdk.UpdateResour
 		return
 	}
 
+	roleBefore, err := r.p.Client.GetRole(ctx, name)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", err, "role"))
+		return
+	}
+
 	err = r.p.Client.UpsertRole(ctx, role)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating Role", err, "role"))
 		return
 	}
 
-	roleI, err := r.p.Client.GetRole(ctx, name)
+	var roleI apitypes.Role
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		roleI, err = r.p.Client.GetRole(ctx, name)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", err, "role"))
+			return
+		}
+		if roleBefore.GetMetadata().ID != roleI.GetMetadata().ID {
+			break
+		}
+
+		if bErr := backoff.Do(ctx); bErr != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading Role (tried %d times)", tries)
+			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "role"))
+			return
+		}
+	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", err, "role"))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))	
 		return
 	}
 

@@ -221,15 +221,45 @@ func (r resourceTeleportApp) Update(ctx context.Context, req tfsdk.UpdateResourc
 		return
 	}
 
+	appBefore, err := r.p.Client.GetApp(ctx, name)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", err, "app"))
+		return
+	}
+
 	err = r.p.Client.UpdateApp(ctx, app)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating App", err, "app"))
 		return
 	}
 
-	appI, err := r.p.Client.GetApp(ctx, name)
+	var appI apitypes.Application
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		appI, err = r.p.Client.GetApp(ctx, name)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", err, "app"))
+			return
+		}
+		if appBefore.GetMetadata().ID != appI.GetMetadata().ID {
+			break
+		}
+
+		if bErr := backoff.Do(ctx); bErr != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(err), "app"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading App (tried %d times)", tries)
+			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "app"))
+			return
+		}
+	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", err, "app"))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(err), "app"))	
 		return
 	}
 

@@ -221,15 +221,45 @@ func (r resourceTeleportSAMLConnector) Update(ctx context.Context, req tfsdk.Upd
 		return
 	}
 
+	samlConnectorBefore, err := r.p.Client.GetSAMLConnector(ctx, name, true)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", err, "saml"))
+		return
+	}
+
 	err = r.p.Client.UpsertSAMLConnector(ctx, samlConnector)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SAMLConnector", err, "saml"))
 		return
 	}
 
-	samlConnectorI, err := r.p.Client.GetSAMLConnector(ctx, name, true)
+	var samlConnectorI apitypes.SAMLConnector
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		samlConnectorI, err = r.p.Client.GetSAMLConnector(ctx, name, true)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", err, "saml"))
+			return
+		}
+		if samlConnectorBefore.GetMetadata().ID != samlConnectorI.GetMetadata().ID {
+			break
+		}
+
+		if bErr := backoff.Do(ctx); bErr != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading SAMLConnector (tried %d times)", tries)
+			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "saml"))
+			return
+		}
+	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", err, "saml"))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))	
 		return
 	}
 
