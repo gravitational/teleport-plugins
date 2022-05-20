@@ -17,6 +17,8 @@ limitations under the License.
 package test
 
 import (
+	"time"
+
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -84,6 +86,15 @@ func (s *TerraformSuite) TestImportApp() {
 
 	err = s.client.CreateApp(s.Context(), app)
 	require.NoError(s.T(), err)
+
+	require.Eventually(s.T(), func() bool {
+		_, err := s.client.GetApp(s.Context(), app.GetName())
+		if trace.IsNotFound(err) {
+			return false
+		}
+		require.NoError(s.T(), err)
+		return true
+	}, 5*time.Second, time.Second)
 
 	resource.Test(s.T(), resource.TestCase{
 		ProtoV6ProviderFactories: s.terraformProviders,

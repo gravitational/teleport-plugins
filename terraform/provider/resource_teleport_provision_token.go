@@ -255,23 +255,19 @@ func (r resourceTeleportProvisionToken) Update(ctx context.Context, req tfsdk.Up
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", err, "token"))
 			return
 		}
-		if provisionTokenBefore.GetMetadata().ID != provisionTokenI.GetMetadata().ID {
+		if provisionTokenBefore.GetMetadata().ID != provisionTokenI.GetMetadata().ID || false {
 			break
 		}
 
-		if bErr := backoff.Do(ctx); bErr != nil {
+		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading ProvisionToken (tried %d times)", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "token"))
+			resp.Diagnostics.AddError(diagMessage, "token")
 			return
 		}
-	}
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))	
-		return
 	}
 
 	provisionToken = provisionTokenI.(*apitypes.ProvisionTokenV2)

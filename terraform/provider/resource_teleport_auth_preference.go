@@ -80,6 +80,12 @@ func (r resourceTeleportAuthPreference) Create(ctx context.Context, req tfsdk.Cr
 
 	
 
+	authPreferenceBefore, err := r.p.Client.GetAuthPreference(ctx)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
+		return
+	}
+
 	err = r.p.Client.SetAuthPreference(ctx, authPreference)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
@@ -93,19 +99,22 @@ func (r resourceTeleportAuthPreference) Create(ctx context.Context, req tfsdk.Cr
 	for {
 		tries = tries + 1
 		authPreferenceI, err = r.p.Client.GetAuthPreference(ctx)
-		if trace.IsNotFound(err) {
-			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
-				return
-			}
-			if tries >= r.p.RetryConfig.MaxTries {
-				diagMessage := fmt.Sprintf("Error reading AuthPreference (tried %d times)", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "cluster_auth_preference"))
-				return
-			}
-			continue
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
+			return
 		}
-		break
+		if authPreferenceBefore.GetMetadata().ID != authPreferenceI.GetMetadata().ID || false {
+			break
+		}
+		if bErr := backoff.Do(ctx); bErr != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading AuthPreference (tried %d times)", tries)
+			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "cluster_auth_preference"))
+			return
+		}
 	}
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
@@ -211,10 +220,10 @@ func (r resourceTeleportAuthPreference) Update(ctx context.Context, req tfsdk.Up
 		tries = tries + 1
 		authPreferenceI, err = r.p.Client.GetAuthPreference(ctx)
 		if err != nil {
-			resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
 			return
 		}
-		if authPreferenceBefore.GetMetadata().ID != authPreferenceI.GetMetadata().ID {
+		if authPreferenceBefore.GetMetadata().ID != authPreferenceI.GetMetadata().ID || false {
 			break
 		}
 		if bErr := backoff.Do(ctx); bErr != nil {
@@ -223,7 +232,7 @@ func (r resourceTeleportAuthPreference) Update(ctx context.Context, req tfsdk.Up
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading AuthPreference (tried %d times)", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "cluster_auth_preference"))
+			resp.Diagnostics.AddError(diagMessage, "cluster_auth_preference")
 			return
 		}
 	}

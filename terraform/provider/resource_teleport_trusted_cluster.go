@@ -244,23 +244,19 @@ func (r resourceTeleportTrustedCluster) Update(ctx context.Context, req tfsdk.Up
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", err, "trusted_cluster"))
 			return
 		}
-		if trustedClusterBefore.GetMetadata().ID != trustedClusterI.GetMetadata().ID {
+		if trustedClusterBefore.GetMetadata().ID != trustedClusterI.GetMetadata().ID || false {
 			break
 		}
 
-		if bErr := backoff.Do(ctx); bErr != nil {
+		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading TrustedCluster (tried %d times)", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "trusted_cluster"))
+			resp.Diagnostics.AddError(diagMessage, "trusted_cluster")
 			return
 		}
-	}
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))	
-		return
 	}
 
 	trustedCluster = trustedClusterI.(*apitypes.TrustedClusterV2)

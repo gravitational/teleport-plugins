@@ -80,6 +80,12 @@ func (r resourceTeleportSessionRecordingConfig) Create(ctx context.Context, req 
 
 	
 
+	sessionRecordingConfigBefore, err := r.p.Client.GetSessionRecordingConfig(ctx)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
+		return
+	}
+
 	err = r.p.Client.SetSessionRecordingConfig(ctx, sessionRecordingConfig)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
@@ -93,19 +99,22 @@ func (r resourceTeleportSessionRecordingConfig) Create(ctx context.Context, req 
 	for {
 		tries = tries + 1
 		sessionRecordingConfigI, err = r.p.Client.GetSessionRecordingConfig(ctx)
-		if trace.IsNotFound(err) {
-			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
-				return
-			}
-			if tries >= r.p.RetryConfig.MaxTries {
-				diagMessage := fmt.Sprintf("Error reading SessionRecordingConfig (tried %d times)", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "session_recording_config"))
-				return
-			}
-			continue
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
+			return
 		}
-		break
+		if sessionRecordingConfigBefore.GetMetadata().ID != sessionRecordingConfigI.GetMetadata().ID || false {
+			break
+		}
+		if bErr := backoff.Do(ctx); bErr != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading SessionRecordingConfig (tried %d times)", tries)
+			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "session_recording_config"))
+			return
+		}
 	}
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
@@ -211,10 +220,10 @@ func (r resourceTeleportSessionRecordingConfig) Update(ctx context.Context, req 
 		tries = tries + 1
 		sessionRecordingConfigI, err = r.p.Client.GetSessionRecordingConfig(ctx)
 		if err != nil {
-			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
 			return
 		}
-		if sessionRecordingConfigBefore.GetMetadata().ID != sessionRecordingConfigI.GetMetadata().ID {
+		if sessionRecordingConfigBefore.GetMetadata().ID != sessionRecordingConfigI.GetMetadata().ID || false {
 			break
 		}
 		if bErr := backoff.Do(ctx); bErr != nil {
@@ -223,7 +232,7 @@ func (r resourceTeleportSessionRecordingConfig) Update(ctx context.Context, req 
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading SessionRecordingConfig (tried %d times)", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "session_recording_config"))
+			resp.Diagnostics.AddError(diagMessage, "session_recording_config")
 			return
 		}
 	}

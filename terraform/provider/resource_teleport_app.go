@@ -244,23 +244,19 @@ func (r resourceTeleportApp) Update(ctx context.Context, req tfsdk.UpdateResourc
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", err, "app"))
 			return
 		}
-		if appBefore.GetMetadata().ID != appI.GetMetadata().ID {
+		if appBefore.GetMetadata().ID != appI.GetMetadata().ID || false {
 			break
 		}
 
-		if bErr := backoff.Do(ctx); bErr != nil {
+		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(err), "app"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading App (tried %d times)", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "app"))
+			resp.Diagnostics.AddError(diagMessage, "app")
 			return
 		}
-	}
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(err), "app"))	
-		return
 	}
 
 	app = appI.(*apitypes.AppV3)

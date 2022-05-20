@@ -244,23 +244,19 @@ func (r resourceTeleportOIDCConnector) Update(ctx context.Context, req tfsdk.Upd
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", err, "oidc"))
 			return
 		}
-		if oidcConnectorBefore.GetMetadata().ID != oidcConnectorI.GetMetadata().ID {
+		if oidcConnectorBefore.GetMetadata().ID != oidcConnectorI.GetMetadata().ID || true {
 			break
 		}
 
-		if bErr := backoff.Do(ctx); bErr != nil {
+		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(err), "oidc"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading OIDCConnector (tried %d times)", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "oidc"))
+			resp.Diagnostics.AddError(diagMessage, "oidc")
 			return
 		}
-	}
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(err), "oidc"))	
-		return
 	}
 
 	oidcConnector = oidcConnectorI.(*apitypes.OIDCConnectorV3)

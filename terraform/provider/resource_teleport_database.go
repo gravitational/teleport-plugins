@@ -244,23 +244,19 @@ func (r resourceTeleportDatabase) Update(ctx context.Context, req tfsdk.UpdateRe
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", err, "db"))
 			return
 		}
-		if databaseBefore.GetMetadata().ID != databaseI.GetMetadata().ID {
+		if databaseBefore.GetMetadata().ID != databaseI.GetMetadata().ID || false {
 			break
 		}
 
-		if bErr := backoff.Do(ctx); bErr != nil {
+		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading Database (tried %d times)", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "db"))
+			resp.Diagnostics.AddError(diagMessage, "db")
 			return
 		}
-	}
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))	
-		return
 	}
 
 	database = databaseI.(*apitypes.DatabaseV3)

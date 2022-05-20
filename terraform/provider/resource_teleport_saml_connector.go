@@ -244,23 +244,19 @@ func (r resourceTeleportSAMLConnector) Update(ctx context.Context, req tfsdk.Upd
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", err, "saml"))
 			return
 		}
-		if samlConnectorBefore.GetMetadata().ID != samlConnectorI.GetMetadata().ID {
+		if samlConnectorBefore.GetMetadata().ID != samlConnectorI.GetMetadata().ID || true {
 			break
 		}
 
-		if bErr := backoff.Do(ctx); bErr != nil {
+		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading SAMLConnector (tried %d times)", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "saml"))
+			resp.Diagnostics.AddError(diagMessage, "saml")
 			return
 		}
-	}
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))	
-		return
 	}
 
 	samlConnector = samlConnectorI.(*apitypes.SAMLConnectorV2)

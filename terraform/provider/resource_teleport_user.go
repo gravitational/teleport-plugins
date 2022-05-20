@@ -244,23 +244,19 @@ func (r resourceTeleportUser) Update(ctx context.Context, req tfsdk.UpdateResour
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", err, "user"))
 			return
 		}
-		if userBefore.GetMetadata().ID != userI.GetMetadata().ID {
+		if userBefore.GetMetadata().ID != userI.GetMetadata().ID || false {
 			break
 		}
 
-		if bErr := backoff.Do(ctx); bErr != nil {
+		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading User (tried %d times)", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "user"))
+			resp.Diagnostics.AddError(diagMessage, "user")
 			return
 		}
-	}
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))	
-		return
 	}
 
 	user = userI.(*apitypes.UserV2)

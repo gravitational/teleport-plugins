@@ -244,23 +244,19 @@ func (r resourceTeleportGithubConnector) Update(ctx context.Context, req tfsdk.U
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", err, "github"))
 			return
 		}
-		if githubConnectorBefore.GetMetadata().ID != githubConnectorI.GetMetadata().ID {
+		if githubConnectorBefore.GetMetadata().ID != githubConnectorI.GetMetadata().ID || true {
 			break
 		}
 
-		if bErr := backoff.Do(ctx); bErr != nil {
+		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading GithubConnector (tried %d times)", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "github"))
+			resp.Diagnostics.AddError(diagMessage, "github")
 			return
 		}
-	}
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))	
-		return
 	}
 
 	githubConnector = githubConnectorI.(*apitypes.GithubConnectorV3)

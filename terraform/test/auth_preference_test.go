@@ -17,6 +17,8 @@ limitations under the License.
 package test
 
 import (
+	"time"
+
 	"github.com/gravitational/teleport/api/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -71,8 +73,18 @@ func (s *TerraformSuite) TestImportAuthPreference() {
 	err := authPreference.CheckAndSetDefaults()
 	require.NoError(s.T(), err)
 
+	authPreferencesBefore, err := s.client.GetAuthPreference(s.Context())
+	require.NoError(s.T(), err)
+
 	err = s.client.SetAuthPreference(s.Context(), authPreference)
 	require.NoError(s.T(), err)
+
+	require.Eventually(s.T(), func() bool {
+		authPreferencesCurrent, err := s.client.GetAuthPreference(s.Context())
+		require.NoError(s.T(), err)
+
+		return authPreferencesBefore.GetMetadata().ID != authPreferencesCurrent.GetMetadata().ID
+	}, 5*time.Second, time.Second)
 
 	resource.Test(s.T(), resource.TestCase{
 		ProtoV6ProviderFactories: s.terraformProviders,
@@ -89,6 +101,41 @@ func (s *TerraformSuite) TestImportAuthPreference() {
 					return nil
 				},
 			},
+		},
+	})
+}
+
+func (s *TerraformSuiteWithCache) TestAuthPreferenceAddLabel() {
+	name := "teleport_auth_preference.cluster_auth_preference"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories:  s.terraformProviders,
+		PreventPostDestroyRefresh: true,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("auth_preference_0_cluster.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "cluster_auth_preference"),
+					resource.TestCheckNoResourceAttr(name, "metadata.labels"),
+					resource.TestCheckResourceAttr(name, "spec.type", "oidc"),
+				),
+			},
+			// {
+			// 	Config:   s.getFixture("auth_preference_0_cluster.tf"),
+			// 	PlanOnly: true,
+			// },
+			// {
+			// 	Config: s.getFixture("auth_preference_1_cluster.tf"),
+			// 	Check: resource.ComposeTestCheckFunc(
+			// 		resource.TestCheckResourceAttr(name, "kind", "cluster_auth_preference"),
+			// 		resource.TestCheckResourceAttr(name, "metadata.labels.provisioner", "terraform"),
+			// 		resource.TestCheckResourceAttr(name, "spec.type", "oidc"),
+			// 	),
+			// },
+			// {
+			// 	Config:   s.getFixture("auth_preference_1_cluster.tf"),
+			// 	PlanOnly: true,
+			// },
 		},
 	})
 }

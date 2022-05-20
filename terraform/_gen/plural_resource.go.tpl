@@ -263,23 +263,19 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", err, "{{.Kind}}"))
 			return
 		}
-		if {{.VarName}}Before.GetMetadata().ID != {{.VarName}}I.GetMetadata().ID {
+		if {{.VarName}}Before.GetMetadata().ID != {{.VarName}}I.GetMetadata().ID || {{.StaticID}} {
 			break
 		}
 
-		if bErr := backoff.Do(ctx); bErr != nil {
+		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading {{.Name}} (tried %d times)", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "{{.Kind}}"))
+			resp.Diagnostics.AddError(diagMessage, "{{.Kind}}")
 			return
 		}
-	}
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))	
-		return
 	}
 
 	{{.VarName}} = {{.VarName}}I.(*apitypes.{{.TypeName}})

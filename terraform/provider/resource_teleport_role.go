@@ -246,23 +246,19 @@ func (r resourceTeleportRole) Update(ctx context.Context, req tfsdk.UpdateResour
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", err, "role"))
 			return
 		}
-		if roleBefore.GetMetadata().ID != roleI.GetMetadata().ID {
+		if roleBefore.GetMetadata().ID != roleI.GetMetadata().ID || false {
 			break
 		}
 
-		if bErr := backoff.Do(ctx); bErr != nil {
+		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading Role (tried %d times)", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "role"))
+			resp.Diagnostics.AddError(diagMessage, "role")
 			return
 		}
-	}
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))	
-		return
 	}
 
 	role = roleI.(*apitypes.RoleV5)
