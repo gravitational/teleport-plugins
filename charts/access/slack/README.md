@@ -68,14 +68,14 @@ kubectl create secret generic teleport-plugin-slack-identity --from-file=auth_id
 ### Installing the plugin
 
 ```
-helm repo add teleport https://charts.teleport.sh/
+helm repo add teleport https://charts.releases.teleport.dev/
 ```
 
 ```shell
 helm install teleport-plugin-slack teleport/teleport-plugin-slack --values teleport-plugin-slack-values.yaml
 ```
 
-Example `teleport-plugin-slack-values.yaml` for using MailGun:
+Example `teleport-plugin-slack-values.yaml`:
 
 ```yaml
 teleport:
