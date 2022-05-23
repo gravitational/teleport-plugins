@@ -1,4 +1,4 @@
-# Default values for email.
+# Default values for event-handler.
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
@@ -23,7 +23,7 @@ fluentd:
 # Deployment
 #
 image:
-  repository: 146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/teleport-plugin-email
+  repository: quay.io/gravitational/teleport-plugin-event-handler
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""

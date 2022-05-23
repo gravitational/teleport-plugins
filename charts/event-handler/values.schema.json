@@ -23,7 +23,7 @@
             "default": {},
             "examples": [
                 {
-                    "repository": "quay.io/gravitational/teleport-plugin-email",
+                    "repository": "quay.io/gravitational/teleport-plugin-event-handler",
                     "pullPolicy": "IfNotPresent",
                     "tag": ""
                 }
@@ -37,9 +37,9 @@
                 "repository": {
                     "$id": "#/properties/image/properties/repository",
                     "type": "string",
-                    "default": "quay.io/gravitational/teleport-plugin-email",
+                    "default": "quay.io/gravitational/teleport-plugin-event-handler",
                     "examples": [
-                        "quay.io/gravitational/teleport-plugin-email"
+                        "quay.io/gravitational/teleport-plugin-event-handler"
                     ]
                 },
                 "pullPolicy": {
@@ -267,7 +267,7 @@
             "examples": [
                 {
                     "address": "auth.example.com:3025",
-                    "identitySecretName": "teleport-plugin-email-auth-id",
+                    "identitySecretName": "teleport-plugin-event-handler-auth-id",
                     "identitySecretPath": "auth_id"
                 }
             ],
