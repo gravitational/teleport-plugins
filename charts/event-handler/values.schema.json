@@ -301,6 +301,56 @@
             },
             "additionalProperties": true
         },
+        "eventHandler": {
+            "$id": "#/properties/eventHandler",
+            "type": "object",
+            "default": {
+                "storagePath": "/var/lib/teleport/plugins/event-handler/storage",
+                "timeout": "10s",
+                "batch": 20,
+                "namespace": "default"
+            },
+            "examples": [
+                {
+                    "storagePath": "/var/lib/teleport/plugins/event-handler/storage",
+                    "timeout": "10s",
+                    "batch": 20,
+                    "namespace": "default"
+                }
+            ],
+            "required": [
+                "storagePath",
+                "timeout",
+                "namespace"
+            ],
+            "properties": {
+                "storagePath": {
+                    "$id": "#/properties/eventHandler/properties/storagePath",
+                    "type": "string",
+                    "default": "/var/lib/teleport/plugins/event-handler/storage",
+                    "examples": [
+                        "/var/lib/teleport/plugins/event-handler/storage",
+                        "/storage"
+                    ]
+                },
+                "timeout": {
+                    "$id": "#/properties/eventHandler/properties/timeout",
+                    "type": "string",
+                    "default": "10s"
+                },
+                "batch": {
+                    "$id": "#/properties/eventHandler/properties/batch",
+                    "type": "number",
+                    "default": 20
+                },
+                "namespace": {
+                    "$id": "#/properties/eventHandler/properties/namespace",
+                    "type": "string",
+                    "default": "default"
+                }
+            },
+            "additionalProperties": true
+        },
         "fluentd": {
             "$id": "#/properties/fluentd",
             "type": "object",
