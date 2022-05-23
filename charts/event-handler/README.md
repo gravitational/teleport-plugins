@@ -38,6 +38,35 @@ The following values can be set for the Helm chart:
   </tr>
 
   <tr>
+    <td><code>eventHandler.storagePath</code></td>
+    <td>Path to the directory where `event-handler`'s state is stored</td>
+    <td>string</td>
+    <td><code>"/var/lib/teleport/plugins/event-handler/storage"</code></td>
+    <td>no</td>
+  </tr>
+  <tr>
+    <td><code>eventHandler.timeout</code></td>
+    <td>Maximum time to wait for incoming events before sending them to fluentd.</td>
+    <td>string</td>
+    <td><code>"10s"</code></td>
+    <td>no</td>
+  </tr>
+  <tr>
+    <td><code>eventHandler.batch</code></td>
+    <td>Maximum number of events fetched from Teleport in one request</td>
+    <td>string</td>
+    <td><code>20</code></td>
+    <td>no</td>
+  </tr>
+  <tr>
+    <td><code>eventHandler.namespace</code></td>
+    <td>Namespace where the events </td>
+    <td>string</td>
+    <td><code>20</code></td>
+    <td>no</td>
+  </tr>
+
+  <tr>
     <td><code>fluentd.url</code></td>
     <td>URL of fluentd where the event logs will be sent to.</td>
     <td>string</td>
