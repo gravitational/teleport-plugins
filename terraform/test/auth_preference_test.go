@@ -120,22 +120,22 @@ func (s *TerraformSuiteWithCache) TestAuthPreferenceAddLabel() {
 					resource.TestCheckResourceAttr(name, "spec.type", "oidc"),
 				),
 			},
-			// {
-			// 	Config:   s.getFixture("auth_preference_0_cluster.tf"),
-			// 	PlanOnly: true,
-			// },
-			// {
-			// 	Config: s.getFixture("auth_preference_1_cluster.tf"),
-			// 	Check: resource.ComposeTestCheckFunc(
-			// 		resource.TestCheckResourceAttr(name, "kind", "cluster_auth_preference"),
-			// 		resource.TestCheckResourceAttr(name, "metadata.labels.provisioner", "terraform"),
-			// 		resource.TestCheckResourceAttr(name, "spec.type", "oidc"),
-			// 	),
-			// },
-			// {
-			// 	Config:   s.getFixture("auth_preference_1_cluster.tf"),
-			// 	PlanOnly: true,
-			// },
+			{
+				Config:   s.getFixture("auth_preference_0_cluster.tf"),
+				PlanOnly: true,
+			},
+			{
+				Config: s.getFixture("auth_preference_1_cluster.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "cluster_auth_preference"),
+					resource.TestCheckResourceAttr(name, "metadata.labels.provisioner", "terraform"),
+					resource.TestCheckResourceAttr(name, "spec.type", "oidc"),
+				),
+			},
+			{
+				Config:   s.getFixture("auth_preference_1_cluster.tf"),
+				PlanOnly: true,
+			},
 		},
 	})
 }
