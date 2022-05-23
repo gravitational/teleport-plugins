@@ -40,10 +40,10 @@ type payload struct {
 	Kind string
 	// DefaultVersion represents the default resource version on create
 	DefaultVersion string
-	// StaticID states whether this particular resource has a static (usually 0) Metadata.ID
+	// HasStaticID states whether this particular resource has a static (usually 0) Metadata.ID
 	// This is relevant to cache enabled clusters: we use Metadata.ID to check if the resource was updated
 	// Currently, the resources that don't have a dynamic Metadata.ID are strong consistent: oidc, github and saml connectors
-	StaticID bool
+	HasStaticID bool
 }
 
 const (
@@ -65,7 +65,7 @@ var (
 		DeleteMethod: "DeleteApp",
 		ID:           `app.Metadata.Name`,
 		Kind:         "app",
-		StaticID:     false,
+		HasStaticID:  false,
 	}
 
 	authPreference = payload{
@@ -78,7 +78,7 @@ var (
 		DeleteMethod: "ResetAuthPreference",
 		ID:           `"auth_preference"`,
 		Kind:         "cluster_auth_preference",
-		StaticID:     false,
+		HasStaticID:  false,
 	}
 
 	clusterNetworking = payload{
@@ -91,7 +91,7 @@ var (
 		DeleteMethod: "ResetClusterNetworkingConfig",
 		ID:           `"cluster_networking_config"`,
 		Kind:         "cluster_networking_config",
-		StaticID:     false,
+		HasStaticID:  false,
 	}
 
 	database = payload{
@@ -104,7 +104,7 @@ var (
 		DeleteMethod: "DeleteDatabase",
 		ID:           `database.Metadata.Name`,
 		Kind:         "db",
-		StaticID:     false,
+		HasStaticID:  false,
 	}
 
 	githubConnector = payload{
@@ -118,7 +118,7 @@ var (
 		WithSecrets:  "true",
 		ID:           "githubConnector.Metadata.Name",
 		Kind:         "github",
-		StaticID:     true,
+		HasStaticID:  true,
 	}
 
 	oidcConnector = payload{
@@ -132,7 +132,7 @@ var (
 		WithSecrets:  "true",
 		ID:           "oidcConnector.Metadata.Name",
 		Kind:         "oidc",
-		StaticID:     true,
+		HasStaticID:  true,
 	}
 
 	samlConnector = payload{
@@ -146,7 +146,7 @@ var (
 		WithSecrets:  "true",
 		ID:           "samlConnector.Metadata.Name",
 		Kind:         "saml",
-		StaticID:     true,
+		HasStaticID:  true,
 	}
 
 	provisionToken = payload{
@@ -160,7 +160,7 @@ var (
 		ID:                 "provisionToken.Metadata.Name",
 		RandomMetadataName: true,
 		Kind:               "token",
-		StaticID:           false,
+		HasStaticID:        false,
 	}
 
 	role = payload{
@@ -174,7 +174,7 @@ var (
 		ID:             "role.Metadata.Name",
 		Kind:           "role",
 		DefaultVersion: "v4", // TODO (Joerger)
-		StaticID:       false,
+		HasStaticID:    false,
 	}
 
 	sessionRecording = payload{
@@ -187,7 +187,7 @@ var (
 		DeleteMethod: "ResetSessionRecordingConfig",
 		ID:           `"session_recording_config"`,
 		Kind:         "session_recording_config",
-		StaticID:     false,
+		HasStaticID:  false,
 	}
 
 	trustedCluster = payload{
@@ -201,7 +201,7 @@ var (
 		UpsertMethodArity: 2,
 		ID:                "trustedCluster.Metadata.Name",
 		Kind:              "trusted_cluster",
-		StaticID:          false,
+		HasStaticID:       false,
 	}
 
 	user = payload{
@@ -216,7 +216,7 @@ var (
 		GetWithoutContext: true,
 		ID:                "user.Metadata.Name",
 		Kind:              "user",
-		StaticID:          false,
+		HasStaticID:       false,
 	}
 )
 
