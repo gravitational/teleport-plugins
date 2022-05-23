@@ -472,6 +472,33 @@
             },
             "additionalProperties": true
         },
+        "roleToRecipients": {
+            "$id": "#/properties/roleToRecipients",
+            "type": "object",
+            "default": {},
+            "examples": [
+                {
+                    "dev": [
+                        "devs-slack-channel"
+                    ],
+                    "*": [
+                        "admin@email.com",
+                        "admin-slack-channel"
+                    ]
+                }
+            ],
+            "additionalProperties": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "examples": [
+                        "example-slack-channel",
+                        "user@example.com"
+                    ]
+                },
+                "minItems": 1
+            }
+        },
         "log": {
             "$id": "#/properties/log",
             "type": "object",

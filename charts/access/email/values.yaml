@@ -77,6 +77,8 @@ delivery:
   sender: ""
   recipients: []
 
+roleToRecipients: {}
+
 log:
   output: stdout
   severity: INFO

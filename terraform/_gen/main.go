@@ -14,8 +14,10 @@ type payload struct {
 	Name string
 	// VarName represents resource variable name (underscored)
 	VarName string
-	// VarName represents api/types resource type name
+	// TypeName represents api/types resource type name
 	TypeName string
+	// IfaceName represents api/types interface for the (usually this is the same as Name)
+	IfaceName string
 	// GetMethod represents API get method name
 	GetMethod string
 	// CreateMethod represents API create method name
@@ -52,6 +54,7 @@ var (
 		Name:         "App",
 		TypeName:     "AppV3",
 		VarName:      "app",
+		IfaceName:    "Application",
 		GetMethod:    "GetApp",
 		CreateMethod: "CreateApp",
 		UpdateMethod: "UpdateApp",

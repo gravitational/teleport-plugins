@@ -24,7 +24,7 @@ steps:
       - make lint
 
   - name: Run tests
-    image: golang:1.17.9
+    image: golang:1.17.10
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
@@ -62,7 +62,7 @@ workspace:
 steps:
   - name: Install Go Toolchain
     environment:
-      GO_VERSION: go1.17.9
+      GO_VERSION: go1.17.10
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
       - set -u
@@ -119,7 +119,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.9
+    image: golang:1.17.10
     commands:
       - make build-all
 
@@ -155,7 +155,7 @@ workspace:
 steps:
   - name: Install Go Toolchain
     environment:
-      GO_VERSION: go1.17.9
+      GO_VERSION: go1.17.10
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
       - set -u
@@ -209,7 +209,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.9
+    image: golang:1.17.10
     commands:
       - mkdir -p build/
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
@@ -339,7 +339,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.9
+    image: golang:1.17.10
     commands:
       - mkdir -p build/
       - make release/terraform
@@ -421,7 +421,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.17.9
+    image: golang:1.17.10
     commands:
       - mkdir -p build/
       - make release/event-handler
@@ -768,7 +768,7 @@ concurrency:
 
 steps:
   - name: Upload terraform provider to staging registry
-    image: golang:1.17.9
+    image: golang:1.17.10
     commands:
       - cd tooling
       - |
@@ -823,7 +823,7 @@ concurrency:
 
 steps:
   - name: Upload terraform provider to staging registry
-    image: golang:1.17.9
+    image: golang:1.17.10
     commands:
       - cd tooling
       - |
@@ -878,7 +878,7 @@ concurrency:
 
 steps:
   - name: Promote terraform provider to public registry
-    image: golang:1.17.9
+    image: golang:1.17.10
     commands:
       - cd tooling
       - |
@@ -913,6 +913,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: 00f6ab1621124f81ccb6d4b60f2697851b2a7c11e7c2d5cadca9c234ff4da49c
+hmac: 6488c7a6f669d152212eab4775763e4945211ad797e9ddc12e590c4f84f702ed
 
 ...

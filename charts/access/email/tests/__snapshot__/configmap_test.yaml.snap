@@ -7,10 +7,11 @@ should match the snapshot (mailgun on):
         addr = "teleport.example.com:1234"
         identity = "/var/lib/teleport/plugins/email/auth_id"
 
-
         [mailgun]
         domain      = "mymailgunsubdomain.mailgun.org"
         private_key = "xoxb-71d75f662b0eac53565a38c8cc0316f6"
+
+
         [delivery]
         sender = ""
         recipients = []
@@ -24,8 +25,8 @@ should match the snapshot (mailgun on):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 9.2.1
-        helm.sh/chart: teleport-plugin-email-9.2.1
+        app.kubernetes.io/version: 9.2.4
+        helm.sh/chart: teleport-plugin-email-9.2.4
       name: RELEASE-NAME-teleport-plugin-email
 should match the snapshot (smtp on):
   1: |
@@ -36,14 +37,14 @@ should match the snapshot (smtp on):
         addr = "teleport.example.com:1234"
         identity = "/var/lib/teleport/plugins/email/auth_id"
 
-
         [smtp]
-        host          = "smtp.someservice.com"
+        host          = "smtp.example.com"
         port          = 1234
         username      = "mysmtpuser"
         password      = "mysmtppasswd"
 
         starttls_policy = "mandatory"
+
         [delivery]
         sender = "teleport@example.com"
         recipients = ["security@mycompany.com"]
@@ -57,8 +58,8 @@ should match the snapshot (smtp on):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 9.2.1
-        helm.sh/chart: teleport-plugin-email-9.2.1
+        app.kubernetes.io/version: 9.2.4
+        helm.sh/chart: teleport-plugin-email-9.2.4
       name: RELEASE-NAME-teleport-plugin-email
 should match the snapshot (smtp on, no starttls):
   1: |
@@ -69,14 +70,14 @@ should match the snapshot (smtp on, no starttls):
         addr = "teleport.example.com:1234"
         identity = "/var/lib/teleport/plugins/email/auth_id"
 
-
         [smtp]
-        host          = "smtp.someservice.com"
+        host          = "smtp.example.com"
         port          = 1234
         username      = "mysmtpuser"
         password_file = "/etc/teleport/supersecretemailpw"
 
         starttls_policy = "mandatory"
+
         [delivery]
         sender = ""
         recipients = []
@@ -90,8 +91,8 @@ should match the snapshot (smtp on, no starttls):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 9.2.1
-        helm.sh/chart: teleport-plugin-email-9.2.1
+        app.kubernetes.io/version: 9.2.4
+        helm.sh/chart: teleport-plugin-email-9.2.4
       name: RELEASE-NAME-teleport-plugin-email
 should match the snapshot (smtp on, password file):
   1: |
@@ -102,14 +103,14 @@ should match the snapshot (smtp on, password file):
         addr = "teleport.example.com:1234"
         identity = "/var/lib/teleport/plugins/email/auth_id"
 
-
         [smtp]
-        host          = "smtp.someservice.com"
+        host          = "smtp.example.com"
         port          = 1234
         username      = "mysmtpuser"
         password_file = "/etc/teleport/supersecretemailpw"
 
         starttls_policy = "mandatory"
+
         [delivery]
         sender = ""
         recipients = []
@@ -123,8 +124,44 @@ should match the snapshot (smtp on, password file):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 9.2.1
-        helm.sh/chart: teleport-plugin-email-9.2.1
+        app.kubernetes.io/version: 9.2.4
+        helm.sh/chart: teleport-plugin-email-9.2.4
+      name: RELEASE-NAME-teleport-plugin-email
+should match the snapshot (smtp on, roleToRecipients set):
+  1: |
+    apiVersion: v1
+    data:
+      teleport-email.toml: |
+        [teleport]
+        addr = "teleport.example.com:1234"
+        identity = "/var/lib/teleport/plugins/email/auth_id"
+
+        [smtp]
+        host          = "smtp.example.com"
+        port          = 1234
+        username      = "mysmtpuser"
+        password      = "mysmtppasswd"
+
+        starttls_policy = "mandatory"
+
+        [delivery]
+        sender = "teleport@example.com"
+
+        [role_to_recipients]
+        "*" = ["security@mycompany.com"]
+        "dev" = ["developers@mycompany.com"]
+
+        [log]
+        output = "/var/log/teleport-email.log"
+        severity = "DEBUG"
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: teleport-plugin-email
+        app.kubernetes.io/version: 9.2.4
+        helm.sh/chart: teleport-plugin-email-9.2.4
       name: RELEASE-NAME-teleport-plugin-email
 should match the snapshot (smtp on, starttls disabled):
   1: |
@@ -135,14 +172,14 @@ should match the snapshot (smtp on, starttls disabled):
         addr = "teleport.example.com:1234"
         identity = "/var/lib/teleport/plugins/email/auth_id"
 
-
         [smtp]
-        host          = "smtp.someservice.com"
+        host          = "smtp.example.com"
         port          = 1234
         username      = "mysmtpuser"
         password_file = "/etc/teleport/supersecretemailpw"
 
         starttls_policy = "disabled"
+
         [delivery]
         sender = ""
         recipients = []
@@ -156,6 +193,6 @@ should match the snapshot (smtp on, starttls disabled):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 9.2.1
-        helm.sh/chart: teleport-plugin-email-9.2.1
+        app.kubernetes.io/version: 9.2.4
+        helm.sh/chart: teleport-plugin-email-9.2.4
       name: RELEASE-NAME-teleport-plugin-email

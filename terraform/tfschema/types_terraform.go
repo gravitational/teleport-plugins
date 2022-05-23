@@ -1530,6 +1530,11 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
 						},
+						"max_kubernetes_connections": {
+							Description: "MaxKubernetesConnections defines the maximum number of concurrent Kubernetes sessions a user may hold.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
+						},
 						"max_session_ttl": {
 							Computed:      true,
 							Description:   "MaxSessionTTL defines how long a SSH session can last for.",
@@ -9266,6 +9271,23 @@ func CopyRoleV5FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 											}
 										}
 									}
+									{
+										a, ok := tf.Attrs["max_kubernetes_connections"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV5.Spec.Options.MaxKubernetesConnections"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV5.Spec.Options.MaxKubernetesConnections", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
+											} else {
+												var t int64
+												if !v.Null && !v.Unknown {
+													t = int64(v.Value)
+												}
+												obj.MaxKubernetesConnections = t
+											}
+										}
+									}
 								}
 							}
 						}
@@ -12398,6 +12420,28 @@ func CopyRoleV5ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												c.Unknown = false
 												tf.Attrs["cert_extensions"] = c
 											}
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["max_kubernetes_connections"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV5.Spec.Options.MaxKubernetesConnections"})
+										} else {
+											v, ok := tf.Attrs["max_kubernetes_connections"].(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV5.Spec.Options.MaxKubernetesConnections", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV5.Spec.Options.MaxKubernetesConnections", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
+												}
+												v.Null = int64(obj.MaxKubernetesConnections) == 0
+											}
+											v.Value = int64(obj.MaxKubernetesConnections)
+											v.Unknown = false
+											tf.Attrs["max_kubernetes_connections"] = v
 										}
 									}
 								}
