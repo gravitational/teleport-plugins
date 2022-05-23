@@ -2,8 +2,26 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# replicaCount: 1
+#
+# Plugin specific options
+#
+teleport:
+  address: ""
+  identitySecretName: ""
+  identitySecretPath: "auth_id"
 
+fluentd:
+  url: ""
+  sessionUrl: ""
+  certificate:
+    secretName: ""
+    caPath: "ca.crt"
+    certPath: "client.crt"
+    keyPath: "client.key"
+
+#
+# Deployment
+#
 image:
   repository: 146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/teleport-plugin-email
   pullPolicy: IfNotPresent
@@ -40,20 +58,3 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
-
-#
-# Plugin specific options
-#
-teleport:
-  address: ""
-  identitySecretName: ""
-  identitySecretPath: "auth_id"
-
-fluentd:
-  url: ""
-  sessionUrl: ""
-  certificate:
-    secretName: ""
-    caPath: "ca.crt"
-    certPath: "client.crt"
-    keyPath: "client.key"
