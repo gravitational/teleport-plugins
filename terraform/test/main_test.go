@@ -156,7 +156,7 @@ func (s *TerraformBaseSuite) SetupSuite() {
 	s.terraformConfig = `
 		provider "teleport" {
 			addr = "` + s.teleportConfig.Addr + `"
-			identity_file_path = "` + s.teleportConfig.Identity + `"
+			identity_file = file("` + s.teleportConfig.Identity + `")
 		}
 	`
 
