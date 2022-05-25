@@ -80,10 +80,6 @@ helm-package-charts:
 terraform:
 	make -C terraform
 
-.PHONY: test-terraform
-test-terraform:
-	make -C terraform test
-
 .PHONY: terraform-gen-tfschema
 terraform-gen-tfschema:
 	make -C terraform gen-tfschema
@@ -94,9 +90,9 @@ event-handler:
 
 # Run all tests
 .PHONY: test
-test: test-tooling test-terraform
+test: test-tooling
 	@echo Testing plugins against Teleport $(TELEPORT_GET_VERSION)
-	go test -race -count 1 $(shell go list ./... | grep -v "/terraform/")
+	go test -race -count 1 $(shell go list ./...)
 
 .PHONY: test-tooling
 test-tooling:
