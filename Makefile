@@ -96,7 +96,7 @@ event-handler:
 .PHONY: test
 test: test-tooling test-terraform
 	@echo Testing plugins against Teleport $(TELEPORT_GET_VERSION)
-	go test -race -count 1 $(shell go list ./... | grep -v '/terraform/')
+	go test -race -count 1 $(shell go list ./... | grep -v "/terraform/")
 
 .PHONY: test-tooling
 test-tooling:
