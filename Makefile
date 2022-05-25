@@ -73,6 +73,7 @@ helm-package-charts:
 	mkdir -p packages
 	helm package -d packages charts/access/email
 	helm package -d packages charts/access/slack
+	helm package -d packages charts/access/pagerduty
 
 .PHONY: terraform
 terraform:
@@ -199,6 +200,7 @@ test-helm-access-%:
 	helm unittest ./charts/access/$*
 
 .PHONY: test-helm
-test-helm: 
+test-helm:
 	$(MAKE) test-helm-access-email
 	$(MAKE) test-helm-access-slack
+	$(MAKE) test-helm-access-pagerduty
