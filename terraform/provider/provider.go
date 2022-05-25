@@ -86,6 +86,8 @@ type providerData struct {
 	RetryBaseDuration types.String `tfsdk:"retry_base_duration"`
 	// RetryCapDuration is used to setup the retry algorithm when the API returns 'not found'
 	RetryCapDuration types.String `tfsdk:"retry_cap_duration"`
+	// RetryMaxTries sets the max number of tries when retrying
+	RetryMaxTries types.String `tfsdk:"retry_max_tries"`
 }
 
 // New returns an empty provider struct
@@ -166,6 +168,12 @@ func (p *Provider) GetSchema(_ context.Context) (tfsdk.Schema, diag.Diagnostics)
 				Optional:    true,
 				Description: "Retry algorithm when the API returns 'not found': max duration between retries (https://pkg.go.dev/time#ParseDuration).",
 			},
+			"retry_max_tries": {
+				Type:        types.StringType,
+				Sensitive:   false,
+				Optional:    true,
+				Description: "Retry algorithm when the API returns 'not found': max tries.",
+			},
 		},
 	}, nil
 }
@@ -206,9 +214,9 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 	profileDir := p.stringFromConfigOrEnv(config.ProfileDir, "TF_TELEPORT_PROFILE_PATH", "")
 	identityFilePath := p.stringFromConfigOrEnv(config.IdentityFilePath, "TF_TELEPORT_IDENTITY_FILE_PATH", "")
 	identityFile := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_IDENTITY_FILE", "")
-	retryBaseDurationStr := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_RETRY_BASE_DURATION", "1s")
-	retryCapDurationStr := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_RETRY_CAP_DURATION", "5s")
-	maxTriesStr := p.stringFromConfigOrEnv(config.IdentityFile, "TF_TELEPORT_RETRY_MAX_TRIES", "10")
+	retryBaseDurationStr := p.stringFromConfigOrEnv(config.RetryBaseDuration, "TF_TELEPORT_RETRY_BASE_DURATION", "1s")
+	retryCapDurationStr := p.stringFromConfigOrEnv(config.RetryCapDuration, "TF_TELEPORT_RETRY_CAP_DURATION", "5s")
+	maxTriesStr := p.stringFromConfigOrEnv(config.RetryMaxTries, "TF_TELEPORT_RETRY_MAX_TRIES", "10")
 
 	if !p.validateAddr(addr, resp) {
 		return
