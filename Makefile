@@ -242,5 +242,4 @@ test-helm:
 	$(MAKE) test-helm-access-slack
 	$(MAKE) test-helm-access-pagerduty
 	$(MAKE) test-helm-access-mattermost
-	$(MAKE) test-helm-access-email
 	$(MAKE) test-helm-plugin-event-handler
