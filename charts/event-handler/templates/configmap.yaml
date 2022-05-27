@@ -6,10 +6,10 @@ metadata:
     {{- include "event-handler.labels" . | nindent 4 }}
 data:
   teleport-event-handler.toml: |
-    storage = {{ .values.eventHandler.storagePath | tojson }}
-    timeout = {{ .values.eventHandler.timeout | tojson }}
-    batch = {{ .values.eventHandler.batch }}
-    namespace = {{ .values.eventHandler.namespace }}
+    storage = {{ .Values.eventHandler.storagePath | toJson }}
+    timeout = {{ .Values.eventHandler.timeout | toJson }}
+    batch = {{ .Values.eventHandler.batch }}
+    namespace = {{ .Values.eventHandler.namespace | toJson }}
 
     [teleport]
     addr = "{{ .Values.teleport.address }}"
