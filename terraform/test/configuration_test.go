@@ -87,3 +87,27 @@ provider "teleport" {
 		},
 	})
 }
+
+func (s *TerraformSuite) TestConfigureIdentityFilePath() {
+	name := "teleport_app.test"
+
+	providerConfigUsingAuthFiles := `
+provider "teleport" {
+	addr = "` + s.teleportConfig.Addr + `"
+	identity_file_path = "` + s.teleportConfig.Identity + `"
+}
+	`
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixtureWithCustomConfig("app_0_create.tf", providerConfigUsingAuthFiles),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "app"),
+					resource.TestCheckResourceAttr(name, "spec.uri", "localhost:3000"),
+				),
+			},
+		},
+	})
+}
