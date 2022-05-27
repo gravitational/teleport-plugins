@@ -2,6 +2,114 @@
 
 This chart sets up and configures a Deployment for the Event Handler plugin.
 
+## Installation
+
+### Prerequisites
+
+First, you'll need to create a Teleport user and role for the plugin. The following file contains a minimal user that's needed for the plugin to work:
+
+```yaml
+---
+kind: role
+version: v5
+metadata:
+  name: teleport-plugin-event-handler
+spec:
+  allow:
+    logins:
+    - teleport-plugin-event-handler
+    rules:
+    - resources:
+      - access_request
+      verbs:
+      - list
+      - read
+      - update
+  options:
+    forward_agent: false
+    max_session_ttl: 8760h0m0s
+    port_forwarding: false
+---
+kind: user
+version: v2
+metadata:
+  name: teleport-plugin-event-handler
+spec:
+  roles:
+    - teleport-plugin-event-handler
+```
+
+You can either create the user and the roles by putting the YAML above into a file and issuing the following command  (you must be logged in with `tsh`):
+
+```
+tctl create user.yaml
+```
+
+or by navigating to the Teleport Web UI under `https://<yourserver>/web/users` and `https://<yourserver>/web/roles` respectively. You'll also need to create a password for the user by either clicking `Options/Reset password...` under `https://<yourserver>/web/users` on the UI or issuing `tctl users reset teleport-plugin-event-handler` in the command line.
+
+The next step is to create an identity file, which contains a private/public key pair and a certificate that'll identify us as the user above. To do this, log in with the newly created credentials and issue a new certificate (525600 and 8760 are both roughly a year in minutes and hours respectively):
+
+```
+tsh login --proxy=access-dev.teleportinfra.dev --auth local --user teleport-plugin-event-handler --ttl 525600
+```
+
+```
+tctl auth sign --user teleport-plugin-event-handler --ttl 8760h --out teleport-plugin-event-handler-identity
+```
+
+Alternatively, you can execute the command above on one of the `auth` instances/pods.
+
+The last step is to create the secret. The following command will create a Kubernetes secret with the name `teleport-plugin-event-handler-identity` with the key `auth_id` in it holding the contents of the file `teleport-plugin-event-handler-identity`:
+
+```
+kubectl create secret generic teleport-plugin-event-handler-identity --from-file=auth_id=teleport-plugin-event-handler-identity
+```
+
+### Mounting Fluentd client certificate
+
+See the [plugin's documentation](../../event-handler/README.md#mtls_advanced) about how to generate the certificates using fluentd's CA certificate and private key.
+
+Once the files `client.key` and `client.crt` were created successfully, the following command can be used to create a new secret (`ca.crt` is also included since we'll need it to verify we are connecting to the right fluentd):
+
+```
+kubectl create secret generic teleport-plugin-event-handler-client-tls --from-file="ca.crt=ca.crt,client.key=client.key,client.crt=client.crt"
+```
+
+### Installing the plugin
+
+```
+helm repo add teleport https://charts.releases.teleport.dev/
+```
+
+```shell
+helm install teleport-plugin-event-handler teleport/teleport-plugin-event-handler --values teleport-plugin-event-handler-values.yaml
+```
+
+Example `teleport-plugin-event-handler-values.yaml`:
+
+```yaml
+teleport:
+  address: teleport.example.com:443
+  identitySecretName: teleport-plugin-event-handler-identity
+
+eventHandler:
+  storagePath: "/var/lib/teleport/plugins/event-handler/storage"
+  timeout: "10s"
+  batch: 20
+  namespace: "default"
+
+fluentd:
+  url: ""
+  sessionUrl: ""
+  certificate:
+    secretName: "teleport-plugin-event-handler-client-tls"
+    caPath: "ca.crt"
+    certPath: "client.crt"
+    keyPath: "client.key"
+```
+
+See [Settings](#settings) for more details.
+
 ## Settings
 
 The following values can be set for the Helm chart:
