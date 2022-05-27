@@ -50,7 +50,7 @@ or by navigating to the Teleport Web UI under `https://<yourserver>/web/users` a
 The next step is to create an identity file, which contains a private/public key pair and a certificate that'll identify us as the user above. To do this, log in with the newly created credentials and issue a new certificate (525600 and 8760 are both roughly a year in minutes and hours respectively):
 
 ```
-tsh login --proxy=access-dev.teleportinfra.dev --auth local --user teleport-plugin-event-handler --ttl 525600
+tsh login --proxy=proxy.example.com --auth local --user teleport-plugin-event-handler --ttl 525600
 ```
 
 ```
@@ -168,7 +168,7 @@ The following values can be set for the Helm chart:
   </tr>
   <tr>
     <td><code>eventHandler.namespace</code></td>
-    <td>Namespace where the events </td>
+    <td>Namespace where the events are received from</td>
     <td>string</td>
     <td><code>20</code></td>
     <td>no</td>
