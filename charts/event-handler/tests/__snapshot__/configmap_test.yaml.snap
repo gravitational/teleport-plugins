@@ -3,7 +3,7 @@ should match the snapshot:
     apiVersion: v1
     data:
       teleport-event-handler.toml: |
-        storage = "./storage"
+        storage = "/var/lib/teleport/plugins/event-handler/storage"
         timeout = "10s"
         batch = 20
         namespace = "default"
