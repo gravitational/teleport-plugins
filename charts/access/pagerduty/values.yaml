@@ -2,8 +2,25 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# replicaCount: 1
+#
+# Plugin specific options
+#
+teleport:
+  address: ""
+  identitySecretName: ""
+  identitySecretPath: "auth_id"
 
+pagerduty:
+  apiKey: ""
+  userEmail: ""
+
+log:
+  output: stdout
+  severity: INFO
+
+#
+# Deployment
+#
 image:
   repository: quay.io/gravitational/teleport-plugin-pagerduty
   pullPolicy: IfNotPresent
@@ -40,19 +57,3 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
-
-#
-# Plugin specific options
-#
-teleport:
-  address: ""
-  identitySecretName: ""
-  identitySecretPath: "auth_id"
-
-pagerduty:
-  apiKey: ""
-  userEmail: ""
-
-log:
-  output: stdout
-  severity: INFO
