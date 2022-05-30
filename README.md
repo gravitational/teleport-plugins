@@ -73,3 +73,9 @@ The [Teleport Event Handler Plugin](./event-handler) is used to export audit log
 
 The [Teleport Terraform Provider](./terraform) makes it easy to create resources using
 Terraform. More info can be found in [terraform/README.md](./terraform/README.md).
+
+
+## Kubernetes Operator
+
+The [Teleport Operator](./kubernetes/) is a Kubernetes Operator that manages the Teleport state from the Kubernetes tooling.
+You can find more in the project's [README](./kubernetes/README.md).

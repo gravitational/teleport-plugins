@@ -31,4 +31,4 @@ run:
   skip-dirs:
     - pkg/mod
   skip-dirs-use-default: false
-  timeout: 8m
+  timeout: 10m

@@ -17,8 +17,10 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -31,9 +33,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/backoff"
+	"github.com/gravitational/teleport/api/client"
+	"github.com/jonboulle/clockwork"
+
 	resourcesv2 "github.com/gravitational/teleport-plugins/kubernetes/apis/resources/v2"
 	resourcesv5 "github.com/gravitational/teleport-plugins/kubernetes/apis/resources/v5"
 	resourcescontrollers "github.com/gravitational/teleport-plugins/kubernetes/controllers/resources"
+	"github.com/gravitational/teleport-plugins/kubernetes/sidecar"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -51,12 +59,15 @@ func init() {
 }
 
 func main() {
+	ctx := context.Background()
+
+	var err error
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
+	flag.BoolVar(&enableLeaderElection, "leader-elect", true,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	opts := zap.Options{
@@ -80,16 +91,40 @@ func main() {
 		os.Exit(1)
 	}
 
+	var teleportClient *client.Client
+
+	backoff := backoff.NewDecorr(time.Millisecond, time.Second, clockwork.NewRealClock())
+	for {
+		teleportClient, err = sidecar.NewSidecarClient(ctx, sidecar.Options{})
+		if err == nil {
+			break
+		}
+		setupLog.Error(err, "failed to connect to teleport cluster, backing off")
+
+		err = backoff.Do(ctx)
+		if lib.IsCanceled(err) {
+			setupLog.Error(err, "deadline exceeded waiting for teleport cluster")
+			os.Exit(1)
+		}
+		if err != nil {
+			setupLog.Error(err, "backoff failed")
+			os.Exit(1)
+		}
+	}
+	setupLog.Info("connected to Teleport")
+
 	if err = (&resourcescontrollers.RoleReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		TeleportClient: teleportClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Role")
 		os.Exit(1)
 	}
 	if err = (&resourcescontrollers.UserReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:         mgr.GetClient(),
+		Scheme:         mgr.GetScheme(),
+		TeleportClient: teleportClient,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "User")
 		os.Exit(1)
