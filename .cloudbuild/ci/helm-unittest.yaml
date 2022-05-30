@@ -9,4 +9,5 @@ steps:
         helm unittest ./charts/access/email &&
         helm unittest ./charts/access/slack &&
         helm unittest ./charts/access/pagerduty &&
-        helm unittest ./charts/access/mattermost
+        helm unittest ./charts/access/mattermost &&
+        helm unittest ./charts/event-handler
