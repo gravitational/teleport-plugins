@@ -101,6 +101,13 @@ func (s *TerraformSuite) TestImportSAMLConnector() {
 </md:IDPSSODescriptor>
 </md:EntityDescriptor>				
 `,
+			AttributesToRoles: []types.AttributeMapping{
+				{
+					Name:  "map attrx to rolex",
+					Value: "attrx",
+					Roles: []string{"rolex"},
+				},
+			},
 		},
 	}
 
