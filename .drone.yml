@@ -913,6 +913,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: 0d01d8c0f36e182a3283cd9895778af4ab17a807675bae882c108ee3ae8223b3
+hmac: 69cdedbe45ce23448c039e7f6c1ad12846f75f96fa2fbbef4529cedebfa68957
 
 ...
