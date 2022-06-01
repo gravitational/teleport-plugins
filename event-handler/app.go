@@ -322,10 +322,6 @@ func (a *App) CallWASMPlugin(ctx context.Context, evt *TeleportEvent) (*Sanitize
 			return nil, trace.Wrap(err)
 		}
 
-		if response.Success == false {
-			return nil, trace.Errorf(response.Error)
-		}
-
 		if response.Event == nil {
 			return nil, nil
 		}
