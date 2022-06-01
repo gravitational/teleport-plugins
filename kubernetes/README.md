@@ -79,9 +79,9 @@ The first two steps above may change the object's state in K8S. If they do, we u
 You can use `minikube` if you don't have a cluster yet.
 
 #### Operator's docker image
-You can obtain the docker image by building it yourself
+You can obtain the docker image by building it yourself.
 
-We're planning to upload the image to quay.io, but for now you have to build it yourself with the following command: `make docker-build-kubernetes`
+We're planning to upload the image to quay.io, but for now you have to build it yourself with the following command: `make docker-build-kubernetes`.
 
 This creates a `teleport-operator:latest` image that we'll be using later on to setup de Operator.
 
@@ -101,16 +101,16 @@ Start `minikube` with `minikube start`.
 In order to build the Operator's image, we must use the docker daemon from the `minikube`:
 `eval $(minikube docker-env --shell bash)`.
 
-Change to the Project's root directory (`teleport-plguins`) and build the docker image:
+Change to the Project's root directory (`teleport-plugins`) and build the docker image:
 `make docker-build-kubernetes`.
 
 Meanwhile (or right after) we need to install the CRDs into the cluster.
 
-You can do so by issuing `make kubernetes-install`
+You can do so by issuing `make kubernetes-install`.
 
 You are now ready to install the Teleport Cluster with the Teleport Operator:
 
-Before executing, set the `TELEPORT_PROJECT` to the full path to your teleport's project checked out at `marco/plugins-teleport-operator-charts`
+Before executing, set the `TELEPORT_PROJECT` to the full path to your teleport's project checked out at `marco/plugins-teleport-operator-charts`:
 ```bash
 $ helm upgrade --install --create-namespace -n teleport-cluster \
 	--set clusterName=teleport-cluster.teleport-cluster.svc.cluster.local \
@@ -119,12 +119,12 @@ $ helm upgrade --install --create-namespace -n teleport-cluster \
 	--set operator=true \
 	teleport-cluster ${TELEPORT_PROJECT}/examples/chart/teleport-cluster
 
-$ kubectl config set-context --current --namespace ${NAMESPACE?}
+$ kubectl config set-context --current --namespace teleport-cluster
 
 ```
 
 Now let's wait for the deployment to finish:
-`kubectl wait --for=condition=available deployment/${CLUSTER_SHORT} --timeout=2m`
+`kubectl wait --for=condition=available deployment/teleport-cluster --timeout=2m`
 
 If it doesn't, check the errors.
 
@@ -141,9 +141,9 @@ TP_CLUSTER_IP=$(kubectl get service teleport-cluster -o jsonpath='{ .status.load
 echo "https://${TP_CLUSTER_IP}/web/invite/<id>"
 ```
 
-As for the K8S UI, you only need to run `minikube dashboard`
+As for the K8S UI, you only need to run `minikube dashboard`.
 
-After this, you should be able to manage users and roles using, for example, `kubectl`
+After this, you should be able to manage users and roles using, for example, `kubectl`.
 
 As an example, create the following file (`roles.yaml`) and then apply it:
 ```yaml
@@ -162,4 +162,4 @@ spec:
 
 `$ kubcetl apply -f roles.yaml`
 
-And now check if the role was created in Teleport and K8S (`teleport-cluster` namespace)
+And now check if the role was created in Teleport and K8S (`teleport-cluster` namespace).
