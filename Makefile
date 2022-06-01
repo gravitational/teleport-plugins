@@ -95,9 +95,9 @@ docker-build-kubernetes:
 .PHONY: kubernetes-install
 kubernetes-install:
 	$(MAKE) -C kubernetes install
-	
+
 .PHONY: test-kubernetes
-kubernetes-test:
+test-kubernetes:
 	$(MAKE) -C kubernetes test
 
 .PHONY: event-handler
