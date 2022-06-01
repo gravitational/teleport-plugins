@@ -41,7 +41,7 @@ spec:
 
 You can either create the user and the roles by putting the YAML above into a file and issuing the following command  (you must be logged in with `tsh`):
 
-```
+```console
 tctl create user.yaml
 ```
 
@@ -49,11 +49,11 @@ or by navigating to the Teleport Web UI under `https://<yourserver>/web/users` a
 
 The next step is to create an identity file, which contains a private/public key pair and a certificate that'll identify us as the user above. To do this, log in with the newly created credentials and issue a new certificate (525600 and 8760 are both roughly a year in minutes and hours respectively):
 
-```
+```console
 tsh login --proxy proxy.example.com --auth local --user teleport-plugin-mattermost --ttl 525600
 ```
 
-```
+```console
 tctl auth sign --user teleport-plugin-mattermost --ttl 8760h --out teleport-plugin-mattermost-identity
 ```
 
@@ -61,17 +61,17 @@ Alternatively, you can execute the command above on one of the `auth` instances/
 
 The last step is to create the secret. The following command will create a Kubernetes secret with the name `teleport-plugin-mattermost-identity` with the key `auth_id` in it holding the contents of the file `teleport-plugin-mattermost-identity`:
 
-```
+```console
 kubectl create secret generic teleport-plugin-mattermost-identity --from-file=auth_id=teleport-plugin-mattermost-identity
 ```
 
 ### Installing the plugin
 
-```
+```console
 helm repo add teleport https://charts.releases.teleport.dev/
 ```
 
-```shell
+```console
 helm install teleport-plugin-mattermost teleport/teleport-plugin-mattermost --values teleport-plugin-mattermost-values.yaml
 ```
 
