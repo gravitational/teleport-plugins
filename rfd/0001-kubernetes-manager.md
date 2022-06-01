@@ -17,7 +17,7 @@ Automated bootstrap of Teleport data is not an easy task, especially when it's r
 
 ### Implementation
 
-For the task, the [Kubebuilder](https://kubebuilder.io/) framework should be used. It has great code generation capabilities and gives a complete setup to develop & deploy the operator.
+For the task, the [operator-sdk](https://sdk.operatorframework.io/) framework should be used. It has great code generation capabilities and gives a complete setup to develop & deploy the operator.
 
 ### Teleport Auth server discovery and authentication
 
@@ -32,7 +32,7 @@ One could deploy Teleport in High Availability mode, i.e. with `replicas` number
 Custom resource definitions of Teleport resource look like this:
 
 ```yaml
-apiVersion: resources.teleport.dev/v2
+apiVersion: resources.teleport.dev/v5
 kind: Role
 metadata:
   name: folks
@@ -42,7 +42,7 @@ spec:
     request:
       roles: ["admin"]
 ---
-apiVersion: resources.teleport.dev/v4
+apiVersion: resources.teleport.dev/v2
 kind: User
 metadata:
   name: human-bean
@@ -56,36 +56,6 @@ Operator process watches for custom resource events. Once a custom resource is c
 The name of the Kubernetes custom resource is the name of the resource in Teleport. Also, every Kubernetes custom resource must have a `spec` field that has the same schema as a `spec` field of a resource in Teleport.
 
 Deletion of resources is being handled using [resource finalizers](https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers/). Every acknowledged resource gets a finalizer named `"resources.teleport.dev/delete"` so when the deletion happens, Kubernetes doesn't actually delete it but sets a deletion timestamp. While the finalizer list is non-empty, the operator can still access the resource's fields. Deletion of the Kubernetes object leads to deletion of the associated resource in Teleport. Once a deletion in Teleport succeeds, the operator removes a finalizer from the Kubernetes object so it can be garbage-collected.
-
-### Identity definitions
-
-To run some plugin in the cluster, the credentials are required. Normally, one can get the credentials using `tctl auth sign` command or using `tsh login`. To automate the credentials generation, the `Identity` resource is introduced. The identity definition looks like this:
-
-```yaml
-apiVersion: auth.teleport.dev/v8
-kind: Identity
-metadata:
-  name: access-slack
-spec:
-  username: access-slack
-  secretName: access-slack-secret
-```
-
-Here, the `username` is a Teleport user name, and `secretName` is a name of a secret resource where the operator will write credentials. Once the `Identity` object is created in the Kubernetes, the secret object with credentials contents will be written in the same namespace where the identity object resides.
-
-Once an identity is removed, any secret data it had generated should remain untouched. However, if the user wants the identity secret to being deleted as well, there should be a configuration option for this:
-
-
-```yaml
-identities:
-  ownerRefEnabled: true
-```
-
-When `ownerRefEnabled` is true, the operator sets a [metadata.ownerReferences](https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/) of a `Secret` object referenced by `secretName` of some `Identity`. Once an `Identity` resource is removed, Kubernetes will automatically clean up the referenced secret object.
-
-By default, `ownerRefEnabled` should be turned off because if the user suddenly deleted the `Identity` object it can break the deployment.
-
-If the secret referenced by `secretName` has been removed or its secret data has been overwritten, it's the operator's responsibility to re-generate the identity and to write it back.
 
 ### Limit the scope
 
@@ -102,10 +72,10 @@ scope:
 
 ### API Groups and Versions
 
-`Identity` resource resides in an API group called `auth.teleport.dev`, and all the Teleport resources reside in a group called `resources.teleport.dev`. Two different groups are used for a reason:
+All the Teleport resources reside in a group called `resources.teleport.dev`.
 
-- API Versions of `auth.teleport.dev` start from `v8` because the Teleport version is 8.x at the moment of writing this document.
-- API Versions of `resources.teleport.dev` are all different because they're tied to Teleport resource versions.
+API Versions of `resources.teleport.dev` are all different because they're tied to Teleport resource versions.
+For example, currently User is v2 and Role is v5.
 
 ### Generating Custom Resource Definitions
 
