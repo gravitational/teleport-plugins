@@ -7,6 +7,7 @@ trigger:
   branch:
     - master
     - branch/*
+    - marco/add_terraform_drone_test
   event:
     include:
       - push
@@ -31,6 +32,10 @@ steps:
       TELEPORT_GET_VERSION: v9.3.0
     commands:
       - echo Testing plugins against Teleport $TELEPORT_GET_VERSION
+      - curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
+      - apt update && apt install -y software-properties-common
+      - apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+      - apt update && apt install -y terraform=1.2.2
       - make test
 
 ---
