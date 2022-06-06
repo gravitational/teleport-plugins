@@ -696,6 +696,52 @@ volumes:
 ---
 kind: pipeline
 type: kubernetes
+name: publish-operator-image
+
+trigger:
+  branch:
+    - marco/operator_publish
+  event:
+    - push
+  repo:
+    - gravitational/teleport-plugins
+
+workspace:
+  path: /go/src/github.com/gravitational/teleport-plugins
+
+steps:
+  - name: Publish image
+    image: docker:git
+    environment:
+      QUAYIO_DOCKER_USERNAME:
+        from_secret: PRODUCTION_QUAYIO_DOCKER_USERNAME
+      QUAYIO_DOCKER_PASSWORD:
+        from_secret: PRODUCTION_QUAYIO_DOCKER_PASSWORD
+      DOCKER_BUILDKIT: 1
+    volumes:
+      - name: dockersock
+        path: /var/run
+    commands:
+      - sleep 10
+      - docker login -u="$QUAYIO_DOCKER_USERNAME" -p="$QUAYIO_DOCKER_PASSWORD" quay.io
+      - docker build -t quay.io/gravitational/teleport-operator:latest . -f ./kubernetes/Dockerfile
+      - docker push quay.io/gravitational/teleport-operator:latest
+
+services:
+  - name: start docker
+    image: docker:dind
+    privileged: true
+    volumes:
+      - name: dockersock
+        path: /var/run
+
+volumes:
+  - name: dockersock
+    temp: {}
+
+---
+kind: pipeline
+type: kubernetes
 name: publish-helm-charts
 
 trigger:

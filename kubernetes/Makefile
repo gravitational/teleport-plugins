@@ -47,7 +47,9 @@ ifeq ($(USE_IMAGE_DIGESTS), true)
 endif
 
 # Image URL to use all building/pushing image targets
-IMG ?= teleport-operator:latest
+IMG ?= teleport-operator:$(VERSION)
+DOCKER_IMAGE_QUAY = quay.io/gravitational/$(IMG)
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.23
 
@@ -138,11 +140,14 @@ run: manifests generate fmt vet ## Run a controller from your host.
 
 .PHONY: docker-build
 docker-build: ## Build docker image with the manager.
-	docker build -t ${IMG} --build-arg version=${VERSION} .. -f ./Dockerfile
+	docker build -t ${DOCKER_IMAGE_QUAY} --build-arg version=${VERSION} .. -f ./Dockerfile
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
-	docker push ${IMG}
+	docker push ${DOCKER_IMAGE_QUAY}
+
+.PHONY: docker-promote
+docker-promote: docker-build docker-push ## Build and push docker image to quay.io
 
 ##@ Deployment
 

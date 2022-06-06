@@ -92,6 +92,10 @@ terraform-gen-tfschema:
 test-terraform:
 	make -C terraform test
 
+.PHONY: docker-promote-kubernetes
+docker-promote-kubernetes:
+	$(MAKE) -C kubernetes docker-promote
+
 .PHONY: docker-build-kubernetes
 docker-build-kubernetes:
 	$(MAKE) -C kubernetes docker-build
