@@ -191,6 +191,23 @@ update-tag:
 	git push origin terraform-provider-teleport-v$(VERSION)
 	git push origin v$(VERSION)
 
+
+.PHONY: update-goversion
+update-goversion:
+	# Make sure GOVERSION is set on the command line "make update-goversion GOVERSION=x.y.z".
+	@test $(GOVERSION)
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/jira/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/mattermost/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/slack/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/pagerduty/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/email/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/Makefile
+	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
+	$(SED) 's/- name: golang:.*/- name: golang:$(GOVERSION)/' .cloudbuild/ci/unit-tests-linux.yaml
+	$(SED) 's/image: golang:.*/image: golang:$(GOVERSION)/g' .drone.yml
+	$(SED) 's/GO_VERSION: go.*/GO_VERSION: go$(GOVERSION)/g' .drone.yml
+	@echo Please sign .drone.yml before staging and committing the changes
+
 #
 # Lint the Go code.
 # By default lint scans the entire repo. Pass GO_LINT_FLAGS='--new' to only scan local
