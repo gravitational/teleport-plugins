@@ -11,7 +11,7 @@ The operator lives right beside the Teleport server.
 
 ### Setup
 When the operator starts it:
-- grabs the leader lock, to ensure we only have one operator
+- grabs the leader lock, to ensure only one operator is acting upon the modifications
 - ensures the exclusive role and user exist
 - creates an identity file using that user
 - starts a new client, using that identity file and manages the resources
