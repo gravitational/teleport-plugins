@@ -1,5 +1,5 @@
 steps:
-  - name: golang:1.17.10
+  - name: golang:1.17.11
     env:
       - TELEPORT_GET_VERSION=v9.0.4
     secretEnv:
