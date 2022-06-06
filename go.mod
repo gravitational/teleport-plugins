@@ -43,6 +43,6 @@ require (
 
 replace (
 	github.com/gogo/protobuf => github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf
-	github.com/gravitational/teleport-plugin-framework => github.com/gzigzigzeo/teleport-plugin-framework v0.0.0-20220531235109-85abc57c26ba
+	github.com/gravitational/teleport-plugin-framework => github.com/gzigzigzeo/teleport-plugin-framework v0.0.0-20220606142335-de6d9012fa5e
 	github.com/julienschmidt/httprouter => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 )

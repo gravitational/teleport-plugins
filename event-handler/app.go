@@ -250,10 +250,9 @@ func (a *App) initWasm(ctx context.Context) error {
 	})
 
 	e := wasm.NewAssemblyScriptEnv()
-	pb := wasm.NewProtobufInterop()
 	s := wasm.NewStore(wasm.NewBadgerPersistentStore(a.badgerDB))
-	a.wasmHandleEvent = wasm.NewHandleEvent(a.Config.WASMHandleEvent, pb)
-	api := wasm.NewTeleportAPI(a.EventWatcher.client, pb)
+	a.wasmHandleEvent = wasm.NewHandleEvent(a.Config.WASMHandleEvent)
+	api := wasm.NewTeleportAPI(a.EventWatcher.client)
 
 	opts := wasm.ExecutionContextPoolOptions{
 		Log:           log.WithField("service", "WASM"),
@@ -262,7 +261,7 @@ func (a *App) initWasm(ctx context.Context) error {
 		Timeout:       a.Config.WASMTimeout,
 		Concurrency:   a.Config.WASMConcurrency,
 		Traits: []interface{}{
-			e, pb, a.wasmHandleEvent, s, api,
+			e, a.wasmHandleEvent, s, api,
 		},
 	}
 

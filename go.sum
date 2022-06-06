@@ -289,8 +289,8 @@ github.com/grpc-ecosystem/go-grpc-middleware v1.0.0/go.mod h1:FiyG127CGDf3tlThmg
 github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0/go.mod h1:8NvIoxWQoOIhqOTXgfV/d3M/q6VIi02HzZEHgUlZvzk=
 github.com/grpc-ecosystem/grpc-gateway v1.10.0/go.mod h1:vNeuVxBJEsws4ogUvrchl83t/GYV9WGTSLVdBhOQFDY=
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
-github.com/gzigzigzeo/teleport-plugin-framework v0.0.0-20220531235109-85abc57c26ba h1:ELeuZ4zzTutYSlxNga5Q5dDazevcySCAOYTiBPOP5Qc=
-github.com/gzigzigzeo/teleport-plugin-framework v0.0.0-20220531235109-85abc57c26ba/go.mod h1:9H0IquLirciGJiYLmLxfy1z6PGad3UKVc5EiuntVgnE=
+github.com/gzigzigzeo/teleport-plugin-framework v0.0.0-20220606142335-de6d9012fa5e h1:EGft0QXc5VuePI0hTLyx6rgl0s8A7AKTKvyooKXqUMs=
+github.com/gzigzigzeo/teleport-plugin-framework v0.0.0-20220606142335-de6d9012fa5e/go.mod h1:9H0IquLirciGJiYLmLxfy1z6PGad3UKVc5EiuntVgnE=
 github.com/hashicorp/consul/api v1.7.0/go.mod h1:1NSuaUUkFaJzMasbfq/11wKYWSR67Xn6r2DXKhuDNFg=
 github.com/hashicorp/consul/sdk v0.6.0/go.mod h1:fY08Y9z5SvJqevyZNy6WWPXiG3KwBPAvlcdx16zZ0fM=
 github.com/hashicorp/errwrap v1.0.0 h1:hLrqtEDnRye3+sgx6z4qVLNuviH3MR5aQ0ykNJa/UYA=
