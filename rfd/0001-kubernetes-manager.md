@@ -81,7 +81,7 @@ For example, currently User is v2 and Role is v5.
 
 To understand a custom resource, Kubernetes needs [its definition & OpenAPI v3.0 schema](https://kubernetes.io/docs/concepts/extend-kubernetes/api-extension/custom-resources/).
 
-In standard scenarios, the Kubebuilder can generate CRDs right from the Go type definitions. However, the generator breaks when something like `types.UserSpecV2` or `types.RoleSpecV5` is used as a `Spec` field. Type definitions from `types.pb.go` are initially written for Protobuf and can't be directly re-used to generate [OpenAPI V3.0 schema](https://swagger.io/specification/).
+In standard scenarios, the Kubebuilder can generate CRDs right from the Go type definitions. However, the generator breaks when something like `types.UserSpecV2` or `types.RoleSpecV5` is used as a `Spec` field. Type definitions from `types.pb.go` are initially written for Protobuf and can't be directly re-used to generate [OpenAPI V3.0 schema](https://swagger.io/specification/) because they lack the json tags necessary for autogeneration by `controller-gen`.
 
 To generate all the `resources.teleport.dev` APIs, one should implement a generator similar to the one done for [Terraform provider](https://github.com/gravitational/teleport-plugins/tree/master/terraform).
 
