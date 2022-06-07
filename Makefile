@@ -80,6 +80,10 @@ helm-package-charts:
 terraform:
 	make -C terraform
 
+.PHONY: test-terraform
+test-terraform:
+	make -C terraform test
+
 .PHONY: terraform-gen-tfschema
 terraform-gen-tfschema:
 	make -C terraform gen-tfschema
