@@ -84,6 +84,10 @@ terraform:
 terraform-gen-tfschema:
 	make -C terraform gen-tfschema
 
+.PHONY: test-terraform
+test-terraform:
+	make -C terraform test
+
 .PHONY: event-handler
 event-handler:
 	make -C event-handler
@@ -92,7 +96,7 @@ event-handler:
 .PHONY: test
 test: test-tooling
 	@echo Testing plugins against Teleport $(TELEPORT_GET_VERSION)
-	go test -race -count 1 $(shell go list ./...)
+	go test -race -count 1 $(shell go list ./... | grep -v '/terraform/')
 
 .PHONY: test-tooling
 test-tooling:
