@@ -31,6 +31,10 @@ steps:
       TELEPORT_GET_VERSION: v9.3.0
     commands:
       - echo Testing plugins against Teleport $TELEPORT_GET_VERSION
+      - curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
+      - apt update && apt install -y software-properties-common
+      - apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+      - apt update && apt install -y terraform=1.2.2
       - make test
 
 ---
@@ -913,6 +917,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
 ---
 kind: signature
-hmac: 69cdedbe45ce23448c039e7f6c1ad12846f75f96fa2fbbef4529cedebfa68957
+hmac: 754bd960e9a78fdb5398f2cd9f16dd3c3242442e529e1a8db48bf427fdc5f2ac
 
 ...
