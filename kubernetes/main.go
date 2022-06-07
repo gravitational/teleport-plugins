@@ -18,31 +18,34 @@ package main
 
 import (
 	"context"
+	"embed"
 	"flag"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport/api/client"
+	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
 
 	resourcesv2 "github.com/gravitational/teleport-plugins/kubernetes/apis/resources/v2"
 	resourcesv5 "github.com/gravitational/teleport-plugins/kubernetes/apis/resources/v5"
 	resourcescontrollers "github.com/gravitational/teleport-plugins/kubernetes/controllers/resources"
+	"github.com/gravitational/teleport-plugins/kubernetes/crd"
 	"github.com/gravitational/teleport-plugins/kubernetes/sidecar"
 	//+kubebuilder:scaffold:imports
 )
@@ -50,6 +53,9 @@ import (
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
+
+	//go:embed config/crd/bases/*.teleport.dev_*.yaml
+	crdFS embed.FS
 )
 
 func init() {
@@ -58,11 +64,12 @@ func init() {
 	utilruntime.Must(resourcesv5.AddToScheme(scheme))
 	utilruntime.Must(resourcesv2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+
+	utilruntime.Must(apiextv1.AddToScheme(scheme))
 }
 
 func main() {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
+	ctx := ctrl.SetupSignalHandler()
 
 	var err error
 	var metricsAddr string
@@ -92,7 +99,7 @@ func main() {
 
 	var teleportClient *client.Client
 
-	backoff := backoff.NewDecorr(time.Millisecond, time.Second, clockwork.NewRealClock())
+	backoff := backoff.NewDecorr(time.Second, 5*time.Second, clockwork.NewRealClock())
 	for {
 		teleportClient, err = sidecar.NewSidecarClient(ctx, sidecar.Options{})
 		if err == nil {
@@ -139,8 +146,21 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := mgr.Add(manager.RunnableFunc(func(ctx context.Context) error {
+		// Install CRDs
+		setupLog.Info("installing CRDs")
+		if err := crd.Upsert(ctx, setupLog, crdFS, mgr.GetClient()); err != nil {
+			return trace.Wrap(err)
+		}
+
+		return nil
+	})); err != nil {
+		setupLog.Error(err, "unable to set up CRDs")
+		os.Exit(1)
+	}
+
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}

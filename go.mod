@@ -44,6 +44,8 @@ require (
 	sigs.k8s.io/yaml v1.3.0
 )
 
+require gopkg.in/yaml.v2 v2.4.0
+
 require (
 	cloud.google.com/go v0.81.0 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
@@ -140,7 +142,6 @@ require (
 	google.golang.org/genproto v0.0.0-20220107163113-42d7afdf6368 // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/component-base v0.24.1 // indirect
 	k8s.io/klog/v2 v2.60.1 // indirect

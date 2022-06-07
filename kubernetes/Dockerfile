@@ -20,7 +20,9 @@ COPY kubernetes/main.go kubernetes/main.go
 COPY kubernetes/apis/ kubernetes/apis/
 COPY kubernetes/controllers/ kubernetes/controllers/
 COPY kubernetes/sidecar/ kubernetes/sidecar/
+COPY kubernetes/crd/ kubernetes/crd/
 COPY lib/ lib/
+COPY kubernetes/config/crd/bases/ kubernetes/config/crd/bases/
 
 # Build
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -o teleport-operator kubernetes/main.go
