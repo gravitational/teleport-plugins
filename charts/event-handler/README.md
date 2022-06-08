@@ -124,8 +124,8 @@ eventHandler:
   namespace: "default"
 
 fluentd:
-  url: ""
-  sessionUrl: ""
+  url: "https://fluentd.fluentd.svc.cluster.local/events.log"
+  sessionUrl: "https://fluentd.fluentd.svc.cluster.local/session.log"
   certificate:
     secretName: "teleport-plugin-event-handler-client-tls"
     caPath: "ca.crt"
