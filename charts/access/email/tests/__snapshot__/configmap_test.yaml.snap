@@ -9,7 +9,7 @@ should match the snapshot (mailgun on):
 
         [mailgun]
         domain      = "mymailgunsubdomain.mailgun.org"
-        private_key = "xoxb-71d75f662b0eac53565a38c8cc0316f6"
+        private_key = "xoxb-fakekey62b0eac53565a38c8cc0316f6"
 
 
         [delivery]
