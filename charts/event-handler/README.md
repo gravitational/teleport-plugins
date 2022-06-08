@@ -74,9 +74,35 @@ Once the files `client.key` and `client.crt` were created successfully, the foll
 kubectl create secret generic teleport-plugin-event-handler-client-tls --from-file="ca.crt=ca.crt,client.key=client.key,client.crt=client.crt"
 ```
 
+### Storage
+
+The event-handler plugin stores it's current state on the disk, so to avoid accidentally sending any events twice, it's a good idea to create a PersistentVolumeClaim to ensure those files are retained:
+
+```yaml
+# teleport-plugin-event-handler-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: teleport-plugin-event-handler
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+```
+
+Create the PVC by applying the file above:
+
+```code
+kubectl apply -f teleport-plugin-event-handler-pvc.yaml
+```
+
+For more information, check out [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) in the Kubernetes Documentation.
+
 ### Installing the plugin
 
-```
+```code
 helm repo add teleport https://charts.releases.teleport.dev/
 ```
 
@@ -105,6 +131,16 @@ fluentd:
     caPath: "ca.crt"
     certPath: "client.crt"
     keyPath: "client.key"
+
+# Let's mount the PVC we've created above
+volumes:
+  - name: storage
+    persistentVolumeClaim:
+      claimName: teleport-plugin-event-handler
+
+volumeMounts:
+  - name: storage
+    mountPath: "/var/lib/teleport/plugins/event-handler/storage"
 ```
 
 See [Settings](#settings) for more details.
