@@ -116,7 +116,7 @@ func (r resourceTeleportTrustedCluster) Create(ctx context.Context, req tfsdk.Cr
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
-				diagMessage := fmt.Sprintf("Error reading TrustedCluster (tried %d times)", tries)
+				diagMessage := fmt.Sprintf("Error reading TrustedCluster (tried %d times) - state outdated, please import resource", tries)
 				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "trusted_cluster"))
 				return
 			}
@@ -253,7 +253,7 @@ func (r resourceTeleportTrustedCluster) Update(ctx context.Context, req tfsdk.Up
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
-			diagMessage := fmt.Sprintf("Error reading TrustedCluster (tried %d times)", tries)
+			diagMessage := fmt.Sprintf("Error reading TrustedCluster (tried %d times) - state outdated, please import resource", tries)
 			resp.Diagnostics.AddError(diagMessage, "trusted_cluster")
 			return
 		}

@@ -111,7 +111,7 @@ func (r resourceTeleportClusterNetworkingConfig) Create(ctx context.Context, req
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
-			diagMessage := fmt.Sprintf("Error reading ClusterNetworkingConfig (tried %d times)", tries)
+			diagMessage := fmt.Sprintf("Error reading ClusterNetworkingConfig (tried %d times) - state outdated, please import resource", tries)
 			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "cluster_networking_config"))
 			return
 		}
@@ -231,7 +231,7 @@ func (r resourceTeleportClusterNetworkingConfig) Update(ctx context.Context, req
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
-			diagMessage := fmt.Sprintf("Error reading ClusterNetworkingConfig (tried %d times)", tries)
+			diagMessage := fmt.Sprintf("Error reading ClusterNetworkingConfig (tried %d times) - state outdated, please import resource", tries)
 			resp.Diagnostics.AddError(diagMessage, "cluster_networking_config")
 			return
 		}

@@ -116,7 +116,7 @@ func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.Cre
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
-				diagMessage := fmt.Sprintf("Error reading SAMLConnector (tried %d times)", tries)
+				diagMessage := fmt.Sprintf("Error reading SAMLConnector (tried %d times) - state outdated, please import resource", tries)
 				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "saml"))
 				return
 			}
@@ -253,7 +253,7 @@ func (r resourceTeleportSAMLConnector) Update(ctx context.Context, req tfsdk.Upd
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
-			diagMessage := fmt.Sprintf("Error reading SAMLConnector (tried %d times)", tries)
+			diagMessage := fmt.Sprintf("Error reading SAMLConnector (tried %d times) - state outdated, please import resource", tries)
 			resp.Diagnostics.AddError(diagMessage, "saml")
 			return
 		}

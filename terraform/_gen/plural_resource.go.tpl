@@ -135,7 +135,7 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
-				diagMessage := fmt.Sprintf("Error reading {{.Name}} (tried %d times)", tries)
+				diagMessage := fmt.Sprintf("Error reading {{.Name}} (tried %d times) - state outdated, please import resource", tries)
 				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "{{.Kind}}"))
 				return
 			}
@@ -272,7 +272,7 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
-			diagMessage := fmt.Sprintf("Error reading {{.Name}} (tried %d times)", tries)
+			diagMessage := fmt.Sprintf("Error reading {{.Name}} (tried %d times) - state outdated, please import resource", tries)
 			resp.Diagnostics.AddError(diagMessage, "{{.Kind}}")
 			return
 		}

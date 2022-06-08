@@ -111,7 +111,7 @@ func (r resourceTeleportAuthPreference) Create(ctx context.Context, req tfsdk.Cr
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
-			diagMessage := fmt.Sprintf("Error reading AuthPreference (tried %d times)", tries)
+			diagMessage := fmt.Sprintf("Error reading AuthPreference (tried %d times) - state outdated, please import resource", tries)
 			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "cluster_auth_preference"))
 			return
 		}
@@ -231,7 +231,7 @@ func (r resourceTeleportAuthPreference) Update(ctx context.Context, req tfsdk.Up
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
-			diagMessage := fmt.Sprintf("Error reading AuthPreference (tried %d times)", tries)
+			diagMessage := fmt.Sprintf("Error reading AuthPreference (tried %d times) - state outdated, please import resource", tries)
 			resp.Diagnostics.AddError(diagMessage, "cluster_auth_preference")
 			return
 		}

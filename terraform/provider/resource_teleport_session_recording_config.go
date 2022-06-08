@@ -111,7 +111,7 @@ func (r resourceTeleportSessionRecordingConfig) Create(ctx context.Context, req 
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
-			diagMessage := fmt.Sprintf("Error reading SessionRecordingConfig (tried %d times)", tries)
+			diagMessage := fmt.Sprintf("Error reading SessionRecordingConfig (tried %d times) - state outdated, please import resource", tries)
 			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "session_recording_config"))
 			return
 		}
@@ -231,7 +231,7 @@ func (r resourceTeleportSessionRecordingConfig) Update(ctx context.Context, req 
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
-			diagMessage := fmt.Sprintf("Error reading SessionRecordingConfig (tried %d times)", tries)
+			diagMessage := fmt.Sprintf("Error reading SessionRecordingConfig (tried %d times) - state outdated, please import resource", tries)
 			resp.Diagnostics.AddError(diagMessage, "session_recording_config")
 			return
 		}

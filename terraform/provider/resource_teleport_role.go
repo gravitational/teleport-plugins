@@ -118,7 +118,7 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
-				diagMessage := fmt.Sprintf("Error reading Role (tried %d times)", tries)
+				diagMessage := fmt.Sprintf("Error reading Role (tried %d times) - state outdated, please import resource", tries)
 				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "role"))
 				return
 			}
@@ -255,7 +255,7 @@ func (r resourceTeleportRole) Update(ctx context.Context, req tfsdk.UpdateResour
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
-			diagMessage := fmt.Sprintf("Error reading Role (tried %d times)", tries)
+			diagMessage := fmt.Sprintf("Error reading Role (tried %d times) - state outdated, please import resource", tries)
 			resp.Diagnostics.AddError(diagMessage, "role")
 			return
 		}

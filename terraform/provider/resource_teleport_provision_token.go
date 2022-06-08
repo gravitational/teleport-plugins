@@ -127,7 +127,7 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
-				diagMessage := fmt.Sprintf("Error reading ProvisionToken (tried %d times)", tries)
+				diagMessage := fmt.Sprintf("Error reading ProvisionToken (tried %d times) - state outdated, please import resource", tries)
 				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "token"))
 				return
 			}
@@ -264,7 +264,7 @@ func (r resourceTeleportProvisionToken) Update(ctx context.Context, req tfsdk.Up
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
-			diagMessage := fmt.Sprintf("Error reading ProvisionToken (tried %d times)", tries)
+			diagMessage := fmt.Sprintf("Error reading ProvisionToken (tried %d times) - state outdated, please import resource", tries)
 			resp.Diagnostics.AddError(diagMessage, "token")
 			return
 		}

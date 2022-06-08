@@ -116,7 +116,7 @@ func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.C
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
-				diagMessage := fmt.Sprintf("Error reading GithubConnector (tried %d times)", tries)
+				diagMessage := fmt.Sprintf("Error reading GithubConnector (tried %d times) - state outdated, please import resource", tries)
 				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "github"))
 				return
 			}
@@ -253,7 +253,7 @@ func (r resourceTeleportGithubConnector) Update(ctx context.Context, req tfsdk.U
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
-			diagMessage := fmt.Sprintf("Error reading GithubConnector (tried %d times)", tries)
+			diagMessage := fmt.Sprintf("Error reading GithubConnector (tried %d times) - state outdated, please import resource", tries)
 			resp.Diagnostics.AddError(diagMessage, "github")
 			return
 		}
