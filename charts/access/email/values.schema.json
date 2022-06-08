@@ -311,8 +311,8 @@
             "examples": [
                 {
                     "enabled": false,
-                    "domain": "sandboxbd81caddef744a69be0e5b544ab0c3bd.mailgun.org",
-                    "privateKey": "xoxb-11xx"
+                    "domain": "yourdomain.mailgun.org",
+                    "privateKey": "xoxb-fakekey62b0eac53565a38c8cc0316f6"
                 }
             ],
             "required": [
@@ -334,7 +334,7 @@
                     "type": "string",
                     "default": "",
                     "examples": [
-                        "sandboxbd81caddef744a69be0e5b544ab0c3bd.mailgun.org"
+                        "yourdomain.mailgun.org"
                     ]
                 },
                 "privateKey": {

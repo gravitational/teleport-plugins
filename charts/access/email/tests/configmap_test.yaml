@@ -101,6 +101,6 @@ tests:
       mailgun:
         enabled: true
         domain: mymailgunsubdomain.mailgun.org
-        privateKey: xoxb-71d75f662b0eac53565a38c8cc0316f6
+        privateKey: xoxb-fakekey62b0eac53565a38c8cc0316f6
     asserts:
       - matchSnapshot: {}
