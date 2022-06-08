@@ -80,6 +80,12 @@ func (r resourceTeleportClusterNetworkingConfig) Create(ctx context.Context, req
 
 	
 
+	clusterNetworkingConfigBefore, err := r.p.Client.GetClusterNetworkingConfig(ctx)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
+		return
+	}
+
 	err = r.p.Client.SetClusterNetworkingConfig(ctx, clusterNetworkingConfig)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
@@ -93,19 +99,22 @@ func (r resourceTeleportClusterNetworkingConfig) Create(ctx context.Context, req
 	for {
 		tries = tries + 1
 		clusterNetworkingConfigI, err = r.p.Client.GetClusterNetworkingConfig(ctx)
-		if trace.IsNotFound(err) {
-			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
-				return
-			}
-			if tries >= r.p.RetryConfig.MaxTries {
-				diagMessage := fmt.Sprintf("Error reading ClusterNetworkingConfig (tried %d times)", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "cluster_networking_config"))
-				return
-			}
-			continue
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))	
+			return
 		}
-		break
+		if clusterNetworkingConfigBefore.GetMetadata().ID != clusterNetworkingConfigI.GetMetadata().ID || false {
+			break
+		}
+		if bErr := backoff.Do(ctx); bErr != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading ClusterNetworkingConfig (tried %d times) - state outdated, please import resource", tries)
+			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "cluster_networking_config"))
+			return
+		}
 	}
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))	
@@ -187,19 +196,48 @@ func (r resourceTeleportClusterNetworkingConfig) Update(ctx context.Context, req
 
 	err := clusterNetworkingConfig.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error updating ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
+		return
+	}
+
+	clusterNetworkingConfigBefore, err := r.p.Client.GetClusterNetworkingConfig(ctx)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
 		return
 	}
 
 	err = r.p.Client.SetClusterNetworkingConfig(ctx, clusterNetworkingConfig)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error updating ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
 		return
 	}
 
-	clusterNetworkingConfigI, err := r.p.Client.GetClusterNetworkingConfig(ctx)
+	var clusterNetworkingConfigI apitypes.ClusterNetworkingConfig
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		clusterNetworkingConfigI, err = r.p.Client.GetClusterNetworkingConfig(ctx)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
+			return
+		}
+		if clusterNetworkingConfigBefore.GetMetadata().ID != clusterNetworkingConfigI.GetMetadata().ID || false {
+			break
+		}
+		if bErr := backoff.Do(ctx); bErr != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading ClusterNetworkingConfig (tried %d times) - state outdated, please import resource", tries)
+			resp.Diagnostics.AddError(diagMessage, "cluster_networking_config")
+			return
+		}
+	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error updating ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))	
 		return
 	}
 

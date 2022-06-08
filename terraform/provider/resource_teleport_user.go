@@ -116,7 +116,7 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
-				diagMessage := fmt.Sprintf("Error reading User (tried %d times)", tries)
+				diagMessage := fmt.Sprintf("Error reading User (tried %d times) - state outdated, please import resource", tries)
 				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "user"))
 				return
 			}
@@ -221,16 +221,42 @@ func (r resourceTeleportUser) Update(ctx context.Context, req tfsdk.UpdateResour
 		return
 	}
 
+	userBefore, err := r.p.Client.GetUser(name, false)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", err, "user"))
+		return
+	}
+
 	err = r.p.Client.UpdateUser(ctx, user)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating User", err, "user"))
 		return
 	}
 
-	userI, err := r.p.Client.GetUser(name, false)
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", err, "user"))
-		return
+	var userI apitypes.User
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		userI, err = r.p.Client.GetUser(name, false)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", err, "user"))
+			return
+		}
+		if userBefore.GetMetadata().ID != userI.GetMetadata().ID || false {
+			break
+		}
+
+		if err := backoff.Do(ctx); err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading User (tried %d times) - state outdated, please import resource", tries)
+			resp.Diagnostics.AddError(diagMessage, "user")
+			return
+		}
 	}
 
 	user = userI.(*apitypes.UserV2)

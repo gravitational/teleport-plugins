@@ -116,7 +116,7 @@ func (r resourceTeleportOIDCConnector) Create(ctx context.Context, req tfsdk.Cre
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
-				diagMessage := fmt.Sprintf("Error reading OIDCConnector (tried %d times)", tries)
+				diagMessage := fmt.Sprintf("Error reading OIDCConnector (tried %d times) - state outdated, please import resource", tries)
 				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "oidc"))
 				return
 			}
@@ -221,16 +221,42 @@ func (r resourceTeleportOIDCConnector) Update(ctx context.Context, req tfsdk.Upd
 		return
 	}
 
+	oidcConnectorBefore, err := r.p.Client.GetOIDCConnector(ctx, name, true)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", err, "oidc"))
+		return
+	}
+
 	err = r.p.Client.UpsertOIDCConnector(ctx, oidcConnector)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating OIDCConnector", err, "oidc"))
 		return
 	}
 
-	oidcConnectorI, err := r.p.Client.GetOIDCConnector(ctx, name, true)
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", err, "oidc"))
-		return
+	var oidcConnectorI apitypes.OIDCConnector
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		oidcConnectorI, err = r.p.Client.GetOIDCConnector(ctx, name, true)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", err, "oidc"))
+			return
+		}
+		if oidcConnectorBefore.GetMetadata().ID != oidcConnectorI.GetMetadata().ID || true {
+			break
+		}
+
+		if err := backoff.Do(ctx); err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(err), "oidc"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading OIDCConnector (tried %d times) - state outdated, please import resource", tries)
+			resp.Diagnostics.AddError(diagMessage, "oidc")
+			return
+		}
 	}
 
 	oidcConnector = oidcConnectorI.(*apitypes.OIDCConnectorV3)

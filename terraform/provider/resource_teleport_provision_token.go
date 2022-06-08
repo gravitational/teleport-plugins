@@ -127,7 +127,7 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
-				diagMessage := fmt.Sprintf("Error reading ProvisionToken (tried %d times)", tries)
+				diagMessage := fmt.Sprintf("Error reading ProvisionToken (tried %d times) - state outdated, please import resource", tries)
 				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "token"))
 				return
 			}
@@ -232,16 +232,42 @@ func (r resourceTeleportProvisionToken) Update(ctx context.Context, req tfsdk.Up
 		return
 	}
 
+	provisionTokenBefore, err := r.p.Client.GetToken(ctx, name)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", err, "token"))
+		return
+	}
+
 	err = r.p.Client.UpsertToken(ctx, provisionToken)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating ProvisionToken", err, "token"))
 		return
 	}
 
-	provisionTokenI, err := r.p.Client.GetToken(ctx, name)
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", err, "token"))
-		return
+	var provisionTokenI apitypes.ProvisionToken
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		provisionTokenI, err = r.p.Client.GetToken(ctx, name)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", err, "token"))
+			return
+		}
+		if provisionTokenBefore.GetMetadata().ID != provisionTokenI.GetMetadata().ID || false {
+			break
+		}
+
+		if err := backoff.Do(ctx); err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading ProvisionToken (tried %d times) - state outdated, please import resource", tries)
+			resp.Diagnostics.AddError(diagMessage, "token")
+			return
+		}
 	}
 
 	provisionToken = provisionTokenI.(*apitypes.ProvisionTokenV2)

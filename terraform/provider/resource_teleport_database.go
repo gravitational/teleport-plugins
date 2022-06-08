@@ -116,7 +116,7 @@ func (r resourceTeleportDatabase) Create(ctx context.Context, req tfsdk.CreateRe
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
-				diagMessage := fmt.Sprintf("Error reading Database (tried %d times)", tries)
+				diagMessage := fmt.Sprintf("Error reading Database (tried %d times) - state outdated, please import resource", tries)
 				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "db"))
 				return
 			}
@@ -221,16 +221,42 @@ func (r resourceTeleportDatabase) Update(ctx context.Context, req tfsdk.UpdateRe
 		return
 	}
 
+	databaseBefore, err := r.p.Client.GetDatabase(ctx, name)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", err, "db"))
+		return
+	}
+
 	err = r.p.Client.UpdateDatabase(ctx, database)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating Database", err, "db"))
 		return
 	}
 
-	databaseI, err := r.p.Client.GetDatabase(ctx, name)
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", err, "db"))
-		return
+	var databaseI apitypes.Database
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		databaseI, err = r.p.Client.GetDatabase(ctx, name)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", err, "db"))
+			return
+		}
+		if databaseBefore.GetMetadata().ID != databaseI.GetMetadata().ID || false {
+			break
+		}
+
+		if err := backoff.Do(ctx); err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading Database (tried %d times) - state outdated, please import resource", tries)
+			resp.Diagnostics.AddError(diagMessage, "db")
+			return
+		}
 	}
 
 	database = databaseI.(*apitypes.DatabaseV3)

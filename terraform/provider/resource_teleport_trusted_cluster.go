@@ -116,7 +116,7 @@ func (r resourceTeleportTrustedCluster) Create(ctx context.Context, req tfsdk.Cr
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
-				diagMessage := fmt.Sprintf("Error reading TrustedCluster (tried %d times)", tries)
+				diagMessage := fmt.Sprintf("Error reading TrustedCluster (tried %d times) - state outdated, please import resource", tries)
 				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "trusted_cluster"))
 				return
 			}
@@ -221,16 +221,42 @@ func (r resourceTeleportTrustedCluster) Update(ctx context.Context, req tfsdk.Up
 		return
 	}
 
+	trustedClusterBefore, err := r.p.Client.GetTrustedCluster(ctx, name)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", err, "trusted_cluster"))
+		return
+	}
+
 	_, err = r.p.Client.UpsertTrustedCluster(ctx, trustedCluster)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating TrustedCluster", err, "trusted_cluster"))
 		return
 	}
 
-	trustedClusterI, err := r.p.Client.GetTrustedCluster(ctx, name)
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", err, "trusted_cluster"))
-		return
+	var trustedClusterI apitypes.TrustedCluster
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		trustedClusterI, err = r.p.Client.GetTrustedCluster(ctx, name)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", err, "trusted_cluster"))
+			return
+		}
+		if trustedClusterBefore.GetMetadata().ID != trustedClusterI.GetMetadata().ID || false {
+			break
+		}
+
+		if err := backoff.Do(ctx); err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading TrustedCluster (tried %d times) - state outdated, please import resource", tries)
+			resp.Diagnostics.AddError(diagMessage, "trusted_cluster")
+			return
+		}
 	}
 
 	trustedCluster = trustedClusterI.(*apitypes.TrustedClusterV2)
