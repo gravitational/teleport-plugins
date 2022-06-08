@@ -20,11 +20,10 @@ spec:
     - teleport-plugin-event-handler
     rules:
     - resources:
-      - access_request
+      - event
       verbs:
       - list
       - read
-      - update
   options:
     forward_agent: false
     max_session_ttl: 8760h0m0s
