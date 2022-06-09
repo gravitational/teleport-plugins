@@ -40,7 +40,7 @@ spec:
 
 You can either create the user and the roles by putting the YAML above into a file and issuing the following command  (you must be logged in with `tsh`):
 
-```code
+```console
 tctl create user.yaml
 ```
 
@@ -48,11 +48,11 @@ or by navigating to the Teleport Web UI under `https://<yourserver>/web/users` a
 
 The next step is to create an identity file, which contains a private/public key pair and a certificate that'll identify us as the user above. To do this, log in with the newly created credentials and issue a new certificate (525600 and 8760 are both roughly a year in minutes and hours respectively):
 
-```code
+```console
 tsh login --proxy=proxy.example.com --auth local --user teleport-plugin-event-handler --ttl 525600
 ```
 
-```code
+```console
 tctl auth sign --user teleport-plugin-event-handler --ttl 8760h --out teleport-plugin-event-handler-identity
 ```
 
@@ -60,7 +60,7 @@ Alternatively, you can execute the command above on one of the `auth` instances/
 
 The last step is to create the secret. The following command will create a Kubernetes secret with the name `teleport-plugin-event-handler-identity` with the key `auth_id` in it holding the contents of the file `teleport-plugin-event-handler-identity`:
 
-```code
+```console
 kubectl create secret generic teleport-plugin-event-handler-identity --from-file=auth_id=teleport-plugin-event-handler-identity
 ```
 
@@ -70,7 +70,7 @@ See the [plugin's documentation](../../event-handler/README.md#mtls_advanced) ab
 
 Once the files `client.key` and `client.crt` were created successfully, the following command can be used to create a new secret (`ca.crt` is also included since we'll need it to verify we are connecting to the right fluentd):
 
-```code
+```console
 kubectl create secret generic teleport-plugin-event-handler-client-tls --from-file="ca.crt=ca.crt,client.key=client.key,client.crt=client.crt"
 ```
 
@@ -94,7 +94,7 @@ spec:
 
 Create the PVC by applying the file above:
 
-```code
+```console
 kubectl apply -f teleport-plugin-event-handler-pvc.yaml
 ```
 
@@ -102,11 +102,11 @@ For more information, check out [Persistent Volumes](https://kubernetes.io/docs/
 
 ### Installing the plugin
 
-```code
+```console
 helm repo add teleport https://charts.releases.teleport.dev/
 ```
 
-```code
+```console
 helm install teleport-plugin-event-handler teleport/teleport-plugin-event-handler --values teleport-plugin-event-handler-values.yaml
 ```
 
