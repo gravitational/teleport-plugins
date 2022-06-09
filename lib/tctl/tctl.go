@@ -17,10 +17,10 @@ limitations under the License.
 package tctl
 
 import (
+	"bytes"
 	"context"
 	"os/exec"
 	"regexp"
-	"strings"
 
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport/api/types"
@@ -101,21 +101,18 @@ func (tctl Tctl) GetAll(ctx context.Context, query string) ([]types.Resource, er
 	cmd := exec.CommandContext(ctx, tctl.cmd(), args...)
 
 	log.Debugf("Running %s", cmd)
-	stdoutPipe, err := cmd.StdoutPipe()
+
+	bs, err := cmd.CombinedOutput()
 	if err != nil {
-		return nil, trace.Wrap(err, "failed to get stdout")
-	}
-	if err := cmd.Start(); err != nil {
-		return nil, trace.Wrap(err, "failed to start tctl")
-	}
-	resources, err := readResourcesYAMLOrJSON(stdoutPipe)
-	if err != nil {
+		if bytes.Contains(bs, []byte("is not found")) {
+			return nil, nil
+		}
 		return nil, trace.Wrap(err)
 	}
-	if err := cmd.Wait(); err != nil {
-		return nil, trace.Wrap(err)
-	}
-	return resources, nil
+
+	resources, err := readResourcesYAMLOrJSON(bytes.NewReader(bs))
+
+	return resources, trace.Wrap(err)
 }
 
 // Get loads a singular resource by its kind and name identifiers.
@@ -129,26 +126,6 @@ func (tctl Tctl) Get(ctx context.Context, kind, name string) (types.Resource, er
 		return nil, trace.NotFound("resource %q is not found", query)
 	}
 	return resources[0], nil
-}
-
-// Exists validates a resource existence by its kind and name identifiers.
-func (tctl Tctl) Exists(ctx context.Context, kind, name string) (bool, error) {
-	log := logger.Get(ctx)
-	query := kind + "/" + name
-	args := append(tctl.baseArgs(), "get", query)
-	cmd := exec.CommandContext(ctx, tctl.cmd(), args...)
-
-	log.Debugf("Running %s", cmd)
-
-	commandOutput, err := cmd.CombinedOutput()
-	if err != nil {
-		if strings.Contains(string(commandOutput), "is not found") {
-			return false, nil
-		}
-
-		return false, trace.WrapWithMessage(err, string(commandOutput))
-	}
-	return true, nil
 }
 
 // GetCAPin sets the auth service CA Pin using output from tctl.
