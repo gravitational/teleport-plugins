@@ -70,6 +70,16 @@ In the future, we can consider using [buf](https://docs.buf.build/introduction)
 or something similar to handle `.proto` dependencies more carefully, and avoid
 the need for unguided manual fixes.
 
+#### Integration Tests
+
+The repo's integration tests directly download versions of `teleport`, `tsh`, and `tctl`
+to handle integration testing. The version downloaded should be updated at least every
+major release or else the tests will fail or fail to fail when something is broken.
+
+The version referenced by `TELEPORT_GET_VERSION` in the drone and cloudbuild files should
+be updated, and the version should be added to `lib/integration/testing/download.go` with
+the correct sha256 values.
+
 ### Additional Concerns
 
 #### Release branches
