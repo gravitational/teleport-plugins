@@ -63,28 +63,26 @@ func NewSidecarClient(ctx context.Context, opts Options) (*client.Client, error)
 
 	resourcesToCreate := make([]types.Resource, 0)
 
-	exists, err := tctl.Exists(ctx, types.KindRole, opts.Role)
-	if err != nil {
-		return nil, trace.Wrap(err, "failed to query role")
-	}
-	if !exists {
+	_, err := tctl.Get(ctx, types.KindRole, opts.Role)
+	if trace.IsNotFound(err) {
 		role, err := sidecarRole(opts.Role)
 		if err != nil {
 			return nil, trace.Wrap(err, "failed to create role")
 		}
 		resourcesToCreate = append(resourcesToCreate, role)
+	} else if err != nil {
+		return nil, trace.Wrap(err, "failed to query role")
 	}
 
-	exists, err = tctl.Exists(ctx, types.KindUser, opts.User)
-	if err != nil {
-		return nil, trace.Wrap(err, "failed to query user")
-	}
-	if !exists {
+	_, err = tctl.Get(ctx, types.KindUser, opts.User)
+	if trace.IsNotFound(err) {
 		user, err := sidecarUserWithRole(opts.User, opts.Role)
 		if err != nil {
 			return nil, trace.Wrap(err, "failed to create user")
 		}
 		resourcesToCreate = append(resourcesToCreate, user)
+	} else if err != nil {
+		return nil, trace.Wrap(err, "failed to query role")
 	}
 
 	if len(resourcesToCreate) > 0 {

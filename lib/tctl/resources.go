@@ -77,7 +77,7 @@ func (res *streamResource) UnmarshalJSON(raw []byte) error {
 		}
 	case types.KindRole:
 		switch header.Version {
-		case types.V4:
+		case types.V4, types.V5:
 			resource = &types.RoleV5{}
 		default:
 			return trace.BadParameter("unsupported resource version %s", header.Version)
