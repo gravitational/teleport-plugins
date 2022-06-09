@@ -160,23 +160,15 @@ update-helm-version:
 	$(MAKE) update-helm-version-access-slack
 	$(MAKE) update-helm-version-access-pagerduty
 	$(MAKE) update-helm-version-access-mattermost
-	$(MAKE) update-helm-version-plugin-event-handler
+	$(MAKE) update-helm-version-event-handler
 
 # Update specific chart
-.PHONY: update-helm-version-plugin-%
-update-helm-version-plugin-%:
+.PHONY: update-helm-version-%
+update-helm-version-%:
+	$(SED) 's/appVersion: .*/appVersion: "$(VERSION)"/' charts/$(subst access-,access/,$*)/Chart.yaml
+	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/$(subst access-,access/,$*)/Chart.yaml
 	# Update snapshots
-	$(SED) 's/appVersion: .*/appVersion: "$(VERSION)"/' charts/$*/Chart.yaml
-	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/$*/Chart.yaml
-	# Update snapshots
-	@helm unittest -u charts/$* || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
-
-.PHONY: update-helm-version-access-%
-update-helm-version-access-%:
-	$(SED) 's/appVersion: .*/appVersion: "$(VERSION)"/' charts/access/$*/Chart.yaml
-	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/access/$*/Chart.yaml
-	# Update snapshots
-	@helm unittest -u charts/access/$* || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
+	@helm unittest -u charts/$(subst access-,access/,$*) || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
 
 .PHONY: update-tag
 update-tag:
@@ -228,13 +220,9 @@ lint: GO_LINT_FLAGS ?=
 lint:
 	golangci-lint run -c .golangci.yml $(GO_LINT_FLAGS)
 
-.PHONY: test-helm-access-%
-test-helm-access-%:
-	helm unittest ./charts/access/$*
-
-.PHONY: test-helm-plugin-%
-test-helm-plugin-%:
-	helm unittest ./charts/$*
+.PHONY: test-helm-%
+test-helm-%:
+	helm unittest ./charts/$(subst access-,access/,$*)
 
 .PHONY: test-helm
 test-helm:
@@ -242,4 +230,4 @@ test-helm:
 	$(MAKE) test-helm-access-slack
 	$(MAKE) test-helm-access-pagerduty
 	$(MAKE) test-helm-access-mattermost
-	$(MAKE) test-helm-plugin-event-handler
+	$(MAKE) test-helm-event-handler
