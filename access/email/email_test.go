@@ -1,3 +1,19 @@
+/*
+Copyright 2022 Gravitational, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
@@ -113,7 +129,7 @@ func (s *EmailSuite) SetupSuite() {
 	if teleportFeatures.AdvancedAccessWorkflows {
 		conditions.Request.Thresholds = []types.AccessReviewThreshold{{Approve: 2, Deny: 2}}
 	}
-	role, err := bootstrap.AddRole("foo", types.RoleSpecV4{Allow: conditions})
+	role, err := bootstrap.AddRole("foo", types.RoleSpecV5{Allow: conditions})
 	require.NoError(t, err)
 
 	user, err := bootstrap.AddUserWithRoles(me.Username+"@example.com", role.GetName())
@@ -126,7 +142,7 @@ func (s *EmailSuite) SetupSuite() {
 	if teleportFeatures.AdvancedAccessWorkflows {
 		conditions.ReviewRequests = &types.AccessReviewConditions{Roles: []string{"editor"}}
 	}
-	role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV4{Allow: conditions})
+	role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV5{Allow: conditions})
 	require.NoError(t, err)
 
 	user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer1@example.com", role.GetName())
@@ -139,7 +155,7 @@ func (s *EmailSuite) SetupSuite() {
 
 	// Set up plugin user.
 
-	role, err = bootstrap.AddRole("access-email", types.RoleSpecV4{
+	role, err = bootstrap.AddRole("access-email", types.RoleSpecV5{
 		Allow: types.RoleConditions{
 			Rules: []types.Rule{
 				types.NewRule("access_request", []string{"list", "read"}),
@@ -199,7 +215,9 @@ func (s *EmailSuite) SetupTest() {
 		APIBase:    s.mockMailgun.GetURL(),
 	}
 	conf.Delivery.Sender = sender
-	conf.Delivery.Recipients = []string{allRecipient}
+	conf.RoleToRecipients = map[string][]string{
+		types.Wildcard: {allRecipient},
+	}
 
 	s.appConfig = conf
 	s.SetContextTimeout(5 * time.Minute)

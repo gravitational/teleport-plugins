@@ -17,51 +17,17 @@ limitations under the License.
 package test
 
 import (
+	"time"
+
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/stretchr/testify/require"
 )
 
 func (s *TerraformSuite) TestDatabase() {
-	res := "teleport_database"
-
-	create := s.terraformConfig + `
-		resource "` + res + `" "test" {
-			metadata {
-				name    = "test"
-				expires = "2022-10-12T07:20:50.3Z"
-				labels  = {					
-				  	example = "yes"
-					"teleport.dev/origin" = "dynamic"
-				}
-			}
-
-			spec {
-				protocol = "postgres"
-				uri = "localhost"
-			}
-		}
-	`
-
-	update := s.terraformConfig + `
-		resource "` + res + `" "test" {
-			metadata {
-				name    = "test"
-				expires = "2022-10-12T07:20:50.3Z"
-				labels  = {
-                    "teleport.dev/origin" = "dynamic"
-					example = "yes"
-				}
-			}
-
-			spec {
-				protocol = "postgres"
-				uri = "example.com"
-			}
-		}
-	`
-
-	checkDatabaseDestroyed := func(state *terraform.State) error {
+	checkDestroyed := func(state *terraform.State) error {
 		_, err := s.client.GetDatabase(s.Context(), "test")
 		if trace.IsNotFound(err) {
 			return nil
@@ -70,37 +36,86 @@ func (s *TerraformSuite) TestDatabase() {
 		return err
 	}
 
-	name := res + ".test"
+	name := "teleport_database.test"
 
 	resource.Test(s.T(), resource.TestCase{
-		ProviderFactories: s.terraformProviders,
-		CheckDestroy:      checkDatabaseDestroyed,
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkDestroyed,
 		Steps: []resource.TestStep{
 			{
-				Config: create,
+				Config: s.getFixture("database_0_create.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "db"),
-					resource.TestCheckResourceAttr(name, "metadata.0.expires", "2022-10-12T07:20:50.3Z"),
-					resource.TestCheckResourceAttr(name, "spec.0.protocol", "postgres"),
-					resource.TestCheckResourceAttr(name, "spec.0.uri", "localhost"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2022-10-12T07:20:50Z"),
+					resource.TestCheckResourceAttr(name, "spec.protocol", "postgres"),
+					resource.TestCheckResourceAttr(name, "spec.uri", "localhost"),
 				),
 			},
 			{
-				Config:   create, // Check that there is no state drift
+				Config:   s.getFixture("database_0_create.tf"),
 				PlanOnly: true,
 			},
 			{
-				Config: update,
+				Config: s.getFixture("database_1_update.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "db"),
-					resource.TestCheckResourceAttr(name, "metadata.0.expires", "2022-10-12T07:20:50.3Z"),
-					resource.TestCheckResourceAttr(name, "spec.0.protocol", "postgres"),
-					resource.TestCheckResourceAttr(name, "spec.0.uri", "example.com"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2022-10-12T07:20:50Z"),
+					resource.TestCheckResourceAttr(name, "spec.protocol", "postgres"),
+					resource.TestCheckResourceAttr(name, "spec.uri", "example.com"),
 				),
 			},
 			{
-				Config:   update, // Check that there is no state drift
+				Config:   s.getFixture("database_1_update.tf"),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestImportDatabase() {
+	r := "teleport_database"
+	id := "test_import"
+	name := r + "." + id
+
+	database := &types.DatabaseV3{
+		Metadata: types.Metadata{
+			Name: id,
+		},
+		Spec: types.DatabaseSpecV3{
+			Protocol: "postgres",
+			URI:      "localhost:3000/test",
+		},
+	}
+	err := database.CheckAndSetDefaults()
+	require.NoError(s.T(), err)
+
+	err = s.client.CreateDatabase(s.Context(), database)
+	require.NoError(s.T(), err)
+
+	require.Eventually(s.T(), func() bool {
+		_, err := s.client.GetDatabase(s.Context(), database.GetName())
+		if trace.IsNotFound(err) {
+			return false
+		}
+		require.NoError(s.T(), err)
+		return true
+	}, 5*time.Second, time.Second)
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
+				ResourceName:  name,
+				ImportState:   true,
+				ImportStateId: id,
+				ImportStateCheck: func(state []*terraform.InstanceState) error {
+					require.Equal(s.T(), state[0].Attributes["kind"], "db")
+					require.Equal(s.T(), state[0].Attributes["spec.uri"], "localhost:3000/test")
+					require.Equal(s.T(), state[0].Attributes["spec.protocol"], "postgres")
+
+					return nil
+				},
 			},
 		},
 	})

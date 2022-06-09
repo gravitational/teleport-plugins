@@ -87,6 +87,12 @@ type Version struct {
 	IsEnterprise bool
 }
 
+type SignTLSPaths struct {
+	CertPath   string
+	KeyPath    string
+	RootCAPath string
+}
+
 const serviceShutdownTimeout = 10 * time.Second
 
 // New initializes a Teleport installation.
@@ -257,8 +263,16 @@ func (integration *Integration) Version() Version {
 	return integration.version
 }
 
+type AuthServiceOption func(yaml string) string
+
+func WithCache() AuthServiceOption {
+	return func(yaml string) string {
+		return strings.ReplaceAll(yaml, "{{TELEPORT_CACHE_ENABLED}}", "true")
+	}
+}
+
 // NewAuthService creates a new auth server instance.
-func (integration *Integration) NewAuthService() (*AuthService, error) {
+func (integration *Integration) NewAuthService(opts ...AuthServiceOption) (*AuthService, error) {
 	dataDir, err := integration.tempDir("data-auth-*")
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to initialize data directory")
@@ -268,7 +282,14 @@ func (integration *Integration) NewAuthService() (*AuthService, error) {
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to write config file")
 	}
-	yaml := strings.ReplaceAll(teleportAuthYAML, "{{TELEPORT_DATA_DIR}}", dataDir)
+
+	yaml := teleportAuthYAML
+	for _, o := range opts {
+		yaml = o(yaml)
+	}
+
+	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_DATA_DIR}}", dataDir)
+	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_CACHE_ENABLED}}", "false")
 	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_LICENSE_FILE}}", integration.paths.license)
 	yaml = strings.ReplaceAll(yaml, "{{TELEPORT_AUTH_TOKEN}}", integration.token)
 	if _, err := configFile.WriteString(yaml); err != nil {
@@ -389,7 +410,7 @@ func (integration *Integration) NewSignedClient(ctx context.Context, auth Auth, 
 
 func (integration *Integration) MakeAdmin(ctx context.Context, auth *AuthService, userName string) (*Client, error) {
 	var bootstrap Bootstrap
-	if _, err := bootstrap.AddRole(IntegrationAdminRole, types.RoleSpecV4{
+	if _, err := bootstrap.AddRole(IntegrationAdminRole, types.RoleSpecV5{
 		Allow: types.RoleConditions{
 			Rules: []types.Rule{
 				types.Rule{
@@ -420,10 +441,31 @@ func (integration *Integration) Sign(ctx context.Context, auth *AuthService, use
 		return "", trace.Wrap(err)
 	}
 	outPath := outFile.Name()
-	if err := integration.tctl(auth).Sign(ctx, userName, outPath); err != nil {
+	if err := integration.tctl(auth).Sign(ctx, userName, "file", outPath); err != nil {
 		return "", trace.Wrap(err)
 	}
 	return outPath, nil
+}
+
+// SignTLS generates a set of files to be used for generating the TLS Config: Cert, Key and RootCAs
+func (integration *Integration) SignTLS(ctx context.Context, auth *AuthService, userName string) (*SignTLSPaths, error) {
+	outFile, err := integration.tempFile(fmt.Sprintf("credentials-%s-*", userName))
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	if err := outFile.Close(); err != nil {
+		return nil, trace.Wrap(err)
+	}
+	outPath := outFile.Name()
+	if err := integration.tctl(auth).Sign(ctx, userName, "tls", outPath); err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return &SignTLSPaths{
+		CertPath:   outPath + ".crt",
+		KeyPath:    outPath + ".key",
+		RootCAPath: outPath + ".cas",
+	}, nil
 }
 
 // SetCAPin sets integration with the auth service's CA Pin.

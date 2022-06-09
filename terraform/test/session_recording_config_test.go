@@ -17,66 +17,88 @@ limitations under the License.
 package test
 
 import (
+	"time"
+
+	"github.com/gravitational/teleport/api/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/stretchr/testify/require"
 )
 
 func (s *TerraformSuite) TestSessionRecordingConfig() {
-	res := "teleport_session_recording_config"
-
-	create := s.terraformConfig + `
-		resource "` + res + `" "test" {
-			metadata {
-				labels = {
-					"example" = "yes"
-				}
-			}
-							
-			spec {
-				proxy_checks_host_keys = true
-			}			
-		}
-	`
-
-	update := s.terraformConfig + `
-		resource "` + res + `" "test" {
-			metadata {
-				labels = {
-					"example" = "no"
-				}
-			}
-			
-			spec {
-				proxy_checks_host_keys = false
-			}
-		}
-	`
-	name := res + ".test"
+	name := "teleport_session_recording_config.test"
 
 	resource.Test(s.T(), resource.TestCase{
-		ProviderFactories:         s.terraformProviders,
+		ProtoV6ProviderFactories:  s.terraformProviders,
 		PreventPostDestroyRefresh: true,
 		Steps: []resource.TestStep{
 			{
-				Config: create,
+				Config: s.getFixture("session_recording_config_0_set.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "session_recording_config"),
-					resource.TestCheckResourceAttr(name, "spec.0.proxy_checks_host_keys", "true"),
+					resource.TestCheckResourceAttr(name, "spec.mode", "node"),
 				),
 			},
 			{
-				Config:   create, // Check that there is no state drift
+				Config:   s.getFixture("session_recording_config_0_set.tf"),
 				PlanOnly: true,
 			},
 			{
-				Config: update,
+				Config: s.getFixture("session_recording_config_1_update.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "session_recording_config"),
-					resource.TestCheckResourceAttr(name, "spec.0.proxy_checks_host_keys", "false"),
+					resource.TestCheckResourceAttr(name, "spec.mode", "off"),
 				),
 			},
 			{
-				Config:   update, // Check that there is no state drift
+				Config:   s.getFixture("session_recording_config_1_update.tf"),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestImportSessionRecordingConfig() {
+	r := "teleport_session_recording_config"
+	id := "test_import"
+	name := r + "." + id
+
+	sessionrRecordingConfig := &types.SessionRecordingConfigV2{
+		Metadata: types.Metadata{},
+		Spec: types.SessionRecordingConfigSpecV2{
+			Mode: "off",
+		},
+	}
+	err := sessionrRecordingConfig.CheckAndSetDefaults()
+	require.NoError(s.T(), err)
+
+	recordingConfigBefore, err := s.client.GetSessionRecordingConfig(s.Context())
+	require.NoError(s.T(), err)
+
+	err = s.client.SetSessionRecordingConfig(s.Context(), sessionrRecordingConfig)
+	require.NoError(s.T(), err)
+
+	require.Eventually(s.T(), func() bool {
+		recordingConfigCurrent, err := s.client.GetSessionRecordingConfig(s.Context())
+		require.NoError(s.T(), err)
+
+		return recordingConfigBefore.GetMetadata().ID != recordingConfigCurrent.GetMetadata().ID
+	}, 5*time.Second, time.Second)
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
+				ResourceName:  name,
+				ImportState:   true,
+				ImportStateId: id,
+				ImportStateCheck: func(state []*terraform.InstanceState) error {
+					require.Equal(s.T(), state[0].Attributes["kind"], "session_recording_config")
+					require.Equal(s.T(), state[0].Attributes["spec.mode"], "off")
+
+					return nil
+				},
 			},
 		},
 	})

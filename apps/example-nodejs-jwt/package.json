@@ -4,7 +4,7 @@
   "main": "app.js",
   "license": "MIT",
   "dependencies": {
-    "ejs": "^3.1.5",
+    "ejs": "^3.1.7",
     "express": "^4.17.1",
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^1.11.0", 

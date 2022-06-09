@@ -88,21 +88,6 @@ services:
         aliases:
           - "teleport-pagerduty.cluster.local"
 
-  teleport-gitlab:
-    <<: *plugin
-    container_name: teleport-gitlab
-    command: |
-      ${PLUGINSHOME}/access/gitlab/build/teleport-gitlab start
-      -c ${PLUGINSHOME}/docker/plugins/teleport-gitlab.toml
-      ${PLUGIN_FLAGS}
-    ports:
-      - "8044:8044"
-    networks:
-      teleport-network:
-        ipv4_address: 172.10.1.44
-        aliases:
-          - "teleport-gitlab.cluster.local"
-
   teleport-jira-cloud:
     <<: *plugin
     container_name: teleport-jira-cloud

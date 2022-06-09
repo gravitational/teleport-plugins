@@ -4,11 +4,11 @@ LOCALDIR := $(dir $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
 GENTERRAFORMPATH := $(shell go env GOPATH)/bin
 
 BUILDDIR ?= build
-TFDIR ?= tf
+TFDIR ?= example
 
 ADDFLAGS ?=
 BUILDFLAGS ?= $(ADDFLAGS) -ldflags '-w -s'
-CGOFLAG ?= CGO_ENABLED=1
+CGOFLAG ?= CGO_ENABLED=0
 
 RELEASE = terraform-provider-teleport-v$(VERSION)-$(OS)-$(ARCH)-bin
 
@@ -30,39 +30,16 @@ clean: tfclean
 build: clean
 	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/terraform-provider-teleport $(BUILDFLAGS)
 
-.PHONY: release
-release: build
-	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
-
-# Used for debugging
-.PHONY: setup-tf
-setup-tf:
-	mkdir -p tf
-	cp example/* tf
-	cp tf/vars.tfvars.example tf/vars.tfvars
-
-# Used for debugging
-.PHONY: apply
-apply: install
-	-tctl tokens rm example
-	-tctl users rm example
-	-tctl rm role/example
-	-tctl rm github/example
-	-tctl rm oidc/example
-	-tctl rm saml/example
-	-tctl rm app/example
-	-tctl rm db/example
-	terraform -chdir=$(TFDIR) init -var-file="vars.tfvars" && terraform -chdir=$(TFDIR) apply -auto-approve -var-file="vars.tfvars"
-
-# Used for debugging
-.PHONY: reapply
-reapply:
-	terraform -chdir=$(TFDIR) apply -var-file="vars.tfvars"
-
 CUSTOM_IMPORTS_TMP_DIR ?= /tmp/protoc-gen-terraform/custom-imports
+PROTOC_GEN_TERRAFORM_VERSION ?= v1.0.0
+PROTOC_GEN_TERRAFORM_EXISTS := $(shell protoc-gen-terraform version 2>&1 >/dev/null | grep 'protoc-gen-terraform $(PROTOC_GEN_TERRAFORM_VERSION)')
 
-# Regenerates types_terraform.go
-gen-schema:
+.PHONY: gen-tfschema
+gen-tfschema:
+ifndef PROTOC_GEN_TERRAFORM_EXISTS
+	@echo "protoc-gen-terraform v1.0.0 is not installed. Please, refer to README.md for installation instructions."
+	@exit -1
+endif
 
 # The wrappers.proto file needed for this generator exist only inside the go mod cache,
 # so we retrieve the file path for the cached proto files with go mod tools.
@@ -84,6 +61,40 @@ gen-schema:
 		-I$(API_MOD_PATH)/types \
 		-I$(PROTOBUF_MOD_PATH) \
 		-I$(CUSTOM_IMPORTS_TMP_DIR) \
-		--plugin=$(GENTERRAFORMPATH)/protoc-gen-terraform\
-		--terraform_out=config=gen_teleport.yaml:./tfschema \
+		--plugin=$(GENTERRAFORMPATH)/protoc-gen-terraform \
+		--terraform_out=config=protoc-gen-terraform-teleport.yaml:./tfschema \
 		types.proto
+
+	@go run ./_gen/main.go
+
+.PHONY: release
+release: build
+	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
+
+TERRAFORM_EXISTS := $(shell terraform -version | grep 'Terraform v1.2')
+CURRENT_ULIMIT := $(shell ulimit -n)
+
+.PHONY: test
+test: install
+ifndef TERRAFORM_EXISTS
+	@echo "Terraform v1.1+ is not installed. Please, refer to README.md for installation instructions."
+	@exit -1
+endif
+# NOTE: This is related to an old bug in Terraform and will be fixed in future releases (possibly, by a workaround on our side)
+ifeq ($(shell expr $(CURRENT_ULIMIT) \< 1024), 1)
+	@echo "ulimit -n is too low ($(CURRENT_ULIMIT)), please set ulimit -n 1024"
+	@exit -1
+endif
+	TF_ACC=true go test ./test -v
+
+.PHONY: apply
+apply: install
+	terraform -chdir=$(TFDIR) init && terraform -chdir=$(TFDIR) apply -auto-approve
+
+.PHONY: reapply
+reapply:
+	terraform -chdir=$(TFDIR) apply
+
+.PHONY: destroy
+destroy:
+	terraform -chdir=$(TFDIR) destroy -auto-approve

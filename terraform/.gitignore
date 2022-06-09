@@ -7,7 +7,8 @@ build/*
 *.lock.hcl
 
 example/vars.tfvars
-
-tf
+example/*.tf
 
 tmp
+
+*.log

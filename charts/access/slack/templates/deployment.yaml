@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "slack.fullname" . }}
+  labels:
+    {{- include "slack.labels" . | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "slack.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "slack.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - /usr/local/bin/teleport-plugin
+            - start
+            - "--config"
+            - "/etc/teleport-slack.toml"
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/teleport-slack.toml
+              subPath: teleport-slack.toml
+            - name: auth-id
+              mountPath: /var/lib/teleport/plugins/slack/auth_id
+              subPath: {{ .Values.teleport.identitySecretPath }}
+            {{- if .Values.slack.tokenSecretName }}
+            - name: slack-token
+              mountPath: /var/lib/teleport/plugins/slack/slack-token
+              subPath: {{ .Values.slack.tokenSecretPath }}
+            {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "slack.fullname" . }}
+            defaultMode: 0600
+        - name: auth-id
+          secret:
+            secretName: "{{ .Values.teleport.identitySecretName }}"
+            defaultMode: 0600
+        {{- if .Values.slack.tokenSecretName }}
+        - name: slack-token
+          secret:
+            secretName: "{{ .Values.slack.tokenSecretName }}"
+            defaultMode: 0600
+        {{- end }}

@@ -1,3 +1,12 @@
+# Set up a system-agnostic in-place sed command
+IS_GNU_SED = $(shell sed --version 1>/dev/null 2>&1 && echo true || echo false)
+
+ifeq ($(IS_GNU_SED),true)
+	SED = sed -i
+else
+	SED = sed -i ''
+endif
+
 .PHONY: access-slack
 access-slack:
 	make -C access/slack
@@ -14,10 +23,6 @@ access-mattermost:
 access-pagerduty:
 	make -C access/pagerduty
 
-.PHONY: access-gitlab
-access-gitlab:
-	make -C access/gitlab
-
 .PHONY: access-example
 access-example:
 	go build -o build/access-example ./access/example
@@ -26,9 +31,62 @@ access-example:
 access-email:
 	go build -o build/access-email ./access/email
 
+# Build specific access plugin with docker
+.PHONY: docker-build-access-%
+docker-build-access-%:
+	$(MAKE) -C access/$* docker-build
+
+# Build all access plugins with docker
+.PHONY: docker-build-access-plugins
+docker-build-access-plugins: docker-build-access-email \
+ docker-build-access-jira \
+ docker-build-access-mattermost \
+ docker-build-access-pagerduty \
+ docker-build-access-slack
+
+# Push specific access plugin with docker to ECR
+.PHONY: docker-push-access-%
+docker-push-access-%: docker-build-access-%
+	$(MAKE) -C access/$* docker-push
+
+# Pulls and pushes image from ECR to quay.
+.PHONY: docker-promote-access-%
+docker-promote-access-%:
+	$(MAKE) -C access/$* docker-promote
+
+# Build event-handler plugin with docker
+.PHONY: docker-build-event-handler
+docker-build-event-handler:
+	$(MAKE) -C event-handler docker-build
+
+.PHONY: docker-push-event-handler
+docker-push-event-handler: docker-build-event-handler
+	$(MAKE) -C event-handler docker-push
+
+.PHONY: docker-promote-event-handler
+docker-promote-event-handler:
+	$(MAKE) -C event-handler docker-promote
+
+
+.PHONY: helm-package-charts
+helm-package-charts:
+	mkdir -p packages
+	helm package -d packages charts/access/email
+	helm package -d packages charts/access/slack
+	helm package -d packages charts/access/pagerduty
+	helm package -d packages charts/access/mattermost
+
 .PHONY: terraform
 terraform:
 	make -C terraform
+
+.PHONY: terraform-gen-tfschema
+terraform-gen-tfschema:
+	make -C terraform gen-tfschema
+
+.PHONY: test-terraform
+test-terraform:
+	make -C terraform test
 
 .PHONY: event-handler
 event-handler:
@@ -36,9 +94,13 @@ event-handler:
 
 # Run all tests
 .PHONY: test
-test:
+test: test-tooling
 	@echo Testing plugins against Teleport $(TELEPORT_GET_VERSION)
-	go test -race -count 1 ./...
+	go test -race -count 1 $(shell go list ./... | grep -v '/terraform/')
+
+.PHONY: test-tooling
+test-tooling:
+	(cd tooling; go test -v -race ./...)
 
 # Individual releases
 .PHONY: release/access-slack
@@ -57,10 +119,6 @@ release/access-mattermost:
 release/access-pagerduty:
 	make -C access/pagerduty clean release
 
-.PHONY: release/access-gitlab
-release/access-gitlab:
-	make -C access/gitlab clean release
-
 .PHONY: release/access-email
 release/access-email:
 	make -C access/email clean release
@@ -75,10 +133,10 @@ release/event-handler:
 
 # Run all releases
 .PHONY: releases
-releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-gitlab release/access-email
+releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-email
 
 .PHONY: build-all
-build-all: access-slack access-jira access-mattermost access-pagerduty access-gitlab access-email terraform event-handler
+build-all: access-slack access-jira access-mattermost access-pagerduty access-email terraform event-handler
 
 .PHONY: update-api-version
 update-api-version:
@@ -90,31 +148,41 @@ update-api-version:
 	go get github.com/gravitational/telepeport/api@v$(VERSION)
 	go mod tidy
 
-	# Once the API version is updated, the terraform schema
-	# must be regenerated with the up to date .proto files.
-	# If significant changes have been made to the grpc API
-	# then the terraform/gen_teleport.yaml file will need to
-	# be updated manually.
-	$(MAKE) -C terraform gen-schema
-
 .PHONY: update-version
 update-version:
 	# Make sure VERSION is set on the command line "make update-version VERSION=x.y.z".
 	@test $(VERSION)
-	sed -i '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
-	make -C event-handler version.go
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/jira/Makefile
-	make -C access/jira version.go
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/mattermost/Makefile
-	make -C access/mattermost version.go
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/slack/Makefile
-	make -C access/slack version.go
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
-	make -C access/pagerduty version.go
-	sed -i '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
-	make -C access/email version.go
-	sed -i '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
+	$(SED) '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/jira/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/mattermost/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/slack/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
+	$(MAKE) update-helm-version
 	$(MAKE) update-api-version
+	# Once the API version is updated, the terraform schema
+	# must be regenerated with the up to date protobuf files.
+	# If significant changes have been made to the grpc API
+	# then the terraform/gen_teleport.yaml file will need to
+	# be updated manually.
+	$(MAKE) terraform-gen-tfschema
+
+# Update all charts to VERSION
+.PHONY: update-helm-version
+update-helm-version:
+	$(MAKE) update-helm-version-access-email
+	$(MAKE) update-helm-version-access-slack
+	$(MAKE) update-helm-version-access-pagerduty
+	$(MAKE) update-helm-version-access-mattermost
+
+# Update specific chart
+.PHONY: update-helm-version-%
+update-helm-version-access-%:
+	$(SED) 's/appVersion: .*/appVersion: "$(VERSION)"/' charts/access/$*/Chart.yaml
+	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/access/$*/Chart.yaml
+	# Update snapshots
+	@helm unittest -u charts/access/$* || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
 
 .PHONY: update-tag
 update-tag:
@@ -139,6 +207,23 @@ update-tag:
 	git push origin terraform-provider-teleport-v$(VERSION)
 	git push origin v$(VERSION)
 
+
+.PHONY: update-goversion
+update-goversion:
+	# Make sure GOVERSION is set on the command line "make update-goversion GOVERSION=x.y.z".
+	@test $(GOVERSION)
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/jira/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/mattermost/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/slack/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/pagerduty/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/email/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/Makefile
+	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
+	$(SED) 's/- name: golang:.*/- name: golang:$(GOVERSION)/' .cloudbuild/ci/unit-tests-linux.yaml
+	$(SED) 's/image: golang:.*/image: golang:$(GOVERSION)/g' .drone.yml
+	$(SED) 's/GO_VERSION: go.*/GO_VERSION: go$(GOVERSION)/g' .drone.yml
+	@echo Please sign .drone.yml before staging and committing the changes
+
 #
 # Lint the Go code.
 # By default lint scans the entire repo. Pass GO_LINT_FLAGS='--new' to only scan local
@@ -148,3 +233,14 @@ update-tag:
 lint: GO_LINT_FLAGS ?=
 lint:
 	golangci-lint run -c .golangci.yml $(GO_LINT_FLAGS)
+
+.PHONY: test-helm-access-%
+test-helm-access-%:
+	helm unittest ./charts/access/$*
+
+.PHONY: test-helm
+test-helm:
+	$(MAKE) test-helm-access-email
+	$(MAKE) test-helm-access-slack
+	$(MAKE) test-helm-access-pagerduty
+	$(MAKE) test-helm-access-mattermost

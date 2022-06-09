@@ -1,10 +1,12 @@
-VERSION=8.3.4
+VERSION=9.3.2
+GO_VERSION=1.17.11
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-mattermost
 GITTAG=v$(VERSION)
+GITREF ?= $(shell git describe --dirty --long --tags --match '*mattermost*')
 ADDFLAGS ?=
-BUILDFLAGS ?= $(ADDFLAGS) -ldflags '-w -s'
+BUILDFLAGS ?= $(ADDFLAGS) -ldflags "-w -s -X main.Gitref=$(GITREF) -X main.Version=$(VERSION)"
 CGOFLAG ?= CGO_ENABLED=1
 
 OS ?= $(shell go env GOOS)
@@ -12,11 +14,12 @@ ARCH ?= $(shell go env GOARCH)
 RELEASE_NAME=teleport-access-mattermost
 RELEASE=$(RELEASE_NAME)-$(GITTAG)-$(OS)-$(ARCH)-bin
 
-RELEASE_MESSAGE := "Building with GOOS=$(OS) GOARCH=$(ARCH)."
+RELEASE_MESSAGE = "Building with GOOS=$(OS) GOARCH=$(ARCH)."
 
-VERSRC = version.go gitref.go
-
-export
+DOCKER_NAME = teleport-plugin-mattermost
+DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/$(DOCKER_NAME):$(VERSION)
+DOCKER_IMAGE_QUAY = quay.io/gravitational/$(DOCKER_NAME):$(VERSION)
+DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg ACCESS_PLUGIN=mattermost --build-arg GITREF=$(GITREF)
 
 .PHONY: $(BINARY)
 $(BINARY):
@@ -24,7 +27,7 @@ $(BINARY):
 
 .PHONY: test
 test: FLAGS ?= '-race'
-test: $(VERSRC)
+test:
 	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go test $(FLAGS) $(ADDFLAGS)
 
 clean:
@@ -36,7 +39,7 @@ clean:
 	rm -f gitref.go
 
 .PHONY: release
-release: clean $(VERSRC) $(BINARY)
+release: clean $(BINARY)
 	@echo "---> $(RELEASE_MESSAGE)"
 	mkdir $(RELEASE_NAME)
 	cp -rf $(BINARY) \
@@ -49,6 +52,16 @@ release: clean $(VERSRC) $(BINARY)
 	rm -rf $(RELEASE_NAME)/
 	@echo "---> Created $(RELEASE).tar.gz."
 
-# This rule triggers re-generation of version.go and gitref.go if Makefile changes
-$(VERSRC): Makefile
-	VERSION=$(VERSION) $(MAKE) -f version.mk setver
+.PHONY: docker-build
+docker-build: ## Build docker image with the plugin.
+	docker build ${DOCKER_BUILD_ARGS} -t ${DOCKER_IMAGE} -f ../Dockerfile ../..
+
+.PHONY: docker-push
+docker-push: 
+	docker push ${DOCKER_IMAGE}
+
+.PHONY: docker-promote
+docker-promote:
+	docker pull ${DOCKER_IMAGE} && \
+	docker tag ${DOCKER_IMAGE} ${DOCKER_IMAGE_QUAY} && \
+	docker push ${DOCKER_IMAGE_QUAY}

@@ -1,0 +1,28 @@
+should match the snapshot:
+  1: |
+    apiVersion: v1
+    data:
+      teleport-slack.toml: |
+        [teleport]
+        addr = "teleport.example.com:1234"
+        identity = "/var/lib/teleport/plugins/slack/auth_id"
+
+        [slack]
+        token = "test-api-key"
+
+        [role_to_recipients]
+        "*" = ["dev-access-requests"]
+        "dev" = ["dev-access-requests","example-user@example.com"]
+
+        [log]
+        output = "/var/log/teleport-slack.log"
+        severity = "DEBUG"
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: teleport-plugin-slack
+        app.kubernetes.io/version: 9.3.2
+        helm.sh/chart: teleport-plugin-slack-9.3.2
+      name: RELEASE-NAME-teleport-plugin-slack

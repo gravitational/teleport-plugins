@@ -17,22 +17,28 @@ limitations under the License.
 package test
 
 import (
+	"embed"
+	"fmt"
 	"os/user"
+	"path/filepath"
 	"testing"
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
 	"github.com/gravitational/teleport-plugins/terraform/provider"
-	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/utils"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
-type TerraformSuite struct {
+//go:embed fixtures/*
+var fixtures embed.FS
+
+type TerraformBaseSuite struct {
 	integration.AuthSetup
 	// client represents plugin client
 	client *integration.Client
@@ -45,19 +51,47 @@ type TerraformSuite struct {
 	// terraformConfig represents Terraform provider configuration
 	terraformConfig string
 	// terraformProvider represents an instance of a Terraform provider
-	terraformProvider *schema.Provider
+	terraformProvider tfsdk.Provider
 	// terraformProviders represents an array of provider factories that Terraform will use to instantiate the provider(s) under test.
-	terraformProviders map[string]func() (*schema.Provider, error)
+	terraformProviders map[string]func() (tfprotov6.ProviderServer, error)
+
+	// cacheEnabled represents whether the Teleport Auth Service has cache enabled
+	cacheEnabled bool
 }
 
-func TestTerraform(t *testing.T) { suite.Run(t, &TerraformSuite{}) }
+type TerraformSuiteWithCache struct {
+	TerraformBaseSuite
+}
+type TerraformSuite struct {
+	TerraformBaseSuite
+}
 
-func (s *TerraformSuite) SetupSuite() {
+func TestTerraform(t *testing.T) {
+	suite.Run(t, &TerraformSuite{
+		TerraformBaseSuite: TerraformBaseSuite{
+			cacheEnabled: false,
+		},
+	})
+}
+
+func TestTerraformWithCache(t *testing.T) {
+	suite.Run(t, &TerraformSuiteWithCache{
+		TerraformBaseSuite: TerraformBaseSuite{
+			cacheEnabled: true,
+		},
+	})
+}
+
+func (s *TerraformBaseSuite) SetupSuite() {
 	var err error
 	t := s.T()
 
 	s.AuthSetup.SetupSuite()
-	s.AuthSetup.SetupService()
+	authOptions := []integration.AuthServiceOption{}
+	if s.cacheEnabled {
+		authOptions = append(authOptions, integration.WithCache())
+	}
+	s.AuthSetup.SetupService(authOptions...)
 
 	ctx := s.Context()
 
@@ -74,7 +108,7 @@ func (s *TerraformSuite) SetupSuite() {
 	var bootstrap integration.Bootstrap
 
 	unrestricted := []string{"list", "create", "read", "update", "delete"}
-	role, err := bootstrap.AddRole("terraform", types.RoleSpecV4{
+	role, err := bootstrap.AddRole("terraform", types.RoleSpecV5{
 		Allow: types.RoleConditions{
 			DatabaseLabels: types.Labels(map[string]utils.Strings{"*": []string{"*"}}),
 			AppLabels:      types.Labels(map[string]utils.Strings{"*": []string{"*"}}),
@@ -106,44 +140,67 @@ func (s *TerraformSuite) SetupSuite() {
 	identityPath, err := s.Integration.Sign(ctx, s.Auth, s.plugin)
 	require.NoError(t, err)
 
+	tlsPaths, err := s.Integration.SignTLS(ctx, s.Auth, s.plugin)
+	require.NoError(t, err)
+
 	s.client, err = s.Integration.NewClient(ctx, s.Auth, s.plugin)
 	require.NoError(t, err)
 
 	s.teleportConfig.Addr = s.Auth.AuthAddr().String()
 	s.teleportConfig.Identity = identityPath
+	s.teleportConfig.ClientCrt = tlsPaths.CertPath
+	s.teleportConfig.ClientKey = tlsPaths.KeyPath
+	s.teleportConfig.RootCAs = tlsPaths.RootCAPath
 	s.teleportFeatures = teleportFeatures
 
 	s.terraformConfig = `
 		provider "teleport" {
 			addr = "` + s.teleportConfig.Addr + `"
-			identity_file_path = "` + s.teleportConfig.Identity + `"
+			identity_file = file("` + s.teleportConfig.Identity + `")
+			retry_base_duration = "900ms"
+			retry_cap_duration = "4s"
+			retry_max_tries = "12"
 		}
 	`
 
-	s.terraformProvider = provider.Provider()
-	s.terraformProviders = make(map[string]func() (*schema.Provider, error))
-	s.terraformProviders["teleport"] = func() (*schema.Provider, error) {
+	s.terraformProvider = provider.New()
+	s.terraformProviders = make(map[string]func() (tfprotov6.ProviderServer, error))
+	s.terraformProviders["teleport"] = func() (tfprotov6.ProviderServer, error) {
 		// Terraform configures provider on every test step, but does not clean up previous one, which produces
 		// to "too many open files" at some point.
 		//
 		// With this statement we try to forcefully close previously opened client, which stays cached in
 		// the provider variable.
 		s.closeClient()
-		return s.terraformProvider, nil
+		return tfsdk.NewProtocol6Server(s.terraformProvider), nil
 	}
 }
 
-func (s *TerraformSuite) AfterTest(suiteName, testName string) {
+func (s *TerraformBaseSuite) AfterTest(suiteName, testName string) {
 	s.closeClient()
 }
 
-func (s *TerraformSuite) SetupTest() {
+func (s *TerraformBaseSuite) SetupTest() {
 }
 
-func (s *TerraformSuite) closeClient() {
-	m := s.terraformProvider.Meta()
-	if m != nil {
-		c := m.(*client.Client)
-		require.NoError(s.T(), c.Close())
+func (s *TerraformBaseSuite) closeClient() {
+	p, ok := s.terraformProvider.(*provider.Provider)
+	require.True(s.T(), ok)
+	if p != nil && p.Client != nil {
+		require.NoError(s.T(), p.Client.Close())
 	}
+}
+
+// getFixture loads fixture and returns it as string or <error> if failed
+func (s *TerraformBaseSuite) getFixture(name string) string {
+	return s.getFixtureWithCustomConfig(name, s.terraformConfig)
+}
+
+// getFixtureWithCustomConfig loads fixture and returns it as string or <error> if failed
+func (s *TerraformBaseSuite) getFixtureWithCustomConfig(name string, config string) string {
+	b, err := fixtures.ReadFile(filepath.Join("fixtures", name))
+	if err != nil {
+		return fmt.Sprintf("<error: %v fixture not found>", name)
+	}
+	return config + "\n" + string(b)
 }

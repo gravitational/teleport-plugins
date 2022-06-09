@@ -20,6 +20,6 @@ var (
 	// Version package version, specified in Makefile using ldflags
 	Version = `Not specified, use --ldflags "-X main.Version "1.0.0""`
 
-	// Sha git commit sha, passed from Makefile with ldflags
-	Sha = "Not specified"
+	// Gitref variable is specified in Makefile using ldflags
+	Gitref string
 )

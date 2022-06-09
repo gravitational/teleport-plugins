@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/gravitational/teleport-plugins/access/config"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	. "github.com/gravitational/teleport-plugins/lib/testing"
@@ -95,7 +96,7 @@ func (s *SlackSuite) SetupSuite() {
 	if teleportFeatures.AdvancedAccessWorkflows {
 		conditions.Request.Thresholds = []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}}
 	}
-	role, err := bootstrap.AddRole("foo", types.RoleSpecV4{Allow: conditions})
+	role, err := bootstrap.AddRole("foo", types.RoleSpecV5{Allow: conditions})
 	require.NoError(t, err)
 
 	user, err := bootstrap.AddUserWithRoles(me.Username+"@example.com", role.GetName())
@@ -108,7 +109,7 @@ func (s *SlackSuite) SetupSuite() {
 	if teleportFeatures.AdvancedAccessWorkflows {
 		conditions.ReviewRequests = &types.AccessReviewConditions{Roles: []string{"editor"}}
 	}
-	role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV4{Allow: conditions})
+	role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV5{Allow: conditions})
 	require.NoError(t, err)
 
 	user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer1@example.com", role.GetName())
@@ -121,7 +122,7 @@ func (s *SlackSuite) SetupSuite() {
 
 	// Set up plugin user.
 
-	role, err = bootstrap.AddRole("access-slack", types.RoleSpecV4{
+	role, err = bootstrap.AddRole("access-slack", types.RoleSpecV5{
 		Allow: types.RoleConditions{
 			Rules: []types.Rule{
 				types.NewRule("access_request", []string{"list", "read"}),
@@ -302,7 +303,7 @@ func (s *SlackSuite) TestRecipientsConfig() {
 
 	reviewer1 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
 	reviewer2 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer2}})
-	s.appConfig.Recipients = RecipientsMap{
+	s.appConfig.Recipients = config.RecipientsMap{
 		types.Wildcard: []string{reviewer2.Profile.Email, reviewer1.ID},
 	}
 

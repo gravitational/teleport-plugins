@@ -22,7 +22,7 @@ BUILDFORHOST := -e OS=$(OS) \
 	-e CGOFLAG="CGO_ENABLED=0"
 
 DOCKERPULLFLAGS ?= --pull
-GO_VER = 1.16
+GO_VER = 1.17
 
 NOROOT=-u $$(id -u):$$(id -g)
 BINDIR=/usr/local/bin

@@ -1,0 +1,30 @@
+#! /bin/bash
+
+# NOTE: The variable mappings here need to match those in the
+#       promote-terraform-provider Drone pipeline. Any change here should
+#       be reflected there, and vice versa.
+
+export STAGING_REGION=us-west-2
+export STAGING_BUCKET=$AWS_S3_BUCKET
+export STAGING_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+export STAGING_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
+    
+export PROD_REGION=$PRODUCTION_TERRAFORM_AWS_REGION
+export PROD_BUCKET=$PRODUCTION_TERRAFORM_AWS_BUCKET
+export PROD_ACCESS_KEY_ID=$PRODUCTION_TERRAFORM_AWS_ACCESS_KEY_ID_nope
+export PROD_SECRET_ACCESS_KEY=$PRODUCTION_TERRAFORM_AWS_SECRET_ACCESS_KEY
+export DEPLOYMENT_ROLE=$PRODUCTION_TERRAFORM_AWS_DEPLOYMENT_ROLE
+export SIGNING_KEY=$PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
+
+export DRONE_TAG=$1
+
+cd tooling
+go run ./cmd/promote-terraform                                 \
+  -d workspace-prod                                            \
+  --tag $DRONE_TAG                                             \
+  -p 6                                                         \
+  --registry-url https://terraform.releases.teleport.dev/      \
+  --namespace gravitational                                    \
+  --name teleport                                              \
+  --deployment-role $DEPLOYMENT_ROLE
+

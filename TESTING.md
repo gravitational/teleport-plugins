@@ -58,10 +58,10 @@ if teleportFeatures.AdvancedAccessWorkflows {
 	// For Teleport Enterprise only. This role holders can review admin access request.
 	conditions.ReviewRequests = &types.AccessReviewConditions{Roles: []string{"admin"}}
 }
-role, err = bootstrap.AddRole("admin", types.RoleSpecV4{})
+role, err = bootstrap.AddRole("admin", types.RoleSpecV5{})
 require.NoError(t, err)
 
-role, err = bootstrap.AddRole("user", types.RoleSpecV4{Allow: conditions})
+role, err = bootstrap.AddRole("user", types.RoleSpecV5{Allow: conditions})
 require.NoError(t, err)
 
 adminUser, err = bootstrap.AddUserWithRoles("admin", role.GetName())
