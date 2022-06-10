@@ -70,3 +70,5 @@ http:
 log:
   output: stdout
   severity: INFO
+
+serviceAnnotations: {}
