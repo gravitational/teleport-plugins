@@ -437,6 +437,66 @@
                 }
             },
             "additionalProperties": true
+        },
+        "persistentVolumeClaim": {
+            "$id": "#/properties/persistentVolumeClaim",
+            "type": "object",
+            "default": {
+                "enabled": true,
+                "size": "1Gi",
+                "storageClassName": "",
+                "existingClaim": ""
+            },
+            "examples": [
+                {
+                    "enabled": true,
+                    "size": "1Gi",
+                    "storageClassName": "",
+                    "existingClaim": ""
+                }
+            ],
+            "required": [
+                "enabled",
+                "size",
+                "storageClassName",
+                "existingClaim"
+            ],
+            "properties": {
+                "enabled": {
+                    "$id": "#/properties/persistentVolumeClaim/properties/enabled",
+                    "type": "boolean",
+                    "default": false,
+                    "examples": [
+                        true
+                    ]
+                },
+                "size": {
+                    "$id": "#/properties/persistentVolumeClaim/properties/size",
+                    "type": "string",
+                    "default": "1Gi",
+                    "examples": [
+                        "1Gi",
+                        "1Ti"
+                    ]
+                },
+                "storageClassName": {
+                    "$id": "#/properties/persistentVolumeClaim/properties/storageClassName",
+                    "type": "string",
+                    "default": "",
+                    "examples": [
+                        "gp2"
+                    ]
+                },
+                "existingClaim": {
+                    "$id": "#/properties/persistentVolumeClaim/properties/existingClaim",
+                    "type": "string",
+                    "default": "",
+                    "examples": [
+                        "teleport-plugin-event-handler-pvc"
+                    ]
+                }
+            },
+            "additionalProperties": true
         }
     },
     "additionalProperties": true

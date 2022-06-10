@@ -25,6 +25,12 @@ fluentd:
     certPath: "client.crt"
     keyPath: "client.key"
 
+persistentVolumeClaim:
+  enabled: false
+  size: 1Gi
+  storageClassName: ""
+  existingClaim: ""
+
 #
 # Deployment
 #

@@ -76,27 +76,7 @@ kubectl create secret generic teleport-plugin-event-handler-client-tls --from-fi
 
 ### Storage
 
-The event-handler plugin stores it's current state on the disk, so to avoid accidentally sending any events twice, it's a good idea to create a PersistentVolumeClaim to ensure those files are retained:
-
-```yaml
-# teleport-plugin-event-handler-pvc.yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: teleport-plugin-event-handler
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
-```
-
-Create the PVC by applying the file above:
-
-```console
-kubectl apply -f teleport-plugin-event-handler-pvc.yaml
-```
+The `event-handler` plugin stores it's current state on the disk, so to avoid accidentally sending any events twice, it's a good idea to create a PersistentVolumeClaim to ensure those files are retained. The Chart contains a default implementation (see the example values file below). Check out [Settings](#settings) for more options!
 
 For more information, check out [Persistent Volumes](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) in the Kubernetes Documentation.
 
@@ -132,15 +112,8 @@ fluentd:
     certPath: "client.crt"
     keyPath: "client.key"
 
-# Let's mount the PVC we've created above
-volumes:
-  - name: storage
-    persistentVolumeClaim:
-      claimName: teleport-plugin-event-handler
-
-volumeMounts:
-  - name: storage
-    mountPath: "/var/lib/teleport/plugins/event-handler/storage"
+persistentVolumeClaim:
+  enabled: true
 ```
 
 See [Settings](#settings) for more details.
@@ -252,6 +225,45 @@ The following values can be set for the Helm chart:
     <td>Path of the client private key in the secret described by `fluentd.secretName`.</td>
     <td>string</td>
     <td><code>"client.key"</code></td>
+    <td>no</td>
+  </tr>
+
+  <tr>
+    <td><code>persistentVolumeClaim.enabled</code></td>
+    <td>
+      Instructs the Helm chart to include a PersistentVolumeClaim for the storage. This storage
+      will be mounted to the path specified by <code>eventHandler.storagePath</code>.
+    </td>
+    <td>boolean</td>
+    <td><code>false</code></td>
+    <td>no</td>
+  </tr>
+  <tr>
+    <td><code>persistentVolumeClaim.size</code></td>
+    <td>Sets the size of the created PersistentVolumeClaim. Don't forget to append the proper suffix!</td>
+    <td>string</td>
+    <td><code>"1Gi"</code></td>
+    <td>no</td>
+  </tr>
+  <tr>
+    <td><code>persistentVolumeClaim.storageClassName</code></td>
+    <td>
+      Sets the storage class name of the created PersistentVolumeClaim. Kubernetes will use the default
+      one when omitted.
+    </td>
+    <td>string</td>
+    <td><code>""</code></td>
+    <td>no</td>
+  </tr>
+  <tr>
+    <td><code>persistentVolumeClaim.existingClaim</code></td>
+    <td>
+      Specifies an already existing PersistentVolumeClaim which should be mounted to the path specified
+      by <code>eventHandler.storagePath</code>. <code>persistentVolumeClaim.enabled</code> must be set to false for this
+      option to take precedence. Ignored when <code>persistentVolumeClaim.enabled</code> is true.
+    </td>
+    <td>string</td>
+    <td><code>""</code></td>
     <td>no</td>
   </tr>
 </table>
