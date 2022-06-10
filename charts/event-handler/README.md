@@ -155,7 +155,7 @@ The following values can be set for the Helm chart:
 
   <tr>
     <td><code>eventHandler.storagePath</code></td>
-    <td>Path to the directory where `event-handler`'s state is stored</td>
+    <td>Path to the directory where <code>event-handler</code>'s state is stored</td>
     <td>string</td>
     <td><code>"/var/lib/teleport/plugins/event-handler/storage"</code></td>
     <td>no</td>
@@ -209,20 +209,20 @@ The following values can be set for the Helm chart:
   </tr>
   <tr>
     <td><code>fluentd.caPath</code></td>
-    <td>Path of the CA certificate in the secret described by `fluentd.secretName`.</td>
+    <td>Path of the CA certificate in the secret described by <code>fluentd.secretName</code>.</td>
     <td>string</td>
     <td><code>"ca.crt"</code></td>
   </tr>
   <tr>
     <td><code>fluentd.certPath</code></td>
-    <td>Path of the client's certificate in the secret described by `fluentd.secretName`.</td>
+    <td>Path of the client's certificate in the secret described by <code>fluentd.secretName</code>.</td>
     <td>string</td>
     <td><code>"client.crt"</code></td>
     <td>no</td>
   </tr>
   <tr>
     <td><code>fluentd.keyPath</code></td>
-    <td>Path of the client private key in the secret described by `fluentd.secretName`.</td>
+    <td>Path of the client private key in the secret described by <code>fluentd.secretName</code>.</td>
     <td>string</td>
     <td><code>"client.key"</code></td>
     <td>no</td>
