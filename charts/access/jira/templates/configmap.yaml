@@ -33,9 +33,6 @@ data:
     password = {{ .Values.http.basicAuth.password }}
     {{ end }}
 
-    [https.tls]
-    verify_client_cert = {{ .Values.http.verifyClientCert }}
-
     [log]
     output = "{{ .Values.log.output }}"
     severity = "{{ .Values.log.severity }}"
