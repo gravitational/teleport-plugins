@@ -40,7 +40,7 @@ spec:
             - "/etc/teleport-jira.toml"
           ports:
             - name: http
-              containerPort: 80
+              containerPort: 8443
               protocol: TCP
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

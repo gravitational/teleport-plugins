@@ -20,7 +20,7 @@ data:
     {{- end }}
 
     [http]
-    listen_addr = "{{ .Values.http.listenAddress }}"
+    listen_addr = ":8443"
     public_addr = "{{ .Values.http.publicAddress }}"
     {{- if .Values.http.keyFile }}
     https_key_file = "{{ .Values.http.keyFile }}"
