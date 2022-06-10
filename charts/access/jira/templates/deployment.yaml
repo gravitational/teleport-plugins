@@ -25,9 +25,6 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:
-        # - name: debug
-        #   image: kbence/auto-install
-        #   args: [tini, sleep, 1h]
         - name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
