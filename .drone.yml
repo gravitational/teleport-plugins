@@ -172,7 +172,7 @@ steps:
     environment:
       GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
       GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains 
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
       - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
       - go version
@@ -260,7 +260,7 @@ depends_on:
 steps:
   - name: fetch tags
     image: docker:git
-    commands: 
+    commands:
       - git fetch --tags
 
   - name: Build and push to ECR
@@ -308,7 +308,7 @@ trigger:
 steps:
   - name: "Helm: Package charts"
     image: alpine/helm:latest
-    commands: 
+    commands:
       - apk add --no-cache make
       - make helm-package-charts
 
@@ -466,7 +466,7 @@ workspace:
 steps:
   - name: fetch tags
     image: docker:git
-    commands: 
+    commands:
       - git fetch --tags
 
   - name: Build and push to ECR
@@ -737,7 +737,7 @@ steps:
       - helm repo index packages/
 
   - name: "Helm: Publish chart repository to S3"
-    image: plugins/s3 
+    image: plugins/s3
     settings:
       bucket:
         from_secret: HELM_CHART_PRODUCTION_BUCKET
@@ -748,9 +748,9 @@ steps:
       region: us-east-2
       source: packages/*
       strip_prefix: packages
-    
+
 ---
-# NOTE: Any changes here need to be reflected in the emergency deployment 
+# NOTE: Any changes here need to be reflected in the emergency deployment
 #       scripts in tooling/bin
 kind: pipeline
 type: kubernetes
@@ -792,7 +792,7 @@ steps:
         from_secret: AWS_ACCESS_KEY_ID
       STAGING_SECRET_ACCESS_KEY:
         from_secret: AWS_SECRET_ACCESS_KEY
-      
+
       PROD_REGION:
         from_secret: STAGING_TERRAFORM_AWS_REGION
       PROD_BUCKET:
@@ -806,7 +806,7 @@ steps:
       SIGNING_KEY:
         from_secret: STAGING_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
-# NOTE: Any changes here need to be reflected in the emergency deployment 
+# NOTE: Any changes here need to be reflected in the emergency deployment
 #       scripts in tooling/bin
 kind: pipeline
 type: kubernetes
@@ -847,7 +847,7 @@ steps:
         from_secret: AWS_ACCESS_KEY_ID
       STAGING_SECRET_ACCESS_KEY:
         from_secret: AWS_SECRET_ACCESS_KEY
-      
+
       PROD_REGION:
         from_secret: STAGING_TERRAFORM_AWS_REGION
       PROD_BUCKET:
@@ -861,7 +861,7 @@ steps:
       SIGNING_KEY:
         from_secret: STAGING_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
-# NOTE: Any changes here need to be reflected in the emergency deployment 
+# NOTE: Any changes here need to be reflected in the emergency deployment
 #       scripts in tooling/bin
 kind: pipeline
 type: kubernetes
@@ -876,7 +876,7 @@ trigger:
   ref:
     include:
       - refs/tags/terraform-provider-teleport-v*
-      
+
 concurrency:
   limit: 1
 
@@ -902,7 +902,7 @@ steps:
         from_secret: AWS_ACCESS_KEY_ID
       STAGING_SECRET_ACCESS_KEY:
         from_secret: AWS_SECRET_ACCESS_KEY
-      
+
       PROD_REGION:
         from_secret: PRODUCTION_TERRAFORM_AWS_REGION
       PROD_BUCKET:
@@ -910,11 +910,11 @@ steps:
       PROD_ACCESS_KEY_ID:
         from_secret: PRODUCTION_TERRAFORM_AWS_ACCESS_KEY_ID
       PROD_SECRET_ACCESS_KEY:
-        from_secret: PRODUCTION_TERRAFORM_AWS_SECRET_ACCESS_KEY 
+        from_secret: PRODUCTION_TERRAFORM_AWS_SECRET_ACCESS_KEY
       DEPLOYMENT_ROLE:
-        from_secret: PRODUCTION_TERRAFORM_AWS_DEPLOYMENT_ROLE 
+        from_secret: PRODUCTION_TERRAFORM_AWS_DEPLOYMENT_ROLE
       SIGNING_KEY:
-        from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY 
+        from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
 hmac: 754bd960e9a78fdb5398f2cd9f16dd3c3242442e529e1a8db48bf427fdc5f2ac

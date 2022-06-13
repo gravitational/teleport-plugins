@@ -75,6 +75,7 @@ helm-package-charts:
 	helm package -d packages charts/access/slack
 	helm package -d packages charts/access/pagerduty
 	helm package -d packages charts/access/mattermost
+	helm package -d packages charts/event-handler
 
 .PHONY: terraform
 terraform:
@@ -159,14 +160,15 @@ update-helm-version:
 	$(MAKE) update-helm-version-access-slack
 	$(MAKE) update-helm-version-access-pagerduty
 	$(MAKE) update-helm-version-access-mattermost
+	$(MAKE) update-helm-version-event-handler
 
 # Update specific chart
 .PHONY: update-helm-version-%
-update-helm-version-access-%:
-	$(SED) 's/appVersion: .*/appVersion: "$(VERSION)"/' charts/access/$*/Chart.yaml
-	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/access/$*/Chart.yaml
+update-helm-version-%:
+	$(SED) 's/appVersion: .*/appVersion: "$(VERSION)"/' charts/$(subst access-,access/,$*)/Chart.yaml
+	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/$(subst access-,access/,$*)/Chart.yaml
 	# Update snapshots
-	@helm unittest -u charts/access/$* || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
+	@helm unittest -u charts/$(subst access-,access/,$*) || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
 
 .PHONY: update-tag
 update-tag:
@@ -218,9 +220,9 @@ lint: GO_LINT_FLAGS ?=
 lint:
 	golangci-lint run -c .golangci.yml $(GO_LINT_FLAGS)
 
-.PHONY: test-helm-access-%
-test-helm-access-%:
-	helm unittest ./charts/access/$*
+.PHONY: test-helm-%
+test-helm-%:
+	helm unittest ./charts/$(subst access-,access/,$*)
 
 .PHONY: test-helm
 test-helm:
@@ -228,3 +230,4 @@ test-helm:
 	$(MAKE) test-helm-access-slack
 	$(MAKE) test-helm-access-pagerduty
 	$(MAKE) test-helm-access-mattermost
+	$(MAKE) test-helm-event-handler
