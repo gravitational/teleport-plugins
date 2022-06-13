@@ -32,7 +32,7 @@ should match the snapshot:
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-jira
             ports:
-            - containerPort: 80
+            - containerPort: 8443
               name: http
               protocol: TCP
             resources: {}
