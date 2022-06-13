@@ -30,6 +30,7 @@ persistentVolumeClaim:
   size: 1Gi
   storageClassName: ""
   existingClaim: ""
+  volumeName: "storage"
 
 #
 # Deployment

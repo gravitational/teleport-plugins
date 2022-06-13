@@ -494,6 +494,14 @@
                     "examples": [
                         "teleport-plugin-event-handler-pvc"
                     ]
+                },
+                "volumeName": {
+                    "$id": "#/properties/persistentVolumeClaim/properties/volumeName",
+                    "type": "string",
+                    "default": "storage",
+                    "examples": [
+                        "storage"
+                    ]
                 }
             },
             "additionalProperties": true
