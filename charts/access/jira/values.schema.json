@@ -303,7 +303,7 @@
             "additionalProperties": true
         },
         "jira": {
-            "$id": "#/properties/teleport",
+            "$id": "#/properties/jira",
             "type": "object",
             "default": {},
             "examples": [
@@ -363,6 +363,94 @@
                         "Bug",
                         "Task"
                     ]
+                }
+            },
+            "additionalProperties": true
+        },
+        "http": {
+            "$id": "#/properties/http",
+            "type": "object",
+            "default": {
+                "publicAddress": "",
+                "keyFile": "",
+                "certFile": "",
+
+                "basicAuth":{
+                  "user": "",
+                  "password": ""
+                }
+            },
+            "examples": [
+                {
+                    "publicAddress": "jira-plugin.teleport.example.com",
+                    "keyFile": "/var/lib/teleport/plugins/jira/tls.key",
+                    "certFile": "/var/lib/teleport/plugins/jira/tls.crt",
+
+                    "basicAuth":{
+                      "user": "exampleuser",
+                      "password": "examplepassword"
+                    }
+                }
+            ],
+            "required": [
+                "publicAddress",
+                "keyFile",
+                "certFile"
+            ],
+            "properties": {
+                "publicAddress": {
+                    "$id": "#/properties/teleport/properties/publicAddress",
+                    "type": "string",
+                    "default": "",
+                    "examples": [
+                        "jira-plugin.teleport.example.com"
+                    ]
+                },
+                "keyFile": {
+                    "$id": "#/properties/teleport/properties/keyFile",
+                    "type": "string",
+                    "default": "",
+                    "examples": [
+                        "/var/lib/teleport/plugins/jira/tls.key"
+                    ]
+                },
+                "certFile": {
+                    "$id": "#/properties/teleport/properties/certFile",
+                    "type": "string",
+                    "default": "",
+                    "examples": [
+                        "/var/lib/teleport/plugins/jira/tls.key"
+                    ]
+                },
+                "basicAuth": {
+                    "$id": "#/properties/basicAuth",
+                    "type": "object",
+                    "default": {
+                        "user": "",
+                        "password": ""
+                    },
+                    "examples": [
+                        {
+                            "user": "exampleuser",
+                            "password": "examplepassword"
+                        }
+                    ],
+                    "user": {
+                        "$id": "#/properties/teleport/properties/user",
+                        "type": "string",
+                        "default": "",
+                        "examples": [
+                            "exampleuser"
+                        ]
+                    },
+                    "password": {
+                        "$id": "#/properties/teleport/properties/password",
+                        "type": "string",
+                        "default": "",
+                        "examples": [
+                            "examplepassword"
+                        ]
+                    }
                 }
             },
             "additionalProperties": true
