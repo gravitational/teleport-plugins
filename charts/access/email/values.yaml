@@ -29,6 +29,8 @@ delivery:
 
 roleToRecipients: {}
 
+secretVolumeName: "password-file"
+
 log:
   output: stdout
   severity: INFO

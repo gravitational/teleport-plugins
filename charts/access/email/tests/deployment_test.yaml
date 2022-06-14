@@ -23,3 +23,11 @@ tests:
         enabled: true
     asserts:
       - matchSnapshot: {}
+
+  - it: should be possible to override volume name (smtp on)
+    set:
+      smtp:
+        enabled: true
+      secretVolumeName: "secret-volume"
+    asserts:
+      - matchSnapshot: {}
