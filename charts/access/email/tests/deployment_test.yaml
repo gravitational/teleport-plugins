@@ -31,3 +31,21 @@ tests:
       secretVolumeName: "secret-volume"
     asserts:
       - matchSnapshot: {}
+
+  - it: should mount external secret (mailgun on)
+    set:
+      mailgun:
+        enabled: true
+        privateKeyFromSecret: my-secret-name
+        privateKeySecretPath: my-path-in-secret
+    asserts:
+      - matchSnapshot: {}
+
+  - it: should mount external secret (smtp on)
+    set:
+      smtp:
+        enabled: true
+        passwordFromSecret: my-secret-name
+        passwordSecretPath: my-path-in-secret
+    asserts:
+      - matchSnapshot: {}

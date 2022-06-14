@@ -344,6 +344,22 @@
                     "examples": [
                         "xoxb-11xx"
                     ]
+                },
+                "privateKeyFromSecret": {
+                    "$id": "#/properties/mailgun/properties/privateKeyFromSecret",
+                    "type": "string",
+                    "default": "",
+                    "examples": [
+                        "my-secret-name"
+                    ]
+                },
+                "privateKeySecretPath": {
+                    "$id": "#/properties/mailgun/properties/privateKeySecretPath",
+                    "type": "string",
+                    "default": "mailgunPrivateKey",
+                    "examples": [
+                        "my-path-in-secret"
+                    ]
                 }
             },
             "additionalProperties": true
@@ -405,6 +421,16 @@
                     "$id": "#/properties/smtp/properties/password",
                     "type": "string",
                     "default": ""
+                },
+                "passwordFromSecret": {
+                    "$id": "#/properties/smtp/properties/passwordFromSecret",
+                    "type": "string",
+                    "default": ""
+                },
+                "passwordSecretPath": {
+                    "$id": "#/properties/smtp/properties/passwordSecretPath",
+                    "type": "string",
+                    "default": "smtpPassword"
                 },
                 "starttlsPolicy": {
                     "$id": "#/properties/smtp/properties/starttlsPolicy",
@@ -492,6 +518,14 @@
                 },
                 "minItems": 1
             }
+        },
+        "secretVolumeName": {
+            "$id": "#/properties/secretVolumeName",
+            "type": "string",
+            "default": "password-file",
+            "examples": [
+                "my-secret-volume"
+            ]
         },
         "log": {
             "$id": "#/properties/log",
