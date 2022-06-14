@@ -2,7 +2,22 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# replicaCount: 1
+#
+# Plugin specific options
+#
+teleport:
+  address: ""
+  identitySecretName: ""
+  identitySecretPath: "auth_id"
+
+mattermost:
+  url: ""
+  token: ""
+  recipients: []
+
+log:
+  output: stdout
+  severity: INFO
 
 image:
   repository: quay.io/gravitational/teleport-plugin-mattermost
@@ -40,20 +55,3 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
-
-#
-# Plugin specific options
-#
-teleport:
-  address: ""
-  identitySecretName: ""
-  identitySecretPath: "auth_id"
-
-mattermost:
-  url: ""
-  token: ""
-  recipients: []
-
-log:
-  output: stdout
-  severity: INFO
