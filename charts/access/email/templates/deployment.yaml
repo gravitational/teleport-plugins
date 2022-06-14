@@ -48,6 +48,16 @@ spec:
             - name: auth-id
               mountPath: /var/lib/teleport/plugins/email/auth_id
               subPath: {{ .Values.teleport.identitySecretPath }}
+            {{- if or .Values.mailgun.enabled .Values.smtp.enabled }}
+            - name: password-file
+              {{- if .Values.mailgun.enabled }}
+              mountPath: "/var/lib/teleport/plugins/email/mailgun_private_key"
+              subPath: mailgunPrivateKey
+              {{- else }}
+              mountPath: "/var/lib/teleport/plugins/email/smtp_password"
+              subPath: smtpPassword
+              {{- end }}
+            {{- end }}
             {{- with .Values.volumeMounts -}}
               {{- toYaml . | nindent 12 }}
             {{- end}}
@@ -72,6 +82,12 @@ spec:
           secret:
             secretName: "{{ .Values.teleport.identitySecretName }}"
             defaultMode: 0600
+        {{- if or .Values.mailgun.enabled .Values.smtp.enabled }}
+        - name: password-file
+          secret:
+            secretName: "{{ include "email.fullname" . }}-password"
+            defaultMode: 0600
+        {{- end }}
         {{- with .Values.volumes -}}
           {{- toYaml . | nindent 8 }}
         {{- end }}

@@ -8,8 +8,8 @@ should match the snapshot (mailgun on):
         identity = "/var/lib/teleport/plugins/email/auth_id"
 
         [mailgun]
-        domain      = "mymailgunsubdomain.mailgun.org"
-        private_key = "xoxb-fakekey62b0eac53565a38c8cc0316f6"
+        domain           = "mymailgunsubdomain.mailgun.org"
+        private_key_file = "/var/lib/teleport/plugins/email/mailgun_private_key"
 
 
         [delivery]
@@ -38,11 +38,10 @@ should match the snapshot (smtp on):
         identity = "/var/lib/teleport/plugins/email/auth_id"
 
         [smtp]
-        host          = "smtp.example.com"
-        port          = 1234
-        username      = "mysmtpuser"
-        password      = "mysmtppasswd"
-
+        host            = "smtp.example.com"
+        port            = 1234
+        username        = "mysmtpuser"
+        password_file   = "/var/lib/teleport/plugins/email/smtp_password"
         starttls_policy = "mandatory"
 
         [delivery]
@@ -71,11 +70,10 @@ should match the snapshot (smtp on, no starttls):
         identity = "/var/lib/teleport/plugins/email/auth_id"
 
         [smtp]
-        host          = "smtp.example.com"
-        port          = 1234
-        username      = "mysmtpuser"
-        password_file = "/etc/teleport/supersecretemailpw"
-
+        host            = "smtp.example.com"
+        port            = 1234
+        username        = "mysmtpuser"
+        password_file   = "/var/lib/teleport/plugins/email/smtp_password"
         starttls_policy = "mandatory"
 
         [delivery]
@@ -104,11 +102,10 @@ should match the snapshot (smtp on, password file):
         identity = "/var/lib/teleport/plugins/email/auth_id"
 
         [smtp]
-        host          = "smtp.example.com"
-        port          = 1234
-        username      = "mysmtpuser"
-        password_file = "/etc/teleport/supersecretemailpw"
-
+        host            = "smtp.example.com"
+        port            = 1234
+        username        = "mysmtpuser"
+        password_file   = "/var/lib/teleport/plugins/email/smtp_password"
         starttls_policy = "mandatory"
 
         [delivery]
@@ -137,11 +134,10 @@ should match the snapshot (smtp on, roleToRecipients set):
         identity = "/var/lib/teleport/plugins/email/auth_id"
 
         [smtp]
-        host          = "smtp.example.com"
-        port          = 1234
-        username      = "mysmtpuser"
-        password      = "mysmtppasswd"
-
+        host            = "smtp.example.com"
+        port            = 1234
+        username        = "mysmtpuser"
+        password_file   = "/var/lib/teleport/plugins/email/smtp_password"
         starttls_policy = "mandatory"
 
         [delivery]
@@ -173,11 +169,10 @@ should match the snapshot (smtp on, starttls disabled):
         identity = "/var/lib/teleport/plugins/email/auth_id"
 
         [smtp]
-        host          = "smtp.example.com"
-        port          = 1234
-        username      = "mysmtpuser"
-        password_file = "/etc/teleport/supersecretemailpw"
-
+        host            = "smtp.example.com"
+        port            = 1234
+        username        = "mysmtpuser"
+        password_file   = "/var/lib/teleport/plugins/email/smtp_password"
         starttls_policy = "disabled"
 
         [delivery]

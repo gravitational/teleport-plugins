@@ -9,3 +9,17 @@ tests:
         tag: v98.76.54
     asserts:
       - matchSnapshot: {}
+
+  - it: should match the snapshot (mailgun on)
+    set:
+      mailgun:
+        enabled: true
+    asserts:
+      - matchSnapshot: {}
+
+  - it: should match the snapshot (smtp on)
+    set:
+      smtp:
+        enabled: true
+    asserts:
+      - matchSnapshot: {}

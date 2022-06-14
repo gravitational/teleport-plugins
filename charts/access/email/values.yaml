@@ -21,7 +21,6 @@ smtp:
   port: 587
   username: ""
   password: ""
-  passwordFile: ""
   starttlsPolicy: "mandatory"
 
 delivery:
