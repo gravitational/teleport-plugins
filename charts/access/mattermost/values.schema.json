@@ -317,6 +317,22 @@
                         "example-token"
                     ]
                 },
+                "tokenFromSecret": {
+                    "$id": "#/properties/mattermost/properties/tokenFromSecret",
+                    "type": "string",
+                    "default": "",
+                    "examples": [
+                        "my-mattermost-secret"
+                    ]
+                },
+                "tokenSecretPath": {
+                    "$id": "#/properties/mattermost/properties/tokenSecretPath",
+                    "type": "string",
+                    "default": "pagerdutyApiKey",
+                    "examples": [
+                        "pagerdutyApiKey"
+                    ]
+                },
                 "recipients": {
                     "$id": "#/properties/mattermost/properties/recipients",
                     "type": "array",
@@ -343,6 +359,14 @@
                 }
             },
             "additionalProperties": true
+        },
+        "secretVolumeName": {
+            "$id": "#/properties/secretVolumeName",
+            "type": "string",
+            "default": "password-file",
+            "examples": [
+                "my-secret-volume"
+            ]
         },
         "log": {
             "$id": "#/properties/log",
