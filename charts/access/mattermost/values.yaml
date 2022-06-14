@@ -13,11 +13,15 @@ teleport:
 mattermost:
   url: ""
   token: ""
+  tokenFromSecret: ""
+  tokenSecretPath: "mattermostToken"
   recipients: []
 
 log:
   output: stdout
   severity: INFO
+
+secretVolumeName: "password-file"
 
 image:
   repository: quay.io/gravitational/teleport-plugin-mattermost
