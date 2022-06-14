@@ -60,7 +60,7 @@ should be possible to override volume name (smtp on):
           - name: secret-volume
             secret:
               defaultMode: 384
-              secretName: RELEASE-NAME-teleport-plugin-email-password
+              secretName: RELEASE-NAME-teleport-plugin-email-secret
 should match the snapshot:
   1: |
     apiVersion: apps/v1
@@ -179,7 +179,7 @@ should match the snapshot (mailgun on):
           - name: password-file
             secret:
               defaultMode: 384
-              secretName: RELEASE-NAME-teleport-plugin-email-password
+              secretName: RELEASE-NAME-teleport-plugin-email-secret
 should match the snapshot (smtp on):
   1: |
     apiVersion: apps/v1
@@ -242,7 +242,7 @@ should match the snapshot (smtp on):
           - name: password-file
             secret:
               defaultMode: 384
-              secretName: RELEASE-NAME-teleport-plugin-email-password
+              secretName: RELEASE-NAME-teleport-plugin-email-secret
 should mount external secret (mailgun on):
   1: |
     apiVersion: apps/v1
