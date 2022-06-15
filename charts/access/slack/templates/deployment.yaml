@@ -44,11 +44,9 @@ spec:
             - name: auth-id
               mountPath: /var/lib/teleport/plugins/slack/auth_id
               subPath: {{ .Values.teleport.identitySecretPath }}
-            {{- if .Values.slack.tokenSecretName }}
-            - name: slack-token
+            - name: {{ .Values.secretVolumeName }}
               mountPath: /var/lib/teleport/plugins/slack/slack-token
               subPath: {{ .Values.slack.tokenSecretPath }}
-            {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -70,9 +68,7 @@ spec:
           secret:
             secretName: "{{ .Values.teleport.identitySecretName }}"
             defaultMode: 0600
-        {{- if .Values.slack.tokenSecretName }}
-        - name: slack-token
+        - name: {{ .Values.secretVolumeName }}
           secret:
-            secretName: "{{ .Values.slack.tokenSecretName }}"
+            secretName: "{{ coalesce .Values.slack.tokenFromSecret (printf "%s-secret" (include "slack.fullname" .)) }}"
             defaultMode: 0600
-        {{- end }}
