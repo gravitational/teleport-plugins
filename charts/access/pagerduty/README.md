@@ -140,6 +140,20 @@ The following values can be set for the Helm chart:
     <td>yes</td>
   </tr>
   <tr>
+    <td><code>pagerduty.apiKeyFromSecret</code></td>
+    <td>Kubernetes secret to read the api key from instead of <code>pagerduty.apiKey</code></td>
+    <td>string</td>
+    <td><code>""</code></td>
+    <td>no</td>
+  </tr>
+  <tr>
+    <td><code>pagerduty.apiKeySecretPath</code></td>
+    <td>The path of the api key in the secret described by <code>pagerduty.apiKeyFromSecret</code></td>
+    <td>string</td>
+    <td><code>"pagerdutyApiKey"</code></td>
+    <td>no</td>
+  </tr>
+  <tr>
     <td><code>pagerduty.userEmail</code></td>
     <td>PagerDuty bot user email</td>
     <td>string</td>
