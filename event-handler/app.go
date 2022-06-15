@@ -249,6 +249,26 @@ func (a *App) initWasm(ctx context.Context) error {
 		}
 	})
 
+	alerting := wasm.NewAlerting(1024)
+
+	a.SpawnCritical(func(ctx context.Context) error {
+		log := logger.Get(ctx)
+		defer close(alerting.Alerts)
+
+		for {
+			select {
+			case <-ctx.Done():
+				return trace.Wrap(ctx.Err())
+			case a := <-alerting.Alerts:
+				log.WithFields(logrus.Fields{
+					"metadata": a.Metadata,
+					"event":    a.Event,
+					"severity": a.Severity,
+				}).Info(a.Message)
+			}
+		}
+	})
+
 	e := wasm.NewAssemblyScriptEnv()
 	s := wasm.NewStore(wasm.NewBadgerPersistentStore(a.badgerDB))
 	a.wasmHandleEvent = wasm.NewHandleEvent(a.Config.WASMHandleEvent)
@@ -261,7 +281,7 @@ func (a *App) initWasm(ctx context.Context) error {
 		Timeout:       a.Config.WASMTimeout,
 		Concurrency:   a.Config.WASMConcurrency,
 		Traits: []interface{}{
-			e, a.wasmHandleEvent, s, api,
+			e, a.wasmHandleEvent, s, api, alerting,
 		},
 	}
 
