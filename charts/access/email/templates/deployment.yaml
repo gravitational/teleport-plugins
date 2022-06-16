@@ -53,7 +53,8 @@ spec:
               {{- if .Values.mailgun.enabled }}
               mountPath: "/var/lib/teleport/plugins/email/mailgun_private_key"
               subPath: "{{ .Values.mailgun.privateKeySecretPath }}"
-              {{- else }}
+              {{- end }}
+              {{- if .Values.smtp.enabled }}
               mountPath: "/var/lib/teleport/plugins/email/smtp_password"
               subPath: "{{ .Values.smtp.passwordSecretPath }}"
               {{- end }}
@@ -82,6 +83,7 @@ spec:
           secret:
             secretName: "{{ .Values.teleport.identitySecretName }}"
             defaultMode: 0600
+        {{- if or .Values.smtp.enabled .Values.mailgun.enabled }}
         {{- if .Values.smtp.enabled }}
         - name: {{ .Values.secretVolumeName }}
           secret:
@@ -93,6 +95,7 @@ spec:
           secret:
             secretName: "{{ coalesce .Values.mailgun.privateKeyFromSecret (printf "%s-secret" (include "email.fullname" .)) }}"
             defaultMode: 0600
+        {{- end }}
         {{- end }}
         {{- with .Values.volumes -}}
           {{- toYaml . | nindent 8 }}
