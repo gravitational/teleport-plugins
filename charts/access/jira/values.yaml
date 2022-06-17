@@ -21,8 +21,9 @@ jira:
 
 http:
   publicAddress: ""
-  keyFile: ""
-  certFile: ""
+  tlsFromSecret: ""
+  tlsKeySecretPath: "tls.key"
+  tlsCertSecretPath: "tls.crt"
 
   basicAuth:
     user: ""
@@ -35,6 +36,7 @@ log:
   severity: INFO
 
 secretVolumeName: "password-file"
+tlsSecretVolumeName: "tls"
 
 #
 # Deployment

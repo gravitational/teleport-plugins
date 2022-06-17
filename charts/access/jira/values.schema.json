@@ -372,8 +372,9 @@
             "type": "object",
             "default": {
                 "publicAddress": "",
-                "keyFile": "",
-                "certFile": "",
+                "tlsFromSecret": "",
+                "tlsKeySecretPath": "tls.key",
+                "tlsCertSecretPath": "tls.crt",
 
                 "basicAuth":{
                   "user": "",
@@ -383,8 +384,9 @@
             "examples": [
                 {
                     "publicAddress": "jira-plugin.teleport.example.com",
-                    "keyFile": "/var/lib/teleport/plugins/jira/tls.key",
-                    "certFile": "/var/lib/teleport/plugins/jira/tls.crt",
+                    "tlsFromSecret": "teleport-jira-plugin-tls",
+                    "tlsKeySecretPath": "tls.key",
+                    "tlsCertSecretPath": "tls.crt",
 
                     "basicAuth":{
                       "user": "exampleuser",
@@ -394,8 +396,7 @@
             ],
             "required": [
                 "publicAddress",
-                "keyFile",
-                "certFile"
+                "tlsFromSecret"
             ],
             "properties": {
                 "publicAddress": {
@@ -406,20 +407,28 @@
                         "jira-plugin.teleport.example.com"
                     ]
                 },
-                "keyFile": {
-                    "$id": "#/properties/teleport/properties/keyFile",
+                "tlsFromSecret": {
+                    "$id": "#/properties/teleport/properties/tlsFromSecret",
                     "type": "string",
                     "default": "",
                     "examples": [
-                        "/var/lib/teleport/plugins/jira/tls.key"
+                        "my-tls-secret"
                     ]
                 },
-                "certFile": {
-                    "$id": "#/properties/teleport/properties/certFile",
+                "tlsKeySecretPath": {
+                    "$id": "#/properties/teleport/properties/tlsKeySecretPath",
                     "type": "string",
-                    "default": "",
+                    "default": "tls.key",
                     "examples": [
-                        "/var/lib/teleport/plugins/jira/tls.key"
+                        "tls.key"
+                    ]
+                },
+                "tlsCertSecretPath": {
+                    "$id": "#/properties/teleport/properties/tlsCertSecretPath",
+                    "type": "string",
+                    "default": "tls.crt",
+                    "examples": [
+                        "tls.crt"
                     ]
                 },
                 "basicAuth": {

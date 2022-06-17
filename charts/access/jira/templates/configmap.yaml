@@ -22,16 +22,14 @@ data:
     [http]
     listen_addr = ":8443"
     public_addr = "{{ .Values.http.publicAddress }}"
-    {{- if .Values.http.keyFile }}
-    https_key_file = "{{ .Values.http.keyFile }}"
-    https_cert_file = "{{ .Values.http.certFile }}"
-    {{- end }}
+    https_key_file = "/var/lib/teleport/plugins/jira/tls/tls.key"
+    https_cert_file = "/var/lib/teleport/plugins/jira/tls/tls.crt"
 
-    {{ if .Values.http.basicAuth.enabled }}
+    {{ if .Values.http.basicAuth.enabled -}}
     [http.basic_auth]
     user = {{ .Values.http.basicAuth.user }}
     password = {{ .Values.http.basicAuth.password }}
-    {{ end }}
+    {{- end }}
 
     [log]
     output = "{{ .Values.log.output }}"

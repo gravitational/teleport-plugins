@@ -7,5 +7,9 @@ tests:
       image:
         repository: gcr.io/overridden/repository
         tag: v98.76.54
+      http:
+        tlsFromSecret: "jira-tls-secret"
+        tlsKeySecretPath: "server.key"
+        tlsCertSecretPath: "server.crt"
     asserts:
       - matchSnapshot: {}

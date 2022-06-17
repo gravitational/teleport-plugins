@@ -47,6 +47,12 @@ should match the snapshot:
             - mountPath: /var/lib/teleport/plugins/jira/jira_api_token
               name: password-file
               subPath: jiraApiToken
+            - mountPath: /var/lib/teleport/plugins/jira/tls/tls.key
+              name: tls
+              subPath: server.key
+            - mountPath: /var/lib/teleport/plugins/jira/tls/tls.crt
+              name: tls
+              subPath: server.crt
           securityContext: {}
           volumes:
           - configMap:
@@ -61,3 +67,7 @@ should match the snapshot:
             secret:
               defaultMode: 384
               secretName: RELEASE-NAME-teleport-plugin-jira-secret
+          - name: tls
+            secret:
+              defaultMode: 384
+              secretName: jira-tls-secret

@@ -17,8 +17,8 @@ should match the snapshot (smtp on):
         [http]
         listen_addr = ":8443"
         public_addr = "jira-plugin.example.com"
-        https_key_file = "server.key"
-        https_cert_file = "server.crt"
+        https_key_file = "/var/lib/teleport/plugins/jira/tls/tls.key"
+        https_cert_file = "/var/lib/teleport/plugins/jira/tls/tls.crt"
 
 
 

@@ -51,6 +51,12 @@ spec:
             - name: {{ .Values.secretVolumeName }}
               mountPath: "/var/lib/teleport/plugins/jira/jira_api_token"
               subPath: {{ .Values.jira.apiTokenSecretPath }}
+            - name: {{ .Values.tlsSecretVolumeName }}
+              mountPath: "/var/lib/teleport/plugins/jira/tls/tls.key"
+              subPath: {{ .Values.http.tlsKeySecretPath }}
+            - name: {{ .Values.tlsSecretVolumeName }}
+              mountPath: "/var/lib/teleport/plugins/jira/tls/tls.crt"
+              subPath: {{ .Values.http.tlsCertSecretPath }}
             {{- with .Values.volumeMounts -}}
               {{- toYaml . | nindent 12 }}
             {{- end}}
@@ -78,6 +84,10 @@ spec:
         - name: {{ .Values.secretVolumeName }}
           secret:
             secretName: "{{ coalesce .Values.jira.apiTokenFromSecret (printf "%s-secret" (include "jira.fullname" .)) }}"
+            defaultMode: 0600
+        - name: {{ .Values.tlsSecretVolumeName }}
+          secret:
+            secretName: "{{ .Values.http.tlsFromSecret }}"
             defaultMode: 0600
         {{- with .Values.volumes -}}
           {{- toYaml . | nindent 8 }}
