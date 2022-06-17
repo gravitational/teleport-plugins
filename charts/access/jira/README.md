@@ -108,8 +108,11 @@ jira:
 
 http:
   publicAddress: "teleport-plugin-jira.example.com"
-  keyFile: "/var/lib/teleport/plugins/jira/tls/tls.key"
-  certFile: "/var/lib/teleport/plugins/jira/tls/tls.crt"
+  tlsFromSecret: "teleport-plugin-jira-tls"
+  # Uncomment and change the following lines if your secret is structured
+  # differently then the example above
+  # tlsKeySecretPath: "tls.key"
+  # tlsCertSecretPath: "tls.crt"
 
   basicAuth:
     user: "basicauthuser"
@@ -117,15 +120,6 @@ http:
 
 # Uncomment the following line on AWS
 # chartMode: "aws"
-
-volumes:
-  - name: tls
-    secret:
-      secretName: teleport-plugin-jira-tls
-
-volumeMounts:
-  - name: tls
-    mountPath: /var/lib/teleport/plugins/jira/tls
 ```
 
 Make sure you protect the endpoint by setting a strong basic auth password in the `http` section!
@@ -227,18 +221,25 @@ The following values can be set for the Helm chart:
     <td>yes</td>
   </tr>
   <tr>
-    <td><code>http.keyFile</code></td>
-    <td>Path to the file containing the private key for the TLS connection</td>
+    <td><code>http.tlsFromSecret</code></td>
+    <td>Name of the Kubernetes secret where the TLS key and certificate will be mounted</td>
     <td>string</td>
     <td><code>""</code></td>
     <td>yes</td>
   </tr>
   <tr>
-    <td><code>http.certFile</code></td>
-    <td>Path to the file containing the certificate for the TLS connection</td>
+    <td><code>http.tlsKeySecretPath</code></td>
+    <td>Path of the TLS key in the secret specified by <code>http.tlsFromSecret</code></td>
     <td>string</td>
     <td><code>""</code></td>
-    <td>yes</td>
+    <td>no</td>
+  </tr>
+  <tr>
+    <td><code>http.tlsCertSecretPath</code></td>
+    <td>Path of the TLS certificate in the secret specified by <code>http.tlsFromSecret</code></td>
+    <td>string</td>
+    <td><code>""</code></td>
+    <td>no</td>
   </tr>
 
   <tr>
