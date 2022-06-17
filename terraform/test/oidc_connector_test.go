@@ -18,6 +18,7 @@ package test
 
 import (
 	"github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/teleport/api/types/wrappers"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -72,6 +73,61 @@ func (s *TerraformSuite) TestOIDCConnector() {
 	})
 }
 
+func (s *TerraformSuite) TestOIDCConnectorUpgradeToMultipleRedirectURLs() {
+	checkDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetOIDCConnector(s.Context(), "test_multiple_redirects", false)
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := "teleport_oidc_connector.test_multiple_redirects"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("oidc_connector_0_create_single_redirects.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "oidc"),
+					resource.TestCheckResourceAttr(name, "spec.redirect_url", "https://example.com/redirect"),
+				),
+			},
+			{
+				Config:   s.getFixture("oidc_connector_0_create_single_redirects.tf"),
+				PlanOnly: true,
+			},
+			{
+				Config: s.getFixture("oidc_connector_1_update_multiple_redirects.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "oidc"),
+					resource.TestCheckResourceAttr(name, "spec.redirect_url", "https://example.com/redirect"),
+					resource.TestCheckResourceAttr(name, "spec.redirect_urls.0", "https://example.com/redirect"),
+				),
+			},
+			{
+				Config:   s.getFixture("oidc_connector_1_update_multiple_redirects.tf"),
+				PlanOnly: true,
+			},
+			{
+				Config: s.getFixture("oidc_connector_2_update_only_redirect_urls.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "oidc"),
+					resource.TestCheckResourceAttr(name, "spec.redirect_urls.0", "https://example.com/redirect"),
+					resource.TestCheckResourceAttr(name, "spec.redirect_urls.1", "https://example.com/redirect2"),
+				),
+			},
+			{
+				Config:   s.getFixture("oidc_connector_2_update_only_redirect_urls.tf"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
 func (s *TerraformSuite) TestImportOIDCConnector() {
 	r := "teleport_oidc_connector"
 	id := "test_import"
@@ -89,6 +145,9 @@ func (s *TerraformSuite) TestImportOIDCConnector() {
 					Claim: "test",
 					Roles: []string{"terraform"},
 				},
+			},
+			RedirectURLs: wrappers.Strings{
+				"https://example.com/redirect",
 			},
 		},
 	}
