@@ -1853,10 +1853,11 @@ func GenSchemaOIDCConnectorV3(ctx context.Context) (github_com_hashicorp_terrafo
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
 				"redirect_url": {
-					Description: "RedirectURL is a URL that will redirect the client's browser back to the identity provider after successful authentication. This should match the URL on the Provider's side.",
+					Description: "RedirectURL is a URL that will redirect the client's browser back to the identity provider after successful authentication. This should match the URL on the Provider's side.  DELETE IN 11.0.0 in favor of RedirectURLs",
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
+				"redirect_urls": GenSchemaStrings(ctx),
 				"scope": {
 					Description: "Scope specifies additional scopes set by provider.",
 					Optional:    true,
@@ -17905,6 +17906,13 @@ func CopyOIDCConnectorV3FromTerraform(_ context.Context, tf github_com_hashicorp
 							}
 						}
 					}
+					{
+						a, ok := tf.Attrs["redirect_urls"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"OIDCConnectorV3.Spec.RedirectURLs"})
+						}
+						CopyFromStrings(diags, a, &obj.RedirectURLs)
+					}
 				}
 			}
 		}
@@ -18620,6 +18628,15 @@ func CopyOIDCConnectorV3ToTerraform(ctx context.Context, obj github_com_gravitat
 							v.Value = string(obj.GoogleAdminEmail)
 							v.Unknown = false
 							tf.Attrs["google_admin_email"] = v
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["redirect_urls"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"OIDCConnectorV3.Spec.RedirectURLs"})
+						} else {
+							v := CopyToStrings(diags, obj.RedirectURLs, t, tf.Attrs["redirect_urls"])
+							tf.Attrs["redirect_urls"] = v
 						}
 					}
 				}

@@ -20,11 +20,11 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/provider"
 
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
 
 func main() {
-	tfsdk.Serve(context.Background(), provider.New, tfsdk.ServeOpts{
-		Name: "teleport",
+	providerserver.Serve(context.Background(), provider.New, providerserver.ServeOpts{
+		Address: "teleport",
 	})
 }

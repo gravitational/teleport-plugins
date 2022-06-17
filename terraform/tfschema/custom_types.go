@@ -193,3 +193,56 @@ func CopyToTraits(diags diag.Diagnostics, o wrappers.Traits, t attr.Type, v attr
 
 	return value
 }
+
+// GenSchemaStrings returns Terraform schema for Strings type
+func GenSchemaStrings(_ context.Context) tfsdk.Attribute {
+	return tfsdk.Attribute{
+		Optional: true,
+		Type: types.ListType{
+			ElemType: types.StringType,
+		},
+	}
+}
+
+// CopyFromStrings converts from a Terraform value into a Teleport wrappers.Strings
+// The received value must be of List type
+func CopyFromStrings(diags diag.Diagnostics, v attr.Value, o *wrappers.Strings) {
+	value, ok := v.(types.List)
+	if !ok {
+		diags.AddError("Error reading from Terraform object", fmt.Sprintf("Can not convert %T to types.List", v))
+		return
+	}
+
+	*o = make(wrappers.Strings, len(value.Elems))
+	for i, tfValue := range value.Elems {
+		tfString, ok := tfValue.(types.String)
+		if !ok {
+			diags.AddError("Error reading from Terraform object", fmt.Sprintf("Can not convert %T to types.String", tfValue))
+			return
+		}
+
+		(*o)[i] = tfString.Value
+	}
+}
+
+// CopyFromStrings converts from a Teleport wrappers.Strings into a Terraform List with ElemType of String
+func CopyToStrings(diags diag.Diagnostics, o wrappers.Strings, t attr.Type, v attr.Value) attr.Value {
+	typ := t.(types.ListType) // By the convention, t comes type-asserted so there would be no failure
+
+	value, ok := v.(types.List)
+	if !ok {
+		value = types.List{ElemType: typ.ElemType}
+	}
+
+	if value.Elems == nil {
+		value.Elems = make([]attr.Value, len(o))
+	}
+
+	for k, l := range o {
+		value.Elems[k] = types.String{
+			Value: l,
+		}
+	}
+
+	return value
+}
