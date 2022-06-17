@@ -268,13 +268,13 @@
             "examples": [
                 {
                     "address": "auth.example.com:3025",
-                    "identitySecretName": "teleport-plugin-email-auth-id",
+                    "identityFromSecret": "teleport-plugin-email-auth-id",
                     "identitySecretPath": "auth_id"
                 }
             ],
             "required": [
                 "address",
-                "identitySecretName",
+                "identityFromSecret",
                 "identitySecretPath"
             ],
             "properties": {
@@ -286,8 +286,8 @@
                         "auth.example.com:3025"
                     ]
                 },
-                "identitySecretName": {
-                    "$id": "#/properties/teleport/properties/identitySecretName",
+                "identityFromSecret": {
+                    "$id": "#/properties/teleport/properties/identityFromSecret",
                     "type": "string",
                     "default": ""
                 },

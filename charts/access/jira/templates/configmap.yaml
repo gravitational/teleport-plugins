@@ -13,7 +13,7 @@ data:
     [jira]
     url = "{{ .Values.jira.url }}"
     username = "{{ .Values.jira.username }}"
-    api_token = "{{ .Values.jira.apiToken }}"
+    api_token = "/var/lib/teleport/plugins/jira/jira_api_token"
     project = "{{ .Values.jira.project }}"
     {{- if .Values.jira.issueType }}
     issue_type = "{{ .Values.jira.issueType }}"

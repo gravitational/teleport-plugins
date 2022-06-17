@@ -10,7 +10,7 @@ should match the snapshot (smtp on):
         [jira]
         url = "https://jira.example.com"
         username = "user@example.com"
-        api_token = "examplejiratoken"
+        api_token = "/var/lib/teleport/plugins/jira/jira_api_token"
         project = "ACC"
         issue_type = "Task"
 

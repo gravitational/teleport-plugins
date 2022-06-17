@@ -48,6 +48,9 @@ spec:
             - name: auth-id
               mountPath: /var/lib/teleport/plugins/jira/auth_id
               subPath: {{ .Values.teleport.identitySecretPath }}
+            - name: {{ .Values.secretVolumeName }}
+              mountPath: "/var/lib/teleport/plugins/jira/jira_api_token"
+              subPath: {{ .Values.jira.apiTokenSecretPath }}
             {{- with .Values.volumeMounts -}}
               {{- toYaml . | nindent 12 }}
             {{- end}}
@@ -70,7 +73,11 @@ spec:
             defaultMode: 0600
         - name: auth-id
           secret:
-            secretName: "{{ .Values.teleport.identitySecretName }}"
+            secretName: "{{ .Values.teleport.identityFromSecret }}"
+            defaultMode: 0600
+        - name: {{ .Values.secretVolumeName }}
+          secret:
+            secretName: "{{ coalesce .Values.jira.apiTokenFromSecret (printf "%s-secret" (include "jira.fullname" .)) }}"
             defaultMode: 0600
         {{- with .Values.volumes -}}
           {{- toYaml . | nindent 8 }}

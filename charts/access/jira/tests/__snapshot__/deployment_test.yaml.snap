@@ -44,6 +44,9 @@ should match the snapshot:
             - mountPath: /var/lib/teleport/plugins/jira/auth_id
               name: auth-id
               subPath: auth_id
+            - mountPath: /var/lib/teleport/plugins/jira/jira_api_token
+              name: password-file
+              subPath: jiraApiToken
           securityContext: {}
           volumes:
           - configMap:
@@ -54,3 +57,7 @@ should match the snapshot:
             secret:
               defaultMode: 384
               secretName: ""
+          - name: password-file
+            secret:
+              defaultMode: 384
+              secretName: RELEASE-NAME-teleport-plugin-jira-secret

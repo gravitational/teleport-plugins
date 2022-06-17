@@ -7,13 +7,15 @@
 #
 teleport:
   address: ""
-  identitySecretName: ""
+  identityFromSecret: ""
   identitySecretPath: "auth_id"
 
 jira:
   url: ""
   username: ""
   apiToken: ""
+  apiTokenFromSecret: ""
+  apiTokenSecretPath: "jiraApiToken"
   project: ""
   issueType: "Task"
 
@@ -31,6 +33,8 @@ chartMode: ""
 log:
   output: stdout
   severity: INFO
+
+secretVolumeName: "password-file"
 
 #
 # Deployment
