@@ -17,6 +17,7 @@ package main
 
 import (
 	"context"
+	"log"
 
 	"github.com/gravitational/teleport-plugins/terraform/provider"
 
@@ -24,7 +25,10 @@ import (
 )
 
 func main() {
-	providerserver.Serve(context.Background(), provider.New, providerserver.ServeOpts{
-		Address: "teleport",
+	err := providerserver.Serve(context.Background(), provider.New, providerserver.ServeOpts{
+		Address: "terraform.releases.teleport.dev/gravitational/teleport",
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 }
