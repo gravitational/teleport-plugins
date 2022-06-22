@@ -7,8 +7,8 @@ should match the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 9.3.6
-        helm.sh/chart: teleport-plugin-email-9.3.6
+        app.kubernetes.io/version: 9.3.7
+        helm.sh/chart: teleport-plugin-email-9.3.7
       name: RELEASE-NAME-teleport-plugin-email
     spec:
       replicas: 1
