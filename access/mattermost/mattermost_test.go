@@ -16,7 +16,6 @@ import (
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	. "github.com/gravitational/teleport-plugins/lib/testing"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
@@ -32,7 +31,7 @@ var requestReasonRegexp = regexp.MustCompile("(?im)^\\*\\*Reason\\*\\*:\\ ```\\n
 var resolutionReasonRegexp = regexp.MustCompile("(?im)^\\*\\*Resolution reason\\*\\*:\\ ```\\n(.*?)```(.*?)$")
 
 type MattermostSuite struct {
-	Suite
+	integration.Suite
 	appConfig Config
 	userNames struct {
 		ruler     string
