@@ -29,6 +29,7 @@ import (
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/utils"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/stretchr/testify/require"
@@ -172,7 +173,7 @@ func (s *TerraformBaseSuite) SetupSuite() {
 		// With this statement we try to forcefully close previously opened client, which stays cached in
 		// the provider variable.
 		s.closeClient()
-		return tfsdk.NewProtocol6Server(s.terraformProvider), nil
+		return providerserver.NewProtocol6(s.terraformProvider)(), nil
 	}
 }
 

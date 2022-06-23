@@ -17,14 +17,18 @@ package main
 
 import (
 	"context"
+	"log"
 
 	"github.com/gravitational/teleport-plugins/terraform/provider"
 
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 )
 
 func main() {
-	tfsdk.Serve(context.Background(), provider.New, tfsdk.ServeOpts{
-		Name: "teleport",
+	err := providerserver.Serve(context.Background(), provider.New, providerserver.ServeOpts{
+		Address: "terraform.releases.teleport.dev/gravitational/teleport",
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 }
