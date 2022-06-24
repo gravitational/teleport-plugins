@@ -48,16 +48,16 @@ type downloadVersion struct {
 }
 
 var downloadVersions = map[downloadVersionKey]downloadVersion{
-	// Teleport v9.3.0 Enterprise binaries
-	{"v9.3.0", "darwin", "amd64", true}: {sha256: lib.MustHexSHA256("3337b13f45fc05ecabdcd18a4ef53ebdf8221a8e12c364d3b5555f66ff854af4")},
-	{"v9.3.0", "linux", "amd64", true}:  {sha256: lib.MustHexSHA256("14b33e0250e87cb0b56f2fe4d62a890fb55298f5e9aee16258b30e9d3d4a5808")},
-	{"v9.3.0", "linux", "arm64", true}:  {sha256: lib.MustHexSHA256("fdff62443fd69cc93fbdebab6ed8ff1d07aa3b5fb5612a37c988e5924b27d340")},
-	{"v9.3.0", "linux", "arm", true}:    {sha256: lib.MustHexSHA256("c062e847d359ae4ddc8bb22112dd7405cf7a2906e26d50ad583b3a6c05b73b27")},
-	// Teleport v9.3.0 OSS binaries
-	{"v9.3.0", "darwin", "amd64", false}: {sha256: lib.MustHexSHA256("70fd9952e8484cb70ee9a7101da045e86b6d4c3d1a71526ea121667bbd330abb")},
-	{"v9.3.0", "linux", "amd64", false}:  {sha256: lib.MustHexSHA256("17e989f5bf60094e927594d0a97c9efcb1650033986c5ebb5d12a7856a7dbb5e")},
-	{"v9.3.0", "linux", "arm64", false}:  {sha256: lib.MustHexSHA256("cbd8e2d2baaf5e55d4195b1d910e5cab086cf04bb36fdd4770aedd6b98010f29")},
-	{"v9.3.0", "linux", "arm", false}:    {sha256: lib.MustHexSHA256("4c607eb3d04201c5ac9779458fed7c66c03c72e25c01b5adfe5b99b999038782")},
+	// Teleport v9.3.7 Enterprise binaries
+	{"v9.3.7", "darwin", "amd64", true}: {sha256: lib.MustHexSHA256("747cebfc7d457bc44a2310ff46b69a0e9cf25b1e4bd9103d8b61b1c552cb99cd")},
+	{"v9.3.7", "linux", "amd64", true}:  {sha256: lib.MustHexSHA256("9f8f2d06cc80a3407bf1b696632234e0923b86be726ffea6668ef6b68bf95d86")},
+	{"v9.3.7", "linux", "arm64", true}:  {sha256: lib.MustHexSHA256("87f4b1b94d30fafe3ffce3e0a21b4bf494a383364e0cee21669722df0a15d9d6")},
+	{"v9.3.7", "linux", "arm", true}:    {sha256: lib.MustHexSHA256("a1b409fdd9aef2b8d4defad716808a3de05992832b62878ad6dac3fc38a3f33c")},
+	// Teleport v9.3.7 OSS binaries
+	{"v9.3.7", "darwin", "amd64", false}: {sha256: lib.MustHexSHA256("22f841ec31600137e13c90d5ed540b562d0242e7def628f074d30a34144bae08")},
+	{"v9.3.7", "linux", "amd64", false}:  {sha256: lib.MustHexSHA256("391839f5b2a51d4202cc02569f207db0d6a59e1f5ac4531d2739ef0894bde803")},
+	{"v9.3.7", "linux", "arm64", false}:  {sha256: lib.MustHexSHA256("9c19b89be614b47502459c0ff56f9daf0c21716f471ff1bcd8b9749aa968217b")},
+	{"v9.3.7", "linux", "arm", false}:    {sha256: lib.MustHexSHA256("9e0e886b1ad8abe765a73e5a94d36873bb2070a6f6841ccba1dc7f6059ea2a10")},
 }
 
 // GetEnterprise downloads a Teleport Enterprise distribution.

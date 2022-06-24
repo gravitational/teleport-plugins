@@ -19,7 +19,7 @@ workspace:
 
 steps:
   - name: Run linter
-    image: golangci/golangci-lint:v1.39.0
+    image: golangci/golangci-lint:v1.46.2
     commands:
       - make lint
 
@@ -28,7 +28,7 @@ steps:
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v9.3.0
+      TELEPORT_GET_VERSION: v9.3.7
     commands:
       - echo Testing plugins against Teleport $TELEPORT_GET_VERSION
       - curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
@@ -79,7 +79,7 @@ steps:
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v9.3.0
+      TELEPORT_GET_VERSION: v9.3.7
       GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
       GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
@@ -919,6 +919,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 209a6e650d8faae9d516a987443b30d360a6d9779c0f3d84e017d07f1d5759f7
+hmac: 1cb9710a6f204e8d58f8f8bfe29b16160c133c43ed62177b4ef9bce9fb53535b
 
 ...
