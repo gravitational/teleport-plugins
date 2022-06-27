@@ -5,6 +5,12 @@ The Teleport plugins release process is controlled by Drone, and is described in
 ## Authenticating to Amazon ECR
 Plugin maintainers can push to both the staging and public Amazon Elastic Container Registries by assuming the `release-engineer-plugin-admin` role in AWS. To assume this administrative role the engineer must first login to AWS using `Plugin-Release-Engineers` permission set. This permission set can be found under the `teleport-prod` AWS Account. To request access to this account please contact the IT team. 
 
+Assume the `release-engineer-plugin-admin` on the CLI with:
+```console
+$ aws sts assume-role --role-arn arn:aws:iam::146628656107:role/release-engineer-plugin-admin --role-session-name AWSCLI-Session
+``` 
+and export the credentials to your environment. 
+
 Once authenticated, the plugin maintainer can authenticate to the staging and public ECR's using the following commands, respectively. 
 
 ```console
