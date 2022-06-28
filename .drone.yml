@@ -627,6 +627,7 @@ steps:
       - apk add --no-cache make aws-cli
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
       - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
+      - aws ecr-public get-login-password --region us-east-1 | docker login -u="AWS" --password-stdin public.ecr.aws
       - docker login -u="$QUAYIO_DOCKER_USERNAME" -p="$QUAYIO_DOCKER_PASSWORD" quay.io
       - make docker-promote-access-$PLUGIN_TYPE
 
@@ -678,6 +679,7 @@ steps:
     commands:
       - apk add --no-cache make aws-cli
       - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
+      - aws ecr-public get-login-password --region us-east-1 | docker login -u="AWS" --password-stdin public.ecr.aws
       - docker login -u="$QUAYIO_DOCKER_USERNAME" -p="$QUAYIO_DOCKER_PASSWORD" quay.io
       - make docker-promote-event-handler
 
@@ -917,6 +919,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: ad38bd355ab8d446e519f412e9e632fbe1bef129008397b97f79d2ed0b59cec4
+hmac: 209a6e650d8faae9d516a987443b30d360a6d9779c0f3d84e017d07f1d5759f7
 
 ...
