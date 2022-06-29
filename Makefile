@@ -72,6 +72,7 @@ docker-promote-event-handler:
 helm-package-charts:
 	mkdir -p packages
 	helm package -d packages charts/access/email
+	helm package -d packages charts/access/jira
 	helm package -d packages charts/access/slack
 	helm package -d packages charts/access/pagerduty
 	helm package -d packages charts/access/mattermost
@@ -157,6 +158,7 @@ update-version:
 .PHONY: update-helm-version
 update-helm-version:
 	$(MAKE) update-helm-version-access-email
+	$(MAKE) update-helm-version-access-jira
 	$(MAKE) update-helm-version-access-slack
 	$(MAKE) update-helm-version-access-pagerduty
 	$(MAKE) update-helm-version-access-mattermost
@@ -227,6 +229,7 @@ test-helm-%:
 .PHONY: test-helm
 test-helm:
 	$(MAKE) test-helm-access-email
+	$(MAKE) test-helm-access-jira
 	$(MAKE) test-helm-access-slack
 	$(MAKE) test-helm-access-pagerduty
 	$(MAKE) test-helm-access-mattermost
