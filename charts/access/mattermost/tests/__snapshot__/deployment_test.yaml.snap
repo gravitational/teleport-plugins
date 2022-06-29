@@ -70,8 +70,8 @@ should mount external secret:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-mattermost
-        app.kubernetes.io/version: 9.3.6
-        helm.sh/chart: teleport-plugin-mattermost-9.3.6
+        app.kubernetes.io/version: 9.3.7
+        helm.sh/chart: teleport-plugin-mattermost-9.3.7
       name: RELEASE-NAME-teleport-plugin-mattermost
     spec:
       replicas: 1
@@ -91,7 +91,7 @@ should mount external secret:
             - start
             - --config
             - /etc/teleport-mattermost.toml
-            image: quay.io/gravitational/teleport-plugin-mattermost:9.3.6
+            image: quay.io/gravitational/teleport-plugin-mattermost:9.3.7
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-mattermost
             ports:
@@ -133,8 +133,8 @@ should override volume name:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-mattermost
-        app.kubernetes.io/version: 9.3.6
-        helm.sh/chart: teleport-plugin-mattermost-9.3.6
+        app.kubernetes.io/version: 9.3.7
+        helm.sh/chart: teleport-plugin-mattermost-9.3.7
       name: RELEASE-NAME-teleport-plugin-mattermost
     spec:
       replicas: 1
@@ -154,7 +154,7 @@ should override volume name:
             - start
             - --config
             - /etc/teleport-mattermost.toml
-            image: quay.io/gravitational/teleport-plugin-mattermost:9.3.6
+            image: quay.io/gravitational/teleport-plugin-mattermost:9.3.7
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-mattermost
             ports:
