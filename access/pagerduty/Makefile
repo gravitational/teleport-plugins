@@ -1,4 +1,4 @@
-VERSION=9.3.6
+VERSION=9.3.7
 GO_VERSION=1.17.11
 
 BUILDDIR ?= build
@@ -18,6 +18,7 @@ RELEASE_MESSAGE = "Building with GOOS=$(OS) GOARCH=$(ARCH)."
 
 DOCKER_NAME = teleport-plugin-pagerduty
 DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/$(DOCKER_NAME):$(VERSION)
+DOCKER_IMAGE_ECR_PUBLIC = public.ecr.aws/d7a2c0j1/$(DOCKER_NAME):$(VERSION)
 DOCKER_IMAGE_QUAY = quay.io/gravitational/$(DOCKER_NAME):$(VERSION)
 DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg ACCESS_PLUGIN=pagerduty --build-arg GITREF=$(GITREF)
 
@@ -61,7 +62,16 @@ docker-push:
 	docker push ${DOCKER_IMAGE}
 
 .PHONY: docker-promote
-docker-promote:
+docker-promote: docker-promote-quay docker-promote-ecr-public
+
+.PHONY: docker-promote-quay
+docker-promote-quay:
 	docker pull ${DOCKER_IMAGE} && \
 	docker tag ${DOCKER_IMAGE} ${DOCKER_IMAGE_QUAY} && \
 	docker push ${DOCKER_IMAGE_QUAY}
+
+.PHONY: docker-promote-ecr-public
+docker-promote-ecr-public:
+	docker pull ${DOCKER_IMAGE} && \
+	docker tag ${DOCKER_IMAGE} ${DOCKER_IMAGE_ECR_PUBLIC} && \
+	docker push ${DOCKER_IMAGE_ECR_PUBLIC}

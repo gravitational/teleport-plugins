@@ -222,7 +222,8 @@ func (s *MattermostSuite) newAccessRequest(reviewers []User) types.AccessRequest
 
 	req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "editor")
 	require.NoError(t, err)
-	req.SetRequestReason("because of " + strings.Repeat("A", 5000))
+	// max size of request was decreased here: https://github.com/gravitational/teleport/pull/13298
+	req.SetRequestReason("because of " + strings.Repeat("A", 4000))
 	var suggestedReviewers []string
 	for _, user := range reviewers {
 		suggestedReviewers = append(suggestedReviewers, user.Email)
@@ -352,7 +353,9 @@ func (s *MattermostSuite) TestDenial() {
 	directChannelID := s.fakeMattermost.GetDirectChannelFor(s.fakeMattermost.GetBotUser(), reviewer).ID
 	assert.Equal(t, directChannelID, post.ChannelID)
 
-	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay "+strings.Repeat("A", 10000))
+	// max size of request was decreased here: https://github.com/gravitational/teleport/pull/13298
+	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay "+strings.Repeat("A", 4000))
+	require.NoError(t, err)
 
 	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.Context())
 	require.NoError(t, err, "no messages updated")

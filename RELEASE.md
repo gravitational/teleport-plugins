@@ -2,6 +2,41 @@
 
 The Teleport plugins release process is controlled by Drone, and is described in detail by [RFD003](./rfd0003-teleport-plugins-versioning.md).
 
+## Authenticating to Amazon ECR
+Plugin maintainers can push to both the staging and public Amazon Elastic Container Registries by assuming the `release-engineer-plugin-admin` role in AWS. To assume this administrative role the engineer must first login to AWS using `Plugin-Release-Engineers` permission set. This permission set can be found under the `teleport-prod` AWS Account. To request access to this account please contact the IT team. 
+
+Assume the `release-engineer-plugin-admin` on the CLI with:
+```console
+$ aws sts assume-role --role-arn arn:aws:iam::146628656107:role/release-engineer-plugin-admin --role-session-name AWSCLI-Session
+``` 
+and export the credentials to your environment. 
+
+Once authenticated, the plugin maintainer can authenticate to the staging and public ECR's using the following commands, respectively. 
+
+```console
+$ aws ecr get-login-password --region us-west-2 | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
+```
+and
+```console 
+$ aws ecr-public get-login-password --region us-east-1 | docker login -u="AWS" --password-stdin public.ecr.aws
+```
+
+Whenever possible, the plugin maintainers should prefer to push to these registries by tagging a new version and promoting it in drone. However, in case of emergency the above method may be used to push an image. 
+
+### Pull an image in staging
+Teleport engineers can gain read-only access to the internal plugin images by authenticating to AWS using the `Teleport-Team-Prod-ReadOnly` permission set found under the `teleport-prod` AWS Account. 
+
+Afterwards, authenticate to the registry with:
+
+```console
+$ aws ecr get-login-password --region us-west-2 | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
+```
+
+and pull an image with:
+```console
+$ docker pull 146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/teleport-plugin-email:9.3.7
+```
+
 ## Recovery & Troubleshooting
 
 ### Terraform Registry

@@ -15,5 +15,7 @@ resource "teleport_oidc_connector" "test" {
             claim = "test"
             roles = ["teleport"]
         }]
+        
+        redirect_url = "https://example.com/redirect"
     }
 }

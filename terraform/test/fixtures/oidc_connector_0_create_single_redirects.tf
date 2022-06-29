@@ -1,6 +1,6 @@
-resource "teleport_oidc_connector" "test" {
+resource "teleport_oidc_connector" "test_multiple_redirects" {
     metadata = {
-        name    = "test"
+        name    = "test_multiple_redirects"
         expires = "2022-10-12T07:20:50Z"
         labels  = {
             example = "yes"
