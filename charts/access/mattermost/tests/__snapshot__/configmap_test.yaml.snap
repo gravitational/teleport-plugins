@@ -9,7 +9,7 @@ should match the snapshot:
 
         [mattermost]
         url        = "https://my.mattermost.com"
-        token      = "test-mattermost-token"
+        token      = "/var/lib/teleport/plugins/mattermost/mattermost_token"
         recipients = ["security@example.com"]
 
         [log]

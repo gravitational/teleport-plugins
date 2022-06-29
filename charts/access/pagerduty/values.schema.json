@@ -305,6 +305,22 @@
                         "example-api-key"
                     ]
                 },
+                "apiKeyFromSecret": {
+                    "$id": "#/properties/pagerduty/properties/apiKeyFromSecret",
+                    "type": "string",
+                    "default": "",
+                    "examples": [
+                        "my-pagerduty-secret"
+                    ]
+                },
+                "apiKeySecretPath": {
+                    "$id": "#/properties/pagerduty/properties/apiKeySecretPath",
+                    "type": "string",
+                    "default": "pagerdutyApiKey",
+                    "examples": [
+                        "apikey"
+                    ]
+                },
                 "userEmail": {
                     "$id": "#/properties/pagerduty/properties/userEmail",
                     "type": "string",
@@ -349,6 +365,14 @@
                 }
             },
             "additionalProperties": true
+        },
+        "secretVolumeName": {
+            "$id": "#/properties/secretVolumeName",
+            "type": "string",
+            "default": "password-file",
+            "examples": [
+                "my-secret-volume"
+            ]
         }
     },
     "additionalProperties": true

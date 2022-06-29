@@ -12,11 +12,15 @@ teleport:
 
 pagerduty:
   apiKey: ""
+  apiKeyFromSecret: ""
+  apiKeySecretPath: "pagerdutyApiKey"
   userEmail: ""
 
 log:
   output: stdout
   severity: INFO
+
+secretVolumeName: "password-file"
 
 #
 # Deployment

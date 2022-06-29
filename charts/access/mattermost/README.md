@@ -140,6 +140,20 @@ The following values can be set for the Helm chart:
     <td>yes</td>
   </tr>
   <tr>
+    <td><code>mattermost.tokenFromSecret</code></td>
+    <td>Kubernetes secret to read the token from instead of <code>mattermost.token</code></td>
+    <td>string</td>
+    <td><code>""</code></td>
+    <td>no</td>
+  </tr>
+  <tr>
+    <td><code>mattermost.tokenSecretPath</code></td>
+    <td>The path of the token in the secret described by <code>mattermost.tokenFromSecret</code></td>
+    <td>string</td>
+    <td><code>"mattermostToken"</code></td>
+    <td>no</td>
+  </tr>
+  <tr>
     <td><code>mattermost.recipients</code></td>
     <td>Array of the recipients the plugin should send access requests to.</td>
     <td>array</td>

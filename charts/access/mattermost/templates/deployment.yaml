@@ -48,6 +48,9 @@ spec:
             - name: auth-id
               mountPath: /var/lib/teleport/plugins/mattermost/auth_id
               subPath: {{ .Values.teleport.identitySecretPath }}
+            - name: {{ .Values.secretVolumeName }}
+              mountPath: /var/lib/teleport/plugins/mattermost/mattermost_token
+              subPath: {{ .Values.mattermost.tokenSecretPath }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -68,4 +71,8 @@ spec:
         - name: auth-id
           secret:
             secretName: "{{ .Values.teleport.identitySecretName }}"
+            defaultMode: 0600
+        - name: {{ .Values.secretVolumeName }}
+          secret:
+            secretName: "{{ coalesce .Values.mattermost.tokenFromSecret (printf "%s-secret" (include "mattermost.fullname" .)) }}"
             defaultMode: 0600

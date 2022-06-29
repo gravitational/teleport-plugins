@@ -48,6 +48,9 @@ spec:
             - name: auth-id
               mountPath: /var/lib/teleport/plugins/pagerduty/auth_id
               subPath: {{ .Values.teleport.identitySecretPath }}
+            - name: {{ .Values.secretVolumeName }}
+              mountPath: /var/lib/teleport/plugins/pagerduty/pagerduty_api_key
+              subPath: {{ .Values.pagerduty.apiKeySecretPath }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
@@ -68,4 +71,8 @@ spec:
         - name: auth-id
           secret:
             secretName: "{{ .Values.teleport.identitySecretName }}"
+            defaultMode: 0600
+        - name: {{ .Values.secretVolumeName }}
+          secret:
+            secretName: "{{ coalesce .Values.pagerduty.apiKeyFromSecret (printf "%s-secret" (include "pagerduty.fullname" .)) }}"
             defaultMode: 0600

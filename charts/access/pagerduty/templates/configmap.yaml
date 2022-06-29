@@ -11,7 +11,7 @@ data:
     identity = "/var/lib/teleport/plugins/pagerduty/auth_id"
 
     [pagerduty]
-    api_key = "{{ .Values.pagerduty.apiKey }}"
+    api_key    = "/var/lib/teleport/plugins/pagerduty/pagerduty_api_key"
     user_email = "{{ .Values.pagerduty.userEmail }}"
 
     [log]

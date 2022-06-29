@@ -294,7 +294,7 @@
             ],
             "required": [
                 "token",
-                "tokenSecretName",
+                "tokenFromSecret",
                 "tokenSecretPath"
             ],
             "properties": {
@@ -306,8 +306,8 @@
                         "example-api-token"
                     ]
                 },
-                "tokenSecretName": {
-                    "$id": "#/properties/slack/properties/tokenSecretName",
+                "tokenFromSecret": {
+                    "$id": "#/properties/slack/properties/tokenFromSecret",
                     "type": "string",
                     "default": "",
                     "examples": [
@@ -317,7 +317,7 @@
                 "tokenSecretPath": {
                     "$id": "#/properties/slack/properties/tokenSecretPath",
                     "type": "string",
-                    "default": "",
+                    "default": "slackToken",
                     "examples": [
                         "token"
                     ]
@@ -385,6 +385,14 @@
                 }
             },
             "additionalProperties": true
+        },
+        "secretVolumeName": {
+            "$id": "#/properties/secretVolumeName",
+            "type": "string",
+            "default": "password-file",
+            "examples": [
+                "my-secret-volume"
+            ]
         }
     },
     "additionalProperties": true

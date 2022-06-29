@@ -14,6 +14,8 @@ mailgun:
   enabled: false
   domain: ""
   privateKey: ""
+  privateKeyFromSecret: ""
+  privateKeySecretPath: "mailgunPrivateKey"
 
 smtp:
   enabled: false
@@ -21,7 +23,8 @@ smtp:
   port: 587
   username: ""
   password: ""
-  passwordFile: ""
+  passwordFromSecret: ""
+  passwordSecretPath: "smtpPassword"
   starttlsPolicy: "mandatory"
 
 delivery:
@@ -29,6 +32,8 @@ delivery:
   recipients: []
 
 roleToRecipients: {}
+
+secretVolumeName: "password-file"
 
 log:
   output: stdout
@@ -50,23 +55,10 @@ fullnameOverride: ""
 podAnnotations: {}
 
 podSecurityContext: {}
-  # fsGroup: 2000
 
 securityContext: {}
-  # capabilities:
-  #   drop:
-  #   - ALL
-  # readOnlyRootFilesystem: true
-  # runAsNonRoot: true
-  # runAsUser: 1000
 
 resources: {}
-  # limits:
-  #   cpu: 100m
-  #   memory: 128Mi
-  # requests:
-  #   cpu: 100m
-  #   memory: 128Mi
 
 nodeSelector: {}
 
@@ -75,11 +67,5 @@ tolerations: []
 affinity: {}
 
 volumes: []
-  # - name: password-file
-  #   secret:
-  #     secretName: teleport-email-plugin-password-file
-  #     defaultMode: 0600
 
 volumeMounts: []
-  # - name: password-file
-  #   mountPath: /var/lib/teleport/plugins/email/smtp_password
