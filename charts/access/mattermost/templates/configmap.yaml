@@ -12,7 +12,7 @@ data:
 
     [mattermost]
     url        = "{{ .Values.mattermost.url }}"
-    token      = "{{ .Values.mattermost.token }}"
+    token      = "/var/lib/teleport/plugins/mattermost/mattermost_token"
     recipients = {{ .Values.mattermost.recipients | toJson }}
 
     [log]

@@ -8,7 +8,7 @@ should match the snapshot (smtp on):
         identity = "/var/lib/teleport/plugins/pagerduty/auth_id"
 
         [pagerduty]
-        api_key = "test-api-key"
+        api_key    = "/var/lib/teleport/plugins/pagerduty/pagerduty_api_key"
         user_email = "example-user@example.com"
 
         [log]

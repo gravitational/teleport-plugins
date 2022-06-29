@@ -12,18 +12,14 @@ data:
 
     {{ if .Values.mailgun.enabled -}}
     [mailgun]
-    domain      = "{{ .Values.mailgun.domain }}"
-    private_key = "{{ .Values.mailgun.privateKey }}"
+    domain           = "{{ .Values.mailgun.domain }}"
+    private_key_file = "/var/lib/teleport/plugins/email/mailgun_private_key"
     {{ else if .Values.smtp.enabled -}}
     [smtp]
-    host          = "{{ .Values.smtp.host }}"
-    port          = {{ .Values.smtp.port }}
-    username      = "{{ .Values.smtp.username }}"
-    {{ if eq .Values.smtp.passwordFile "" -}}
-    password      = "{{ .Values.smtp.password }}"
-    {{ else -}}
-    password_file = "{{ .Values.smtp.passwordFile }}"
-    {{ end }}
+    host            = "{{ .Values.smtp.host }}"
+    port            = {{ .Values.smtp.port }}
+    username        = "{{ .Values.smtp.username }}"
+    password_file   = "/var/lib/teleport/plugins/email/smtp_password"
     starttls_policy = "{{ .Values.smtp.starttlsPolicy }}"
     {{- end }}
 

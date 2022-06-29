@@ -9,3 +9,17 @@ tests:
         tag: v98.76.54
     asserts:
       - matchSnapshot: {}
+
+  - it: should mount external secret
+    set:
+      mattermost:
+        tokenFromSecret: my-mattermost-secret
+        tokenSecretPath: my-token-in-secret
+    asserts:
+      - matchSnapshot: {}
+
+  - it: should override volume name
+    set:
+      secretVolumeName: my-secret-volume
+    asserts:
+      - matchSnapshot: {}

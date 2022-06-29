@@ -50,8 +50,8 @@ $ ./build/teleport-jira start
 
 ## Set up Jira board
 
-- [See detailed setup instructions for Jira Cloud on the website](https://goteleport.com/teleport/docs/enterprise/workflow/ssh_approval_jira_cloud/)
-- [See detailed setup instructions for Jira Server on the website](https://goteleport.com/teleport/docs/enterprise/workflow/ssh_approval_jira_server/)
+- [See detailed setup instructions for Jira Cloud on the website](https://goteleport.com/docs/enterprise/workflow/ssh-approval-jira-cloud/)
+- [See detailed setup instructions for Jira Server on the website](https://goteleport.com/docs/enterprise/workflow/ssh-approval-jira-server/)
 
 Setup process is different for the Jira Cloud and Jira Server editions:
 
@@ -159,5 +159,3 @@ $ docker run -v <path/to/config>:/etc/teleport-jira.toml quay.io/gravitational/t
 If something bad happens, try to run it with `-d` option i.e. `teleport-jira start -d` and attach the stdout output to the issue you are going to create.
 
 If for some reason you want to disable TLS termination in the plugin and deploy it somewhere else e.g. on some reverse proxy, you may want to run the plugin with `--insecure-no-tls` option. With `--insecure-no-tls` option, plugin's webhook server will talk plain HTTP protocol.
-
-

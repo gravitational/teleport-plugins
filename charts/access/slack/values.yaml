@@ -12,14 +12,16 @@ teleport:
 
 slack:
   token: ""
-  tokenSecretName: ""
-  tokenSecretPath: ""
+  tokenFromSecret: ""
+  tokenSecretPath: "slackToken"
 
 roleToRecipients: {}
 
 log:
   output: stdout
   severity: INFO
+
+secretVolumeName: "password-file"
 
 #
 # Deployment
