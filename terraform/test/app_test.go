@@ -17,6 +17,8 @@ limitations under the License.
 package test
 
 import (
+	"time"
+
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -85,6 +87,15 @@ func (s *TerraformSuite) TestImportApp() {
 	err = s.client.CreateApp(s.Context(), app)
 	require.NoError(s.T(), err)
 
+	require.Eventually(s.T(), func() bool {
+		_, err := s.client.GetApp(s.Context(), app.GetName())
+		if trace.IsNotFound(err) {
+			return false
+		}
+		require.NoError(s.T(), err)
+		return true
+	}, 5*time.Second, time.Second)
+
 	resource.Test(s.T(), resource.TestCase{
 		ProtoV6ProviderFactories: s.terraformProviders,
 		Steps: []resource.TestStep{
@@ -99,6 +110,37 @@ func (s *TerraformSuite) TestImportApp() {
 
 					return nil
 				},
+			},
+		},
+	})
+}
+
+func (s *TerraformSuiteWithCache) TestAppWithCache() {
+	checkDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetApp(s.Context(), "test")
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := "teleport_app.test_with_cache"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("app_0_create_with_cache.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "app"),
+					resource.TestCheckResourceAttr(name, "spec.uri", "localhost:3000"),
+				),
+			},
+			{
+				Config:   s.getFixture("app_0_create_with_cache.tf"),
+				PlanOnly: true,
 			},
 		},
 	})

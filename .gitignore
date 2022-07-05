@@ -63,3 +63,6 @@ ssh.config
 
 # teleport binaries
 /.teleport
+
+# helm chart packages directory
+packages/

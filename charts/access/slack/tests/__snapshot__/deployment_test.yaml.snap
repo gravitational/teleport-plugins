@@ -1,0 +1,59 @@
+should match the snapshot:
+  1: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: teleport-plugin-slack
+        app.kubernetes.io/version: 9.3.7
+        helm.sh/chart: teleport-plugin-slack-9.3.7
+      name: RELEASE-NAME-teleport-plugin-slack
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app.kubernetes.io/instance: RELEASE-NAME
+          app.kubernetes.io/name: teleport-plugin-slack
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/name: teleport-plugin-slack
+        spec:
+          containers:
+          - command:
+            - /usr/local/bin/teleport-plugin
+            - start
+            - --config
+            - /etc/teleport-slack.toml
+            image: gcr.io/overridden/repository:v98.76.54
+            imagePullPolicy: IfNotPresent
+            name: teleport-plugin-slack
+            resources: {}
+            securityContext: {}
+            volumeMounts:
+            - mountPath: /etc/teleport-slack.toml
+              name: config
+              subPath: teleport-slack.toml
+            - mountPath: /var/lib/teleport/plugins/slack/auth_id
+              name: auth-id
+              subPath: auth_id
+            - mountPath: /var/lib/teleport/plugins/slack/slack-token
+              name: password-file
+              subPath: slackToken
+          securityContext: {}
+          volumes:
+          - configMap:
+              defaultMode: 384
+              name: RELEASE-NAME-teleport-plugin-slack
+            name: config
+          - name: auth-id
+            secret:
+              defaultMode: 384
+              secretName: ""
+          - name: password-file
+            secret:
+              defaultMode: 384
+              secretName: RELEASE-NAME-teleport-plugin-slack-secret

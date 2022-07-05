@@ -19,14 +19,17 @@ package provider
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
+	"github.com/jonboulle/clockwork"
 )
 
 // resourceTeleportSessionRecordingConfigType is the resource metadata type
@@ -77,13 +80,42 @@ func (r resourceTeleportSessionRecordingConfig) Create(ctx context.Context, req 
 
 	
 
+	sessionRecordingConfigBefore, err := r.p.Client.GetSessionRecordingConfig(ctx)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
+		return
+	}
+
 	err = r.p.Client.SetSessionRecordingConfig(ctx, sessionRecordingConfig)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
 		return
 	}
 
-	sessionRecordingConfigI, err := r.p.Client.GetSessionRecordingConfig(ctx)
+	var sessionRecordingConfigI apitypes.SessionRecordingConfig
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		sessionRecordingConfigI, err = r.p.Client.GetSessionRecordingConfig(ctx)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
+			return
+		}
+		if sessionRecordingConfigBefore.GetMetadata().ID != sessionRecordingConfigI.GetMetadata().ID || false {
+			break
+		}
+		if bErr := backoff.Do(ctx); bErr != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading SessionRecordingConfig (tried %d times) - state outdated, please import resource", tries)
+			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "session_recording_config"))
+			return
+		}
+	}
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
 		return
@@ -164,19 +196,48 @@ func (r resourceTeleportSessionRecordingConfig) Update(ctx context.Context, req 
 
 	err := sessionRecordingConfig.CheckAndSetDefaults()
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
+		return
+	}
+
+	sessionRecordingConfigBefore, err := r.p.Client.GetSessionRecordingConfig(ctx)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
 		return
 	}
 
 	err = r.p.Client.SetSessionRecordingConfig(ctx, sessionRecordingConfig)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
 		return
 	}
 
-	sessionRecordingConfigI, err := r.p.Client.GetSessionRecordingConfig(ctx)
+	var sessionRecordingConfigI apitypes.SessionRecordingConfig
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		sessionRecordingConfigI, err = r.p.Client.GetSessionRecordingConfig(ctx)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
+			return
+		}
+		if sessionRecordingConfigBefore.GetMetadata().ID != sessionRecordingConfigI.GetMetadata().ID || false {
+			break
+		}
+		if bErr := backoff.Do(ctx); bErr != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading SessionRecordingConfig (tried %d times) - state outdated, please import resource", tries)
+			resp.Diagnostics.AddError(diagMessage, "session_recording_config")
+			return
+		}
+	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
 		return
 	}
 

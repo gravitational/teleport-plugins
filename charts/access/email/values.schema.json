@@ -26,7 +26,7 @@
             "default": {},
             "examples": [
                 {
-                    "repository": "146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/teleport-plugin-email",
+                    "repository": "quay.io/gravitational/teleport-plugin-email",
                     "pullPolicy": "IfNotPresent",
                     "tag": ""
                 }
@@ -40,9 +40,9 @@
                 "repository": {
                     "$id": "#/properties/image/properties/repository",
                     "type": "string",
-                    "default": "146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/teleport-plugin-email",
+                    "default": "quay.io/gravitational/teleport-plugin-email",
                     "examples": [
-                        "146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/teleport-plugin-email"
+                        "quay.io/gravitational/teleport-plugin-email"
                     ]
                 },
                 "pullPolicy": {
@@ -311,8 +311,8 @@
             "examples": [
                 {
                     "enabled": false,
-                    "domain": "sandboxbd81caddef744a69be0e5b544ab0c3bd.mailgun.org",
-                    "privateKey": "xoxb-11xx"
+                    "domain": "yourdomain.mailgun.org",
+                    "privateKey": "xoxb-fakekey62b0eac53565a38c8cc0316f6"
                 }
             ],
             "required": [
@@ -334,7 +334,7 @@
                     "type": "string",
                     "default": "",
                     "examples": [
-                        "sandboxbd81caddef744a69be0e5b544ab0c3bd.mailgun.org"
+                        "yourdomain.mailgun.org"
                     ]
                 },
                 "privateKey": {
@@ -343,6 +343,22 @@
                     "default": "",
                     "examples": [
                         "xoxb-11xx"
+                    ]
+                },
+                "privateKeyFromSecret": {
+                    "$id": "#/properties/mailgun/properties/privateKeyFromSecret",
+                    "type": "string",
+                    "default": "",
+                    "examples": [
+                        "my-secret-name"
+                    ]
+                },
+                "privateKeySecretPath": {
+                    "$id": "#/properties/mailgun/properties/privateKeySecretPath",
+                    "type": "string",
+                    "default": "mailgunPrivateKey",
+                    "examples": [
+                        "my-path-in-secret"
                     ]
                 }
             },
@@ -359,7 +375,6 @@
                     "port": 587,
                     "username": "username@example.com",
                     "password": "",
-                    "passwordFile": "",
                     "starttlsPolicy": "mandatory"
                 }
             ],
@@ -407,10 +422,15 @@
                     "type": "string",
                     "default": ""
                 },
-                "passwordFile": {
-                    "$id": "#/properties/smtp/properties/passwordFile",
+                "passwordFromSecret": {
+                    "$id": "#/properties/smtp/properties/passwordFromSecret",
                     "type": "string",
                     "default": ""
+                },
+                "passwordSecretPath": {
+                    "$id": "#/properties/smtp/properties/passwordSecretPath",
+                    "type": "string",
+                    "default": "smtpPassword"
                 },
                 "starttlsPolicy": {
                     "$id": "#/properties/smtp/properties/starttlsPolicy",
@@ -471,6 +491,41 @@
                 }
             },
             "additionalProperties": true
+        },
+        "roleToRecipients": {
+            "$id": "#/properties/roleToRecipients",
+            "type": "object",
+            "default": {},
+            "examples": [
+                {
+                    "dev": [
+                        "devs-slack-channel"
+                    ],
+                    "*": [
+                        "admin@email.com",
+                        "admin-slack-channel"
+                    ]
+                }
+            ],
+            "additionalProperties": {
+                "type": "array",
+                "items": {
+                    "type": "string",
+                    "examples": [
+                        "example-slack-channel",
+                        "user@example.com"
+                    ]
+                },
+                "minItems": 1
+            }
+        },
+        "secretVolumeName": {
+            "$id": "#/properties/secretVolumeName",
+            "type": "string",
+            "default": "password-file",
+            "examples": [
+                "my-secret-volume"
+            ]
         },
         "log": {
             "$id": "#/properties/log",

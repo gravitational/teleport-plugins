@@ -216,7 +216,8 @@ func (s *SlackSuite) newAccessRequest(reviewers []User) types.AccessRequest {
 
 	req, err := types.NewAccessRequest(uuid.New().String(), s.userNames.requestor, "editor")
 	require.NoError(t, err)
-	req.SetRequestReason("because of " + strings.Repeat("A", 5000))
+	// max size of request was decreased here: https://github.com/gravitational/teleport/pull/13298
+	req.SetRequestReason("because of " + strings.Repeat("A", 4000))
 	var suggestedReviewers []string
 	for _, user := range reviewers {
 		suggestedReviewers = append(suggestedReviewers, user.Profile.Email)
@@ -378,7 +379,9 @@ func (s *SlackSuite) TestDenial() {
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msg.Channel)
 
-	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay "+strings.Repeat("A", 10000))
+	// max size of request was decreased here: https://github.com/gravitational/teleport/pull/13298
+	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay "+strings.Repeat("A", 4000))
+	require.NoError(t, err)
 
 	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Context())
 	require.NoError(t, err)

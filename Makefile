@@ -67,9 +67,28 @@ docker-push-event-handler: docker-build-event-handler
 docker-promote-event-handler:
 	$(MAKE) -C event-handler docker-promote
 
+
+.PHONY: helm-package-charts
+helm-package-charts:
+	mkdir -p packages
+	helm package -d packages charts/access/email
+	helm package -d packages charts/access/jira
+	helm package -d packages charts/access/slack
+	helm package -d packages charts/access/pagerduty
+	helm package -d packages charts/access/mattermost
+	helm package -d packages charts/event-handler
+
 .PHONY: terraform
 terraform:
 	make -C terraform
+
+.PHONY: terraform-gen-tfschema
+terraform-gen-tfschema:
+	make -C terraform gen-tfschema
+
+.PHONY: test-terraform
+test-terraform:
+	make -C terraform test
 
 .PHONY: event-handler
 event-handler:
@@ -79,8 +98,7 @@ event-handler:
 .PHONY: test
 test: test-tooling
 	@echo Testing plugins against Teleport $(TELEPORT_GET_VERSION)
-	go test -race -count 1 $(shell go list ./...)
-
+	go test -race -count 1 $(shell go list ./... | grep -v '/terraform/')
 
 .PHONY: test-tooling
 test-tooling:
@@ -133,6 +151,26 @@ update-version:
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
+	$(MAKE) update-helm-version
+	$(MAKE) terraform-gen-tfschema
+
+# Update all charts to VERSION
+.PHONY: update-helm-version
+update-helm-version:
+	$(MAKE) update-helm-version-access-email
+	$(MAKE) update-helm-version-access-jira
+	$(MAKE) update-helm-version-access-slack
+	$(MAKE) update-helm-version-access-pagerduty
+	$(MAKE) update-helm-version-access-mattermost
+	$(MAKE) update-helm-version-event-handler
+
+# Update specific chart
+.PHONY: update-helm-version-%
+update-helm-version-%:
+	$(SED) 's/appVersion: .*/appVersion: "$(VERSION)"/' charts/$(subst access-,access/,$*)/Chart.yaml
+	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/$(subst access-,access/,$*)/Chart.yaml
+	# Update snapshots
+	@helm unittest -u charts/$(subst access-,access/,$*) || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
 
 .PHONY: update-tag
 update-tag:
@@ -157,6 +195,23 @@ update-tag:
 	git push origin terraform-provider-teleport-v$(VERSION)
 	git push origin v$(VERSION)
 
+
+.PHONY: update-goversion
+update-goversion:
+	# Make sure GOVERSION is set on the command line "make update-goversion GOVERSION=x.y.z".
+	@test $(GOVERSION)
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/jira/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/mattermost/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/slack/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/pagerduty/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/email/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/Makefile
+	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
+	$(SED) 's/- name: golang:.*/- name: golang:$(GOVERSION)/' .cloudbuild/ci/unit-tests-linux.yaml
+	$(SED) 's/image: golang:.*/image: golang:$(GOVERSION)/g' .drone.yml
+	$(SED) 's/GO_VERSION: go.*/GO_VERSION: go$(GOVERSION)/g' .drone.yml
+	@echo Please sign .drone.yml before staging and committing the changes
+
 #
 # Lint the Go code.
 # By default lint scans the entire repo. Pass GO_LINT_FLAGS='--new' to only scan local
@@ -167,9 +222,15 @@ lint: GO_LINT_FLAGS ?=
 lint:
 	golangci-lint run -c .golangci.yml $(GO_LINT_FLAGS)
 
-.PHONY: test-helm-access-email
-test-helm-access-email:
-	helm unittest ./charts/access/email
+.PHONY: test-helm-%
+test-helm-%:
+	helm unittest ./charts/$(subst access-,access/,$*)
 
 .PHONY: test-helm
-test-helm: test-helm-access-email
+test-helm:
+	$(MAKE) test-helm-access-email
+	$(MAKE) test-helm-access-jira
+	$(MAKE) test-helm-access-slack
+	$(MAKE) test-helm-access-pagerduty
+	$(MAKE) test-helm-access-mattermost
+	$(MAKE) test-helm-event-handler

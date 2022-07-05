@@ -17,6 +17,8 @@ limitations under the License.
 package test
 
 import (
+	"time"
+
 	"github.com/gravitational/teleport/api/types"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
@@ -70,8 +72,18 @@ func (s *TerraformSuite) TestImportSessionRecordingConfig() {
 	err := sessionrRecordingConfig.CheckAndSetDefaults()
 	require.NoError(s.T(), err)
 
+	recordingConfigBefore, err := s.client.GetSessionRecordingConfig(s.Context())
+	require.NoError(s.T(), err)
+
 	err = s.client.SetSessionRecordingConfig(s.Context(), sessionrRecordingConfig)
 	require.NoError(s.T(), err)
+
+	require.Eventually(s.T(), func() bool {
+		recordingConfigCurrent, err := s.client.GetSessionRecordingConfig(s.Context())
+		require.NoError(s.T(), err)
+
+		return recordingConfigBefore.GetMetadata().ID != recordingConfigCurrent.GetMetadata().ID
+	}, 5*time.Second, time.Second)
 
 	resource.Test(s.T(), resource.TestCase{
 		ProtoV6ProviderFactories: s.terraformProviders,

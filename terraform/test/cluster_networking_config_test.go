@@ -74,8 +74,18 @@ func (s *TerraformSuite) TestImportClusterNetworkingConfig() {
 	err := clusterNetworkingConfig.CheckAndSetDefaults()
 	require.NoError(s.T(), err)
 
+	clusterNetworkConfigBefore, err := s.client.GetClusterNetworkingConfig(s.Context())
+	require.NoError(s.T(), err)
+
 	err = s.client.SetClusterNetworkingConfig(s.Context(), clusterNetworkingConfig)
 	require.NoError(s.T(), err)
+
+	require.Eventually(s.T(), func() bool {
+		clusterNetworkConfigCurrent, err := s.client.GetClusterNetworkingConfig(s.Context())
+		require.NoError(s.T(), err)
+
+		return clusterNetworkConfigBefore.GetMetadata().ID != clusterNetworkConfigCurrent.GetMetadata().ID
+	}, 5*time.Second, time.Second)
 
 	resource.Test(s.T(), resource.TestCase{
 		ProtoV6ProviderFactories: s.terraformProviders,

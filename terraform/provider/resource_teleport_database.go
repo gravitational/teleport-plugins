@@ -20,16 +20,17 @@ package provider
 import (
 	"context"
 	"fmt"
-	
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
+	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
+	"github.com/jonboulle/clockwork"
 )
 
 // resourceTeleportDatabaseType is the resource metadata type
@@ -102,7 +103,28 @@ func (r resourceTeleportDatabase) Create(ctx context.Context, req tfsdk.CreateRe
 	}
 
 	id := database.Metadata.Name
-	databaseI, err := r.p.Client.GetDatabase(ctx, id)
+	var databaseI apitypes.Database
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		databaseI, err = r.p.Client.GetDatabase(ctx, id)
+		if trace.IsNotFound(err) {
+			if bErr := backoff.Do(ctx); bErr != nil {
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
+				return
+			}
+			if tries >= r.p.RetryConfig.MaxTries {
+				diagMessage := fmt.Sprintf("Error reading Database (tried %d times) - state outdated, please import resource", tries)
+				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "db"))
+				return
+			}
+			continue
+		}
+		break
+	}
+
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
 		return
@@ -199,16 +221,42 @@ func (r resourceTeleportDatabase) Update(ctx context.Context, req tfsdk.UpdateRe
 		return
 	}
 
+	databaseBefore, err := r.p.Client.GetDatabase(ctx, name)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", err, "db"))
+		return
+	}
+
 	err = r.p.Client.UpdateDatabase(ctx, database)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating Database", err, "db"))
 		return
 	}
 
-	databaseI, err := r.p.Client.GetDatabase(ctx, name)
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", err, "db"))
-		return
+	var databaseI apitypes.Database
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		databaseI, err = r.p.Client.GetDatabase(ctx, name)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", err, "db"))
+			return
+		}
+		if databaseBefore.GetMetadata().ID != databaseI.GetMetadata().ID || false {
+			break
+		}
+
+		if err := backoff.Do(ctx); err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading Database (tried %d times) - state outdated, please import resource", tries)
+			resp.Diagnostics.AddError(diagMessage, "db")
+			return
+		}
 	}
 
 	database = databaseI.(*apitypes.DatabaseV3)

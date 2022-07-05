@@ -106,6 +106,10 @@ func (t TimeType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (att
 func (t TimeType) Validate(ctx context.Context, in tftypes.Value, path *tftypes.AttributePath) diag.Diagnostics {
 	var diags diag.Diagnostics
 
+	if in.Type() == nil {
+		return diags
+	}
+
 	if !in.Type().Is(tftypes.String) {
 		diags.AddAttributeError(
 			path,

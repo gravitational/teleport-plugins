@@ -15,5 +15,7 @@ resource "teleport_oidc_connector" "test" {
             claim = "test"
             roles = ["terraform"]
         }]
+        
+        redirect_url = "https://example.com/redirect"
     }
 }

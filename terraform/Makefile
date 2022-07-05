@@ -31,7 +31,7 @@ build: clean
 	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/terraform-provider-teleport $(BUILDFLAGS)
 
 CUSTOM_IMPORTS_TMP_DIR ?= /tmp/protoc-gen-terraform/custom-imports
-PROTOC_GEN_TERRAFORM_VERSION ?= v1.0.0
+PROTOC_GEN_TERRAFORM_VERSION ?= v1.1.0
 PROTOC_GEN_TERRAFORM_EXISTS := $(shell protoc-gen-terraform version 2>&1 >/dev/null | grep 'protoc-gen-terraform $(PROTOC_GEN_TERRAFORM_VERSION)')
 
 .PHONY: gen-tfschema
@@ -71,7 +71,7 @@ endif
 release: build
 	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
 
-TERRAFORM_EXISTS := $(shell terraform -version | grep 'Terraform v1.1')
+TERRAFORM_EXISTS := $(shell terraform -version | grep 'Terraform v1.2')
 CURRENT_ULIMIT := $(shell ulimit -n)
 
 .PHONY: test

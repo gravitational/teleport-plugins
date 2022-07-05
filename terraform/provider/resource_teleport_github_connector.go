@@ -20,16 +20,17 @@ package provider
 import (
 	"context"
 	"fmt"
-	
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
+	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
+	"github.com/jonboulle/clockwork"
 )
 
 // resourceTeleportGithubConnectorType is the resource metadata type
@@ -102,7 +103,28 @@ func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.C
 	}
 
 	id := githubConnector.Metadata.Name
-	githubConnectorI, err := r.p.Client.GetGithubConnector(ctx, id, true)
+	var githubConnectorI apitypes.GithubConnector
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		githubConnectorI, err = r.p.Client.GetGithubConnector(ctx, id, true)
+		if trace.IsNotFound(err) {
+			if bErr := backoff.Do(ctx); bErr != nil {
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))
+				return
+			}
+			if tries >= r.p.RetryConfig.MaxTries {
+				diagMessage := fmt.Sprintf("Error reading GithubConnector (tried %d times) - state outdated, please import resource", tries)
+				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "github"))
+				return
+			}
+			continue
+		}
+		break
+	}
+
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))
 		return
@@ -199,16 +221,42 @@ func (r resourceTeleportGithubConnector) Update(ctx context.Context, req tfsdk.U
 		return
 	}
 
+	githubConnectorBefore, err := r.p.Client.GetGithubConnector(ctx, name, true)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", err, "github"))
+		return
+	}
+
 	err = r.p.Client.UpsertGithubConnector(ctx, githubConnector)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating GithubConnector", err, "github"))
 		return
 	}
 
-	githubConnectorI, err := r.p.Client.GetGithubConnector(ctx, name, true)
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", err, "github"))
-		return
+	var githubConnectorI apitypes.GithubConnector
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		githubConnectorI, err = r.p.Client.GetGithubConnector(ctx, name, true)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", err, "github"))
+			return
+		}
+		if githubConnectorBefore.GetMetadata().ID != githubConnectorI.GetMetadata().ID || true {
+			break
+		}
+
+		if err := backoff.Do(ctx); err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading GithubConnector (tried %d times) - state outdated, please import resource", tries)
+			resp.Diagnostics.AddError(diagMessage, "github")
+			return
+		}
 	}
 
 	githubConnector = githubConnectorI.(*apitypes.GithubConnectorV3)

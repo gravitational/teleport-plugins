@@ -17,6 +17,7 @@ limitations under the License.
 package integration
 
 import (
+	"context"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib/logger"
@@ -32,7 +33,8 @@ type BaseSetup struct {
 
 type AuthSetup struct {
 	BaseSetup
-	Auth *AuthService
+	Auth         *AuthService
+	CacheEnabled bool
 }
 
 type ProxySetup struct {
@@ -64,16 +66,21 @@ func (s *BaseSetup) SetupService() {
 }
 
 func (s *AuthSetup) SetupSuite() {
+	s.CacheEnabled = false
 	s.BaseSetup.SetupSuite()
 }
 
-func (s *AuthSetup) SetupService() {
+func (s *AuthSetup) SetupService(authServiceOptions ...AuthServiceOption) {
 	s.BaseSetup.SetupService()
 	t := s.T()
-	auth, err := s.Integration.NewAuthService()
+	auth, err := s.Integration.NewAuthService(authServiceOptions...)
 	require.NoError(t, err)
 	s.StartApp(auth)
 	s.Auth = auth
+
+	ready, err := s.Auth.WaitReady(context.Background())
+	require.NoError(t, err)
+	require.True(t, ready, "auth is not ready")
 
 	// Set CA Pin so that Proxy and SSH can register to auth securely.
 	err = s.Integration.SetCAPin(s.Context(), s.Auth)
@@ -104,4 +111,7 @@ func (s *SSHSetup) SetupService() {
 	require.NoError(t, err)
 	s.StartApp(ssh)
 	s.SSH = ssh
+	ready, err := s.SSH.WaitReady(context.Background())
+	require.NoError(t, err)
+	require.True(t, ready, "ssh is not ready")
 }

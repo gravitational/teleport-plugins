@@ -225,6 +225,15 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 					Description: "GCP contains parameters specific to GCP Cloud SQL databases.",
 					Optional:    true,
 				},
+				"mysql": {
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"server_version": {
+						Description: "ServerVersion is the server version reported by DB proxy if the runtime information is not available.",
+						Optional:    true,
+						Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+					}}),
+					Description: "MySQL is an additional section with MySQL database options.",
+					Optional:    true,
+				},
 				"protocol": {
 					Description: "Protocol is the database protocol: postgres, mysql, mongodb, etc.",
 					Required:    true,
@@ -1521,6 +1530,11 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
 						},
+						"max_kubernetes_connections": {
+							Description: "MaxKubernetesConnections defines the maximum number of concurrent Kubernetes sessions a user may hold.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
+						},
 						"max_session_ttl": {
 							Computed:      true,
 							Description:   "MaxSessionTTL defines how long a SSH session can last for.",
@@ -1839,10 +1853,11 @@ func GenSchemaOIDCConnectorV3(ctx context.Context) (github_com_hashicorp_terrafo
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
 				"redirect_url": {
-					Description: "RedirectURL is a URL that will redirect the client's browser back to the identity provider after successful authentication. This should match the URL on the Provider's side.",
+					Description: "RedirectURL is a URL that will redirect the client's browser back to the identity provider after successful authentication. This should match the URL on the Provider's side.  DELETE IN 11.0.0 in favor of RedirectURLs",
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
+				"redirect_urls": GenSchemaStrings(ctx),
 				"scope": {
 					Description: "Scope specifies additional scopes set by provider.",
 					Optional:    true,
@@ -3037,6 +3052,40 @@ func CopyDatabaseV3FromTerraform(_ context.Context, tf github_com_hashicorp_terr
 							}
 						}
 					}
+					{
+						a, ok := tf.Attrs["mysql"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.MySQL"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.MySQL", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+							} else {
+								obj.MySQL = github_com_gravitational_teleport_api_types.MySQLOptions{}
+								if !v.Null && !v.Unknown {
+									tf := v
+									obj := &obj.MySQL
+									{
+										a, ok := tf.Attrs["server_version"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.MySQL.ServerVersion"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.MySQL.ServerVersion", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.ServerVersion = t
+											}
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -4109,6 +4158,58 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 								}
 								v.Unknown = false
 								tf.Attrs["ad"] = v
+							}
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["mysql"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.MySQL"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.MySQL", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+							} else {
+								v, ok := tf.Attrs["mysql"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+								if !ok {
+									v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+										AttrTypes: o.AttrTypes,
+										Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+									}
+								} else {
+									if v.Attrs == nil {
+										v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+									}
+								}
+								{
+									obj := obj.MySQL
+									tf := &v
+									{
+										t, ok := tf.AttrTypes["server_version"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.MySQL.ServerVersion"})
+										} else {
+											v, ok := tf.Attrs["server_version"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"DatabaseV3.Spec.MySQL.ServerVersion", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.MySQL.ServerVersion", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.ServerVersion) == ""
+											}
+											v.Value = string(obj.ServerVersion)
+											v.Unknown = false
+											tf.Attrs["server_version"] = v
+										}
+									}
+								}
+								v.Unknown = false
+								tf.Attrs["mysql"] = v
 							}
 						}
 					}
@@ -9171,6 +9272,23 @@ func CopyRoleV5FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 											}
 										}
 									}
+									{
+										a, ok := tf.Attrs["max_kubernetes_connections"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV5.Spec.Options.MaxKubernetesConnections"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV5.Spec.Options.MaxKubernetesConnections", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
+											} else {
+												var t int64
+												if !v.Null && !v.Unknown {
+													t = int64(v.Value)
+												}
+												obj.MaxKubernetesConnections = t
+											}
+										}
+									}
 								}
 							}
 						}
@@ -12303,6 +12421,28 @@ func CopyRoleV5ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												c.Unknown = false
 												tf.Attrs["cert_extensions"] = c
 											}
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["max_kubernetes_connections"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV5.Spec.Options.MaxKubernetesConnections"})
+										} else {
+											v, ok := tf.Attrs["max_kubernetes_connections"].(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV5.Spec.Options.MaxKubernetesConnections", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV5.Spec.Options.MaxKubernetesConnections", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
+												}
+												v.Null = int64(obj.MaxKubernetesConnections) == 0
+											}
+											v.Value = int64(obj.MaxKubernetesConnections)
+											v.Unknown = false
+											tf.Attrs["max_kubernetes_connections"] = v
 										}
 									}
 								}
@@ -17766,6 +17906,13 @@ func CopyOIDCConnectorV3FromTerraform(_ context.Context, tf github_com_hashicorp
 							}
 						}
 					}
+					{
+						a, ok := tf.Attrs["redirect_urls"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"OIDCConnectorV3.Spec.RedirectURLs"})
+						}
+						CopyFromStrings(diags, a, &obj.RedirectURLs)
+					}
 				}
 			}
 		}
@@ -18481,6 +18628,15 @@ func CopyOIDCConnectorV3ToTerraform(ctx context.Context, obj github_com_gravitat
 							v.Value = string(obj.GoogleAdminEmail)
 							v.Unknown = false
 							tf.Attrs["google_admin_email"] = v
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["redirect_urls"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"OIDCConnectorV3.Spec.RedirectURLs"})
+						} else {
+							v := CopyToStrings(diags, obj.RedirectURLs, t, tf.Attrs["redirect_urls"])
+							tf.Attrs["redirect_urls"] = v
 						}
 					}
 				}

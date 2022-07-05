@@ -20,16 +20,17 @@ package provider
 import (
 	"context"
 	"fmt"
-	
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 
+	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
+	"github.com/jonboulle/clockwork"
 )
 
 // resourceTeleportRoleType is the resource metadata type
@@ -104,7 +105,28 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 	}
 
 	id := role.Metadata.Name
-	roleI, err := r.p.Client.GetRole(ctx, id)
+	var roleI apitypes.Role
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		roleI, err = r.p.Client.GetRole(ctx, id)
+		if trace.IsNotFound(err) {
+			if bErr := backoff.Do(ctx); bErr != nil {
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
+				return
+			}
+			if tries >= r.p.RetryConfig.MaxTries {
+				diagMessage := fmt.Sprintf("Error reading Role (tried %d times) - state outdated, please import resource", tries)
+				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "role"))
+				return
+			}
+			continue
+		}
+		break
+	}
+
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
 		return
@@ -201,16 +223,42 @@ func (r resourceTeleportRole) Update(ctx context.Context, req tfsdk.UpdateResour
 		return
 	}
 
+	roleBefore, err := r.p.Client.GetRole(ctx, name)
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", err, "role"))
+		return
+	}
+
 	err = r.p.Client.UpsertRole(ctx, role)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating Role", err, "role"))
 		return
 	}
 
-	roleI, err := r.p.Client.GetRole(ctx, name)
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", err, "role"))
-		return
+	var roleI apitypes.Role
+
+	tries := 0
+	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
+	for {
+		tries = tries + 1
+		roleI, err = r.p.Client.GetRole(ctx, name)
+		if err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", err, "role"))
+			return
+		}
+		if roleBefore.GetMetadata().ID != roleI.GetMetadata().ID || false {
+			break
+		}
+
+		if err := backoff.Do(ctx); err != nil {
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
+			return
+		}
+		if tries >= r.p.RetryConfig.MaxTries {
+			diagMessage := fmt.Sprintf("Error reading Role (tried %d times) - state outdated, please import resource", tries)
+			resp.Diagnostics.AddError(diagMessage, "role")
+			return
+		}
 	}
 
 	role = roleI.(*apitypes.RoleV5)
