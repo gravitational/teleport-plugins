@@ -292,6 +292,7 @@ func (s *PagerdutySuite) SetupTest() {
 	conf.Pagerduty.UserEmail = "bot@example.com"
 	conf.Pagerduty.RequestAnnotations.NotifyService = NotifyServiceDefaultAnnotation
 	conf.Pagerduty.RequestAnnotations.Services = ServicesDefaultAnnotation
+	conf.RolesToProcess.Roles = []string{"*"}
 
 	s.appConfig = conf
 	s.currentRequestor = s.userNames.requestor

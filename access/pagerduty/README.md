@@ -185,7 +185,7 @@ user_email = "me@example.com" # PagerDuty bot user email (Could be admin email)
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/pagerduty.log"
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
 
-# Plugin will only process requests containing specified roles. If unset or empty all requests will be processed.
+# Plugin will only process requests containing specified roles. If contains "*" (default) all requests will be processed.
 [roles_to_process]
 roles = [
   "role1", 
