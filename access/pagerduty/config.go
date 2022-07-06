@@ -29,7 +29,7 @@ type Config struct {
 	Teleport       lib.TeleportConfig `toml:"teleport"`
 	Pagerduty      PagerdutyConfig    `toml:"pagerduty"`
 	Log            logger.Config      `toml:"log"`
-	RolesToProcess []string           `toml:"roles_to_process"`
+	RolesToProcess RolesToProcess     `toml:"roles_to_process"`
 }
 
 type PagerdutyConfig struct {
@@ -40,6 +40,10 @@ type PagerdutyConfig struct {
 		NotifyService string `toml:"notify_service"`
 		Services      string `toml:"services"`
 	}
+}
+
+type RolesToProcess struct {
+	Roles []string `toml:"roles"`
 }
 
 const NotifyServiceDefaultAnnotation = "pagerduty_notify_service"
@@ -72,7 +76,8 @@ output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/tele
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
 
 # Plugin will only process requests containing specified roles. If unset or empty all requests will be processed.
-roles_to_process = [
+[roles_to_process]
+roles = [
   "role1", 
   "role2"
 ]

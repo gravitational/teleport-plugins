@@ -243,7 +243,7 @@ func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
 // When RolesToProcess field is empty (default) all requests will be processed.
 // When RolesToProcess field is configured, requests with roles specified in config will be processed.
 func (a *App) maybeProcessRequest(ctx context.Context, req types.AccessRequest) bool {
-	rolesToProcess := stringset.New(a.conf.RolesToProcess...)
+	rolesToProcess := stringset.New(a.conf.RolesToProcess.Roles...)
 	if len(rolesToProcess) == 0 {
 		logger.Get(ctx).Debug("RolesToProcess not specified, processing all requests.")
 		return true
