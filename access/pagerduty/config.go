@@ -26,9 +26,10 @@ import (
 )
 
 type Config struct {
-	Teleport  lib.TeleportConfig `toml:"teleport"`
-	Pagerduty PagerdutyConfig    `toml:"pagerduty"`
-	Log       logger.Config      `toml:"log"`
+	Teleport       lib.TeleportConfig `toml:"teleport"`
+	Pagerduty      PagerdutyConfig    `toml:"pagerduty"`
+	Log            logger.Config      `toml:"log"`
+	RolesToProcess []string           `toml:"roles_to_process"`
 }
 
 type PagerdutyConfig struct {
@@ -69,6 +70,12 @@ user_email = "me@example.com" # PagerDuty bot user email (Could be admin email)
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/pagerduty.log"
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
+
+# Plugin will only process requests containing specified roles. If unset or empty all requests will be processed.
+roles_to_process = [
+  "role1", 
+  "role2"
+]
 `
 
 func LoadConfig(filepath string) (*Config, error) {

@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/gravitational/teleport-plugins/lib/stringset"
 	"strings"
 	"time"
 
@@ -205,6 +206,9 @@ func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
 
 		var err error
 		switch {
+		case !a.maybeProcessRequest(ctx, req):
+			log.Info("Request skipped.")
+			return nil
 		case req.GetState().IsPending():
 			err = a.onPendingRequest(ctx, req)
 		case req.GetState().IsApproved():
@@ -233,6 +237,25 @@ func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
 	default:
 		return trace.BadParameter("unexpected event operation %s", op)
 	}
+}
+
+// maybeProcessRequest checks request against the configured filter and decides if request should be processed.
+// When RolesToProcess field is empty (default) all requests will be processed.
+// When RolesToProcess field is configured, requests with roles specified in config will be processed.
+func (a *App) maybeProcessRequest(ctx context.Context, req types.AccessRequest) bool {
+	rolesToProcess := stringset.New(a.conf.RolesToProcess...)
+	if len(rolesToProcess) == 0 {
+		logger.Get(ctx).Debug("RolesToProcess not specified, processing all requests.")
+		return true
+	}
+	for _, r := range req.GetRoles() {
+		if rolesToProcess.Contains(r) {
+			logger.Get(ctx).Debug("Requested role found in RolesToProcess, processing.")
+			return true
+		}
+	}
+	logger.Get(ctx).Debug("Requested role not found in RolesToProcess, skipping.")
+	return false
 }
 
 func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) error {
