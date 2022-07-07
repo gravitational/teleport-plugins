@@ -1,8 +1,9 @@
 module github.com/gravitational/teleport-plugins
 
-go 1.17
+go 1.18
 
 require (
+	github.com/DanielTitkov/go-adaptive-cards v0.2.2
 	github.com/alecthomas/kong v0.2.17
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-resty/resty/v2 v2.3.0
@@ -27,6 +28,7 @@ require (
 	github.com/sethvargo/go-limiter v0.7.2
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.2
+	github.com/tidwall/gjson v1.14.1
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.46.0
@@ -85,6 +87,8 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.8.0 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/vmihailenco/msgpack/v4 v4.3.12 // indirect
 	github.com/vmihailenco/tagparser v0.1.1 // indirect

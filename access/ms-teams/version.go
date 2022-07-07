@@ -14,26 +14,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package lib
+package main
 
-import (
-	"io"
-	"text/template"
+var (
+	// Version package version, specified in Makefile using ldflags
+	Version = `Not specified, use --ldflags "-X main.Version "1.0.0""`
 
-	"github.com/gravitational/trace"
+	// Gitref variable is specified in Makefile using ldflags
+	Gitref string
 )
-
-// RenderTemplate renders passed template and writes it to writer
-func RenderTemplate(content string, payload interface{}, w io.Writer) error {
-	tpl, err := template.New("template").Parse(content)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	err = tpl.ExecuteTemplate(w, "template", payload)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	return nil
-}

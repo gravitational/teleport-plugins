@@ -79,3 +79,14 @@ func (r RecipientsMap) GetRecipientsFor(roles, suggestedReviewers []string) []st
 
 	return recipients.ToSlice()
 }
+
+// GetAllRecipients returns unique set of recipients
+func (r RecipientsMap) GetAllRecipients() []string {
+	recipients := stringset.New()
+
+	for _, r := range r {
+		recipients.Add(r...)
+	}
+
+	return recipients.ToSlice()
+}
