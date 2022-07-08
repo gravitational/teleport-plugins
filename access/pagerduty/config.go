@@ -43,7 +43,7 @@ type PagerdutyConfig struct {
 }
 
 type Roles struct {
-	Approve []string `toml:"approve"`
+	Allowlist []string `toml:"allowlist"`
 }
 
 const NotifyServiceDefaultAnnotation = "pagerduty_notify_service"
@@ -77,7 +77,7 @@ severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN"
 
 # Plugin will only process requests containing specified roles. If contains "*" (default) all requests will be processed.
 [roles]
-approve = [
+allowlist = [
   "role1", 
   "role2"
 ]
@@ -126,8 +126,8 @@ func (c *Config) CheckAndSetDefaults() error {
 	if c.Log.Severity == "" {
 		c.Log.Severity = "info"
 	}
-	if len(c.Roles.Approve) == 0 {
-		c.Roles.Approve = append(c.Roles.Approve, "*")
+	if len(c.Roles.Allowlist) == 0 {
+		c.Roles.Allowlist = append(c.Roles.Allowlist, "*")
 	}
 	return nil
 }

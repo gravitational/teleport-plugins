@@ -243,7 +243,7 @@ func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
 // When Approve field is unset or contains "*", all requests will be processed.
 // When Approve field is configured, requests with roles specified in config will be processed.
 func (a *App) maybeProcessRequest(ctx context.Context, req types.AccessRequest) bool {
-	rolesToProcess := stringset.New(a.conf.Roles.Approve...)
+	rolesToProcess := stringset.New(a.conf.Roles.Allowlist...)
 	if rolesToProcess.Contains("*") {
 		logger.Get(ctx).Debug("All roles accepted, processing all requests.")
 		return true

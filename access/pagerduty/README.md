@@ -187,7 +187,7 @@ severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN"
 
 # Plugin will only process requests containing specified roles. If contains "*" (default) all requests will be processed.
 [roles]
-approve = [
+allowlist = [
   "role1", 
   "role2"
 ]
