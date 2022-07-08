@@ -186,8 +186,8 @@ output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/tele
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
 
 # Plugin will only process requests containing specified roles. If contains "*" (default) all requests will be processed.
-[roles_to_process]
-roles = [
+[roles]
+approve = [
   "role1", 
   "role2"
 ]

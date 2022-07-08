@@ -240,10 +240,10 @@ func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
 }
 
 // maybeProcessRequest checks request against the configured filter and decides if request should be processed.
-// When RolesToProcess field is unset or contains "*", all requests will be processed.
-// When RolesToProcess field is configured, requests with roles specified in config will be processed.
+// When Approve field is unset or contains "*", all requests will be processed.
+// When Approve field is configured, requests with roles specified in config will be processed.
 func (a *App) maybeProcessRequest(ctx context.Context, req types.AccessRequest) bool {
-	rolesToProcess := stringset.New(a.conf.RolesToProcess.Roles...)
+	rolesToProcess := stringset.New(a.conf.Roles.Approve...)
 	if rolesToProcess.Contains("*") {
 		logger.Get(ctx).Debug("All roles accepted, processing all requests.")
 		return true

@@ -26,10 +26,10 @@ import (
 )
 
 type Config struct {
-	Teleport       lib.TeleportConfig `toml:"teleport"`
-	Pagerduty      PagerdutyConfig    `toml:"pagerduty"`
-	Log            logger.Config      `toml:"log"`
-	RolesToProcess RolesToProcess     `toml:"roles_to_process"`
+	Teleport  lib.TeleportConfig `toml:"teleport"`
+	Pagerduty PagerdutyConfig    `toml:"pagerduty"`
+	Log       logger.Config      `toml:"log"`
+	Roles     Roles              `toml:"roles"`
 }
 
 type PagerdutyConfig struct {
@@ -42,8 +42,8 @@ type PagerdutyConfig struct {
 	}
 }
 
-type RolesToProcess struct {
-	Roles []string `toml:"roles"`
+type Roles struct {
+	Approve []string `toml:"approve"`
 }
 
 const NotifyServiceDefaultAnnotation = "pagerduty_notify_service"
@@ -76,8 +76,8 @@ output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/tele
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".
 
 # Plugin will only process requests containing specified roles. If contains "*" (default) all requests will be processed.
-[roles_to_process]
-roles = [
+[roles]
+approve = [
   "role1", 
   "role2"
 ]
@@ -126,8 +126,8 @@ func (c *Config) CheckAndSetDefaults() error {
 	if c.Log.Severity == "" {
 		c.Log.Severity = "info"
 	}
-	if len(c.RolesToProcess.Roles) == 0 {
-		c.RolesToProcess.Roles = append(c.RolesToProcess.Roles, "*")
+	if len(c.Roles.Approve) == 0 {
+		c.Roles.Approve = append(c.Roles.Approve, "*")
 	}
 	return nil
 }
