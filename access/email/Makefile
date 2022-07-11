@@ -1,5 +1,5 @@
 VERSION=10.0.0
-GO_VERSION=1.17.11
+GO_VERSION=1.18.4
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-email
