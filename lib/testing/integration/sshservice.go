@@ -195,7 +195,7 @@ func (ssh *SSHService) Run(ctx context.Context) error {
 	if !ssh.IsReady() {
 		log.Error("SSH service is failed to initialize")
 		stdoutLines := strings.Split(ssh.Stdout(), "\n")
-		for _, line := range stdoutLines[len(stdoutLines)-10:] {
+		for _, line := range stdoutLines {
 			log.Debug("SSH service log: ", line)
 		}
 		log.Debugf("SSH service stderr: %q", ssh.Stderr())

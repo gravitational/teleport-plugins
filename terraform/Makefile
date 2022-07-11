@@ -37,7 +37,7 @@ PROTOC_GEN_TERRAFORM_EXISTS := $(shell protoc-gen-terraform version 2>&1 >/dev/n
 .PHONY: gen-tfschema
 gen-tfschema:
 ifndef PROTOC_GEN_TERRAFORM_EXISTS
-	@echo "protoc-gen-terraform v1.0.0 is not installed. Please, refer to README.md for installation instructions."
+	@echo "protoc-gen-terraform v1.1.0 is not installed. Please, refer to README.md for installation instructions."
 	@exit -1
 endif
 
