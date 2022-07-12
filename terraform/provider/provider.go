@@ -273,6 +273,9 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 	client, err := client.New(ctx, client.Config{
 		Addrs:       []string{addr},
 		Credentials: creds,
+		DialOpts: []grpc.DialOption{
+			grpc.WithReturnConnectionError(),
+		},
 	})
 
 	if err != nil {
