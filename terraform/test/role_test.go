@@ -177,3 +177,39 @@ func (s *TerraformSuite) TestImportRole() {
 		},
 	})
 }
+
+func (s *TerraformSuite) TestRoleReferenceToValue() {
+	roleName := "test_ref_value"
+	userName := "test_ref_value"
+	checkDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetRole(s.Context(), roleName)
+		if err != nil && !trace.IsNotFound(err) {
+			return err
+		}
+
+		_, err = s.client.GetUser(userName, false)
+		if err != nil && !trace.IsNotFound(err) {
+			return err
+		}
+
+		return nil
+	}
+
+	roleResourceName := "teleport_role." + roleName
+	userResourceName := "teleport_user." + userName
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("user_ref_value_role_1.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(roleResourceName, "kind", "role"),
+					resource.TestCheckResourceAttr(userResourceName, "kind", "user"),
+					resource.TestCheckResourceAttr(userResourceName, "spec.roles.0", roleName),
+				),
+			},
+		},
+	})
+}
