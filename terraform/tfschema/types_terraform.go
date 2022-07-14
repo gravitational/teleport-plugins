@@ -706,12 +706,17 @@ func GenSchemaClusterNetworkingConfigV2(ctx context.Context) (github_com_hashico
 				},
 				"tunnel_strategy": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
-						// Removed while we fix the issue of a Property without any values
-						// "agent_mesh": {
-						// 	Attributes:  github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{}),
-						// 	Description: "",
-						// 	Optional:    true,
-						// },
+						"agent_mesh": {
+							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"active": {
+								Computed:      true,
+								Optional:      true,
+								PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), boolDefault(true)},
+								Required:      false,
+								Type:          github_com_hashicorp_terraform_plugin_framework_types.BoolType,
+							}}),
+							Description: "",
+							Optional:    true,
+						},
 						"proxy_peering": {
 							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"agent_connection_count": {
 								Description: "",

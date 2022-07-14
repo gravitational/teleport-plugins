@@ -77,7 +77,7 @@ CURRENT_ULIMIT := $(shell ulimit -n)
 .PHONY: test
 test: install
 ifndef TERRAFORM_EXISTS
-	@echo "Terraform v1.1+ is not installed. Please, refer to README.md for installation instructions."
+	@echo "Terraform v1.2+ is not installed (tfenv install 1.2.5 && tfenv use 1.2.5)."
 	@exit -1
 endif
 # NOTE: This is related to an old bug in Terraform and will be fixed in future releases (possibly, by a workaround on our side)

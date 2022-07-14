@@ -50,6 +50,7 @@ func (s *TerraformSuite) TestClusterNetworkingConfig() {
 					resource.TestCheckResourceAttr(name, "kind", "cluster_networking_config"),
 					resource.TestCheckResourceAttr(name, "metadata.labels.example", "no"),
 					resource.TestCheckResourceAttr(name, "spec.client_idle_timeout", "1h"),
+					resource.TestCheckResourceAttr(name, "spec.tunnel_strategy.proxy_peering.agent_connection_count", "5"),
 				),
 			},
 			{
