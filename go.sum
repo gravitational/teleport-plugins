@@ -274,6 +274,8 @@ github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf h1:MQ4e8X
 github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXPKa29o=
 github.com/gravitational/teleport/api v0.0.0-20220708161222-e534c286b8f1 h1:XBMHxU7cLfEfLs5DO/ZtD8d6oBD+sNMbl479HUqLfEA=
 github.com/gravitational/teleport/api v0.0.0-20220708161222-e534c286b8f1/go.mod h1:eiT3T7N8XxDxEqIWJ12lo3ZSz7RfZbYeR8RMx3N/KIk=
+github.com/gravitational/teleport/api v0.0.0-20220714215239-ac7323277ade h1:lTAbvTQECfgCoNkDR8W2EiLeqhK4AURy90fE0GaUI8I=
+github.com/gravitational/teleport/api v0.0.0-20220714215239-ac7323277ade/go.mod h1:a4CYxGJsARLShwSODWUfUpZnbXcxHxNjT4EmnaxrYHY=
 github.com/gravitational/trace v1.1.17 h1:BkF30oLm1aKMZ5SPVbnlVbYtYEsG26zHxA4dJ+Z46dM=
 github.com/gravitational/trace v1.1.17/go.mod h1:n0ijrq6psJY0sOI/NzLp+xdd8xl79jjwzVOFHDY6+kQ=
 github.com/grpc-ecosystem/go-grpc-middleware v1.0.0/go.mod h1:FiyG127CGDf3tlThmgyCl78X/SZQqEOJBCDaAfeWzPs=
