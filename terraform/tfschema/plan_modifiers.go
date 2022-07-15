@@ -34,7 +34,3 @@ func (m boolDefaultModifier) Modify(ctx context.Context, req tfsdk.ModifyAttribu
 		resp.AttributePlan = types.Bool{Value: m.Default}
 	}
 }
-
-func boolDefault(def bool) boolDefaultModifier {
-	return boolDefaultModifier{Default: def}
-}
