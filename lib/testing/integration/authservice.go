@@ -195,7 +195,7 @@ func (auth *AuthService) Run(ctx context.Context) error {
 	if !auth.IsReady() {
 		log.Error("Auth server is failed to initialize")
 		stdoutLines := strings.Split(auth.Stdout(), "\n")
-		for _, line := range stdoutLines[len(stdoutLines)-10:] {
+		for _, line := range stdoutLines {
 			log.Debug("AuthService log: ", line)
 		}
 		log.Debugf("AuthService stderr: %q", auth.Stderr())

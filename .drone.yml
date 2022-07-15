@@ -28,7 +28,7 @@ steps:
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v9.3.0
+      TELEPORT_GET_VERSION: v10.0.0
     commands:
       - echo Testing plugins against Teleport $TELEPORT_GET_VERSION
       - curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
@@ -79,7 +79,7 @@ steps:
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v9.3.0
+      TELEPORT_GET_VERSION: v10.0.0
       GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
       GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
@@ -919,6 +919,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 601dc015af9f993c95460cdcb18a2d7828b151d4c2a44128df53c4d67e3e3935
+hmac: f360d8d04978c04062ffafd35c023c88eab3cca36242d09d941d9c752c7641f1
 
 ...

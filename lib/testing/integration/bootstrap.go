@@ -44,7 +44,7 @@ func (bootstrap *Bootstrap) AddUserWithRoles(name string, roles ...string) (type
 }
 
 func (bootstrap *Bootstrap) AddRole(name string, spec types.RoleSpecV5) (types.Role, error) {
-	role, err := types.NewRole(name, spec)
+	role, err := types.NewRoleV3(name, spec)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
