@@ -1,4 +1,4 @@
-VERSION=10.0.0
+VERSION=10.0.1
 GO_VERSION=1.18.4
 
 OS ?= $(shell go env GOOS)
