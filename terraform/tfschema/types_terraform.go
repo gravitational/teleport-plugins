@@ -708,11 +708,10 @@ func GenSchemaClusterNetworkingConfigV2(ctx context.Context) (github_com_hashico
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 						"agent_mesh": {
 							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"active": {
-								Computed:      true,
-								Optional:      true,
-								PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), boolDefault(true)},
-								Required:      false,
-								Type:          github_com_hashicorp_terraform_plugin_framework_types.BoolType,
+								Computed:    true,
+								Description: "Automatically generated field preventing empty message errors",
+								Optional:    true,
+								Type:        github_com_hashicorp_terraform_plugin_framework_types.BoolType,
 							}}),
 							Description: "",
 							Optional:    true,
@@ -7854,6 +7853,28 @@ func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj github_co
 												if obj.AgentMesh == nil {
 													v.Null = true
 												} else {
+													tf := &v
+													{
+														t, ok := tf.AttrTypes["active"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"ClusterNetworkingConfigV2.Spec.TunnelStrategy.AgentMesh.active"})
+														} else {
+															v, ok := tf.Attrs["active"].(github_com_hashicorp_terraform_plugin_framework_types.Bool)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"ClusterNetworkingConfigV2.Spec.TunnelStrategy.AgentMesh.active", err})
+																}
+																v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.Bool)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"ClusterNetworkingConfigV2.Spec.TunnelStrategy.AgentMesh.active", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
+																}
+																v.Null = true
+															}
+															v.Unknown = false
+															tf.Attrs["active"] = v
+														}
+													}
 												}
 												v.Unknown = false
 												tf.Attrs["agent_mesh"] = v
