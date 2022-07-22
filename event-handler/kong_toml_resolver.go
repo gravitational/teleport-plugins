@@ -26,10 +26,13 @@ import (
 )
 
 const (
-	// fdPrefix contains section name which will be prepended with "forward."
-	fdPrefix = "fluentd"
+	// fluentdPrefix contains a section name which will be prepended with "forward."
+	fluentdPrefix = "fluentd"
 
-	// forwardPrefix contains prefix which must be prepended to "fluentd" section
+	// kinesisPrefix contains a section name which will be prepended with "forward."
+	kinesisPrefix = "kinesis"
+
+	// forwardPrefix contains prefix which must be prepended to the "fluentd"/"kinesis" section
 	forwardPrefix = "forward"
 )
 
@@ -44,15 +47,17 @@ func KongTOMLResolver(r io.Reader) (kong.Resolver, error) {
 	var f kong.ResolverFunc = func(context *kong.Context, parent *kong.Path, flag *kong.Flag) (interface{}, error) {
 		name := flag.Name
 
-		if strings.HasPrefix(name, fdPrefix) {
-			name = strings.Join([]string{forwardPrefix, fdPrefix, name[len(fdPrefix)+1:]}, ".")
+		if strings.HasPrefix(name, fluentdPrefix) {
+			name = strings.Join([]string{forwardPrefix, fluentdPrefix, name[len(fluentdPrefix)+1:]}, ".")
+		} else if strings.HasPrefix(name, kinesisPrefix) {
+			name = strings.Join([]string{forwardPrefix, kinesisPrefix, name[len(kinesisPrefix)+1:]}, ".")
 		}
 
 		value := config.Get(name)
-		valueWithinSeciton := config.Get(strings.ReplaceAll(name, "-", "."))
+		valueWithinSection := config.Get(strings.ReplaceAll(name, "-", "."))
 
-		if valueWithinSeciton != nil {
-			return valueWithinSeciton, nil
+		if valueWithinSection != nil {
+			return valueWithinSection, nil
 		}
 
 		return value, nil

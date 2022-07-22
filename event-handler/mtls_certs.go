@@ -83,8 +83,8 @@ func GenerateMTLSCerts(cn string, dnsNames []string, ips []string, ttl time.Dura
 			Subject:     entity,
 			NotBefore:   notBefore,
 			NotAfter:    notAfter,
-			KeyUsage:    x509.KeyUsageDigitalSignature,
 			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+			KeyUsage:    x509.KeyUsageDigitalSignature,
 		},
 	}
 

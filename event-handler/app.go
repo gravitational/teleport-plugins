@@ -30,8 +30,10 @@ import (
 
 // App is the app structure
 type App struct {
-	// Fluentd represents the instance of Fluentd client
+	// Fluentd represents the instance of the Fluentd client
 	Fluentd *FluentdClient
+	// Kinesis represents the instance of the Kinesis client
+	Kinesis *KinesisClient
 	// EventWatcher represents the instance of TeleportEventWatcher
 	EventWatcher *TeleportEventsWatcher
 	// State represents the instance of the persistent state
@@ -75,7 +77,7 @@ func (a *App) Run(ctx context.Context) error {
 	}
 
 	a.SpawnCriticalJob(a.eventsJob)
-	a.SpawnCriticalJob(a.sessionEventsJob)
+	// a.SpawnCriticalJob(a.sessionEventsJob)
 	<-a.Process.Done()
 
 	return a.Err()
@@ -102,7 +104,7 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 }
 
 // SendEvent sends an event to fluentd. Shared method used by jobs.
-func (a *App) SendEvent(ctx context.Context, url string, e *TeleportEvent) error {
+func (a *App) SendEvent(ctx context.Context, streamName string, e *TeleportEvent) error {
 	log := logger.Get(ctx)
 
 	if !a.Config.DryRun {
@@ -110,12 +112,12 @@ func (a *App) SendEvent(ctx context.Context, url string, e *TeleportEvent) error
 		backoffCount := sendBackoffNumTries
 
 		for {
-			err := a.Fluentd.Send(ctx, url, e.Event)
+			err := a.Kinesis.Send(ctx, streamName, e.Event)
 			if err == nil {
 				break
 			}
 
-			log.Error("Error sending event to Teleport: ", err)
+			log.Error("Error sending event to Kinesis: ", err)
 
 			bErr := backoff.Do(ctx)
 			if bErr != nil {
@@ -159,7 +161,7 @@ func (a *App) init(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	f, err := NewFluentdClient(&a.Config.FluentdConfig)
+	f, err := NewKinesisClient(&a.Config.KinesisConfig)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -185,7 +187,7 @@ func (a *App) init(ctx context.Context) error {
 	}
 
 	a.State = s
-	a.Fluentd = f
+	a.Kinesis = f
 	a.EventWatcher = t
 
 	log.WithField("cursor", latestCursor).Info("Using initial cursor value")

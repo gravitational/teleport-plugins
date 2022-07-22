@@ -29,19 +29,32 @@ import (
 // FluentdConfig represents fluentd instance configuration
 type FluentdConfig struct {
 	// FluentdURL fluentd url for audit log events
-	FluentdURL string `help:"fluentd url" required:"true" env:"FDFWD_FLUENTD_URL"`
+	FluentdURL string `help:"fluentd url" env:"FDFWD_FLUENTD_URL"`
 
 	// FluentdSessionURL
-	FluentdSessionURL string `help:"fluentd session url" required:"true" env:"FDFWD_FLUENTD_SESSION_URL"`
+	FluentdSessionURL string `help:"fluentd session url" env:"FDFWD_FLUENTD_SESSION_URL"`
 
 	// FluentdCert is a path to fluentd cert
-	FluentdCert string `help:"fluentd TLS certificate file" required:"true" type:"existingfile" env:"FDWRD_FLUENTD_CERT"`
+	FluentdCert string `help:"fluentd TLS certificate file" type:"existingfile" env:"FDWRD_FLUENTD_CERT"`
 
 	// FluentdKey is a path to fluentd key
-	FluentdKey string `help:"fluentd TLS key file" required:"true" type:"existingfile" env:"FDWRD_FLUENTD_KEY"`
+	FluentdKey string `help:"fluentd TLS key file" type:"existingfile" env:"FDWRD_FLUENTD_KEY"`
 
 	// FluentdCA is a path to fluentd CA
 	FluentdCA string `help:"fluentd TLS CA file" type:"existingfile" env:"FDWRD_FLUENTD_CA"`
+}
+
+// KinesisConfig represents Kinesis instance configuration
+type KinesisConfig struct {
+	// KinesisStreamName kinesis data stream for audit log events
+	// TODO: implement session events
+	KinesisStreamName string `help:"kinesis stream name"`
+
+	// KinesisAwsRegion
+	KinesisAwsRegion string `help:"kinesis aws region"`
+
+	// KinesisAwsProfile
+	KinesisAwsProfile string `help:"kinesis aws profile"`
 }
 
 // TeleportConfig is Teleport instance configuration
@@ -89,7 +102,7 @@ type IngestConfig struct {
 	Timeout time.Duration `help:"Polling timeout" default:"5s" env:"FDFWD_TIMEOUT"`
 
 	// DryRun is the flag which simulates execution without sending events to fluentd
-	DryRun bool `help:"Events are read from Teleport, but are not sent to fluentd. Separate stroage is used. Debug flag."`
+	DryRun bool `help:"Events are read from Teleport, but are not sent to fluentd. Separate storage is used. Debug flag."`
 
 	// ExitOnLastEvent exit when last event is processed
 	ExitOnLastEvent bool `help:"Exit when last event is processed"`
@@ -113,6 +126,7 @@ type LockConfig struct {
 // StartCmdConfig is start command description
 type StartCmdConfig struct {
 	FluentdConfig
+	KinesisConfig
 	TeleportConfig
 	IngestConfig
 	LockConfig
@@ -195,22 +209,22 @@ func (c *StartCmdConfig) Dump(ctx context.Context) {
 	log.WithField("types", c.SkipSessionTypes).Info("Skipping session events of type")
 	log.WithField("value", c.StartTime).Info("Using start time")
 	log.WithField("timeout", c.Timeout).Info("Using timeout")
+
 	log.WithField("url", c.FluentdURL).Info("Using Fluentd url")
 	log.WithField("url", c.FluentdSessionURL).Info("Using Fluentd session url")
 	log.WithField("ca", c.FluentdCA).Info("Using Fluentd ca")
 	log.WithField("cert", c.FluentdCert).Info("Using Fluentd cert")
 	log.WithField("key", c.FluentdKey).Info("Using Fluentd key")
 
-	if c.TeleportIdentityFile != "" {
-		log.WithField("file", c.TeleportIdentityFile).Info("Using Teleport identity file")
-	}
+	log.WithField("name", c.KinesisStreamName).Info("Using Kinesis stream name")
+	log.WithField("region", c.KinesisAwsRegion).Info("Using Kinesis AWS region")
+	log.WithField("profile", c.KinesisAwsRegion).Info("Using Kinesis AWS profile")
 
-	if c.TeleportKey != "" {
-		log.WithField("addr", c.TeleportAddr).Info("Using Teleport addr")
-		log.WithField("ca", c.TeleportCA).Info("Using Teleport CA")
-		log.WithField("cert", c.TeleportCert).Info("Using Teleport cert")
-		log.WithField("key", c.TeleportKey).Info("Using Teleport key")
-	}
+	log.WithField("addr", c.TeleportAddr).Info("Using Teleport addr")
+	log.WithField("file", c.TeleportIdentityFile).Info("Using Teleport identity file")
+	log.WithField("ca", c.TeleportCA).Info("Using Teleport CA")
+	log.WithField("cert", c.TeleportCert).Info("Using Teleport cert")
+	log.WithField("key", c.TeleportKey).Info("Using Teleport key")
 
 	if c.LockEnabled {
 		log.WithField("count", c.LockFailedAttemptsCount).WithField("period", c.LockPeriod).Info("Auto-locking enabled")

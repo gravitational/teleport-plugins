@@ -100,7 +100,7 @@ func (j *EventsJob) runPolling(ctx context.Context) error {
 
 // handleEvent processes an event
 func (j *EventsJob) handleEvent(ctx context.Context, evt *TeleportEvent) error {
-	// Send event to Teleport
+	// Send event to consumer
 	err := j.sendEvent(ctx, evt)
 	if err != nil {
 		return trace.Wrap(err)
@@ -120,6 +120,7 @@ func (j *EventsJob) handleEvent(ctx context.Context, evt *TeleportEvent) error {
 	}
 
 	// Save last event id and cursor to disk
+	// TODO: shouldn't the following two be within a tx?
 	j.app.State.SetID(evt.ID)
 	j.app.State.SetCursor(evt.Cursor)
 
@@ -128,7 +129,7 @@ func (j *EventsJob) handleEvent(ctx context.Context, evt *TeleportEvent) error {
 
 // sendEvent sends an event to Teleport
 func (j *EventsJob) sendEvent(ctx context.Context, evt *TeleportEvent) error {
-	return j.app.SendEvent(ctx, j.app.Config.FluentdURL, evt)
+	return j.app.SendEvent(ctx, j.app.Config.KinesisStreamName, evt)
 }
 
 // TryLockUser locks user if they exceeded failed attempts
