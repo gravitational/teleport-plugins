@@ -379,16 +379,38 @@ platform:
   arch: amd64
 
 trigger:
+  branch:
+    - marco/ci_darwin_install_local_go
   event:
-    - tag
-  ref:
     include:
-      - refs/tags/terraform-provider-teleport-v*
+      - push
+  repo:
+    include:
+      - gravitational/*
 
 steps:
-  - name: Build artifacts
+  - name: Install Go Toolchain
+    environment:
+      GO_VERSION: go1.18.4
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
     commands:
+      - set -u
+      - mkdir -p $TOOLCHAIN_DIR
+      - curl --silent -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
+      - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
+      - rm -rf $GO_VERSION.darwin-amd64.tar.gz
+
+  - name: Build artifacts
+    environment:
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
+      GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains/go
+      GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains/go/cache
+    commands:
+      - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
       - mkdir -p build/
+      - whereis go
+      - which go
+      - go version
       - make release/terraform
       - find terraform/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
@@ -406,7 +428,19 @@ steps:
       AWS_REGION: us-west-2
     commands:
       - cd build
-      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+      - echo aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+
+  - name: Clean up toolchains (post)
+    environment:
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
+    when:
+      status:
+      - success
+      - failure
+    commands:
+      - set -u
+      - chmod -R u+rw $TOOLCHAIN_DIR
+      - rm -rf $TOOLCHAIN_DIR
 
 ---
 kind: pipeline
@@ -511,16 +545,38 @@ platform:
   arch: amd64
 
 trigger:
+  branch:
+    - marco/ci_darwin_install_local_go
   event:
-    - tag
-  ref:
     include:
-      - refs/tags/teleport-event-handler-v*
+      - push
+  repo:
+    include:
+      - gravitational/*
 
 steps:
-  - name: Build artifacts
+  - name: Install Go Toolchain
+    environment:
+      GO_VERSION: go1.18.4
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
     commands:
+      - set -u
+      - mkdir -p $TOOLCHAIN_DIR
+      - curl --silent -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
+      - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
+      - rm -rf $GO_VERSION.darwin-amd64.tar.gz
+
+  - name: Build artifacts
+    environment:
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
+      GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains/go
+      GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains/go/cache
+    commands:
+      - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
       - mkdir -p build/
+      - whereis go
+      - which go
+      - go version
       - make release/event-handler
       - find event-handler/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
@@ -538,7 +594,19 @@ steps:
       AWS_REGION: us-west-2
     commands:
       - cd build
-      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+      - echo aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+
+  - name: Clean up toolchains (post)
+    environment:
+      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
+    when:
+      status:
+      - success
+      - failure
+    commands:
+      - set -u
+      - chmod -R u+rw $TOOLCHAIN_DIR
+      - rm -rf $TOOLCHAIN_DIR
 
 ---
 kind: pipeline
@@ -919,6 +987,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: f360d8d04978c04062ffafd35c023c88eab3cca36242d09d941d9c752c7641f1
+hmac: 310671480d9cd7f9e4f2d50a0e18b306aa6f260ecab06674f7b17bfbf25cf5d7
 
 ...
