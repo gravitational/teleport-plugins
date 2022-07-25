@@ -13,8 +13,8 @@ require (
 	github.com/gravitational/teleport/api v0.0.0-20220801222506-5bc7caf752f6 // tag v10.1.2
 	github.com/gravitational/trace v1.1.17
 	github.com/hashicorp/go-version v1.3.0
-	github.com/hashicorp/terraform-plugin-framework v0.8.0
-	github.com/hashicorp/terraform-plugin-go v0.9.1
+	github.com/hashicorp/terraform-plugin-framework v0.10.0
+	github.com/hashicorp/terraform-plugin-go v0.12.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.10.1
 	github.com/jonboulle/clockwork v0.2.2
 	github.com/json-iterator/go v1.1.12
@@ -29,7 +29,7 @@ require (
 	github.com/stretchr/testify v1.7.2
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/grpc v1.46.0
+	google.golang.org/grpc v1.48.0
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/mail.v2 v2.3.1
 	k8s.io/apimachinery v0.24.1
@@ -70,8 +70,8 @@ require (
 	github.com/hashicorp/logutils v1.0.0 // indirect
 	github.com/hashicorp/terraform-exec v0.15.0 // indirect
 	github.com/hashicorp/terraform-json v0.13.0 // indirect
-	github.com/hashicorp/terraform-plugin-log v0.4.1 // indirect
-	github.com/hashicorp/terraform-registry-address v0.0.0-20210412075316-9b2996cce896 // indirect
+	github.com/hashicorp/terraform-plugin-log v0.6.0 // indirect
+	github.com/hashicorp/terraform-registry-address v0.0.0-20220623143253-7d51757b572c // indirect
 	github.com/hashicorp/terraform-svchost v0.0.0-20200729002733-f050f53b9734 // indirect
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a // indirect

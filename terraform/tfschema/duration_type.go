@@ -146,3 +146,26 @@ func (t DurationValue) Equal(other attr.Value) bool {
 	}
 	return t.Value == o.Value
 }
+
+// IsNull returns true if receiver is null
+func (t DurationValue) IsNull() bool {
+	return t.Null
+}
+
+// IsUnknown returns true if receiver is unknown
+func (t DurationValue) IsUnknown() bool {
+	return t.Unknown
+}
+
+// String returns the string representation of the receiver
+func (t DurationValue) String() string {
+	if t.Unknown {
+		return attr.UnknownValueString
+	}
+
+	if t.Null {
+		return attr.NullValueString
+	}
+
+	return t.Value.String()
+}
