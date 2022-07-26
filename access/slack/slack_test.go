@@ -262,12 +262,12 @@ func (s *SlackSuite) TestMessagePosting() {
 	})
 	assert.Len(t, pluginData.SlackData, 2)
 
-	var messages []Msg
+	var messages []SlackMsg
 	messageSet := make(SlackDataMessageSet)
 	for i := 0; i < 2; i++ {
 		msg, err := s.fakeSlack.CheckNewMessage(s.Context())
 		require.NoError(t, err)
-		messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, Timestamp: msg.Timestamp})
+		messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, TimestampOrDiscordID: msg.Timestamp})
 		messages = append(messages, msg)
 	}
 
@@ -316,20 +316,20 @@ func (s *SlackSuite) TestRecipientsConfig() {
 	assert.Len(t, pluginData.SlackData, 2)
 
 	var (
-		msg      Msg
-		messages []Msg
+		msg      SlackMsg
+		messages []SlackMsg
 	)
 
 	messageSet := make(SlackDataMessageSet)
 
 	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
-	messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, Timestamp: msg.Timestamp})
+	messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, TimestampOrDiscordID: msg.Timestamp})
 	messages = append(messages, msg)
 
 	msg, err = s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
-	messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, Timestamp: msg.Timestamp})
+	messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, TimestampOrDiscordID: msg.Timestamp})
 	messages = append(messages, msg)
 
 	assert.Len(t, messageSet, 2)
@@ -643,7 +643,7 @@ func (s *SlackSuite) TestRace() {
 			if msg.ThreadTs == "" {
 				// Handle "root" notifications.
 
-				threadMsgKey := SlackDataMessage{ChannelID: msg.Channel, Timestamp: msg.Timestamp}
+				threadMsgKey := SlackDataMessage{ChannelID: msg.Channel, TimestampOrDiscordID: msg.Timestamp}
 				if _, loaded := threadMsgIDs.LoadOrStore(threadMsgKey, struct{}{}); loaded {
 					return setRaceErr(trace.Errorf("thread %v already stored", threadMsgKey))
 				}
@@ -670,7 +670,7 @@ func (s *SlackSuite) TestRace() {
 			} else {
 				// Handle review comments.
 
-				threadMsgKey := SlackDataMessage{ChannelID: msg.Channel, Timestamp: msg.ThreadTs}
+				threadMsgKey := SlackDataMessage{ChannelID: msg.Channel, TimestampOrDiscordID: msg.ThreadTs}
 				var newCounter int32
 				val, _ := reviewReplyCounters.LoadOrStore(threadMsgKey, &newCounter)
 				counterPtr := val.(*int32)
@@ -689,7 +689,7 @@ func (s *SlackSuite) TestRace() {
 				return setRaceErr(trace.Wrap(err))
 			}
 
-			threadMsgKey := SlackDataMessage{ChannelID: msg.Channel, Timestamp: msg.Timestamp}
+			threadMsgKey := SlackDataMessage{ChannelID: msg.Channel, TimestampOrDiscordID: msg.Timestamp}
 			var newCounter int32
 			val, _ := msgUpdateCounters.LoadOrStore(threadMsgKey, &newCounter)
 			counterPtr := val.(*int32)
@@ -721,7 +721,7 @@ func (s *SlackSuite) TestRace() {
 	})
 }
 
-func parseMessageField(msg Msg, field string) (string, error) {
+func parseMessageField(msg SlackMsg, field string) (string, error) {
 	block := msg.BlockItems[1].Block
 	sectionBlock, ok := block.(SectionBlock)
 	if !ok {
@@ -747,7 +747,7 @@ func parseMessageField(msg Msg, field string) (string, error) {
 	return "", trace.Errorf("cannot find field %s in %v", field, fields)
 }
 
-func getStatusLine(msg Msg) (string, error) {
+func getStatusLine(msg SlackMsg) (string, error) {
 	block := msg.BlockItems[2].Block
 	contextBlock, ok := block.(ContextBlock)
 	if !ok {
