@@ -8,31 +8,46 @@ import (
 
 // Slack API types
 
-type Response struct {
+type SlackResponse struct {
 	Ok    bool   `json:"ok"`
 	Error string `json:"error,omitempty"`
 }
 
+type DiscordResponse struct {
+	Code    int    `json:"code"`
+	Message string `json:"message,omitempty"`
+}
+
 type ChatMsgResponse struct {
-	Response
+	SlackResponse
 	Channel   string `json:"channel"`
 	Timestamp string `json:"ts"`
 	Text      string `json:"text"`
+	DiscordID string `json:"id"`
 }
 
 type Msg struct {
-	Type       string      `json:"type,omitempty"`
-	Channel    string      `json:"channel,omitempty"`
-	User       string      `json:"user,omitempty"`
-	Username   string      `json:"username,omitempty"`
-	Timestamp  string      `json:"ts,omitempty"`
-	Text       string      `json:"text,omitempty"`
-	ThreadTs   string      `json:"thread_ts,omitempty"`
+	Type      string `json:"type,omitempty"`
+	Channel   string `json:"channel,omitempty"`
+	User      string `json:"user,omitempty"`
+	Username  string `json:"username,omitempty"`
+	Timestamp string `json:"ts,omitempty"`
+	ThreadTs  string `json:"thread_ts,omitempty"`
+}
+
+type SlackMsg struct {
+	Msg
 	BlockItems []BlockItem `json:"blocks,omitempty"`
+	Text       string      `json:"text,omitempty"`
+}
+
+type DiscordMsg struct {
+	Msg
+	Text string `json:"content,omitempty"`
 }
 
 type RespondMsg struct {
-	Msg
+	SlackMsg
 	ReplaceOriginal bool `json:"replace_original,omitempty"`
 }
 

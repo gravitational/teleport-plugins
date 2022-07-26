@@ -1,6 +1,6 @@
 package main
 
-type SlackMessageSlice []Msg
+type SlackMessageSlice []SlackMsg
 type SlackDataMessageSet map[SlackDataMessage]struct{}
 
 func (slice SlackMessageSlice) Len() int {

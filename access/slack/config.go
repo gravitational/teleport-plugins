@@ -21,7 +21,8 @@ type Config struct {
 
 // SlackConfig holds Slack-specific configuration options.
 type SlackConfig struct {
-	Token string
+	IsDiscord bool `toml:"discord"`
+	Token     string
 	// DELETE IN 11.0.0 (Joerger) - use "role_to_recipients["*"]" instead
 	Recipients []string
 	APIURL     string

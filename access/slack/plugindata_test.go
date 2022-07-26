@@ -3,20 +3,22 @@ package main
 import (
 	"testing"
 
+	"github.com/gravitational/teleport-plugins/lib/plugindata"
 	"github.com/stretchr/testify/assert"
 )
 
 var samplePluginData = PluginData{
-	RequestData: RequestData{
-		User:          "user-foo",
-		Roles:         []string{"role-foo", "role-bar"},
-		RequestReason: "foo reason",
-		ReviewsCount:  3,
-		Resolution:    Resolution{Tag: ResolvedApproved, Reason: "foo ok"},
+	AccessRequestData: plugindata.AccessRequestData{
+		User:             "user-foo",
+		Roles:            []string{"role-foo", "role-bar"},
+		RequestReason:    "foo reason",
+		ReviewsCount:     3,
+		ResolutionTag:    plugindata.ResolvedApproved,
+		ResolutionReason: "foo ok",
 	},
 	SlackData: SlackData{
-		{ChannelID: "CHANNEL1", Timestamp: "0000001"},
-		{ChannelID: "CHANNEL2", Timestamp: "0000002"},
+		{ChannelID: "CHANNEL1", TimestampOrDiscordID: "0000001"},
+		{ChannelID: "CHANNEL2", TimestampOrDiscordID: "0000002"},
 	},
 }
 

@@ -4,13 +4,12 @@ import (
 	"context"
 	"time"
 
-	"github.com/jonboulle/clockwork"
 	"google.golang.org/grpc"
 	grpcbackoff "google.golang.org/grpc/backoff"
 
 	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/lib/logger"
+	pd "github.com/gravitational/teleport-plugins/lib/plugindata"
 	"github.com/gravitational/teleport-plugins/lib/stringset"
 	"github.com/gravitational/teleport-plugins/lib/watcherjob"
 	"github.com/gravitational/teleport/api/client"
@@ -22,18 +21,16 @@ import (
 const (
 	// minServerVersion is the minimal teleport version the plugin supports.
 	minServerVersion = "6.1.0-beta.1"
-	// pluginName is used to tag PluginData and as a Delegator in Audit log.
-	pluginName = "slack"
+	// slackPluginName is used to tag Slack PluginData and as a Delegator in Audit log.
+	slackPluginName = "slack"
+	// discordPluginName is used to tag Discord PluginData and as a Delegator in Audit log.
+	discordPluginName = "discord"
 	// grpcBackoffMaxDelay is a maximum time GRPC client waits before reconnection attempt.
 	grpcBackoffMaxDelay = time.Second * 2
 	// initTimeout is used to bound execution time of health check and teleport version check.
 	initTimeout = time.Second * 10
 	// handlerTimeout is used to bound the execution time of watcher event handler.
 	handlerTimeout = time.Second * 5
-	// modifyPluginDataBackoffBase is an initial (minimum) backoff value.
-	modifyPluginDataBackoffBase = time.Millisecond
-	// modifyPluginDataBackoffMax is a backoff threshold
-	modifyPluginDataBackoffMax = time.Second
 )
 
 // App contains global application state.
@@ -43,6 +40,7 @@ type App struct {
 	apiClient *client.Client
 	bot       Bot
 	mainJob   lib.ServiceJob
+	pd        *pd.CompareAndSwap[PluginData]
 
 	*lib.Process
 }
@@ -85,7 +83,7 @@ func (a *App) run(ctx context.Context) error {
 	watcherJob := watcherjob.NewJob(
 		a.apiClient,
 		watcherjob.Config{
-			Watch:            types.Watch{Kinds: []types.WatchKind{types.WatchKind{Kind: types.KindAccessRequest}}},
+			Watch:            types.Watch{Kinds: []types.WatchKind{{Kind: types.KindAccessRequest}}},
 			EventFuncTimeout: handlerTimeout,
 		},
 		a.onWatcherEvent,
@@ -141,12 +139,25 @@ func (a *App) init(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	log.Debug("Starting Slack API health check...")
-	if err = a.bot.HealthCheck(ctx); err != nil {
-		return trace.Wrap(err, "Slack API health check failed")
+	pluginName := slackPluginName
+	if a.conf.Slack.IsDiscord {
+		pluginName = discordPluginName
 	}
 
-	log.Debug("Slack API health check finished ok")
+	a.pd = pd.NewCAS(
+		a.apiClient,
+		pluginName,
+		types.KindAccessRequest,
+		EncodePluginData,
+		DecodePluginData,
+	)
+
+	log.Debug("Starting API health check...")
+	if err = a.bot.HealthCheck(ctx); err != nil {
+		return trace.Wrap(err, "API health check failed")
+	}
+
+	log.Debug("API health check finished ok")
 	return nil
 }
 
@@ -218,19 +229,28 @@ func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) err
 	log := logger.Get(ctx)
 
 	reqID := req.GetName()
-	reqData := RequestData{User: req.GetUser(), Roles: req.GetRoles(), RequestReason: req.GetRequestReason()}
-
-	isNew, err := a.modifyPluginData(ctx, reqID, func(existing *PluginData) (PluginData, bool) {
-		if existing != nil {
-			return PluginData{}, false
-		}
-		return PluginData{RequestData: reqData}, true
-	})
-	if err != nil {
-		return trace.Wrap(err)
+	reqData := pd.AccessRequestData{
+		User:          req.GetUser(),
+		Roles:         req.GetRoles(),
+		RequestReason: req.GetRequestReason(),
 	}
 
-	if isNew {
+	_, err := a.pd.Create(ctx, reqID, PluginData{AccessRequestData: reqData})
+	// isNew, err := a.modifyPluginData(ctx, reqID, func(existing *PluginData) (PluginData, bool) {
+	// 	if existing != nil {
+	// 		return PluginData{}, false
+	// 	}
+	// 	return PluginData{RequestData: reqData}, true
+	// })
+	// if err != nil {
+	// 	return trace.Wrap(err)
+	// }
+
+	if !trace.IsAlreadyExists(err) {
+		if err != nil {
+			return trace.Wrap(err)
+		}
+
 		if channels := a.getMessageRecipients(ctx, req); len(channels) > 0 {
 			if err := a.broadcastMessages(ctx, channels, reqID, reqData); err != nil {
 				return trace.Wrap(err)
@@ -241,8 +261,15 @@ func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) err
 	}
 
 	if reqReviews := req.GetReviews(); len(reqReviews) > 0 {
-		if err := a.postReviewReplies(ctx, reqID, reqReviews); err != nil {
-			return trace.Wrap(err)
+		if a.conf.Slack.IsDiscord {
+			err := a.updateMessages(ctx, reqID, pd.Unresolved, "", reqReviews)
+			if err != nil {
+				return trace.Wrap(err)
+			}
+		} else {
+			if err := a.postReviewReplies(ctx, reqID, reqReviews); err != nil {
+				return trace.Wrap(err)
+			}
 		}
 	}
 
@@ -251,30 +278,36 @@ func (a *App) onPendingRequest(ctx context.Context, req types.AccessRequest) err
 
 func (a *App) onResolvedRequest(ctx context.Context, req types.AccessRequest) error {
 	var replyErr error
-	if err := a.postReviewReplies(ctx, req.GetName(), req.GetReviews()); err != nil {
-		replyErr = trace.Wrap(err)
+
+	// Discord does not use thread replies, we do not have to send them
+	if !a.conf.Slack.IsDiscord {
+		if err := a.postReviewReplies(ctx, req.GetName(), req.GetReviews()); err != nil {
+			replyErr = trace.Wrap(err)
+		}
 	}
 
-	resolution := Resolution{Reason: req.GetResolveReason()}
+	reason := req.GetResolveReason()
 	state := req.GetState()
+	var tag pd.ResolutionTag
+
 	switch state {
 	case types.RequestState_APPROVED:
-		resolution.Tag = ResolvedApproved
+		tag = pd.ResolvedApproved
 	case types.RequestState_DENIED:
-		resolution.Tag = ResolvedDenied
+		tag = pd.ResolvedDenied
 	default:
 		logger.Get(ctx).Warningf("Unknown state %v (%s)", state, state.String())
 		return replyErr
 	}
-	err := trace.Wrap(a.updateMessages(ctx, req.GetName(), resolution))
+	err := trace.Wrap(a.updateMessages(ctx, req.GetName(), tag, reason, req.GetReviews()))
 	return trace.NewAggregate(replyErr, err)
 }
 
 func (a *App) onDeletedRequest(ctx context.Context, reqID string) error {
-	return a.updateMessages(ctx, reqID, Resolution{Tag: ResolvedExpired})
+	return a.updateMessages(ctx, reqID, pd.ResolvedExpired, "", nil)
 }
 
-func (a *App) broadcastMessages(ctx context.Context, channels []string, reqID string, reqData RequestData) error {
+func (a *App) broadcastMessages(ctx context.Context, channels []string, reqID string, reqData pd.AccessRequestData) error {
 	slackData, err := a.bot.Broadcast(ctx, channels, reqID, reqData)
 	if len(slackData) == 0 && err != nil {
 		return trace.Wrap(err)
@@ -282,53 +315,47 @@ func (a *App) broadcastMessages(ctx context.Context, channels []string, reqID st
 	for _, data := range slackData {
 		logger.Get(ctx).WithFields(logger.Fields{
 			"slack_channel":   data.ChannelID,
-			"slack_timestamp": data.Timestamp,
+			"slack_timestamp": data.TimestampOrDiscordID,
 		}).Info("Successfully posted to Slack")
 	}
 	if err != nil {
 		logger.Get(ctx).WithError(err).Error("Failed to post one or more messages to Slack")
 	}
 
-	_, err = a.modifyPluginData(ctx, reqID, func(existing *PluginData) (PluginData, bool) {
-		var pluginData PluginData
-		if existing != nil {
-			pluginData = *existing
-		} else {
-			// It must be impossible but lets handle it just in case.
-			pluginData = PluginData{RequestData: reqData}
-		}
-		pluginData.SlackData = slackData
-		return pluginData, true
+	_, err = a.pd.Update(ctx, reqID, func(existing PluginData) (PluginData, error) {
+		existing.SlackData = slackData
+		return existing, nil
 	})
+
 	return trace.Wrap(err)
 }
 
 func (a *App) postReviewReplies(ctx context.Context, reqID string, reqReviews []types.AccessReview) error {
 	var oldCount int
-	var slackData SlackData
-	ok, err := a.modifyPluginData(ctx, reqID, func(existing *PluginData) (PluginData, bool) {
-		if existing == nil {
-			return PluginData{}, false
-		}
+	//var slackData SlackData
 
-		if slackData = existing.SlackData; len(slackData) == 0 {
-			return PluginData{}, false
+	pd, err := a.pd.Update(ctx, reqID, func(existing PluginData) (PluginData, error) {
+		slackData := existing.SlackData
+		if len(slackData) == 0 {
+			// wait for the plugin data to be updated with SlackData
+			return PluginData{}, trace.CompareFailed("existing slackData is empty")
 		}
 
 		count := len(reqReviews)
-		if oldCount = existing.ReviewsCount; oldCount >= count {
-			return PluginData{}, false
+		oldCount = existing.ReviewsCount
+		if oldCount >= count {
+			return PluginData{}, trace.AlreadyExists("reviews are sent already")
 		}
-		pluginData := *existing
-		pluginData.ReviewsCount = count
-		return pluginData, true
+
+		existing.ReviewsCount = count
+		return existing, nil
 	})
+	if trace.IsAlreadyExists(err) {
+		logger.Get(ctx).Debug("Failed to post reply: replies are already sent")
+		return nil
+	}
 	if err != nil {
 		return trace.Wrap(err)
-	}
-	if !ok {
-		logger.Get(ctx).Debug("Failed to post reply: plugin data is missing")
-		return nil
 	}
 
 	slice := reqReviews[oldCount:]
@@ -337,10 +364,10 @@ func (a *App) postReviewReplies(ctx context.Context, reqID string, reqReviews []
 	}
 
 	errors := make([]error, 0, len(slice))
-	for _, data := range slackData {
-		ctx, _ = logger.WithFields(ctx, logger.Fields{"slack_channel": data.ChannelID, "slack_timestamp": data.Timestamp})
+	for _, data := range pd.SlackData {
+		ctx, _ = logger.WithFields(ctx, logger.Fields{"slack_channel": data.ChannelID, "slack_timestamp": data.TimestampOrDiscordID})
 		for _, review := range slice {
-			if err := a.bot.PostReviewReply(ctx, data.ChannelID, data.Timestamp, review); err != nil {
+			if err := a.bot.PostReviewReply(ctx, data.ChannelID, data.TimestampOrDiscordID, review); err != nil {
 				errors = append(errors, err)
 			}
 		}
@@ -383,7 +410,7 @@ func (a *App) getMessageRecipients(ctx context.Context, req types.AccessRequest)
 	for _, recipient := range recipients {
 		// Recipients could contain either email or channel name or channel ID. It's up to user what format to use.
 		channel := recipient
-		if lib.IsEmail(recipient) {
+		if lib.IsEmail(recipient) && !a.conf.Slack.IsDiscord {
 			channel = a.tryLookupDirectChannelByEmail(ctx, recipient)
 		}
 
@@ -396,111 +423,39 @@ func (a *App) getMessageRecipients(ctx context.Context, req types.AccessRequest)
 }
 
 // updateMessages updates the messages status and adds the resolve reason.
-func (a *App) updateMessages(ctx context.Context, reqID string, resolution Resolution) error {
+func (a *App) updateMessages(ctx context.Context, reqID string, tag pd.ResolutionTag, reason string, reviews []types.AccessReview) error {
 	log := logger.Get(ctx)
 
-	var pluginData PluginData
-	ok, err := a.modifyPluginData(ctx, reqID, func(existing *PluginData) (PluginData, bool) {
-		// If plugin data is empty or missing slack message timestamps, we cannot do anything.
-		if existing == nil {
-			return PluginData{}, false
-		}
-		if pluginData = *existing; len(pluginData.SlackData) == 0 {
-			return PluginData{}, false
+	pluginData, err := a.pd.Update(ctx, reqID, func(existing PluginData) (PluginData, error) {
+		if len(existing.SlackData) == 0 {
+			return PluginData{}, trace.NotFound("plugin data not found")
 		}
 
 		// If resolution field is not empty then we already resolved the incident before. In this case we just quit.
-		if pluginData.RequestData.Resolution.Tag != Unresolved {
-			return PluginData{}, false
+		if existing.AccessRequestData.ResolutionTag != pd.Unresolved {
+			return PluginData{}, trace.CompareFailed("request is already resolved")
 		}
 
 		// Mark plugin data as resolved.
-		pluginData.Resolution = resolution
-		return pluginData, true
+		existing.ResolutionTag = tag
+		existing.ResolutionReason = reason
+
+		return existing, nil
 	})
-	if err != nil {
-		return trace.Wrap(err)
-	}
-	if !ok {
+	if trace.IsNotFound(err) {
 		log.Debug("Failed to update messages: plugin data is missing")
 		return nil
 	}
-
-	reqData, slackData := pluginData.RequestData, pluginData.SlackData
-	if err := a.bot.UpdateMessages(ctx, reqID, reqData, slackData); err != nil {
+	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	log.Infof("Successfully marked request as %s in all messages", resolution.Tag)
+	reqData, slackData := pluginData.AccessRequestData, pluginData.SlackData
+	if err := a.bot.UpdateMessages(ctx, reqID, reqData, slackData, reviews); err != nil {
+		return trace.Wrap(err)
+	}
+
+	log.Infof("Successfully marked request as %s in all messages", tag)
 
 	return nil
-}
-
-// modifyPluginData performs a compare-and-swap update of access request's plugin data.
-// Callback function parameter is nil if plugin data hasn't been created yet.
-// Otherwise, callback function parameter is a pointer to current plugin data contents.
-// Callback function return value is an updated plugin data contents plus the boolean flag
-// indicating whether it should be written or not.
-// Note that callback function fn might be called more than once due to retry mechanism baked in
-// so make sure that the function is "pure" i.e. it doesn't interact with the outside world:
-// it doesn't perform any sort of I/O operations so even things like Go channels must be avoided.
-// Indeed, this limitation is not that ultimate at least if you know what you're doing.
-func (a *App) modifyPluginData(ctx context.Context, reqID string, fn func(data *PluginData) (PluginData, bool)) (bool, error) {
-	backoff := backoff.NewDecorr(modifyPluginDataBackoffBase, modifyPluginDataBackoffMax, clockwork.NewRealClock())
-	for {
-		oldData, err := a.getPluginData(ctx, reqID)
-		if err != nil && !trace.IsNotFound(err) {
-			return false, trace.Wrap(err)
-		}
-		newData, ok := fn(oldData)
-		if !ok {
-			return false, nil
-		}
-		var expectData PluginData
-		if oldData != nil {
-			expectData = *oldData
-		}
-		err = trace.Wrap(a.updatePluginData(ctx, reqID, newData, expectData))
-		if err == nil {
-			return true, nil
-		}
-		if !trace.IsCompareFailed(err) {
-			return false, trace.Wrap(err)
-		}
-		if err := backoff.Do(ctx); err != nil {
-			return false, trace.Wrap(err)
-		}
-	}
-}
-
-// getPluginData loads a plugin data for a given access request. It returns nil if it's not found.
-func (a *App) getPluginData(ctx context.Context, reqID string) (*PluginData, error) {
-	dataMaps, err := a.apiClient.GetPluginData(ctx, types.PluginDataFilter{
-		Kind:     types.KindAccessRequest,
-		Resource: reqID,
-		Plugin:   pluginName,
-	})
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	if len(dataMaps) == 0 {
-		return nil, trace.NotFound("plugin data not found")
-	}
-	entry := dataMaps[0].Entries()[pluginName]
-	if entry == nil {
-		return nil, trace.NotFound("plugin data entry not found")
-	}
-	data := DecodePluginData(entry.Data)
-	return &data, nil
-}
-
-// updatePluginData updates an existing plugin data or sets a new one if it didn't exist.
-func (a *App) updatePluginData(ctx context.Context, reqID string, data PluginData, expectData PluginData) error {
-	return a.apiClient.UpdatePluginData(ctx, types.PluginDataUpdateParams{
-		Kind:     types.KindAccessRequest,
-		Resource: reqID,
-		Plugin:   pluginName,
-		Set:      EncodePluginData(data),
-		Expect:   EncodePluginData(expectData),
-	})
 }
