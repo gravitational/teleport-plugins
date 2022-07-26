@@ -16,7 +16,7 @@ RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
 # Copy the go source
 COPY access/${ACCESS_PLUGIN} access/${ACCESS_PLUGIN}
-COPY access/config access/config
+COPY access/common access/common
 COPY lib lib
 
 # Build

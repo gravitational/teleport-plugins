@@ -311,7 +311,7 @@ func (a *App) getEmailRecipients(ctx context.Context, roles, suggestedReviewers 
 	log := logger.Get(ctx)
 	validEmailRecipients := []string{}
 
-	recipients := a.conf.RoleToRecipients.GetRecipientsFor(roles, suggestedReviewers)
+	recipients := a.conf.RoleToRecipients.GetRawRecipientsFor(roles, suggestedReviewers)
 
 	for _, recipient := range recipients {
 		if !lib.IsEmail(recipient) {

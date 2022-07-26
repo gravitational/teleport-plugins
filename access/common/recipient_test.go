@@ -1,20 +1,4 @@
-/*
-Copyright 2022 Gravitational, Inc.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-
-package config
+package common
 
 import (
 	"testing"
@@ -25,14 +9,14 @@ import (
 )
 
 type wrapRecipientsMap struct {
-	RecipientsMap RecipientsMap `toml:"role_to_recipients"`
+	RecipientsMap RawRecipientsMap `toml:"role_to_recipients"`
 }
 
-func TestRecipientsMap(t *testing.T) {
+func TestRawRecipientsMap(t *testing.T) {
 	testCases := []struct {
 		desc             string
 		in               string
-		expectRecipients RecipientsMap
+		expectRecipients RawRecipientsMap
 	}{
 		{
 			desc: "test role_to_recipients multiple format",
@@ -41,7 +25,7 @@ func TestRecipientsMap(t *testing.T) {
             "dev" = ["dev-channel", "admin-channel"]
             "*" = "admin-channel"
             `,
-			expectRecipients: RecipientsMap{
+			expectRecipients: RawRecipientsMap{
 				"dev":          []string{"dev-channel", "admin-channel"},
 				types.Wildcard: []string{"admin-channel"},
 			},
@@ -53,7 +37,7 @@ func TestRecipientsMap(t *testing.T) {
             "dev" = ["dev-channel", "admin-channel"]
             "prod" = ["sre-channel", "oncall-channel"]
             `,
-			expectRecipients: RecipientsMap{
+			expectRecipients: RawRecipientsMap{
 				"dev":  []string{"dev-channel", "admin-channel"},
 				"prod": []string{"sre-channel", "oncall-channel"},
 			},
@@ -64,7 +48,7 @@ func TestRecipientsMap(t *testing.T) {
             [role_to_recipients]
             "single" = "admin-channel"
             `,
-			expectRecipients: RecipientsMap{
+			expectRecipients: RawRecipientsMap{
 				"single": []string{"admin-channel"},
 			},
 		},
@@ -75,7 +59,7 @@ func TestRecipientsMap(t *testing.T) {
             "dev" = ["dev-channel", "admin-channel"]
             "*" = "admin-channel"
             `,
-			expectRecipients: RecipientsMap{
+			expectRecipients: RawRecipientsMap{
 				"dev":          []string{"dev-channel", "admin-channel"},
 				types.Wildcard: []string{"admin-channel"},
 			},
@@ -85,7 +69,7 @@ func TestRecipientsMap(t *testing.T) {
 			in: `
             [role_to_recipients]
             `,
-			expectRecipients: RecipientsMap{},
+			expectRecipients: RawRecipientsMap{},
 		},
 	}
 
@@ -100,17 +84,17 @@ func TestRecipientsMap(t *testing.T) {
 	}
 }
 
-func TestRecipientsMapGetRecipients(t *testing.T) {
+func TestRawRecipientsMapGetRecipients(t *testing.T) {
 	testCases := []struct {
 		desc               string
-		m                  RecipientsMap
+		m                  RawRecipientsMap
 		roles              []string
 		suggestedReviewers []string
 		output             []string
 	}{
 		{
 			desc: "test match exact role",
-			m: RecipientsMap{
+			m: RawRecipientsMap{
 				"dev": []string{"chanDev"},
 				"*":   []string{"chanA", "chanB"},
 			},
@@ -120,7 +104,7 @@ func TestRecipientsMapGetRecipients(t *testing.T) {
 		},
 		{
 			desc: "test only default recipient",
-			m: RecipientsMap{
+			m: RawRecipientsMap{
 				"*": []string{"chanA", "chanB"},
 			},
 			roles:              []string{"dev"},
@@ -129,7 +113,7 @@ func TestRecipientsMapGetRecipients(t *testing.T) {
 		},
 		{
 			desc: "test deduplicate recipients",
-			m: RecipientsMap{
+			m: RawRecipientsMap{
 				"dev": []string{"chanA", "chanB"},
 				"*":   []string{"chanC"},
 			},
@@ -141,8 +125,90 @@ func TestRecipientsMapGetRecipients(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.desc, func(t *testing.T) {
-			recipients := tc.m.GetRecipientsFor(tc.roles, tc.suggestedReviewers)
+			recipients := tc.m.GetRawRecipientsFor(tc.roles, tc.suggestedReviewers)
 			require.ElementsMatch(t, recipients, tc.output)
 		})
 	}
+}
+
+func TestNewRecipientSet(t *testing.T) {
+	actual := NewRecipientSet()
+	expected := RecipientSet{recipients: make(map[string]Recipient)}
+	require.Equal(t, expected, actual)
+}
+
+func TestRecipientSet_Add(t *testing.T) {
+	// Setup
+	set := NewRecipientSet()
+	a := Recipient{
+		Name: "Recipient A",
+		ID:   "A",
+		Kind: "Test",
+	}
+	b := Recipient{
+		Name: "Recipient B",
+		ID:   "B",
+		Kind: "Test",
+	}
+	a2 := Recipient{
+		Name: "Recipient A2",
+		ID:   "A",
+		Kind: "Test",
+		Data: nil,
+	}
+
+	// Testing with a single element
+	set.Add(a)
+	require.Equal(t, map[string]Recipient{"A": a}, set.recipients)
+
+	// Testing with a second element
+	set.Add(b)
+	require.Equal(t, map[string]Recipient{"A": a, "B": b}, set.recipients)
+
+	// Testing with an element with the same ID
+	set.Add(a2)
+	require.Equal(t, map[string]Recipient{"A": a2, "B": b}, set.recipients)
+}
+
+func TestRecipientSet_Contains(t *testing.T) {
+	// Setup
+	a := Recipient{
+		Name: "Recipient A",
+		ID:   "A",
+		Kind: "Test",
+	}
+	b := Recipient{
+		Name: "Recipient B",
+		ID:   "B",
+		Kind: "Test",
+	}
+	set := RecipientSet{recipients: map[string]Recipient{"A": a, "B": b}}
+
+	// Testing contains on a couple elements
+	require.True(t, set.Contains(a.ID))
+	require.True(t, set.Contains(b.ID))
+
+	// Testing contains on an absent element
+	require.False(t, set.Contains("non-existent"))
+}
+
+func TestRecipientSet_ToSlice(t *testing.T) {
+	// Setup
+	emptySet := NewRecipientSet()
+	a := Recipient{
+		Name: "Recipient A",
+		ID:   "A",
+		Kind: "Test",
+	}
+	b := Recipient{
+		Name: "Recipient B",
+		ID:   "B",
+		Kind: "Test",
+	}
+	set := RecipientSet{recipients: map[string]Recipient{"A": a, "B": b}}
+
+	// Testing with an empty set
+	require.Equal(t, []Recipient{}, emptySet.ToSlice())
+	// Testing with a non-empty set
+	require.ElementsMatch(t, []Recipient{a, b}, set.ToSlice())
 }
