@@ -379,14 +379,11 @@ platform:
   arch: amd64
 
 trigger:
-  branch:
-    - marco/ci_darwin_install_local_go
   event:
+    - tag
+  ref:
     include:
-      - push
-  repo:
-    include:
-      - gravitational/*
+      - refs/tags/terraform-provider-teleport-v*
 
 steps:
   - name: Install Go Toolchain
@@ -408,8 +405,6 @@ steps:
     commands:
       - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
       - mkdir -p build/
-      - whereis go
-      - which go
       - go version
       - make release/terraform
       - find terraform/ -iname "*.tar.gz" -print -exec cp {} build/ \;
@@ -428,7 +423,7 @@ steps:
       AWS_REGION: us-west-2
     commands:
       - cd build
-      - echo aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
 
   - name: Clean up toolchains (post)
     environment:
@@ -545,14 +540,11 @@ platform:
   arch: amd64
 
 trigger:
-  branch:
-    - marco/ci_darwin_install_local_go
   event:
+    - tag
+  ref:
     include:
-      - push
-  repo:
-    include:
-      - gravitational/*
+      - refs/tags/teleport-event-handler-v*
 
 steps:
   - name: Install Go Toolchain
@@ -574,9 +566,6 @@ steps:
     commands:
       - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
       - mkdir -p build/
-      - whereis go
-      - which go
-      - go version
       - make release/event-handler
       - find event-handler/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
@@ -594,7 +583,7 @@ steps:
       AWS_REGION: us-west-2
     commands:
       - cd build
-      - echo aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
 
   - name: Clean up toolchains (post)
     environment:
@@ -987,6 +976,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 310671480d9cd7f9e4f2d50a0e18b306aa6f260ecab06674f7b17bfbf25cf5d7
+hmac: ca7ff791adc744223013ad3775cc606b38e59390f65e7643769de62a3d314332
 
 ...
