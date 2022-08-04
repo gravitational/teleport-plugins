@@ -17,7 +17,10 @@ limitations under the License.
 package main
 
 import (
+	"errors"
 	"fmt"
+	"os"
+	"reflect"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib/logger"
@@ -72,6 +75,10 @@ func NewTeleportEventsWatcher(
 ) (*TeleportEventsWatcher, error) {
 	var err error
 
+	if err := validateConfig(*c); err != nil {
+		return nil, trace.Wrap(err)
+	}
+
 	config := client.Config{
 		Addrs: []string{c.TeleportAddr},
 		Credentials: []client.Credentials{
@@ -79,7 +86,6 @@ func NewTeleportEventsWatcher(
 			client.LoadKeyPair(c.TeleportCert, c.TeleportKey, c.TeleportCA),
 		},
 	}
-
 	client, err := client.New(ctx, config)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -95,6 +101,31 @@ func NewTeleportEventsWatcher(
 	}
 
 	return &tc, nil
+}
+
+// validateConfig validates the given StartCmdConfig
+func validateConfig(cfg StartCmdConfig) error {
+	errs := []error{}
+	// Check all config fields with the tag existingfile point to an existing file.
+	for _, config := range []interface{}{cfg.FluentdConfig, cfg.TeleportConfig, cfg.IngestConfig} {
+		v := reflect.ValueOf(config)
+		for i := 0; i < v.NumField(); i++ {
+			// Get the field tag value
+			tag := v.Type().Field(i).Tag.Get("type")
+			if tag == "" || tag != "existingfile" {
+				continue
+			}
+			fileName := v.Field(i).String()
+			if fileName == "" {
+				continue
+			}
+			if _, err := os.Stat(fileName); errors.Is(err, os.ErrNotExist) {
+				errs = append(errs, trace.BadParameter("required file %v does not exist", fileName))
+			}
+
+		}
+	}
+	return trace.NewAggregate(errs...)
 }
 
 // Close closes connection to Teleport
