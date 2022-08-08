@@ -3,6 +3,8 @@
 # Please note that OIDC connector will work in Enterprise version only. Check the setup docs:
 # https://goteleport.com/docs/enterprise/sso/oidc/
 
+variable "oidc_secret" {}
+
 resource "teleport_oidc_connector" "example" {
   metadata = {
     name = "example"
@@ -13,7 +15,7 @@ resource "teleport_oidc_connector" "example" {
 
   spec = {
     client_id = "client"
-    client_secret = "value"
+    client_secret = var.oidc_secret
 
     claims_to_roles = [{
       claim = "test"

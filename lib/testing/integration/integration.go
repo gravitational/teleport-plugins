@@ -33,6 +33,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-version"
+	"google.golang.org/grpc"
 
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/tctl"
@@ -399,6 +400,9 @@ func (integration *Integration) NewSignedClient(ctx context.Context, auth Auth, 
 		InsecureAddressDiscovery: true,
 		Addrs:                    []string{auth.AuthAddr().String()},
 		Credentials:              []client.Credentials{client.LoadIdentityFile(identityPath)},
+		DialOpts: []grpc.DialOption{
+			grpc.WithReturnConnectionError(),
+		},
 	})
 	if err != nil {
 		return nil, trace.Wrap(err)

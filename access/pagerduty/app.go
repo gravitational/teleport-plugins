@@ -144,7 +144,10 @@ func (a *App) init(ctx context.Context) error {
 	if a.apiClient, err = client.New(ctx, client.Config{
 		Addrs:       a.conf.Teleport.GetAddrs(),
 		Credentials: a.conf.Teleport.Credentials(),
-		DialOpts:    []grpc.DialOption{grpc.WithConnectParams(grpc.ConnectParams{Backoff: bk, MinConnectTimeout: initTimeout})},
+		DialOpts: []grpc.DialOption{
+			grpc.WithConnectParams(grpc.ConnectParams{Backoff: bk, MinConnectTimeout: initTimeout}),
+			grpc.WithReturnConnectionError(),
+		},
 	}); err != nil {
 		return trace.Wrap(err)
 	}
