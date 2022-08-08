@@ -409,6 +409,15 @@ func GenSchemaAppV3(ctx context.Context) (github_com_hashicorp_terraform_plugin_
 		},
 		"spec": {
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+				"aws": {
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"external_id": {
+						Description: "ExternalID is the AWS External ID used when assuming roles in this app.",
+						Optional:    true,
+						Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+					}}),
+					Description: "AWS contains additional options for AWS applications.",
+					Optional:    true,
+				},
 				"dynamic_labels": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.MapNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 						"command": {
@@ -5378,6 +5387,41 @@ func CopyAppV3FromTerraform(_ context.Context, tf github_com_hashicorp_terraform
 							}
 						}
 					}
+					{
+						a, ok := tf.Attrs["aws"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"AppV3.Spec.AWS"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"AppV3.Spec.AWS", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+							} else {
+								obj.AWS = nil
+								if !v.Null && !v.Unknown {
+									tf := v
+									obj.AWS = &github_com_gravitational_teleport_api_types.AppAWS{}
+									obj := obj.AWS
+									{
+										a, ok := tf.Attrs["external_id"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"AppV3.Spec.AWS.ExternalID"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"AppV3.Spec.AWS.ExternalID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.ExternalID = t
+											}
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -6047,6 +6091,60 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 								}
 								v.Unknown = false
 								tf.Attrs["rewrite"] = v
+							}
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["aws"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"AppV3.Spec.AWS"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"AppV3.Spec.AWS", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+							} else {
+								v, ok := tf.Attrs["aws"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+								if !ok {
+									v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+										AttrTypes: o.AttrTypes,
+										Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+									}
+								} else {
+									if v.Attrs == nil {
+										v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+									}
+								}
+								if obj.AWS == nil {
+									v.Null = true
+								} else {
+									obj := obj.AWS
+									tf := &v
+									{
+										t, ok := tf.AttrTypes["external_id"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"AppV3.Spec.AWS.ExternalID"})
+										} else {
+											v, ok := tf.Attrs["external_id"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"AppV3.Spec.AWS.ExternalID", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"AppV3.Spec.AWS.ExternalID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.ExternalID) == ""
+											}
+											v.Value = string(obj.ExternalID)
+											v.Unknown = false
+											tf.Attrs["external_id"] = v
+										}
+									}
+								}
+								v.Unknown = false
+								tf.Attrs["aws"] = v
 							}
 						}
 					}
