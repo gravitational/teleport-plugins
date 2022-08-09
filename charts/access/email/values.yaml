@@ -43,7 +43,7 @@ log:
 # Deployment
 #
 image:
-  repository: quay.io/gravitational/teleport-plugin-email
+  repository: public.ecr.aws/gravitational/teleport-plugin-email
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""

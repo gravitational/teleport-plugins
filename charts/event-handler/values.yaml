@@ -36,7 +36,7 @@ persistentVolumeClaim:
 # Deployment
 #
 image:
-  repository: quay.io/gravitational/teleport-plugin-event-handler
+  repository: public.ecr.aws/gravitational/teleport-plugin-event-handler
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
