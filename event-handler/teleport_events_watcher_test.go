@@ -149,7 +149,7 @@ func TestValidateConfig(t *testing.T) {
 				IngestConfig{},
 				LockConfig{},
 			},
-			wantError: false,
+			wantError: true,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
