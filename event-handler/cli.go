@@ -94,6 +94,10 @@ func (cfg *TeleportConfig) Validate() error {
 			strings.Join(missing.ToSlice(), ", "),
 		)
 	}
+
+	if cfg.TeleportIdentityFile != "" && len(provided) != 0 {
+		return trace.BadParameter("configuration setting `identity` is mutually exclusive with the `cert`, `key` and `ca` settings")
+	}
 	if len(provided) == 0 && cfg.TeleportIdentityFile == "" {
 		return trace.BadParameter("neither `identity` file nor `cert`, `key` and `ca` files configured")
 	}

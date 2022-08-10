@@ -115,42 +115,66 @@ func TestValidateConfig(t *testing.T) {
 		name      string
 		cfg       StartCmdConfig
 		wantError bool
-	}{
-		{
-			name: "Identity and teleport cert/ca/key files configured",
-			cfg: StartCmdConfig{
-				FluentdConfig{},
-				TeleportConfig{
-					TeleportIdentityFile: "not_empty_string",
-					TeleportCA:           "not_empty_string",
-					TeleportCert:         "not_empty_string",
-					TeleportKey:          "not_empty_string",
-				},
-				IngestConfig{},
-				LockConfig{},
+	}{{
+		name: "Identity file configured",
+		cfg: StartCmdConfig{
+			FluentdConfig{},
+			TeleportConfig{
+				TeleportIdentityFile: "not_empty_string",
 			},
-		}, {
-			name: "None set",
-			cfg: StartCmdConfig{
-				FluentdConfig{},
-				TeleportConfig{},
-				IngestConfig{},
-				LockConfig{},
-			},
-			wantError: true,
-		}, {
-			name: "Some of teleport cert/key/ca unset",
-			cfg: StartCmdConfig{
-				FluentdConfig{},
-				TeleportConfig{
-					TeleportIdentityFile: "not_empty_string",
-					TeleportCA:           "not_empty_string",
-				},
-				IngestConfig{},
-				LockConfig{},
-			},
-			wantError: true,
+			IngestConfig{},
+			LockConfig{},
 		},
+		wantError: false,
+	}, {
+		name: "Cert, key, ca files configured",
+		cfg: StartCmdConfig{
+			FluentdConfig{},
+			TeleportConfig{
+				TeleportCA:   "not_empty_string",
+				TeleportCert: "not_empty_string",
+				TeleportKey:  "not_empty_string",
+			},
+			IngestConfig{},
+			LockConfig{},
+		},
+		wantError: false,
+	}, {
+		name: "Identity and teleport cert/ca/key files configured",
+		cfg: StartCmdConfig{
+			FluentdConfig{},
+			TeleportConfig{
+				TeleportIdentityFile: "not_empty_string",
+				TeleportCA:           "not_empty_string",
+				TeleportCert:         "not_empty_string",
+				TeleportKey:          "not_empty_string",
+			},
+			IngestConfig{},
+			LockConfig{},
+		},
+		wantError: true,
+	}, {
+		name: "None set",
+		cfg: StartCmdConfig{
+			FluentdConfig{},
+			TeleportConfig{},
+			IngestConfig{},
+			LockConfig{},
+		},
+		wantError: true,
+	}, {
+		name: "Some of teleport cert/key/ca unset",
+		cfg: StartCmdConfig{
+			FluentdConfig{},
+			TeleportConfig{
+				TeleportIdentityFile: "not_empty_string",
+				TeleportCA:           "not_empty_string",
+			},
+			IngestConfig{},
+			LockConfig{},
+		},
+		wantError: true,
+	},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.cfg.Validate()
