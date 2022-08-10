@@ -50,7 +50,7 @@ type FluentdConfig struct {
 // TeleportConfig is Teleport instance configuration
 type TeleportConfig struct {
 	// TeleportAddr is a Teleport addr
-	TeleportAddr string `help:"Teleport addr" env:"FDFWD_TELEPORT_ADDR" defualt:"localhost:3025"`
+	TeleportAddr string `help:"Teleport addr" env:"FDFWD_TELEPORT_ADDR" default:"localhost:3025"`
 
 	// TeleportIdentityFile is a path to Teleport identity file
 	TeleportIdentityFile string `help:"Teleport identity file" type:"existingfile" name:"teleport-identity" env:"FDFWD_TELEPORT_IDENTITY"`
