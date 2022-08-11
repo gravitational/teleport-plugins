@@ -65,7 +65,7 @@ type TeleportConfig struct {
 	TeleportKey string `help:"Teleport TLS key file" type:"existingfile" env:"FDFWD_TELEPORT_KEY"`
 }
 
-// Validate performs some basic validation on TeleportConfig that can't be handled using the kong defaulting
+// Check verifies that a valid configuration is set
 func (cfg *TeleportConfig) Check() error {
 	provided := stringset.NewWithCap(3)
 	missing := stringset.NewWithCap(3)
@@ -220,7 +220,7 @@ func (c *StartCmdConfig) Validate() error {
 		t := c.StartTime.Truncate(time.Second)
 		c.StartTime = &t
 	}
-	if err := c.TeleportConfig.Validate(); err != nil {
+	if err := c.TeleportConfig.Check(); err != nil {
 		return trace.Wrap(err)
 	}
 	c.SkipSessionTypes = lib.SliceToAnonymousMap(c.SkipSessionTypesRaw)
