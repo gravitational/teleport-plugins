@@ -203,7 +203,7 @@ func (s *JiraSuite) SetupTest() {
 	conf.HTTP.Insecure = true
 
 	s.appConfig = conf
-	s.SetContextTimeout(5 * time.Second)
+	s.SetContextTimeout(10 * time.Second)
 }
 
 func (s *JiraSuite) startApp() *App {
