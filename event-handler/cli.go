@@ -66,7 +66,7 @@ type TeleportConfig struct {
 }
 
 // Validate performs some basic validation on TeleportConfig that can't be handled using the kong defaulting
-func (cfg *TeleportConfig) Validate() error {
+func (cfg *TeleportConfig) Check() error {
 	provided := stringset.NewWithCap(3)
 	missing := stringset.NewWithCap(3)
 	if cfg.TeleportCert != "" {
