@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os/user"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -335,6 +336,30 @@ func (s *JiraSuite) TestIssueCreationWithRequestReason() {
 	}
 }
 
+func (s *JiraSuite) TestIssueCreationWithLargeRequestReason() {
+	t := s.T()
+
+	s.startApp()
+
+	req := s.newAccessRequest()
+	req.SetRequestReason(strings.Repeat("a", jiraReasonLimit+10))
+	err := s.requestor().CreateAccessRequest(s.Context(), req)
+	require.NoError(t, err)
+	s.checkPluginData(req.GetName(), func(data PluginData) bool {
+		return data.IssueID != ""
+	}) // when issue id is written, we are sure that request is completely served.
+
+	issue, err := s.fakeJira.CheckNewIssue(s.Context())
+	require.NoError(t, err)
+	re := regexp.MustCompile("(?:Reason...)(a+)")
+	match := re.FindStringSubmatch(issue.Fields.Description)
+	if len(match) != 2 {
+		t.Error("reason not found in issue description")
+		return
+	}
+	require.Equal(t, jiraReasonLimit, len(match[1]))
+}
+
 func (s *JiraSuite) TestReviewComments() {
 	t := s.T()
 
@@ -377,6 +402,44 @@ func (s *JiraSuite) TestReviewComments() {
 	assert.Contains(t, comment.Body, "*"+s.userNames.reviewer2+"* reviewed the request", "comment must contain a review author")
 	assert.Contains(t, comment.Body, "Resolution: *DENIED*", "comment must contain a denial resolution")
 	assert.Contains(t, comment.Body, "Reason: not okay", "comment must contain a denial reason")
+}
+
+func (s *JiraSuite) TestReviewCommentsResonLimit() {
+	t := s.T()
+
+	if !s.teleportFeatures.AdvancedAccessWorkflows {
+		t.Skip("Doesn't work in OSS version")
+	}
+
+	s.startApp()
+	req := s.createAccessRequest()
+
+	err := s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
+		Author:        s.userNames.reviewer1,
+		ProposedState: types.RequestState_APPROVED,
+		Created:       time.Now(),
+		Reason:        "okay" + strings.Repeat("a", jiraReasonLimit+10),
+	})
+	require.NoError(t, err)
+
+	pluginData := s.checkPluginData(req.GetName(), func(data PluginData) bool {
+		return data.IssueID != "" && data.ReviewsCount == 2
+	})
+
+	comment, err := s.fakeJira.CheckNewIssueComment(s.Context())
+	require.NoError(t, err)
+	assert.Equal(t, pluginData.IssueID, comment.IssueID)
+	assert.Contains(t, comment.Body, "*"+s.userNames.reviewer1+"* reviewed the request", "comment must contain a review author")
+	assert.Contains(t, comment.Body, "Resolution: *APPROVED*", "comment must contain an approval resolution")
+	assert.Contains(t, comment.Body, "Reason: okay", "comment must contain an approval reason")
+	re := regexp.MustCompile("(?:Reason..okay)(a+)")
+	match := re.FindStringSubmatch(comment.Body)
+	if len(match) != 2 {
+		t.Error("reason not found in issue description")
+		return
+	}
+	require.Equal(t, jiraReasonLimit, len(match[1]))
+
 }
 
 func (s *JiraSuite) TestReviewerApproval() {

@@ -39,6 +39,9 @@ const (
 
 	jiraMaxConns    = 100
 	jiraHTTPTimeout = 10 * time.Second
+	// Jira has a 300,000 character limit for the reason field so we
+	// truncate all reasons to a generous but conservative limit
+	jiraReasonLimit = 3000
 )
 
 var jiraRequiredPermissions = []string{"BROWSE_PROJECTS", "CREATE_ISSUES", "TRANSITION_ISSUES", "ADD_COMMENTS"}
@@ -186,6 +189,7 @@ func (j Jira) HealthCheck(ctx context.Context) error {
 
 // CreateIssue creates an issue with "Pending" status
 func (j Jira) CreateIssue(ctx context.Context, reqID string, reqData RequestData) (JiraData, error) {
+	reqData = truncateReasonFields(reqData)
 	description, err := j.buildIssueDescription(reqID, reqData)
 	if err != nil {
 		return JiraData{}, trace.Wrap(err)
@@ -222,6 +226,7 @@ func (j Jira) CreateIssue(ctx context.Context, reqID string, reqData RequestData
 }
 
 func (j Jira) buildIssueDescription(reqID string, reqData RequestData) (string, error) {
+	reqData = truncateReasonFields(reqData)
 	var requestLink string
 	if j.webProxyURL != nil {
 		reqURL := *j.webProxyURL
@@ -404,4 +409,14 @@ func (j Jira) AddResolutionComment(ctx context.Context, id string, resolution Re
 		logger.Get(ctx).Debug("Successfully added a resolution comment to the issue")
 	}
 	return trace.Wrap(err)
+}
+
+func truncateReasonFields(reqData RequestData) RequestData {
+	if reqData.Resolution.Reason != "" && len(reqData.Resolution.Reason) > jiraReasonLimit {
+		reqData.Resolution.Reason = reqData.Resolution.Reason[:jiraReasonLimit]
+	}
+	if reqData.RequestReason != "" && len(reqData.RequestReason) > jiraReasonLimit {
+		reqData.RequestReason = reqData.RequestReason[:jiraReasonLimit]
+	}
+	return reqData
 }
