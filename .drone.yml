@@ -24,7 +24,7 @@ steps:
       - make lint
 
   - name: Run tests
-    image: golang:1.18.4
+    image: golang:1.18.5
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
@@ -66,7 +66,7 @@ workspace:
 steps:
   - name: Install Go Toolchain
     environment:
-      GO_VERSION: go1.18.4
+      GO_VERSION: go1.18.5
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
       - set -u
@@ -123,7 +123,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.18.4
+    image: golang:1.18.5
     commands:
       - make build-all
 
@@ -159,7 +159,7 @@ workspace:
 steps:
   - name: Install Go Toolchain
     environment:
-      GO_VERSION: go1.18.4
+      GO_VERSION: go1.18.5
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
       - set -u
@@ -213,7 +213,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.18.4
+    image: golang:1.18.5
     commands:
       - mkdir -p build/
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
@@ -343,7 +343,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.18.4
+    image: golang:1.18.5
     commands:
       - mkdir -p build/
       - make release/terraform
@@ -388,7 +388,7 @@ trigger:
 steps:
   - name: Install Go Toolchain
     environment:
-      GO_VERSION: go1.18.4
+      GO_VERSION: go1.18.5
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
     commands:
       - set -u
@@ -454,7 +454,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.18.4
+    image: golang:1.18.5
     commands:
       - mkdir -p build/
       - make release/event-handler
@@ -549,7 +549,7 @@ trigger:
 steps:
   - name: Install Go Toolchain
     environment:
-      GO_VERSION: go1.18.4
+      GO_VERSION: go1.18.5
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
     commands:
       - set -u
@@ -831,7 +831,7 @@ concurrency:
 
 steps:
   - name: Upload terraform provider to staging registry
-    image: golang:1.18.4
+    image: golang:1.18.5
     commands:
       - cd tooling
       - |
@@ -886,7 +886,7 @@ concurrency:
 
 steps:
   - name: Upload terraform provider to staging registry
-    image: golang:1.18.4
+    image: golang:1.18.5
     commands:
       - cd tooling
       - |
@@ -941,7 +941,7 @@ concurrency:
 
 steps:
   - name: Promote terraform provider to public registry
-    image: golang:1.18.4
+    image: golang:1.18.5
     commands:
       - cd tooling
       - |
@@ -976,6 +976,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: ca7ff791adc744223013ad3775cc606b38e59390f65e7643769de62a3d314332
+hmac: 40579c57348e41258cec6f75e0846dc16fa7108e21f8e217b1d242622d1ac7f9
 
 ...

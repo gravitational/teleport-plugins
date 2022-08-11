@@ -22,7 +22,7 @@ import (
 
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/events"
-	
+
 	"github.com/gravitational/trace"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
@@ -168,7 +168,7 @@ func TestValidateConfig(t *testing.T) {
 		cfg: StartCmdConfig{
 			FluentdConfig{},
 			TeleportConfig{
-				TeleportCA:           "not_empty_string",
+				TeleportCA: "not_empty_string",
 			},
 			IngestConfig{},
 			LockConfig{},
