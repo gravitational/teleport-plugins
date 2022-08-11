@@ -18,12 +18,15 @@ package main
 
 import (
 	"context"
+	"strings"
 	"time"
-
-	"github.com/alecthomas/kong"
 
 	"github.com/gravitational/teleport-plugins/event-handler/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport-plugins/lib/stringset"
+
+	"github.com/alecthomas/kong"
+	"github.com/gravitational/trace"
 )
 
 // FluentdConfig represents fluentd instance configuration
@@ -47,7 +50,7 @@ type FluentdConfig struct {
 // TeleportConfig is Teleport instance configuration
 type TeleportConfig struct {
 	// TeleportAddr is a Teleport addr
-	TeleportAddr string `help:"Teleport addr" env:"FDFWD_TELEPORT_ADDR"`
+	TeleportAddr string `help:"Teleport addr" env:"FDFWD_TELEPORT_ADDR" default:"localhost:3025"`
 
 	// TeleportIdentityFile is a path to Teleport identity file
 	TeleportIdentityFile string `help:"Teleport identity file" type:"existingfile" name:"teleport-identity" env:"FDFWD_TELEPORT_IDENTITY"`
@@ -60,6 +63,45 @@ type TeleportConfig struct {
 
 	// TeleportKey is a path to Teleport key file
 	TeleportKey string `help:"Teleport TLS key file" type:"existingfile" env:"FDFWD_TELEPORT_KEY"`
+}
+
+// Check verifies that a valid configuration is set
+func (cfg *TeleportConfig) Check() error {
+	provided := stringset.NewWithCap(3)
+	missing := stringset.NewWithCap(3)
+	if cfg.TeleportCert != "" {
+		provided.Add("`teleport.cert`")
+	} else {
+		missing.Add("`teleport.cert`")
+	}
+
+	if cfg.TeleportKey != "" {
+		provided.Add("`teleport.key`")
+	} else {
+		missing.Add("`teleport.key`")
+	}
+
+	if cfg.TeleportCA != "" {
+		provided.Add("`teleport.ca`")
+	} else {
+		missing.Add("`teleport.ca`")
+	}
+
+	if len(provided) > 0 && len(provided) < 3 {
+		return trace.BadParameter(
+			"configuration setting(s) %s are provided but setting(s) %s are missing",
+			strings.Join(provided.ToSlice(), ", "),
+			strings.Join(missing.ToSlice(), ", "),
+		)
+	}
+
+	if cfg.TeleportIdentityFile != "" && len(provided) != 0 {
+		return trace.BadParameter("configuration setting `identity` is mutually exclusive with the `cert`, `key` and `ca` settings")
+	}
+	if len(provided) == 0 && cfg.TeleportIdentityFile == "" {
+		return trace.BadParameter("neither `identity` file nor `cert`, `key` and `ca` files configured")
+	}
+	return nil
 }
 
 // IngestConfig ingestion configuration
@@ -178,7 +220,9 @@ func (c *StartCmdConfig) Validate() error {
 		t := c.StartTime.Truncate(time.Second)
 		c.StartTime = &t
 	}
-
+	if err := c.TeleportConfig.Check(); err != nil {
+		return trace.Wrap(err)
+	}
 	c.SkipSessionTypes = lib.SliceToAnonymousMap(c.SkipSessionTypesRaw)
 
 	return nil
