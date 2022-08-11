@@ -167,7 +167,6 @@ func TestValidateConfig(t *testing.T) {
 		cfg: StartCmdConfig{
 			FluentdConfig{},
 			TeleportConfig{
-				TeleportIdentityFile: "not_empty_string",
 				TeleportCA:           "not_empty_string",
 			},
 			IngestConfig{},
