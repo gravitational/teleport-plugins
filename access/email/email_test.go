@@ -32,7 +32,6 @@ import (
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	teleportTesting "github.com/gravitational/teleport-plugins/lib/testing"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
@@ -65,7 +64,7 @@ const (
 )
 
 type EmailSuite struct {
-	teleportTesting.Suite
+	integration.AuthSetup
 	appConfig Config
 	userNames struct {
 		ruler     string
@@ -88,36 +87,26 @@ func (s *EmailSuite) SetupSuite() {
 	var err error
 	t := s.T()
 
-	logger.Init()
-	logger.Setup(logger.Config{Severity: "debug"})
+	s.AuthSetup.SetupSuite()
+	s.AuthSetup.SetupService()
+
+	ctx := s.Context()
+
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
-
-	// We set such a big timeout because integration.NewFromEnv could start
-	// downloading a Teleport *-bin.tar.gz file which can take a long time.
-	ctx := s.SetContextTimeout(2 * time.Minute)
-
-	teleport, err := integration.NewFromEnv(ctx)
-	require.NoError(t, err)
-	t.Cleanup(teleport.Close)
-
-	auth, err := teleport.NewAuthService()
-	require.NoError(t, err)
-	s.StartApp(auth)
 
 	s.clients = make(map[string]*integration.Client)
 
 	// Set up the user who has an access to all kinds of resources.
 
 	s.userNames.ruler = me.Username + "-ruler@example.com"
-	client, err := teleport.MakeAdmin(ctx, auth, s.userNames.ruler)
+	client, err := s.Integration.MakeAdmin(s.Context(), s.Auth, s.userNames.ruler)
 	require.NoError(t, err)
 	s.clients[s.userNames.ruler] = client
 
 	// Get the server features.
-
-	pong, err := client.Ping(ctx)
+	pong, err := client.Ping(s.Context())
 	require.NoError(t, err)
 	teleportFeatures := pong.GetServerFeatures()
 
@@ -171,29 +160,29 @@ func (s *EmailSuite) SetupSuite() {
 
 	// Bake all the resources.
 
-	err = teleport.Bootstrap(ctx, auth, bootstrap.Resources())
+	err = s.Integration.Bootstrap(ctx, s.Auth, bootstrap.Resources())
 	require.NoError(t, err)
 
 	// Initialize the clients.
 
-	client, err = teleport.NewClient(ctx, auth, s.userNames.requestor)
+	client, err = s.Integration.NewClient(ctx, s.Auth, s.userNames.requestor)
 	require.NoError(t, err)
 	s.clients[s.userNames.requestor] = client
 
 	if teleportFeatures.AdvancedAccessWorkflows {
-		client, err = teleport.NewClient(ctx, auth, s.userNames.reviewer1)
+		client, err = s.Integration.NewClient(ctx, s.Auth, s.userNames.reviewer1)
 		require.NoError(t, err)
 		s.clients[s.userNames.reviewer1] = client
 
-		client, err = teleport.NewClient(ctx, auth, s.userNames.reviewer2)
+		client, err = s.Integration.NewClient(ctx, s.Auth, s.userNames.reviewer2)
 		require.NoError(t, err)
 		s.clients[s.userNames.reviewer2] = client
 	}
 
-	identityPath, err := teleport.Sign(ctx, auth, s.userNames.plugin)
+	identityPath, err := s.Integration.Sign(ctx, s.Auth, s.userNames.plugin)
 	require.NoError(t, err)
 
-	s.teleportConfig.Addr = auth.AuthAddr().String()
+	s.teleportConfig.Addr = s.Auth.AuthAddr().String()
 	s.teleportConfig.Identity = identityPath
 	s.teleportFeatures = teleportFeatures
 }
@@ -221,6 +210,8 @@ func (s *EmailSuite) SetupTest() {
 
 	s.appConfig = conf
 	s.SetContextTimeout(5 * time.Minute)
+
+	s.startApp()
 }
 
 func (s *EmailSuite) startApp() {
@@ -287,8 +278,6 @@ func (s *EmailSuite) checkPluginData(reqID string, cond func(PluginData) bool) P
 func (s *EmailSuite) TestNewThreads() {
 	t := s.T()
 
-	s.startApp()
-
 	request := s.createAccessRequest([]string{s.userNames.reviewer1, s.userNames.reviewer2})
 
 	pluginData := s.checkPluginData(request.GetName(), func(data PluginData) bool {
@@ -327,8 +316,6 @@ func (s *EmailSuite) TestNewThreads() {
 func (s *EmailSuite) TestApproval() {
 	t := s.T()
 
-	s.startApp()
-
 	req := s.createAccessRequest([]string{s.userNames.reviewer1})
 
 	s.skipMessages(s.Context(), t, 2)
@@ -347,8 +334,6 @@ func (s *EmailSuite) TestApproval() {
 
 func (s *EmailSuite) TestDenial() {
 	t := s.T()
-
-	s.startApp()
 
 	req := s.createAccessRequest([]string{s.userNames.reviewer1})
 
@@ -372,8 +357,6 @@ func (s *EmailSuite) TestReviewReplies() {
 	if !s.teleportFeatures.AdvancedAccessWorkflows {
 		t.Skip("Doesn't work in OSS version")
 	}
-
-	s.startApp()
 
 	req := s.createAccessRequest([]string{s.userNames.reviewer1})
 	s.checkPluginData(req.GetName(), func(data PluginData) bool {
@@ -420,8 +403,6 @@ func (s *EmailSuite) TestApprovalByReview() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	s.startApp()
-
 	req := s.createAccessRequest([]string{s.userNames.reviewer2})
 
 	s.skipMessages(s.Context(), t, 2)
@@ -458,8 +439,6 @@ func (s *EmailSuite) TestDenialByReview() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	s.startApp()
-
 	req := s.createAccessRequest([]string{s.userNames.requestor})
 
 	s.skipMessages(s.Context(), t, 2)
@@ -491,8 +470,6 @@ func (s *EmailSuite) TestDenialByReview() {
 func (s *EmailSuite) TestExpiration() {
 	t := s.T()
 
-	s.startApp()
-
 	request := s.createAccessRequest([]string{s.userNames.requestor})
 	s.skipMessages(s.Context(), t, 2)
 
@@ -517,7 +494,6 @@ func (s *EmailSuite) TestRace() {
 	logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
 
 	s.SetContextTimeout(20 * time.Second)
-	s.startApp()
 
 	var (
 		raceErr     error
