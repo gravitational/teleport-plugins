@@ -33,7 +33,6 @@ import (
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	. "github.com/gravitational/teleport-plugins/lib/testing"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
@@ -45,7 +44,7 @@ import (
 )
 
 type JiraSuite struct {
-	Suite
+	integration.Suite
 	appConfig Config
 	userNames struct {
 		ruler     string

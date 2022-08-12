@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package testing
+package integration
 
 import (
 	"context"
@@ -39,9 +39,13 @@ type Suite struct {
 
 // AppI is an app that can be spawned along with running test.
 type AppI interface {
+	// Run starts the application
 	Run(ctx context.Context) error
+	// WaitReady waits till the application finishes initialization
 	WaitReady(ctx context.Context) (bool, error)
+	// Err returns last error
 	Err() error
+	// Shutdown shuts the application down
 	Shutdown(ctx context.Context) error
 }
 
