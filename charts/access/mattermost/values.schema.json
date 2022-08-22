@@ -24,7 +24,7 @@
             "default": {},
             "examples": [
                 {
-                    "repository": "quay.io/gravitational/teleport-plugin-mattermost",
+                    "repository": "public.ecr.aws/gravitational/teleport-plugin-mattermost",
                     "pullPolicy": "IfNotPresent",
                     "tag": ""
                 }
@@ -38,9 +38,9 @@
                 "repository": {
                     "$id": "#/properties/image/properties/repository",
                     "type": "string",
-                    "default": "quay.io/gravitational/teleport-plugin-mattermost",
+                    "default": "public.ecr.aws/gravitational/teleport-plugin-mattermost",
                     "examples": [
-                        "quay.io/gravitational/teleport-plugin-mattermost"
+                        "public.ecr.aws/gravitational/teleport-plugin-mattermost"
                     ]
                 },
                 "pullPolicy": {

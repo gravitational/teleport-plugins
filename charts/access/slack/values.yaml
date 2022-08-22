@@ -27,7 +27,7 @@ secretVolumeName: "password-file"
 # Deployment
 #
 image:
-  repository: quay.io/gravitational/teleport-plugin-slack
+  repository: public.ecr.aws/gravitational/teleport-plugin-slack
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""

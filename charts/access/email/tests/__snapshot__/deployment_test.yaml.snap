@@ -28,7 +28,7 @@ should be possible to override volume name (smtp on):
             - start
             - --config
             - /etc/teleport-email.toml
-            image: quay.io/gravitational/teleport-plugin-email:10.1.4
+            image: public.ecr.aws/gravitational/teleport-plugin-email:10.1.4
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:
@@ -147,7 +147,7 @@ should match the snapshot (mailgun on):
             - start
             - --config
             - /etc/teleport-email.toml
-            image: quay.io/gravitational/teleport-plugin-email:10.1.4
+            image: public.ecr.aws/gravitational/teleport-plugin-email:10.1.4
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:
@@ -210,7 +210,7 @@ should match the snapshot (smtp on):
             - start
             - --config
             - /etc/teleport-email.toml
-            image: quay.io/gravitational/teleport-plugin-email:10.1.4
+            image: public.ecr.aws/gravitational/teleport-plugin-email:10.1.4
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:
@@ -273,7 +273,7 @@ should mount external secret (mailgun on):
             - start
             - --config
             - /etc/teleport-email.toml
-            image: quay.io/gravitational/teleport-plugin-email:10.1.4
+            image: public.ecr.aws/gravitational/teleport-plugin-email:10.1.4
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:
@@ -336,7 +336,7 @@ should mount external secret (smtp on):
             - start
             - --config
             - /etc/teleport-email.toml
-            image: quay.io/gravitational/teleport-plugin-email:10.1.4
+            image: public.ecr.aws/gravitational/teleport-plugin-email:10.1.4
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:
