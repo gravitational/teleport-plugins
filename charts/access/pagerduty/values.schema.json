@@ -24,7 +24,7 @@
             "default": {},
             "examples": [
                 {
-                    "repository": "quay.io/gravitational/teleport-plugin-pagerduty",
+                    "repository": "public.ecr.aws/gravitational/teleport-plugin-pagerduty",
                     "pullPolicy": "IfNotPresent",
                     "tag": ""
                 }
@@ -38,9 +38,9 @@
                 "repository": {
                     "$id": "#/properties/image/properties/repository",
                     "type": "string",
-                    "default": "quay.io/gravitational/teleport-plugin-pagerduty",
+                    "default": "public.ecr.aws/gravitational/teleport-plugin-pagerduty",
                     "examples": [
-                        "quay.io/gravitational/teleport-plugin-pagerduty"
+                        "public.ecr.aws/gravitational/teleport-plugin-pagerduty"
                     ]
                 },
                 "pullPolicy": {

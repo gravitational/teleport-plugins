@@ -27,15 +27,15 @@ $ ./install
 
 ### Docker Image
 ```bash
-$ docker pull quay.io/gravitational/teleport-plugin-jira:9.0.2
+$ docker pull public.ecr.aws/gravitational/teleport-plugin-jira:9.0.2
 ```
 
 ```bash
-$ docker run quay.io/gravitational/teleport-plugin-jira:9.0.2 version
+$ docker run public.ecr.aws/gravitational/teleport-plugin-jira:9.0.2 version
 teleport-jira v9.0.2 git:teleport-jira-v9.0.2-0-g9e149895 go1.17.8
 ```
 
-For a list of available tags, visit [https://quay.io/](https://quay.io/repository/gravitational/teleport-plugin-jira?tab=tags)
+For a list of available tags, visit [AWS ECR Public Gallery](https://gallery.ecr.aws/gravitational/teleport-plugin-jira)
 
 ### Building from source
 
@@ -153,7 +153,7 @@ $ teleport-jira start
 or with docker:
 
 ```bash
-$ docker run -v <path/to/config>:/etc/teleport-jira.toml quay.io/gravitational/teleport-plugin-jira:9.0.2 start
+$ docker run -v <path/to/config>:/etc/teleport-jira.toml public.ecr.aws/gravitational/teleport-plugin-jira:9.0.2 start
 ```
 
 If something bad happens, try to run it with `-d` option i.e. `teleport-jira start -d` and attach the stdout output to the issue you are going to create.

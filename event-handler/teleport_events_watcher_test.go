@@ -22,6 +22,8 @@ import (
 
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/events"
+
+	"github.com/gravitational/trace"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/net/context"
 )
@@ -106,5 +108,81 @@ func TestNext(t *testing.T) {
 		require.Equal(t, "081ca05eea09ac0cd06e2d2acd06bec424146b254aa500de37bdc2c2b0a4dd0f", e.ID)
 	case <-time.After(time.Second):
 		require.Fail(t, "No events were sent")
+	}
+}
+
+func TestValidateConfig(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		cfg       StartCmdConfig
+		wantError bool
+	}{{
+		name: "Identity file configured",
+		cfg: StartCmdConfig{
+			FluentdConfig{},
+			TeleportConfig{
+				TeleportIdentityFile: "not_empty_string",
+			},
+			IngestConfig{},
+			LockConfig{},
+		},
+		wantError: false,
+	}, {
+		name: "Cert, key, ca files configured",
+		cfg: StartCmdConfig{
+			FluentdConfig{},
+			TeleportConfig{
+				TeleportCA:   "not_empty_string",
+				TeleportCert: "not_empty_string",
+				TeleportKey:  "not_empty_string",
+			},
+			IngestConfig{},
+			LockConfig{},
+		},
+		wantError: false,
+	}, {
+		name: "Identity and teleport cert/ca/key files configured",
+		cfg: StartCmdConfig{
+			FluentdConfig{},
+			TeleportConfig{
+				TeleportIdentityFile: "not_empty_string",
+				TeleportCA:           "not_empty_string",
+				TeleportCert:         "not_empty_string",
+				TeleportKey:          "not_empty_string",
+			},
+			IngestConfig{},
+			LockConfig{},
+		},
+		wantError: true,
+	}, {
+		name: "None set",
+		cfg: StartCmdConfig{
+			FluentdConfig{},
+			TeleportConfig{},
+			IngestConfig{},
+			LockConfig{},
+		},
+		wantError: true,
+	}, {
+		name: "Some of teleport cert/key/ca unset",
+		cfg: StartCmdConfig{
+			FluentdConfig{},
+			TeleportConfig{
+				TeleportCA: "not_empty_string",
+			},
+			IngestConfig{},
+			LockConfig{},
+		},
+		wantError: true,
+	},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.cfg.Validate()
+			if tc.wantError {
+				require.True(t, trace.IsBadParameter(err))
+				return
+			}
+			require.NoError(t, err)
+		})
 	}
 }

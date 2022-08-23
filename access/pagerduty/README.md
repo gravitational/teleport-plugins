@@ -37,15 +37,15 @@ $ ./install
 
 ### Docker Image
 ```bash
-$ docker pull quay.io/gravitational/teleport-plugin-pagerduty:9.0.2
+$ docker pull public.ecr.aws/gravitational/teleport-plugin-pagerduty:9.0.2
 ```
 
 ```bash
-$ docker run quay.io/gravitational/teleport-plugin-pagerduty:9.0.2 version
+$ docker run public.ecr.aws/gravitational/teleport-plugin-pagerduty:9.0.2 version
 teleport-pagerduty v9.0.2 git:teleport-pagerduty-v9.0.2-0-g9e149895 go1.17.8
 ```
 
-For a list of available tags, visit [https://quay.io/](https://quay.io/repository/gravitational/teleport-plugin-pagerduty?tab=tags)
+For a list of available tags, visit [Amazon ECR Public Gallery](https://gallery.ecr.aws/gravitational/teleport-plugin-pagerduty)
 
 ### Building from source
 
@@ -198,5 +198,5 @@ $ teleport-pagerduty start
 or with docker:
 
 ```bash
-$ docker run -v <path/to/config>:/etc/teleport-pagerduty.toml quay.io/gravitational/teleport-plugin-pagerduty:9.0.2 start
+$ docker run -v <path/to/config>:/etc/teleport-pagerduty.toml public.ecr.aws/gravitational/teleport-plugin-pagerduty:9.0.2 start
 ```

@@ -23,6 +23,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	diag "github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	tftypes "github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
@@ -103,7 +104,7 @@ func (t TimeType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (att
 }
 
 // Validate validates Terraform Time valud
-func (t TimeType) Validate(ctx context.Context, in tftypes.Value, path *tftypes.AttributePath) diag.Diagnostics {
+func (t TimeType) Validate(ctx context.Context, in tftypes.Value, path path.Path) diag.Diagnostics {
 	var diags diag.Diagnostics
 
 	if in.Type() == nil {
@@ -194,4 +195,27 @@ func (t TimeValue) Equal(other attr.Value) bool {
 	}
 
 	return t.Value == o.Value
+}
+
+// IsNull returns true if receiver is null
+func (t TimeValue) IsNull() bool {
+	return t.Null
+}
+
+// IsUnknown returns true if receiver is unknown
+func (t TimeValue) IsUnknown() bool {
+	return t.Unknown
+}
+
+// String returns the string representation of the receiver
+func (t TimeValue) String() string {
+	if t.Unknown {
+		return attr.UnknownValueString
+	}
+
+	if t.Null {
+		return attr.NullValueString
+	}
+
+	return t.Value.String()
 }

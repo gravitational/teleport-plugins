@@ -21,13 +21,12 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	"github.com/gravitational/teleport-plugins/lib/testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 type BaseSetup struct {
-	testing.Suite
+	Suite
 	Integration *Integration
 }
 

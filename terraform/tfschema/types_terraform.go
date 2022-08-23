@@ -273,7 +273,7 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
-					}, github_com_hashicorp_terraform_plugin_framework_tfsdk.MapNestedAttributesOptions{}),
+					}),
 					Description: "DynamicLabels is the database dynamic labels.",
 					Optional:    true,
 				},
@@ -409,6 +409,15 @@ func GenSchemaAppV3(ctx context.Context) (github_com_hashicorp_terraform_plugin_
 		},
 		"spec": {
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+				"aws": {
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"external_id": {
+						Description: "ExternalID is the AWS External ID used when assuming roles in this app.",
+						Optional:    true,
+						Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+					}}),
+					Description: "AWS contains additional options for AWS applications.",
+					Optional:    true,
+				},
 				"dynamic_labels": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.MapNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 						"command": {
@@ -426,7 +435,7 @@ func GenSchemaAppV3(ctx context.Context) (github_com_hashicorp_terraform_plugin_
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
-					}, github_com_hashicorp_terraform_plugin_framework_tfsdk.MapNestedAttributesOptions{}),
+					}),
 					Description: "DynamicLabels are the app's command labels.",
 					Optional:    true,
 				},
@@ -454,7 +463,7 @@ func GenSchemaAppV3(ctx context.Context) (github_com_hashicorp_terraform_plugin_
 									Optional:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 								},
-							}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+							}),
 							Description: "Headers is a list of headers to inject when passing the request over to the application.",
 							Optional:    true,
 						},
@@ -570,7 +579,7 @@ func GenSchemaProvisionTokenV2(ctx context.Context) (github_com_hashicorp_terraf
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
-					}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+					}),
 					Description: "Allow is a list of TokenRules, nodes using this token must match one allow rule to use this token.",
 					Optional:    true,
 				},
@@ -1110,7 +1119,7 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 									Optional:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 								},
-							}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+							}),
 							Description: "JoinSessions specifies policies to allow users to join other sessions.",
 							Optional:    true,
 						},
@@ -1151,7 +1160,7 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 											Optional:    true,
 											Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 										},
-									}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+									}),
 									Description: "ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.",
 									Optional:    true,
 								},
@@ -1192,7 +1201,7 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 											Optional:    true,
 											Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 										},
-									}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+									}),
 									Description: "Thresholds is a list of thresholds, one of which must be met in order for reviews to trigger a state-transition.  If no thresholds are provided, a default threshold of 1 for approval and denial is used.",
 									Optional:    true,
 								},
@@ -1232,7 +1241,7 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 									Optional:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 								},
-							}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+							}),
 							Description: "RequireSessionJoin specifies policies for required users to start a session.",
 							Optional:    true,
 						},
@@ -1255,7 +1264,7 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 											Optional:    true,
 											Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 										},
-									}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+									}),
 									Description: "ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.",
 									Optional:    true,
 								},
@@ -1295,7 +1304,7 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 									Optional:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 								},
-							}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+							}),
 							Description: "Rules is a list of rules and their access levels. Rules are a high level construct used for access control.",
 							Optional:    true,
 						},
@@ -1382,7 +1391,7 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 									Optional:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 								},
-							}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+							}),
 							Description: "JoinSessions specifies policies to allow users to join other sessions.",
 							Optional:    true,
 						},
@@ -1423,7 +1432,7 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 											Optional:    true,
 											Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 										},
-									}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+									}),
 									Description: "ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.",
 									Optional:    true,
 								},
@@ -1464,7 +1473,7 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 											Optional:    true,
 											Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 										},
-									}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+									}),
 									Description: "Thresholds is a list of thresholds, one of which must be met in order for reviews to trigger a state-transition.  If no thresholds are provided, a default threshold of 1 for approval and denial is used.",
 									Optional:    true,
 								},
@@ -1504,7 +1513,7 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 									Optional:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 								},
-							}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+							}),
 							Description: "RequireSessionJoin specifies policies for required users to start a session.",
 							Optional:    true,
 						},
@@ -1527,7 +1536,7 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 											Optional:    true,
 											Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 										},
-									}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+									}),
 									Description: "ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.",
 									Optional:    true,
 								},
@@ -1567,7 +1576,7 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 									Optional:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 								},
-							}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+							}),
 							Description: "Rules is a list of rules and their access levels. Rules are a high level construct used for access control.",
 							Optional:    true,
 						},
@@ -1605,7 +1614,7 @@ func GenSchemaRoleV5(ctx context.Context) (github_com_hashicorp_terraform_plugin
 									Optional:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 								},
-							}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+							}),
 							Description: "CertExtensions specifies the key/values",
 							Optional:    true,
 						},
@@ -1801,7 +1810,7 @@ func GenSchemaUserV2(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
-					}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+					}),
 					Description: "GithubIdentities list associated Github OAuth2 identities that let user log in using externally verified identity",
 					Optional:    true,
 				},
@@ -1817,7 +1826,7 @@ func GenSchemaUserV2(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
-					}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+					}),
 					Description: "OIDCIdentities lists associated OpenID Connect identities that let user log in using externally verified identity",
 					Optional:    true,
 				},
@@ -1838,7 +1847,7 @@ func GenSchemaUserV2(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
-					}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+					}),
 					Description: "SAMLIdentities lists associated SAML identities that let user log in using externally verified identity",
 					Optional:    true,
 				},
@@ -1939,7 +1948,7 @@ func GenSchemaOIDCConnectorV3(ctx context.Context) (github_com_hashicorp_terrafo
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
-					}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+					}),
 					Description: "ClaimsToRoles specifies a dynamic mapping from claims to roles.",
 					Optional:    true,
 				},
@@ -2118,7 +2127,7 @@ func GenSchemaSAMLConnectorV2(ctx context.Context) (github_com_hashicorp_terrafo
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
-					}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+					}),
 					Description: "AttributesToRoles is a list of mappings of attribute statements to roles.",
 					Required:    true,
 				},
@@ -2323,7 +2332,7 @@ func GenSchemaGithubConnectorV3(ctx context.Context) (github_com_hashicorp_terra
 							Required:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
-					}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+					}),
 					Description: "TeamsToLogins maps Github team memberships onto allowed logins/roles.  DELETE IN 11.0.0 Deprecated: use GithubTeamsToRoles instead.",
 					Required:    true,
 				},
@@ -2344,7 +2353,7 @@ func GenSchemaGithubConnectorV3(ctx context.Context) (github_com_hashicorp_terra
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
-					}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+					}),
 					Description: "TeamsToRoles maps Github team memberships onto allowed roles.",
 					Optional:    true,
 				},
@@ -2439,7 +2448,7 @@ func GenSchemaTrustedClusterV2(ctx context.Context) (github_com_hashicorp_terraf
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
-					}, github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributesOptions{}),
+					}),
 					Description: "RoleMap specifies role mappings to remote roles.",
 					Optional:    true,
 				},
@@ -5378,6 +5387,41 @@ func CopyAppV3FromTerraform(_ context.Context, tf github_com_hashicorp_terraform
 							}
 						}
 					}
+					{
+						a, ok := tf.Attrs["aws"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"AppV3.Spec.AWS"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"AppV3.Spec.AWS", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+							} else {
+								obj.AWS = nil
+								if !v.Null && !v.Unknown {
+									tf := v
+									obj.AWS = &github_com_gravitational_teleport_api_types.AppAWS{}
+									obj := obj.AWS
+									{
+										a, ok := tf.Attrs["external_id"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"AppV3.Spec.AWS.ExternalID"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"AppV3.Spec.AWS.ExternalID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.ExternalID = t
+											}
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -6047,6 +6091,60 @@ func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_tele
 								}
 								v.Unknown = false
 								tf.Attrs["rewrite"] = v
+							}
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["aws"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"AppV3.Spec.AWS"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"AppV3.Spec.AWS", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+							} else {
+								v, ok := tf.Attrs["aws"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+								if !ok {
+									v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+										AttrTypes: o.AttrTypes,
+										Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+									}
+								} else {
+									if v.Attrs == nil {
+										v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+									}
+								}
+								if obj.AWS == nil {
+									v.Null = true
+								} else {
+									obj := obj.AWS
+									tf := &v
+									{
+										t, ok := tf.AttrTypes["external_id"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"AppV3.Spec.AWS.ExternalID"})
+										} else {
+											v, ok := tf.Attrs["external_id"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"AppV3.Spec.AWS.ExternalID", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"AppV3.Spec.AWS.ExternalID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.ExternalID) == ""
+											}
+											v.Value = string(obj.ExternalID)
+											v.Unknown = false
+											tf.Attrs["external_id"] = v
+										}
+									}
+								}
+								v.Unknown = false
+								tf.Attrs["aws"] = v
 							}
 						}
 					}

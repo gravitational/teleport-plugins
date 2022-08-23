@@ -24,7 +24,7 @@
             "default": {},
             "examples": [
                 {
-                    "repository": "quay.io/teleport/access-plugin-email",
+                    "repository": "public.ecr.aws/teleport/access-plugin-email",
                     "pullPolicy": "IfNotPresent",
                     "tag": ""
                 }
@@ -38,9 +38,9 @@
                 "repository": {
                     "$id": "#/properties/image/properties/repository",
                     "type": "string",
-                    "default": "quay.io/teleport/access-plugin-email",
+                    "default": "public.ecr.aws/teleport/access-plugin-email",
                     "examples": [
-                        "quay.io/teleport/access-plugin-email"
+                        "public.ecr.aws/teleport/access-plugin-email"
                     ]
                 },
                 "pullPolicy": {
