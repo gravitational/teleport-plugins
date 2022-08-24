@@ -25,7 +25,7 @@ type AccessRequestData struct {
 	ResolutionReason string
 }
 
-// DecodePluginData deserializes a string map to PluginData struct.
+// DecodeAccessRequestData deserializes a string map to PluginData struct.
 func DecodeAccessRequestData(dataMap map[string]string) (data AccessRequestData) {
 	data.User = dataMap["user"]
 	if str := dataMap["roles"]; str != "" {
@@ -41,7 +41,7 @@ func DecodeAccessRequestData(dataMap map[string]string) (data AccessRequestData)
 	return
 }
 
-// DecodePluginData deserializes a string map to PluginData struct.
+// EncodeAccessRequestData deserializes a string map to PluginData struct.
 func EncodeAccessRequestData(data AccessRequestData) map[string]string {
 	result := make(map[string]string)
 

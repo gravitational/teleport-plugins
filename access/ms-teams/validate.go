@@ -98,7 +98,7 @@ func validate(configPath, userID string) error {
 	data := plugindata.AccessRequestData{
 		User:          "foo",
 		Roles:         []string{"editor"},
-		RequestReason: "Required",
+		RequestReason: "Example request posted by 'validate' command.",
 		ReviewsCount:  1,
 	}
 

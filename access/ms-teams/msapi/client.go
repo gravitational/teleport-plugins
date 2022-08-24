@@ -25,7 +25,7 @@ type Client struct {
 type request struct {
 	// Method HTTP method
 	Method string
-	// Path path to a resource
+	// Path to a resource
 	Path string
 	// Expand $expand value
 	Expand []string
