@@ -103,6 +103,28 @@ func (b Bot) UserExists(ctx context.Context, id string) error {
 	return nil
 }
 
+func (b Bot) UninstallAppForUser(ctx context.Context, userIDOrEmail string) error {
+	if b.teamsApp == nil {
+		return trace.Errorf("Bot is not configured, run GetTeamsApp first")
+	}
+
+	userID, err := b.getUserID(ctx, userIDOrEmail)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	installedApp, err := b.graphClient.GetAppForUser(ctx, b.teamsApp, userID)
+	if trace.IsNotFound(err) {
+		// App is already uninstalled, nothing to do
+		return nil
+	} else if err != nil {
+		return trace.Wrap(err)
+	}
+
+	err = b.graphClient.UninstallAppForUser(ctx, userID, installedApp.ID)
+	return trace.Wrap(err)
+}
+
 // FetchUser fetches app id for user, installs app for a user if missing, fetches chat id and saves
 // everything to cache. This method is used for priming the cache. Returns trace.NotFound if a
 // user was not found.
@@ -120,23 +142,14 @@ func (b Bot) FetchUser(ctx context.Context, userIDOrEmail string) (*UserData, er
 
 	userID := userIDOrEmail
 
-	if lib.IsEmail(userIDOrEmail) {
-		uid, err := b.GetUserIDByEmail(ctx, userIDOrEmail)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
-
-		userID = uid
-	} else {
-		_, err := b.graphClient.GetUserByID(ctx, userIDOrEmail)
-		if err != nil {
-			return nil, trace.Wrap(err)
-		}
+	userID, err := b.getUserID(ctx, userIDOrEmail)
+	if err != nil {
+		return &UserData{}, trace.Wrap(err)
 	}
 
 	var installedApp *msapi.InstalledApp
 
-	installedApp, err := b.graphClient.GetAppForUser(ctx, b.teamsApp, userID)
+	installedApp, err = b.graphClient.GetAppForUser(ctx, b.teamsApp, userID)
 	if trace.IsNotFound(err) {
 		err := b.graphClient.InstallAppForUser(ctx, userID, b.teamsApp.ID)
 		if err != nil {
@@ -163,6 +176,23 @@ func (b Bot) FetchUser(ctx context.Context, userIDOrEmail string) (*UserData, er
 	b.mu.Unlock()
 
 	return &d, nil
+}
+
+// getUserID takes a userID or an email, checks if it exists, and returns the userID.
+func (b Bot) getUserID(ctx context.Context, userIDOrEmail string) (string, error) {
+	if lib.IsEmail(userIDOrEmail) {
+		uid, err := b.GetUserIDByEmail(ctx, userIDOrEmail)
+		if err != nil {
+			return "", trace.Wrap(err)
+		}
+
+		return uid, nil
+	}
+	_, err := b.graphClient.GetUserByID(ctx, userIDOrEmail)
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+	return userIDOrEmail, nil
 }
 
 // PostAdaptiveCardActivity sends the AdaptiveCard to a user

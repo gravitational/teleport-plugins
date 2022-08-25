@@ -172,6 +172,25 @@ func (c *GraphClient) InstallAppForUser(ctx context.Context, userID, teamAppID s
 	return trace.Wrap(c.request(ctx, request))
 }
 
+// UninstallAppForUser returns installed apps for user
+func (c *GraphClient) UninstallAppForUser(ctx context.Context, userID, teamAppID string) error {
+	body := `
+		{
+			"teamsApp@odata.bind": "https://graph.microsoft.com/v1.0/appCatalogs/teamsApps/` + teamAppID + `"
+		}
+	`
+
+	request := request{
+		Method:      http.MethodDelete,
+		Path:        "users/" + userID + "/teamWork/installedApps/" + teamAppID,
+		Body:        body,
+		Err:         &graphError{},
+		SuccessCode: http.StatusNoContent,
+	}
+
+	return trace.Wrap(c.request(ctx, request))
+}
+
 // GetChatForInstalledApp returns a chat between user and installed app
 func (c *GraphClient) GetChatForInstalledApp(ctx context.Context, userID, installationID string) (Chat, error) {
 	var chat Chat
