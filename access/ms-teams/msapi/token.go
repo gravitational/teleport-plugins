@@ -55,7 +55,8 @@ func (c *tokenWithTTL) Bearer(ctx context.Context, config Config) (string, error
 		defer c.mu.Unlock()
 
 		c.token = token
-		c.expiresAt = time.Now().UnixNano() + (token.ExpiresIn * int64(time.Second))
+		// We renew the token 1 minute before its expiration to deal with possible time skew
+		c.expiresAt = time.Now().UnixNano() + (token.ExpiresIn * int64(time.Second)) - int64(time.Minute)
 	}
 
 	return "Bearer " + c.token.AccessToken, nil
