@@ -39,9 +39,9 @@ const (
 
 	jiraMaxConns    = 100
 	jiraHTTPTimeout = 10 * time.Second
-	// Jira has a 300,000 character limit for the reason field so we
+	// Jira has a 4096 character limit for the reason field so we
 	// truncate all reasons to a generous but conservative limit
-	jiraReasonLimit = 30000
+	jiraReasonLimit = 3000
 )
 
 var jiraRequiredPermissions = []string{"BROWSE_PROJECTS", "CREATE_ISSUES", "TRANSITION_ISSUES", "ADD_COMMENTS"}
