@@ -90,6 +90,30 @@ func TestModifyFailed(t *testing.T) {
 	require.Equal(t, r, mockData{})
 }
 
+// We test cas is retrying modityT properly if modifyT returns a CompareFailedError during the first iteration.
+func TestModifyCompareFailed(t *testing.T) {
+	c := &mockClient{
+		oldData: []map[string]string{
+			{"foo": "0"},
+			{"foo": "1"},
+		},
+	}
+	cas := NewCAS(c, resourceKind, types.KindAccessRequest, mockEncode, mockDecode)
+
+	r, err := cas.Update(context.Background(), "foo", func(data mockData) (mockData, error) {
+		// If this is the first time we're called we fail
+		if data.Foo == "0" {
+			return mockData{}, &trace.CompareFailedError{Message: "does not exist yet"}
+		}
+		data.Bar = "other value"
+		return data, nil
+	})
+
+	require.NoError(t, err)
+	require.NotNil(t, r)
+	require.Equal(t, r.Bar, "other value")
+}
+
 func TestModifySuccess(t *testing.T) {
 	c := &mockClient{
 		oldData: []map[string]string{{"foo": "value"}},
