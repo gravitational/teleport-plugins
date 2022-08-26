@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"github.com/gravitational/teleport-plugins/access/config"
 	"github.com/gravitational/teleport-plugins/access/ms-teams/msapi"
 	"github.com/gravitational/teleport-plugins/lib"
@@ -30,6 +32,14 @@ func LoadConfig(filepath string) (*Config, error) {
 	conf := &Config{}
 	if err := t.Unmarshal(conf); err != nil {
 		return nil, trace.Wrap(err)
+	}
+
+	// Azure secret format does not seem to support starting with a "/"
+	if strings.HasPrefix(conf.MSAPI.AppSecret, "/") {
+		conf.MSAPI.AppSecret, err = lib.ReadPassword(conf.MSAPI.AppSecret)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
 	}
 
 	err = conf.CheckAndSetDefaults()
