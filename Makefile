@@ -19,6 +19,10 @@ access-jira:
 access-mattermost:
 	make -C access/mattermost
 
+.PHONY: access-ms-teams
+access-ms-teams:
+	make -C access/ms-teams
+
 .PHONY: access-pagerduty
 access-pagerduty:
 	make -C access/pagerduty
@@ -41,6 +45,7 @@ docker-build-access-%:
 docker-build-access-plugins: docker-build-access-email \
  docker-build-access-jira \
  docker-build-access-mattermost \
+ docker-build-access-ms-teams \
  docker-build-access-pagerduty \
  docker-build-access-slack
 
@@ -76,6 +81,7 @@ helm-package-charts:
 	helm package -d packages charts/access/slack
 	helm package -d packages charts/access/pagerduty
 	helm package -d packages charts/access/mattermost
+	helm package -d packages charts/access/ms-teams
 	helm package -d packages charts/event-handler
 
 .PHONY: terraform
@@ -117,6 +123,10 @@ release/access-jira:
 release/access-mattermost:
 	make -C access/mattermost clean release
 
+.PHONY: release/access-ms-teams
+release/access-msteams:
+	make -C access/ms-teams clean release
+
 .PHONY: release/access-pagerduty
 release/access-pagerduty:
 	make -C access/pagerduty clean release
@@ -135,10 +145,10 @@ release/event-handler:
 
 # Run all releases
 .PHONY: releases
-releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-email
+releases: release/access-slack release/access-jira release/access-mattermost release/access-msteams release/access-pagerduty release/access-email
 
 .PHONY: build-all
-build-all: access-slack access-jira access-mattermost access-pagerduty access-email terraform event-handler
+build-all: access-slack access-jira access-mattermost access-ms-teams access-pagerduty access-email terraform event-handler
 
 .PHONY: update-version
 update-version:
@@ -147,6 +157,7 @@ update-version:
 	$(SED) '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/jira/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/mattermost/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/ms-teams/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/slack/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
@@ -162,6 +173,7 @@ update-helm-version:
 	$(MAKE) update-helm-version-access-slack
 	$(MAKE) update-helm-version-access-pagerduty
 	$(MAKE) update-helm-version-access-mattermost
+	$(MAKE) update-helm-version-access-ms-teams
 	$(MAKE) update-helm-version-event-handler
 
 # Update specific chart
@@ -180,6 +192,7 @@ update-tag:
 	git tag teleport-event-handler-v$(VERSION)
 	git tag teleport-jira-v$(VERSION)
 	git tag teleport-mattermost-v$(VERSION)
+	git tag teleport-ms-teams-v$(VERSION)
 	git tag teleport-slack-v$(VERSION)
 	git tag teleport-pagerduty-v$(VERSION)
 	git tag teleport-email-v$(VERSION)
@@ -189,6 +202,7 @@ update-tag:
 	git push origin teleport-event-handler-v$(VERSION)
 	git push origin teleport-jira-v$(VERSION)
 	git push origin teleport-mattermost-v$(VERSION)
+	git push origin teleport-ms-teams-v$(VERSION)
 	git push origin teleport-slack-v$(VERSION)
 	git push origin teleport-pagerduty-v$(VERSION)
 	git push origin teleport-email-v$(VERSION)
@@ -202,6 +216,7 @@ update-goversion:
 	@test $(GOVERSION)
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/jira/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/mattermost/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/ms-teams/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/slack/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/pagerduty/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/email/Makefile
@@ -233,4 +248,5 @@ test-helm:
 	$(MAKE) test-helm-access-slack
 	$(MAKE) test-helm-access-pagerduty
 	$(MAKE) test-helm-access-mattermost
+	$(MAKE) test-helm-access-ms-teams
 	$(MAKE) test-helm-event-handler
