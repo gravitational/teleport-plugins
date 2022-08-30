@@ -20,7 +20,12 @@ func validate(configPath, userID string) error {
 	lib.PrintVersion(appName, Version, Gitref)
 	fmt.Println()
 
-	b, _, err := loadConfigAndCheckApp(configPath)
+	ctx := context.Background()
+	b, _, err := loadConfig(configPath)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+	err = checkApp(ctx, b)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -118,7 +123,7 @@ func validate(configPath, userID string) error {
 	return nil
 }
 
-func loadConfigAndCheckApp(configPath string) (*Bot, *Config, error) {
+func loadConfig(configPath string) (*Bot, *Config, error) {
 	c, err := LoadConfig(configPath)
 	if err != nil {
 		return nil, nil, trace.Wrap(err)
@@ -130,15 +135,18 @@ func loadConfigAndCheckApp(configPath string) (*Bot, *Config, error) {
 	if err != nil {
 		return nil, nil, trace.Wrap(err)
 	}
+	return b, c, nil
+}
 
-	teamApp, err := b.GetTeamsApp(context.Background())
+func checkApp(ctx context.Context, b *Bot) error {
+	teamApp, err := b.GetTeamsApp(ctx)
 	if trace.IsNotFound(err) {
-		fmt.Printf("Application %v not found in the org app store. Please, ensure that you have the application uploaded and installed for your team.", c.MSAPI.TeamsAppID)
-		return nil, nil, trace.Wrap(err)
+		fmt.Printf("Application %v not found in the org app store. Please, ensure that you have the application uploaded and installed for your team.", b.Config.TeamsAppID)
+		return trace.Wrap(err)
 	} else if err != nil {
-		return nil, nil, trace.Wrap(err)
+		return trace.Wrap(err)
 	}
 
 	fmt.Printf(" - Application found in the team app store (internal ID: %v)\n", teamApp.ID)
-	return b, c, nil
+	return nil
 }
