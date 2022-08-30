@@ -140,8 +140,6 @@ func (b Bot) FetchUser(ctx context.Context, userIDOrEmail string) (*UserData, er
 		return &d, nil
 	}
 
-	userID := userIDOrEmail
-
 	userID, err := b.getUserID(ctx, userIDOrEmail)
 	if err != nil {
 		return &UserData{}, trace.Wrap(err)
