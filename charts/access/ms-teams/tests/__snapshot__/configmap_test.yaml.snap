@@ -1,0 +1,32 @@
+should match the snapshot:
+  1: |
+    data:
+      teleport-ms-teams.toml: |
+        preload = true
+
+        [teleport]
+        addr = "teleport.example.com:1234"
+        identity = "/var/lib/teleport/plugins/ms-teams/auth_id"
+
+        [msapi]
+        app_id = "my-app-id"
+        tenant_id = "my-tenant-id"
+        teams_app_id = "my-teams-app-id"
+        appSecret = "/var/lib/teleport/plugins/ms-teams/appSecret"
+
+        [role_to_recipients]
+        "*" = ["dev-access-requests"]
+        "dev" = ["dev-access-requests","example-user@example.com"]
+
+        [log]
+        output = "/var/log/teleport-ms-teams.log"
+        severity = "DEBUG"
+    kind: ConfigMap
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: teleport-plugin-ms-teams
+        app.kubernetes.io/version: 10.1.4
+        helm.sh/chart: teleport-plugin-ms-teams-10.1.4
+      name: RELEASE-NAME-teleport-plugin-ms-teams

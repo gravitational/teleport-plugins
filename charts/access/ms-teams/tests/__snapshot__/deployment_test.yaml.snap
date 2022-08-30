@@ -1,0 +1,59 @@
+should match the snapshot:
+  1: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      labels:
+        app.kubernetes.io/instance: RELEASE-NAME
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: teleport-plugin-ms-teams
+        app.kubernetes.io/version: 10.1.4
+        helm.sh/chart: teleport-plugin-ms-teams-10.1.4
+      name: RELEASE-NAME-teleport-plugin-ms-teams
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          app.kubernetes.io/instance: RELEASE-NAME
+          app.kubernetes.io/name: teleport-plugin-ms-teams
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/name: teleport-plugin-ms-teams
+        spec:
+          containers:
+          - command:
+            - /usr/local/bin/teleport-plugin
+            - start
+            - --config
+            - /etc/teleport-ms-teams.toml
+            image: gcr.io/overridden/repository:v98.76.54
+            imagePullPolicy: IfNotPresent
+            name: teleport-plugin-ms-teams
+            resources: {}
+            securityContext: {}
+            volumeMounts:
+            - mountPath: /etc/teleport-ms-teams.toml
+              name: config
+              subPath: teleport-ms-teams.toml
+            - mountPath: /var/lib/teleport/plugins/ms-teams/auth_id
+              name: auth-id
+              subPath: auth_id
+            - mountPath: /var/lib/teleport/plugins/ms-teams/appSecret
+              name: password-file
+              subPath: appSecret
+          securityContext: {}
+          volumes:
+          - configMap:
+              defaultMode: 384
+              name: RELEASE-NAME-teleport-plugin-ms-teams
+            name: config
+          - name: auth-id
+            secret:
+              defaultMode: 384
+              secretName: ""
+          - name: password-file
+            secret:
+              defaultMode: 384
+              secretName: RELEASE-NAME-teleport-plugin-ms-teams-secret
