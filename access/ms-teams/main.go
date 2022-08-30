@@ -29,6 +29,12 @@ func main() {
 	appSecret := configureCmd.Flag("appSecret", "MS App Secret").Required().String()
 	tenantID := configureCmd.Flag("tenantID", "MS App Tenant ID").Required().String()
 
+	uninstallCmd := app.Command("uninstall", "Uninstall the application for all teams user.")
+	uninstallConfigPath := uninstallCmd.Flag("config", "TOML config file path").
+		Short('c').
+		Default(configPath).
+		String()
+
 	validateCmd := app.Command("validate", "Validate bot installation")
 	validateConfigPath := validateCmd.Flag("config", "TOML config file path").
 		Short('c').
@@ -54,6 +60,12 @@ func main() {
 	switch selectedCmd {
 	case "configure":
 		err := configure(*targetDir, *appID, *appSecret, *tenantID)
+		if err != nil {
+			lib.Bail(err)
+		}
+
+	case "uninstall":
+		err := uninstall(context.Background(), *uninstallConfigPath)
 		if err != nil {
 			lib.Bail(err)
 		}
