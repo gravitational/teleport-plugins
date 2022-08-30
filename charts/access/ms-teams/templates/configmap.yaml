@@ -1,0 +1,27 @@
+kind: ConfigMap
+metadata:
+  name: {{ include "ms-teams.fullname" . }}
+  labels:
+    {{- include "ms-teams.labels" . | nindent 4 }}
+data:
+  teleport-ms-teams.toml: |
+    preload = true
+    
+    [teleport]
+    addr = "{{ .Values.teleport.address }}"
+    identity = "/var/lib/teleport/plugins/ms-teams/auth_id"
+
+    [msapi]
+    app_id = "{{ .Values.msTeams.appID }}"
+    tenant_id = "{{ .Values.msTeams.tenantID }}"
+    teams_app_id = "{{ .Values.msTeams.teamsAppID }}"
+    appSecret = "/var/lib/teleport/plugins/ms-teams/appSecret"
+
+    [role_to_recipients]
+    {{- range $role, $recipients := .Values.roleToRecipients }}
+    {{ $role | toJson }} = {{ $recipients | toJson }}
+    {{- end }}
+
+    [log]
+    output = "{{ .Values.log.output }}"
+    severity = "{{ .Values.log.severity }}"
