@@ -154,17 +154,17 @@ func (a *App) initBot(ctx context.Context) error {
 		return nil
 	}
 
-	log.Info("Preloading user data...")
+	log.Info("Preloading recipient data...")
 
-	for _, userID := range a.conf.Recipients.GetAllRecipients() {
-		userData, err := a.bot.FetchUser(ctx, userID)
+	for _, recipient := range a.conf.Recipients.GetAllRecipients() {
+		recipientData, err := a.bot.FetchRecipient(ctx, recipient)
 		if err != nil {
 			return trace.Wrap(err)
 		}
-		log.WithField("user_id", userID).WithField("chat_id", userData.Chat.ID).Info("User found, chat found")
+		log.WithField("recipient", recipient).WithField("chat_id", recipientData.Chat.ID).Info("Recipient found, chat found")
 	}
 
-	log.Info("User data preloaded and cached.")
+	log.Info("Recipient data preloaded and cached.")
 
 	return nil
 }

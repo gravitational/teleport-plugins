@@ -41,7 +41,7 @@ func main() {
 		Default(configPath).
 		String()
 
-	validateUserID := validateCmd.Arg("userID", "Your User ID").Required().String()
+	validateRecipientID := validateCmd.Arg("recipient", "UserID, email or channel to notify").Required().String()
 
 	startCmd := app.Command("start", "Starts Teleport MS Teams plugin")
 	startConfigPath := startCmd.Flag("config", "TOML config file path").
@@ -71,7 +71,7 @@ func main() {
 		}
 
 	case "validate":
-		err := validate(*validateConfigPath, *validateUserID)
+		err := validate(*validateConfigPath, *validateRecipientID)
 		if err != nil {
 			lib.Bail(err)
 		}

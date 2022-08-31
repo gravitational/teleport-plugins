@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -13,13 +15,13 @@ import (
 	"github.com/gravitational/trace"
 )
 
-// UserData represents cached data for a user
-type UserData struct {
-	// User ID user id
+// RecipientData represents cached data for a recipient (user or channel)
+type RecipientData struct {
+	// ID identifies the recipient, for users it is the UserID, for channels it is "tenant/group/channelName"
 	ID string
-	// App app installation for user
+	// App installation for the recipient
 	App msapi.InstalledApp
-	// Chat chat for user
+	// Chat for the recipient
 	Chat msapi.Chat
 }
 
@@ -33,10 +35,10 @@ type Bot struct {
 	graphClient *msapi.GraphClient
 	// botClient represents MS Bot Framework client
 	botClient *msapi.BotFrameworkClient
-	// mu users access mutex
+	// mu recipients access mutex
 	mu *sync.RWMutex
 	// apps represents the cache of apps
-	users map[string]UserData
+	recipients map[string]RecipientData
 	// webProxyURL represents Web UI address, if enabled
 	webProxyURL *url.URL
 	// clusterName cluster name
@@ -61,7 +63,7 @@ func NewBot(c msapi.Config, clusterName, webProxyAddr string) (*Bot, error) {
 		Config:      c,
 		graphClient: msapi.NewGraphClient(c),
 		botClient:   msapi.NewBotFrameworkClient(c),
-		users:       make(map[string]UserData),
+		recipients:  make(map[string]RecipientData),
 		webProxyURL: webProxyURL,
 		clusterName: clusterName,
 		mu:          &sync.RWMutex{},
@@ -125,52 +127,60 @@ func (b Bot) UninstallAppForUser(ctx context.Context, userIDOrEmail string) erro
 	return trace.Wrap(err)
 }
 
-// FetchUser fetches app id for user, installs app for a user if missing, fetches chat id and saves
-// everything to cache. This method is used for priming the cache. Returns trace.NotFound if a
+// FetchRecipient checks if recipient is a user or a channel, installs app for a user if missing, fetches chat id
+// and saves everything to cache. This method is used for priming the cache. Returns trace.NotFound if a
 // user was not found.
-func (b Bot) FetchUser(ctx context.Context, userIDOrEmail string) (*UserData, error) {
+func (b Bot) FetchRecipient(ctx context.Context, recipient string) (*RecipientData, error) {
 	if b.teamsApp == nil {
 		return nil, trace.Errorf("Bot is not configured, run GetTeamsApp first")
 	}
 
 	b.mu.RLock()
-	d, ok := b.users[userIDOrEmail]
+	d, ok := b.recipients[recipient]
 	b.mu.RUnlock()
 	if ok {
 		return &d, nil
 	}
 
-	userID, err := b.getUserID(ctx, userIDOrEmail)
-	if err != nil {
-		return &UserData{}, trace.Wrap(err)
-	}
+	// Check if the recipient is a channel
+	d, ok = b.checkChannelURL(recipient)
+	if ok {
+		// TODO: check if teams app is installed in team
+		//       Might need RecipientData refactoring to get group id
+		// If the recipient is not a channel, it means it is a user (either email or userID)
+	} else {
+		userID, err := b.getUserID(ctx, recipient)
+		if err != nil {
+			return &RecipientData{}, trace.Wrap(err)
+		}
 
-	var installedApp *msapi.InstalledApp
+		var installedApp *msapi.InstalledApp
 
-	installedApp, err = b.graphClient.GetAppForUser(ctx, b.teamsApp, userID)
-	if trace.IsNotFound(err) {
-		err := b.graphClient.InstallAppForUser(ctx, userID, b.teamsApp.ID)
+		installedApp, err = b.graphClient.GetAppForUser(ctx, b.teamsApp, userID)
+		if trace.IsNotFound(err) {
+			err := b.graphClient.InstallAppForUser(ctx, userID, b.teamsApp.ID)
+			if err != nil {
+				return nil, trace.Wrap(err)
+			}
+
+			installedApp, err = b.graphClient.GetAppForUser(ctx, b.teamsApp, userID)
+			if err != nil {
+				return nil, trace.Wrap(err, "Failed to install app %v for user %v", b.teamsApp.ID, userID)
+			}
+		} else if err != nil {
+			return nil, trace.Wrap(err)
+		}
+
+		chat, err := b.graphClient.GetChatForInstalledApp(ctx, userID, installedApp.ID)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
 
-		installedApp, err = b.graphClient.GetAppForUser(ctx, b.teamsApp, userID)
-		if err != nil {
-			return nil, trace.Wrap(err, "Failed to install app %v for user %v", b.teamsApp.ID, userID)
-		}
-	} else if err != nil {
-		return nil, trace.Wrap(err)
+		d = RecipientData{userID, *installedApp, chat}
 	}
-
-	chat, err := b.graphClient.GetChatForInstalledApp(ctx, userID, installedApp.ID)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	d = UserData{userID, *installedApp, chat}
 
 	b.mu.Lock()
-	b.users[userIDOrEmail] = d
+	b.recipients[recipient] = d
 	b.mu.Unlock()
 
 	return &d, nil
@@ -193,15 +203,59 @@ func (b Bot) getUserID(ctx context.Context, userIDOrEmail string) (string, error
 	return userIDOrEmail, nil
 }
 
+// checkChannelURL receives a recipient and checks if it is a channel URL.
+// If it is the case, the URL is parsed and the channel RecipientData is returned
+func (b Bot) checkChannelURL(recipient string) (RecipientData, bool) {
+	var data RecipientData
+	channelURL, err := url.Parse(recipient)
+	if err != nil {
+		return data, false
+	}
+
+	var tenantID, groupID, channel, chatID string
+	for k, v := range channelURL.Query() {
+		switch k {
+		case "tenantId":
+			tenantID = v[0]
+		case "groupId":
+			groupID = v[0]
+		default:
+		}
+	}
+	if tenantID == "" || groupID == "" {
+		return data, false
+	}
+
+	// There is no risk to have a channelName with a "/" as they are url-encoded twice
+	path := strings.Split(channelURL.Path, "/")
+	if len(path) != 5 {
+		return data, false
+	}
+	channel = path[len(path)-1]
+	chatID = path[len(path)-2]
+
+	data = RecipientData{
+		ID: fmt.Sprintf("%s/%s/%s", tenantID, groupID, channel),
+		// TODO: populate this ?
+		App: msapi.InstalledApp{},
+		Chat: msapi.Chat{
+			ID:       chatID,
+			TenantID: tenantID,
+			WebURL:   recipient,
+		},
+	}
+	return data, true
+}
+
 // PostAdaptiveCardActivity sends the AdaptiveCard to a user
-func (b Bot) PostAdaptiveCardActivity(ctx context.Context, userIDOrEmail, cardBody, updateID string) (string, error) {
-	userData, err := b.FetchUser(ctx, userIDOrEmail)
+func (b Bot) PostAdaptiveCardActivity(ctx context.Context, recipient, cardBody, updateID string) (string, error) {
+	recipientData, err := b.FetchRecipient(ctx, recipient)
 	if err != nil {
 		return "", trace.Wrap(err)
 	}
 
 	id, err := b.botClient.PostAdaptiveCardActivity(
-		ctx, userData.App.ID, userData.Chat.ID, cardBody, updateID,
+		ctx, recipientData.App.ID, recipientData.Chat.ID, cardBody, updateID,
 	)
 	if err != nil {
 		return "", trace.Wrap(err)
