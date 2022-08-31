@@ -116,7 +116,7 @@ func (c *CompareAndSwap[T]) Update(
 				return emptyData, trace.Wrap(err)
 			}
 
-			return emptyData, trace.Wrap(err)
+			continue
 		} else if err != nil {
 			return emptyData, trace.Wrap(err)
 		}
