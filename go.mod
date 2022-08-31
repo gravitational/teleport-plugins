@@ -11,7 +11,7 @@ require (
 	github.com/google/go-querystring v1.0.0
 	github.com/google/uuid v1.2.0
 	github.com/gravitational/kingpin v2.1.11-0.20190130013101-742f2714c145+incompatible
-	github.com/gravitational/teleport/api v0.0.0-20220815171851-f095c6f40f1c // tag v10.1.4
+	github.com/gravitational/teleport/api v0.0.0-20220830221811-8f6f6ccbb72b // tag v10.1.9
 	github.com/gravitational/trace v1.1.17
 	github.com/hashicorp/go-version v1.3.0
 	github.com/hashicorp/terraform-plugin-framework v0.10.0
