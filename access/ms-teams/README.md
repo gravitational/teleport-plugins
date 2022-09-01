@@ -176,3 +176,68 @@ Select `Deny` and verify that the request was indeed denied using
 `tctl request ls`.
 
 Specify ```preload = true``` at the top of your configuration file if you want plugin to check the user existence prior to startup.
+
+## Plugin-specific Architecture
+
+The plugin leverages 2 different Microsoft APIs to provide access-request notifications:
+```mermaid
+sequenceDiagram
+    participant Teleport    
+    participant Plugin
+    participant GraphAPI
+    participant BotService as Azure Bot Service
+    participant MsTeams
+    actor Users
+
+    Note over Plugin,MsTeams: Azure Tenant
+    Plugin->>GraphAPI: Install TeamsApp with AppID/Secret
+    activate GraphAPI
+    GraphAPI->>MsTeams: Install Process
+    activate MsTeams
+    MsTeams-->>GraphAPI: OK
+    deactivate MsTeams
+    GraphAPI-->>Plugin: OK
+    deactivate GraphAPI
+
+    loop forever
+        Teleport->>Plugin: Send Events
+        Plugin->>BotService: Message with AppID/Secret
+        BotService->>MsTeams: PostMessage as TeamsAppID
+        MsTeams->>Users: Message
+    end
+```
+
+### The Bot Connector service
+
+This is an Azure managed service that comes with an SDK (not available in golang) and allows developers to
+write platform-agnostic messaging bots. It is billed per 1k messages and requires a valid Azure subscription.
+We use this service only for posting messages to MSTeams, but it could be used to send messages to other destinations.
+
+Warning: In this service, the term _channel_ represents the messaging connector used (Teams, Slack, Skype, ...).
+Conversations abstract any kind of communication channel with the user like Private Messages, Group Chat or Team channel.
+All inbound/outbound messages and events are called activities.
+
+Using the Bot connector service requires an `AzureBot` resource in Azure, an application (service account) and a secret.
+
+The Bot connector service should also be authorized to post on MSTeams, this is what the `TeamsApplication` does.
+The Teams application is a ZIP file composed of an application manifest, a logo, and an accent color. It
+contains the AzureBot ID that can interact on its behalf, an admin has to upload it to the Organisation AppCatalog.
+
+### The Graph API
+
+The Graph API allows to interact with a lot of Microsoft resources. This includes listing AD users, MsTeams 
+applications, installing applications on their behalf, ... However, this API does not allow to post messages on Teams
+(technically it is possible when doing a migration but Microsoft warns against using this method  for implementing a bot). 
+
+The graph API has an official go client (currently in beta). While it works, the client is a heavy and make compiling
+the plugin really slow (30 min of CPU time). As we also need to implement the authentication flow for the Bot Connector
+service, we chose not to use the graph client.
+
+MsTeams bot communication requires an already established communication channel. As we need to send notifications
+without user interaction we can't have all users ping the bot. Thus, we pre-emptively install the app for each
+recipient, this is our main use of the Graph API. Installing an app for a user can take several seconds.
+As we need to treat each event before the HTTP timeout, the plugin is preloading by default and installing its Teams
+app for all users.
+
+Interacting with this API requires an application (service account) and an application secret. We reuse the Bot Connector
+application and secret.
