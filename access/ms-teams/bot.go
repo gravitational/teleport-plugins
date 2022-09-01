@@ -25,7 +25,16 @@ type RecipientData struct {
 	Chat msapi.Chat
 }
 
-// Bot represents the facade to MS teams API
+// Channel represents a MSTeams channel parsed from its web URL
+type Channel struct {
+	Name   string
+	Group  string
+	Tenant string
+	URL    url.URL
+	ChatID string
+}
+
+// Bot represents the facade to MS Teams API
 type Bot struct {
 	// Config MS API configuration
 	msapi.Config
@@ -143,10 +152,22 @@ func (b Bot) FetchRecipient(ctx context.Context, recipient string) (*RecipientDa
 	}
 
 	// Check if the recipient is a channel
-	d, ok = b.checkChannelURL(recipient)
-	if ok {
-		// TODO: check if teams app is installed in team
-		//       Might need RecipientData refactoring to get group id
+	channel, isChannel := b.checkChannelURL(recipient)
+	if isChannel {
+		// A team and a group are different but in MsTeams the team is associated to a group and will have the same id.
+		installedApp, err := b.graphClient.GetAppForTeam(ctx, b.teamsApp, channel.Group)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		d = RecipientData{
+			ID:  fmt.Sprintf("%s/%s/%s", channel.Tenant, channel.Group, channel.Name),
+			App: *installedApp,
+			Chat: msapi.Chat{
+				ID:       channel.ChatID,
+				TenantID: channel.Tenant,
+				WebURL:   channel.URL.String(),
+			},
+		}
 		// If the recipient is not a channel, it means it is a user (either email or userID)
 	} else {
 		userID, err := b.getUserID(ctx, recipient)
@@ -205,14 +226,13 @@ func (b Bot) getUserID(ctx context.Context, userIDOrEmail string) (string, error
 
 // checkChannelURL receives a recipient and checks if it is a channel URL.
 // If it is the case, the URL is parsed and the channel RecipientData is returned
-func (b Bot) checkChannelURL(recipient string) (RecipientData, bool) {
-	var data RecipientData
+func (b Bot) checkChannelURL(recipient string) (*Channel, bool) {
 	channelURL, err := url.Parse(recipient)
 	if err != nil {
-		return data, false
+		return nil, false
 	}
 
-	var tenantID, groupID, channel, chatID string
+	var tenantID, groupID, channelName, chatID string
 	for k, v := range channelURL.Query() {
 		switch k {
 		case "tenantId":
@@ -223,28 +243,26 @@ func (b Bot) checkChannelURL(recipient string) (RecipientData, bool) {
 		}
 	}
 	if tenantID == "" || groupID == "" {
-		return data, false
+		return nil, false
 	}
 
 	// There is no risk to have a channelName with a "/" as they are url-encoded twice
 	path := strings.Split(channelURL.Path, "/")
 	if len(path) != 5 {
-		return data, false
+		return nil, false
 	}
-	channel = path[len(path)-1]
+	channelName = path[len(path)-1]
 	chatID = path[len(path)-2]
 
-	data = RecipientData{
-		ID: fmt.Sprintf("%s/%s/%s", tenantID, groupID, channel),
-		// TODO: populate this ?
-		App: msapi.InstalledApp{},
-		Chat: msapi.Chat{
-			ID:       chatID,
-			TenantID: tenantID,
-			WebURL:   recipient,
-		},
+	channel := Channel{
+		Name:   channelName,
+		Group:  groupID,
+		Tenant: tenantID,
+		URL:    *channelURL,
+		ChatID: chatID,
 	}
-	return data, true
+
+	return &channel, true
 }
 
 // PostAdaptiveCardActivity sends the AdaptiveCard to a user

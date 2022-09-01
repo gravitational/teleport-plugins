@@ -102,6 +102,7 @@ Please note that you must have the appropriate Azure AD adminstrator permissions
 5. Go to "API permissions" section. Click "Add a permission". Choose "Microsoft Graph". Choose "Application permissions". Add the following permissions:
 
 * `TeamsAppInstallation.ReadWriteSelfForUser.All`
+* `TeamsAppInstallation.ReadWriteSelfForTeam.All`
 * `AppCatalog.Read.All`
 * `User.Read.All`
 
