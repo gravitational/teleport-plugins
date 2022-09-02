@@ -19,7 +19,7 @@ func uninstall(ctx context.Context, configPath string) error {
 
 	var errs []error
 	for _, recipient := range c.Recipients.GetAllRecipients() {
-		_, isChannel := b.checkChannelURL(recipient)
+		_, isChannel := checkChannelURL(recipient)
 		if !isChannel {
 			errs = append(errs, b.UninstallAppForUser(ctx, recipient))
 		}

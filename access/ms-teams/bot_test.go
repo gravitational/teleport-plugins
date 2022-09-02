@@ -1,31 +1,34 @@
 package main
 
 import (
+	"net/url"
 	"testing"
 
-	"github.com/gravitational/teleport-plugins/access/ms-teams/msapi"
 	"github.com/stretchr/testify/require"
 )
 
-func TestBot_CheckChannelURL(t *testing.T) {
-	b := Bot{}
+func mustParseURL(t *testing.T, urlString string) *url.URL {
+	parsedURL, err := url.Parse(urlString)
+	require.NoError(t, err)
+	return parsedURL
+}
+
+func Test_CheckChannelURL(t *testing.T) {
 	tests := []struct {
 		name             string
 		url              string
-		expectedUserData *RecipientData
+		expectedUserData *Channel
 		validURL         bool
 	}{
 		{
 			name: "Valid URL",
 			url:  "https://teams.microsoft.com/l/channel/19%3ae06a7383ed98468f90217a35fa1980d7%40thread.tacv2/Approval%2520Channel%25202?groupId=f2b3c8ed-5502-4449-b76f-dc3acea81f1c&tenantId=ff882432-09b0-437b-bd22-ca13c0037ded",
-			expectedUserData: &RecipientData{
-				ID:  "ff882432-09b0-437b-bd22-ca13c0037ded/f2b3c8ed-5502-4449-b76f-dc3acea81f1c/Approval%20Channel%202",
-				App: msapi.InstalledApp{},
-				Chat: msapi.Chat{
-					ID:       "19:e06a7383ed98468f90217a35fa1980d7@thread.tacv2",
-					TenantID: "ff882432-09b0-437b-bd22-ca13c0037ded",
-					WebURL:   "https://teams.microsoft.com/l/channel/19%3ae06a7383ed98468f90217a35fa1980d7%40thread.tacv2/Approval%2520Channel%25202?groupId=f2b3c8ed-5502-4449-b76f-dc3acea81f1c&tenantId=ff882432-09b0-437b-bd22-ca13c0037ded",
-				},
+			expectedUserData: &Channel{
+				Name:   "Approval%20Channel%202",
+				Group:  "f2b3c8ed-5502-4449-b76f-dc3acea81f1c",
+				Tenant: "ff882432-09b0-437b-bd22-ca13c0037ded",
+				URL:    *mustParseURL(t, "https://teams.microsoft.com/l/channel/19%3ae06a7383ed98468f90217a35fa1980d7%40thread.tacv2/Approval%2520Channel%25202?groupId=f2b3c8ed-5502-4449-b76f-dc3acea81f1c&tenantId=ff882432-09b0-437b-bd22-ca13c0037ded"),
+				ChatID: "19:e06a7383ed98468f90217a35fa1980d7@thread.tacv2",
 			},
 			validURL: true,
 		},
@@ -56,10 +59,10 @@ func TestBot_CheckChannelURL(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			data, ok := b.checkChannelURL(tc.url)
+			data, ok := checkChannelURL(tc.url)
 			require.Equal(t, tc.validURL, ok)
 			if tc.validURL {
-				require.Equal(t, tc.expectedUserData, &data)
+				require.Equal(t, tc.expectedUserData, data)
 			}
 		})
 	}

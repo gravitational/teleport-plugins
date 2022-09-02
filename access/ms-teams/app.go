@@ -148,7 +148,9 @@ func (a *App) initBot(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	log.WithField("name", teamsApp.DisplayName).WithField("id", teamsApp.ID).Info("MS Teams app found in org app store")
+	log.WithField("name", teamsApp.DisplayName).
+		WithField("id", teamsApp.ID).
+		Info("MS Teams app found in org app store")
 
 	if !a.conf.Preload {
 		return nil
@@ -161,7 +163,10 @@ func (a *App) initBot(ctx context.Context) error {
 		if err != nil {
 			return trace.Wrap(err)
 		}
-		log.WithField("recipient", recipient).WithField("chat_id", recipientData.Chat.ID).Info("Recipient found, chat found")
+		log.WithField("recipient", recipient).
+			WithField("chat_id", recipientData.Chat.ID).
+			WithField("kind", recipientData.Kind).
+			Info("Recipient found, chat found")
 	}
 
 	log.Info("Recipient data preloaded and cached.")
@@ -455,7 +460,7 @@ func (a *App) getMessageRecipients(ctx context.Context, req types.AccessRequest)
 	// This can happen if this set contains the channel `C` and the email for channel `C`.
 	recipientSet := stringset.New()
 
-	validEmailsSuggReviewers := []string{}
+	var validEmailsSuggReviewers []string
 	for _, reviewer := range req.GetSuggestedReviewers() {
 		if !lib.IsEmail(reviewer) {
 			log.Warningf("Failed to notify a suggested reviewer: %q does not look like a valid email", reviewer)

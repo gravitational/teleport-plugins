@@ -15,6 +15,13 @@ import (
 	"github.com/gravitational/trace"
 )
 
+const (
+	RecipientKindUser    RecipientKind = "user"
+	RecipientKindChannel RecipientKind = "channel"
+)
+
+type RecipientKind string
+
 // RecipientData represents cached data for a recipient (user or channel)
 type RecipientData struct {
 	// ID identifies the recipient, for users it is the UserID, for channels it is "tenant/group/channelName"
@@ -23,6 +30,8 @@ type RecipientData struct {
 	App msapi.InstalledApp
 	// Chat for the recipient
 	Chat msapi.Chat
+	// Kind of the recipient (user or channel)
+	Kind RecipientKind
 }
 
 // Channel represents a MSTeams channel parsed from its web URL
@@ -93,7 +102,7 @@ func (b *Bot) GetTeamsApp(ctx context.Context) (*msapi.TeamsApp, error) {
 }
 
 // GetUserIDByEmail gets a user ID by email. NotFoundError if not found.
-func (b Bot) GetUserIDByEmail(ctx context.Context, email string) (string, error) {
+func (b *Bot) GetUserIDByEmail(ctx context.Context, email string) (string, error) {
 	user, err := b.graphClient.GetUserByEmail(ctx, email)
 	if trace.IsNotFound(err) {
 		return "", trace.Wrap(err, "try user id instead")
@@ -105,7 +114,7 @@ func (b Bot) GetUserIDByEmail(ctx context.Context, email string) (string, error)
 }
 
 // UserExists return true if a user exists. Returns NotFoundError if not found.
-func (b Bot) UserExists(ctx context.Context, id string) error {
+func (b *Bot) UserExists(ctx context.Context, id string) error {
 	_, err := b.graphClient.GetUserByID(ctx, id)
 	if err != nil {
 		return trace.Wrap(err)
@@ -114,7 +123,7 @@ func (b Bot) UserExists(ctx context.Context, id string) error {
 	return nil
 }
 
-func (b Bot) UninstallAppForUser(ctx context.Context, userIDOrEmail string) error {
+func (b *Bot) UninstallAppForUser(ctx context.Context, userIDOrEmail string) error {
 	if b.teamsApp == nil {
 		return trace.Errorf("Bot is not configured, run GetTeamsApp first")
 	}
@@ -139,7 +148,7 @@ func (b Bot) UninstallAppForUser(ctx context.Context, userIDOrEmail string) erro
 // FetchRecipient checks if recipient is a user or a channel, installs app for a user if missing, fetches chat id
 // and saves everything to cache. This method is used for priming the cache. Returns trace.NotFound if a
 // user was not found.
-func (b Bot) FetchRecipient(ctx context.Context, recipient string) (*RecipientData, error) {
+func (b *Bot) FetchRecipient(ctx context.Context, recipient string) (*RecipientData, error) {
 	if b.teamsApp == nil {
 		return nil, trace.Errorf("Bot is not configured, run GetTeamsApp first")
 	}
@@ -152,7 +161,7 @@ func (b Bot) FetchRecipient(ctx context.Context, recipient string) (*RecipientDa
 	}
 
 	// Check if the recipient is a channel
-	channel, isChannel := b.checkChannelURL(recipient)
+	channel, isChannel := checkChannelURL(recipient)
 	if isChannel {
 		// A team and a group are different but in MsTeams the team is associated to a group and will have the same id.
 		installedApp, err := b.graphClient.GetAppForTeam(ctx, b.teamsApp, channel.Group)
@@ -167,6 +176,7 @@ func (b Bot) FetchRecipient(ctx context.Context, recipient string) (*RecipientDa
 				TenantID: channel.Tenant,
 				WebURL:   channel.URL.String(),
 			},
+			Kind: RecipientKindChannel,
 		}
 		// If the recipient is not a channel, it means it is a user (either email or userID)
 	} else {
@@ -197,7 +207,7 @@ func (b Bot) FetchRecipient(ctx context.Context, recipient string) (*RecipientDa
 			return nil, trace.Wrap(err)
 		}
 
-		d = RecipientData{userID, *installedApp, chat}
+		d = RecipientData{userID, *installedApp, chat, RecipientKindUser}
 	}
 
 	b.mu.Lock()
@@ -208,7 +218,7 @@ func (b Bot) FetchRecipient(ctx context.Context, recipient string) (*RecipientDa
 }
 
 // getUserID takes a userID or an email, checks if it exists, and returns the userID.
-func (b Bot) getUserID(ctx context.Context, userIDOrEmail string) (string, error) {
+func (b *Bot) getUserID(ctx context.Context, userIDOrEmail string) (string, error) {
 	if lib.IsEmail(userIDOrEmail) {
 		uid, err := b.GetUserIDByEmail(ctx, userIDOrEmail)
 		if err != nil {
@@ -224,9 +234,80 @@ func (b Bot) getUserID(ctx context.Context, userIDOrEmail string) (string, error
 	return userIDOrEmail, nil
 }
 
+// PostAdaptiveCardActivity sends the AdaptiveCard to a user
+func (b *Bot) PostAdaptiveCardActivity(ctx context.Context, recipient, cardBody, updateID string) (string, error) {
+	recipientData, err := b.FetchRecipient(ctx, recipient)
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+
+	id, err := b.botClient.PostAdaptiveCardActivity(
+		ctx, recipientData.App.ID, recipientData.Chat.ID, cardBody, updateID,
+	)
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+
+	return id, nil
+}
+
+// PostMessages sends a message to a set of recipients. Returns array of TeamsMessage to cache.
+func (b *Bot) PostMessages(ctx context.Context, recipients []string, id string, reqData plugindata.AccessRequestData) ([]TeamsMessage, error) {
+	var data []TeamsMessage
+	var errors []error
+
+	body, err := BuildCard(id, b.webProxyURL, b.clusterName, reqData, nil)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	for _, recipient := range recipients {
+		id, err := b.PostAdaptiveCardActivity(ctx, recipient, body, "")
+		if err != nil {
+			errors = append(errors, trace.Wrap(err))
+			continue
+		}
+		msg := TeamsMessage{
+			ID:          id,
+			Timestamp:   time.Now().Format(time.RFC822),
+			RecipientID: recipient,
+		}
+		data = append(data, msg)
+	}
+
+	if len(errors) == 0 {
+		return data, nil
+	}
+
+	return data, trace.NewAggregate(errors...)
+}
+
+// UpdateMessages posts message updates
+func (b *Bot) UpdateMessages(ctx context.Context, id string, data PluginData, reviews []types.AccessReview) error {
+	var errors []error
+
+	body, err := BuildCard(id, b.webProxyURL, b.clusterName, data.AccessRequestData, reviews)
+	if err != nil {
+		return trace.Wrap(err)
+	}
+
+	for _, msg := range data.TeamsData {
+		_, err := b.PostAdaptiveCardActivity(ctx, msg.RecipientID, body, msg.ID)
+		if err != nil {
+			errors = append(errors, trace.Wrap(err))
+		}
+	}
+
+	if len(errors) == 0 {
+		return nil
+	}
+
+	return trace.NewAggregate(errors...)
+}
+
 // checkChannelURL receives a recipient and checks if it is a channel URL.
 // If it is the case, the URL is parsed and the channel RecipientData is returned
-func (b Bot) checkChannelURL(recipient string) (*Channel, bool) {
+func checkChannelURL(recipient string) (*Channel, bool) {
 	channelURL, err := url.Parse(recipient)
 	if err != nil {
 		return nil, false
@@ -263,75 +344,4 @@ func (b Bot) checkChannelURL(recipient string) (*Channel, bool) {
 	}
 
 	return &channel, true
-}
-
-// PostAdaptiveCardActivity sends the AdaptiveCard to a user
-func (b Bot) PostAdaptiveCardActivity(ctx context.Context, recipient, cardBody, updateID string) (string, error) {
-	recipientData, err := b.FetchRecipient(ctx, recipient)
-	if err != nil {
-		return "", trace.Wrap(err)
-	}
-
-	id, err := b.botClient.PostAdaptiveCardActivity(
-		ctx, recipientData.App.ID, recipientData.Chat.ID, cardBody, updateID,
-	)
-	if err != nil {
-		return "", trace.Wrap(err)
-	}
-
-	return id, nil
-}
-
-// PostMessages sends a message to a set of recipients. Returns array of TeamsMessage to cache.
-func (b Bot) PostMessages(ctx context.Context, recipients []string, id string, reqData plugindata.AccessRequestData) ([]TeamsMessage, error) {
-	var data []TeamsMessage
-	var errors []error
-
-	body, err := BuildCard(id, b.webProxyURL, b.clusterName, reqData, nil)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	for _, recipient := range recipients {
-		id, err := b.PostAdaptiveCardActivity(ctx, recipient, body, "")
-		if err != nil {
-			errors = append(errors, trace.Wrap(err))
-			continue
-		}
-		msg := TeamsMessage{
-			ID:          id,
-			Timestamp:   time.Now().Format(time.RFC822),
-			RecipientID: recipient,
-		}
-		data = append(data, msg)
-	}
-
-	if len(errors) == 0 {
-		return data, nil
-	}
-
-	return data, trace.NewAggregate(errors...)
-}
-
-// UpdateMessages posts message updates
-func (b Bot) UpdateMessages(ctx context.Context, id string, data PluginData, reviews []types.AccessReview) error {
-	var errors []error
-
-	body, err := BuildCard(id, b.webProxyURL, b.clusterName, data.AccessRequestData, reviews)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
-	for _, msg := range data.TeamsData {
-		_, err := b.PostAdaptiveCardActivity(ctx, msg.RecipientID, body, msg.ID)
-		if err != nil {
-			errors = append(errors, trace.Wrap(err))
-		}
-	}
-
-	if len(errors) == 0 {
-		return nil
-	}
-
-	return trace.NewAggregate(errors...)
 }
