@@ -55,7 +55,7 @@ type Bot struct {
 	botClient *msapi.BotFrameworkClient
 	// mu recipients access mutex
 	mu *sync.RWMutex
-	// apps represents the cache of apps
+	// recipients represents the cache of potential message recipients
 	recipients map[string]RecipientData
 	// webProxyURL represents Web UI address, if enabled
 	webProxyURL *url.URL
