@@ -84,6 +84,15 @@ func (e *graphError) Error() string {
 	return e.E.Code + " " + e.E.Message
 }
 
+// GetErrorCode returns the
+func GetErrorCode(err error) string {
+	graphErr, ok := trace.Unwrap(err).(*graphError)
+	if !ok {
+		return ""
+	}
+	return graphErr.E.Code
+}
+
 // GetTeamsApp returns the list of installed team apps
 func (c *GraphClient) GetTeamsApp(ctx context.Context, teamsAppID string) (*TeamsApp, error) {
 	g := &genericGraphResponse{}

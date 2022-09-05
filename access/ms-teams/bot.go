@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -190,7 +191,9 @@ func (b *Bot) FetchRecipient(ctx context.Context, recipient string) (*RecipientD
 		installedApp, err = b.graphClient.GetAppForUser(ctx, b.teamsApp, userID)
 		if trace.IsNotFound(err) {
 			err := b.graphClient.InstallAppForUser(ctx, userID, b.teamsApp.ID)
-			if err != nil {
+			// If two installations are running at the same time, one of them will return "Conflict".
+			// This status code is OK to ignore as it means the app is already installed.
+			if err != nil && msapi.GetErrorCode(err) != http.StatusText(http.StatusConflict) {
 				return nil, trace.Wrap(err)
 			}
 
