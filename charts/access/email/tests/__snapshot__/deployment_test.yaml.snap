@@ -7,8 +7,8 @@ should be possible to override volume name (smtp on):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 10.1.2
-        helm.sh/chart: teleport-plugin-email-10.1.2
+        app.kubernetes.io/version: 10.1.9
+        helm.sh/chart: teleport-plugin-email-10.1.9
       name: RELEASE-NAME-teleport-plugin-email
     spec:
       replicas: 1
@@ -28,7 +28,7 @@ should be possible to override volume name (smtp on):
             - start
             - --config
             - /etc/teleport-email.toml
-            image: quay.io/gravitational/teleport-plugin-email:10.1.2
+            image: public.ecr.aws/gravitational/teleport-plugin-email:10.1.9
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:
@@ -70,8 +70,8 @@ should match the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 10.1.2
-        helm.sh/chart: teleport-plugin-email-10.1.2
+        app.kubernetes.io/version: 10.1.9
+        helm.sh/chart: teleport-plugin-email-10.1.9
       name: RELEASE-NAME-teleport-plugin-email
     spec:
       replicas: 1
@@ -126,8 +126,8 @@ should match the snapshot (mailgun on):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 10.1.2
-        helm.sh/chart: teleport-plugin-email-10.1.2
+        app.kubernetes.io/version: 10.1.9
+        helm.sh/chart: teleport-plugin-email-10.1.9
       name: RELEASE-NAME-teleport-plugin-email
     spec:
       replicas: 1
@@ -147,7 +147,7 @@ should match the snapshot (mailgun on):
             - start
             - --config
             - /etc/teleport-email.toml
-            image: quay.io/gravitational/teleport-plugin-email:10.1.2
+            image: public.ecr.aws/gravitational/teleport-plugin-email:10.1.9
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:
@@ -189,8 +189,8 @@ should match the snapshot (smtp on):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 10.1.2
-        helm.sh/chart: teleport-plugin-email-10.1.2
+        app.kubernetes.io/version: 10.1.9
+        helm.sh/chart: teleport-plugin-email-10.1.9
       name: RELEASE-NAME-teleport-plugin-email
     spec:
       replicas: 1
@@ -210,7 +210,7 @@ should match the snapshot (smtp on):
             - start
             - --config
             - /etc/teleport-email.toml
-            image: quay.io/gravitational/teleport-plugin-email:10.1.2
+            image: public.ecr.aws/gravitational/teleport-plugin-email:10.1.9
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:
@@ -252,8 +252,8 @@ should mount external secret (mailgun on):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 10.1.2
-        helm.sh/chart: teleport-plugin-email-10.1.2
+        app.kubernetes.io/version: 10.1.9
+        helm.sh/chart: teleport-plugin-email-10.1.9
       name: RELEASE-NAME-teleport-plugin-email
     spec:
       replicas: 1
@@ -273,7 +273,7 @@ should mount external secret (mailgun on):
             - start
             - --config
             - /etc/teleport-email.toml
-            image: quay.io/gravitational/teleport-plugin-email:10.1.2
+            image: public.ecr.aws/gravitational/teleport-plugin-email:10.1.9
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:
@@ -315,8 +315,8 @@ should mount external secret (smtp on):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 10.1.2
-        helm.sh/chart: teleport-plugin-email-10.1.2
+        app.kubernetes.io/version: 10.1.9
+        helm.sh/chart: teleport-plugin-email-10.1.9
       name: RELEASE-NAME-teleport-plugin-email
     spec:
       replicas: 1
@@ -336,7 +336,7 @@ should mount external secret (smtp on):
             - start
             - --config
             - /etc/teleport-email.toml
-            image: quay.io/gravitational/teleport-plugin-email:10.1.2
+            image: public.ecr.aws/gravitational/teleport-plugin-email:10.1.9
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:

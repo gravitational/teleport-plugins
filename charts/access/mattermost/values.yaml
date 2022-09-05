@@ -24,7 +24,7 @@ log:
 secretVolumeName: "password-file"
 
 image:
-  repository: quay.io/gravitational/teleport-plugin-mattermost
+  repository: public.ecr.aws/gravitational/teleport-plugin-mattermost
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""
