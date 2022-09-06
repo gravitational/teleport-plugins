@@ -39,7 +39,7 @@ const (
 
 	jiraMaxConns    = 100
 	jiraHTTPTimeout = 10 * time.Second
-	// Jira has a 4096 character limit for the reason field so we
+	// Teleport has a 4096 character limit for the reason field so we
 	// truncate all reasons to a generous but conservative limit
 	jiraReasonLimit = 3000
 )
