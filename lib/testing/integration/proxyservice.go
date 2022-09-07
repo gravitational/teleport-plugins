@@ -160,12 +160,14 @@ func (proxy *ProxyService) Run(ctx context.Context) error {
 					tunAddr := proxy.reverseTunnelAddr
 					proxy.mu.Unlock()
 					if !webAddr.IsEmpty() && !sshAddr.IsEmpty() && !tunAddr.IsEmpty() {
-						log.WithFields(logger.Fields{
-							"addr_web": webAddr,
-							"addr_ssh": sshAddr,
-							"addr_tun": tunAddr,
-						}).Debugf("Found all addrs of Proxy service process")
-						proxy.setReady(true)
+						if strings.Contains(line, "List of known proxies updated:") {
+							log.WithFields(logger.Fields{
+								"addr_web": webAddr,
+								"addr_ssh": sshAddr,
+								"addr_tun": tunAddr,
+							}).Debugf("Found all addrs of Proxy service process")
+							proxy.setReady(true)
+						}
 					}
 				}
 			}

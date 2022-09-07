@@ -150,8 +150,10 @@ func (ssh *SSHService) Run(ctx context.Context) error {
 				ssh.parseLine(ctx, line)
 				if !ssh.IsReady() {
 					if addr := ssh.Addr(); !addr.IsEmpty() {
-						log.Debugf("Found addr of SSH service process: %v", addr)
-						ssh.setReady(true)
+						if strings.Contains(line, "The new service has started successfully.") {
+							log.Debugf("Found addr of SSH service process: %v", addr)
+							ssh.setReady(true)
+						}
 					}
 				}
 			}
