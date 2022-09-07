@@ -79,7 +79,7 @@ func (s *TerraformSuite) TestRole() {
 				Config: s.getFixture("role_2_update.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "role"),
-					resource.TestCheckNoResourceAttr(name, "spec.options"),
+					resource.TestCheckNoResourceAttr(name, "spec.options.#"),
 					resource.TestCheckResourceAttr(name, "spec.allow.node_labels.example.0", "no"),
 					resource.TestCheckResourceAttr(name, "spec.allow.node_labels.sample.0", "yes"),
 					resource.TestCheckResourceAttr(name, "spec.allow.node_labels.sample.1", "no"),
