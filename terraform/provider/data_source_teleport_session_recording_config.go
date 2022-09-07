@@ -20,7 +20,9 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -43,14 +45,14 @@ func (r dataSourceTeleportSessionRecordingConfigType) GetSchema(ctx context.Cont
 }
 
 // NewDataSource creates the empty data source
-func (r dataSourceTeleportSessionRecordingConfigType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
+func (r dataSourceTeleportSessionRecordingConfigType) NewDataSource(_ context.Context, p provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	return dataSourceTeleportSessionRecordingConfig{
 		p: *(p.(*Provider)),
 	}, nil
 }
 
 // Read reads teleport SessionRecordingConfig
-func (r dataSourceTeleportSessionRecordingConfig) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
+func (r dataSourceTeleportSessionRecordingConfig) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	sessionRecordingConfigI, err := r.p.Client.GetSessionRecordingConfig(ctx)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))

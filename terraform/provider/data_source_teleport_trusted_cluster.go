@@ -20,10 +20,12 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	apitypes "github.com/gravitational/teleport/api/types"
@@ -44,14 +46,14 @@ func (r dataSourceTeleportTrustedClusterType) GetSchema(ctx context.Context) (tf
 }
 
 // NewDataSource creates the empty data source
-func (r dataSourceTeleportTrustedClusterType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
+func (r dataSourceTeleportTrustedClusterType) NewDataSource(_ context.Context, p provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	return dataSourceTeleportTrustedCluster{
 		p: *(p.(*Provider)),
 	}, nil
 }
 
 // Read reads teleport TrustedCluster
-func (r dataSourceTeleportTrustedCluster) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
+func (r dataSourceTeleportTrustedCluster) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	var id types.String
 	diags := req.Config.GetAttribute(ctx, path.Root("metadata").AtName("name"), &id)
 	resp.Diagnostics.Append(diags...)

@@ -31,13 +31,13 @@ build: clean
 	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/terraform-provider-teleport $(BUILDFLAGS)
 
 CUSTOM_IMPORTS_TMP_DIR ?= /tmp/protoc-gen-terraform/custom-imports
-PROTOC_GEN_TERRAFORM_VERSION ?= v1.4.0
+PROTOC_GEN_TERRAFORM_VERSION ?= v1.5.0
 PROTOC_GEN_TERRAFORM_EXISTS := $(shell protoc-gen-terraform version 2>&1 >/dev/null | grep 'protoc-gen-terraform $(PROTOC_GEN_TERRAFORM_VERSION)')
 
 .PHONY: gen-tfschema
 gen-tfschema:
 ifndef PROTOC_GEN_TERRAFORM_EXISTS
-	@echo "protoc-gen-terraform v1.4.0 is not installed. Please, refer to README.md for installation instructions."
+	@echo "protoc-gen-terraform v1.5.0 is not installed. Please, refer to README.md for installation instructions."
 	@exit -1
 endif
 

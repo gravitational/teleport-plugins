@@ -20,7 +20,9 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -43,14 +45,14 @@ func (r dataSourceTeleport{{.Name}}Type) GetSchema(ctx context.Context) (tfsdk.S
 }
 
 // NewDataSource creates the empty data source
-func (r dataSourceTeleport{{.Name}}Type) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
+func (r dataSourceTeleport{{.Name}}Type) NewDataSource(_ context.Context, p provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	return dataSourceTeleport{{.Name}}{
 		p: *(p.(*Provider)),
 	}, nil
 }
 
 // Read reads teleport {{.Name}}
-func (r dataSourceTeleport{{.Name}}) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
+func (r dataSourceTeleport{{.Name}}) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	{{.VarName}}I, err := r.p.Client.{{.GetMethod}}(ctx)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))

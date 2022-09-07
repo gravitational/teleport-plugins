@@ -20,7 +20,9 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -43,14 +45,14 @@ func (r dataSourceTeleportAuthPreferenceType) GetSchema(ctx context.Context) (tf
 }
 
 // NewDataSource creates the empty data source
-func (r dataSourceTeleportAuthPreferenceType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
+func (r dataSourceTeleportAuthPreferenceType) NewDataSource(_ context.Context, p provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	return dataSourceTeleportAuthPreference{
 		p: *(p.(*Provider)),
 	}, nil
 }
 
 // Read reads teleport AuthPreference
-func (r dataSourceTeleportAuthPreference) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
+func (r dataSourceTeleportAuthPreference) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	authPreferenceI, err := r.p.Client.GetAuthPreference(ctx)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))

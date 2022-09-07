@@ -25,6 +25,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
 
 	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
@@ -47,14 +49,14 @@ func (r resourceTeleportSAMLConnectorType) GetSchema(ctx context.Context) (tfsdk
 }
 
 // NewResource creates the empty resource
-func (r resourceTeleportSAMLConnectorType) NewResource(_ context.Context, p tfsdk.Provider) (tfsdk.Resource, diag.Diagnostics) {
+func (r resourceTeleportSAMLConnectorType) NewResource(_ context.Context, p provider.Provider) (resource.Resource, diag.Diagnostics) {
 	return resourceTeleportSAMLConnector{
 		p: *(p.(*Provider)),
 	}, nil
 }
 
 // Create creates the provision token
-func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
 	}
@@ -152,7 +154,7 @@ func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.Cre
 }
 
 // Read reads teleport SAMLConnector
-func (r resourceTeleportSAMLConnector) Read(ctx context.Context, req tfsdk.ReadResourceRequest, resp *tfsdk.ReadResourceResponse) {
+func (r resourceTeleportSAMLConnector) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state types.Object
 	diags := req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -193,7 +195,7 @@ func (r resourceTeleportSAMLConnector) Read(ctx context.Context, req tfsdk.ReadR
 }
 
 // Update updates teleport SAMLConnector
-func (r resourceTeleportSAMLConnector) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
+func (r resourceTeleportSAMLConnector) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
 	}
@@ -274,7 +276,7 @@ func (r resourceTeleportSAMLConnector) Update(ctx context.Context, req tfsdk.Upd
 }
 
 // Delete deletes Teleport SAMLConnector
-func (r resourceTeleportSAMLConnector) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
+func (r resourceTeleportSAMLConnector) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var id types.String
 	diags := req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &id)
 	resp.Diagnostics.Append(diags...)
@@ -292,7 +294,7 @@ func (r resourceTeleportSAMLConnector) Delete(ctx context.Context, req tfsdk.Del
 }
 
 // ImportState imports SAMLConnector state
-func (r resourceTeleportSAMLConnector) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
+func (r resourceTeleportSAMLConnector) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
 	samlConnectorI, err := r.p.Client.GetSAMLConnector(ctx, req.ID, true)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))

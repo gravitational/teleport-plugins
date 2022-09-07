@@ -20,7 +20,9 @@ package provider
 import (
 	"context"
 
+	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
@@ -43,14 +45,14 @@ func (r dataSourceTeleportClusterNetworkingConfigType) GetSchema(ctx context.Con
 }
 
 // NewDataSource creates the empty data source
-func (r dataSourceTeleportClusterNetworkingConfigType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
+func (r dataSourceTeleportClusterNetworkingConfigType) NewDataSource(_ context.Context, p provider.Provider) (datasource.DataSource, diag.Diagnostics) {
 	return dataSourceTeleportClusterNetworkingConfig{
 		p: *(p.(*Provider)),
 	}, nil
 }
 
 // Read reads teleport ClusterNetworkingConfig
-func (r dataSourceTeleportClusterNetworkingConfig) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
+func (r dataSourceTeleportClusterNetworkingConfig) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 	clusterNetworkingConfigI, err := r.p.Client.GetClusterNetworkingConfig(ctx)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))

@@ -14,7 +14,7 @@ require (
 	github.com/gravitational/teleport/api v0.0.0-20220830221811-8f6f6ccbb72b // tag v10.1.9
 	github.com/gravitational/trace v1.1.19
 	github.com/hashicorp/go-version v1.6.0
-	github.com/hashicorp/terraform-plugin-framework v0.10.0
+	github.com/hashicorp/terraform-plugin-framework v0.11.1
 	github.com/hashicorp/terraform-plugin-go v0.14.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.21.0
 	github.com/jonboulle/clockwork v0.3.0
