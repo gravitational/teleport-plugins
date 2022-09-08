@@ -124,7 +124,7 @@ release/access-mattermost:
 	make -C access/mattermost clean release
 
 .PHONY: release/access-ms-teams
-release/access-msteams:
+release/access-ms-teams:
 	make -C access/ms-teams clean release
 
 .PHONY: release/access-pagerduty
