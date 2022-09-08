@@ -7,8 +7,8 @@ This chart sets up and configures a Deployment for the Access Request MsTeams pl
 ### Prerequisites
 
 As the MsTeams setup requires to download the plugin locally to generate assets to load in MsTeams,
-you must follow the documentation guide to setup the MsTeams access request. When generating the identity file,
-choose the "proxy" solution that generates a single file `auth.pem`.
+you must follow [the MsTeams access request guide](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-ms-teams/).
+When generating the identity file, choose the "proxy" solution that generates a single file `auth.pem`.
 
 Once the guide in finished, you should have a working `teleport-ms-teams.toml` configuration file.
 
