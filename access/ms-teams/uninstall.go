@@ -18,8 +18,11 @@ func uninstall(ctx context.Context, configPath string) error {
 	}
 
 	var errs []error
-	for _, userID := range c.Recipients.GetAllRecipients() {
-		errs = append(errs, b.UninstallAppForUser(ctx, userID))
+	for _, recipient := range c.Recipients.GetAllRecipients() {
+		_, isChannel := checkChannelURL(recipient)
+		if !isChannel {
+			errs = append(errs, b.UninstallAppForUser(ctx, recipient))
+		}
 	}
 	err = trace.NewAggregate(errs...)
 	if err != nil {
