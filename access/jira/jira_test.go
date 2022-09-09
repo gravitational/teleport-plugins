@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"os/user"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -332,6 +333,30 @@ func (s *JiraSuite) TestIssueCreationWithRequestReason() {
 	if !strings.Contains(issue.Fields.Description, `Reason: *because of*`) {
 		t.Error("Issue description should contain request reason")
 	}
+}
+
+func (s *JiraSuite) TestIssueCreationWithLargeRequestReason() {
+	t := s.T()
+
+	s.startApp()
+
+	req := s.newAccessRequest()
+	req.SetRequestReason(strings.Repeat("a", jiraReasonLimit+10))
+	err := s.requestor().CreateAccessRequest(s.Context(), req)
+	require.NoError(t, err)
+	s.checkPluginData(req.GetName(), func(data PluginData) bool {
+		return data.IssueID != ""
+	}) // when issue id is written, we are sure that request is completely served.
+
+	issue, err := s.fakeJira.CheckNewIssue(s.Context())
+	require.NoError(t, err)
+	re := regexp.MustCompile("(?:Reason...)(a+)")
+	match := re.FindStringSubmatch(issue.Fields.Description)
+	if len(match) != 2 {
+		t.Error("reason not found in issue description")
+		return
+	}
+	require.Equal(t, jiraReasonLimit, len(match[1]))
 }
 
 func (s *JiraSuite) TestReviewComments() {
