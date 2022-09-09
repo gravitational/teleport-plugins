@@ -1,5 +1,5 @@
 VERSION=10.0.2
-GO_VERSION=1.18.4
+GO_VERSION=1.18.6
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-ms-teams
