@@ -41,7 +41,7 @@ func DecodePluginData(dataMap map[string]string) PluginData {
 	return data
 }
 
-// Encode serializes plugin data to a string map
+// EncodePluginData serializes plugin data to a string map
 func EncodePluginData(data PluginData) map[string]string {
 	result := plugindata.EncodeAccessRequestData(data.AccessRequestData)
 
