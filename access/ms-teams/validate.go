@@ -14,8 +14,7 @@ import (
 )
 
 // validate installs the application for a user if required and sends the Hello, world! message
-func validate(configPath, userID string) error {
-	var uid = userID
+func validate(configPath, recipient string) error {
 
 	lib.PrintVersion(appName, Version, Gitref)
 	fmt.Println()
@@ -30,29 +29,29 @@ func validate(configPath, userID string) error {
 		return trace.Wrap(err)
 	}
 
-	if lib.IsEmail(uid) {
-		userID, err := b.GetUserIDByEmail(context.Background(), uid)
+	if lib.IsEmail(recipient) {
+		userID, err := b.GetUserIDByEmail(context.Background(), recipient)
 		if trace.IsNotFound(err) {
-			fmt.Printf(" - User %v not found! Try to use user ID instead\n", uid)
+			fmt.Printf(" - User %v not found! Try to use user ID instead\n", recipient)
 			return nil
 		}
 		if err != nil {
 			return trace.Wrap(err)
 		}
 
-		fmt.Printf(" - User %v found: %v\n", uid, userID)
+		fmt.Printf(" - User %v found: %v\n", recipient, userID)
 
-		uid = userID
+		recipient = userID
 	}
 
-	userData, err := b.FetchUser(context.Background(), uid)
+	recipientData, err := b.FetchRecipient(context.Background(), recipient)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	fmt.Printf(" - Application installation ID for user: %v\n", userData.App.ID)
-	fmt.Printf(" - Chat ID for user: %v\n", userData.Chat.ID)
-	fmt.Printf(" - Chat web URL: %v\n", userData.Chat.WebURL)
+	fmt.Printf(" - Application installation ID for recipient: %v\n", recipientData.App.ID)
+	fmt.Printf(" - Chat ID for recipient: %v\n", recipientData.Chat.ID)
+	fmt.Printf(" - Chat web URL: %v\n", recipientData.Chat.WebURL)
 
 	card := cards.New([]cards.Node{
 		&cards.TextBlock{
@@ -74,9 +73,9 @@ func validate(configPath, userID string) error {
 		return trace.Wrap(err)
 	}
 
-	fmt.Println(" - Hailing the user...")
+	fmt.Println(" - Sending the message...")
 
-	id, err := b.PostAdaptiveCardActivity(context.Background(), userData.ID, body, "")
+	id, err := b.PostAdaptiveCardActivity(context.Background(), recipient, body, "")
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -112,7 +111,7 @@ func validate(configPath, userID string) error {
 		return trace.Wrap(err)
 	}
 
-	_, err = b.PostAdaptiveCardActivity(context.Background(), userData.ID, body, "")
+	_, err = b.PostAdaptiveCardActivity(context.Background(), recipient, body, "")
 	if err != nil {
 		return trace.Wrap(err)
 	}

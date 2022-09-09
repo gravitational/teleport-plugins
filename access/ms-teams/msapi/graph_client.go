@@ -84,7 +84,16 @@ func (e *graphError) Error() string {
 	return e.E.Code + " " + e.E.Message
 }
 
-// GetAppsForTeam returns the list of installed team apps
+// GetErrorCode returns the
+func GetErrorCode(err error) string {
+	graphErr, ok := trace.Unwrap(err).(*graphError)
+	if !ok {
+		return ""
+	}
+	return graphErr.E.Code
+}
+
+// GetTeamsApp returns the list of installed team apps
 func (c *GraphClient) GetTeamsApp(ctx context.Context, teamsAppID string) (*TeamsApp, error) {
 	g := &genericGraphResponse{}
 
@@ -144,6 +153,44 @@ func (c *GraphClient) GetAppForUser(ctx context.Context, app *TeamsApp, userID s
 
 	if len(apps) == 0 {
 		return nil, trace.NotFound("App %v for user %v not found", app.ID, userID)
+	}
+
+	if len(apps) > 1 {
+		return nil, trace.Errorf("There is more than one app having id eq %v", app.ID)
+	}
+
+	return &apps[0], nil
+}
+
+// GetAppForTeam returns installedApp for a given app and user
+// This call requires the permission `TeamsAppInstallation.ReadWriteSelfForTeam.All`. This is overkill as we're only
+// reading. Resource Specific Consent is not enabled by default (still in preview) and we cannot rely on it.
+// https://docs.microsoft.com/en-us/microsoftteams/platform/graph-api/rsc/resource-specific-consent
+func (c *GraphClient) GetAppForTeam(ctx context.Context, app *TeamsApp, teamID string) (*InstalledApp, error) {
+	g := &genericGraphResponse{}
+
+	request := request{
+		Method:   http.MethodGet,
+		Path:     "teams/" + teamID + "/installedApps",
+		Expand:   []string{"teamsApp"},
+		Filter:   "teamsApp/id eq '" + app.ID + "'",
+		Response: g,
+		Err:      &graphError{},
+	}
+
+	err := c.request(ctx, request)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	var apps []InstalledApp
+	err = json.NewDecoder(bytes.NewReader(g.Value)).Decode(&apps)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	if len(apps) == 0 {
+		return nil, trace.NotFound("App %v for team %v not found", app.ID, teamID)
 	}
 
 	if len(apps) > 1 {
