@@ -7,8 +7,8 @@ should match the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-ms-teams
-        app.kubernetes.io/version: 10.1.4
-        helm.sh/chart: teleport-plugin-ms-teams-10.1.4
+        app.kubernetes.io/version: 11.0.0-hugoteams
+        helm.sh/chart: teleport-plugin-ms-teams-11.0.0-hugoteams
       name: RELEASE-NAME-teleport-plugin-ms-teams
     spec:
       replicas: 1

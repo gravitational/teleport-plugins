@@ -1,4 +1,4 @@
-VERSION=10.1.9
+VERSION=11.0.0-hugoteams
 GO_VERSION=1.18.5
 
 BUILDDIR ?= build
