@@ -1,4 +1,4 @@
-VERSION=10.1.9
+VERSION=11.0.0-hugoteams
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)

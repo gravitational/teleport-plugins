@@ -1,5 +1,6 @@
 should match the snapshot:
   1: |
+    apiVersion: v1
     data:
       teleport-ms-teams.toml: |
         preload = true
@@ -12,7 +13,7 @@ should match the snapshot:
         app_id = "my-app-id"
         tenant_id = "my-tenant-id"
         teams_app_id = "my-teams-app-id"
-        appSecret = "/var/lib/teleport/plugins/ms-teams/appSecret"
+        app_secret = "/var/lib/teleport/plugins/ms-teams/appSecret"
 
         [role_to_recipients]
         "*" = ["dev-access-requests"]
@@ -27,6 +28,6 @@ should match the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-ms-teams
-        app.kubernetes.io/version: 10.1.4
-        helm.sh/chart: teleport-plugin-ms-teams-10.1.4
+        app.kubernetes.io/version: 11.0.0-hugoteams
+        helm.sh/chart: teleport-plugin-ms-teams-11.0.0-hugoteams
       name: RELEASE-NAME-teleport-plugin-ms-teams
