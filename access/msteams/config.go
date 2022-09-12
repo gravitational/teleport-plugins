@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/gravitational/teleport-plugins/access/config"
-	"github.com/gravitational/teleport-plugins/access/ms-teams/msapi"
+	"github.com/gravitational/teleport-plugins/access/msteams/msapi"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport/api/types"

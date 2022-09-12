@@ -16,12 +16,12 @@ preload = true
 # Credentials generated with `tctl auth sign`.
 #
 # When using --format=file:
-# identity = "/var/lib/teleport/plugins/ms-teams/auth_id"    # Identity file
+# identity = "/var/lib/teleport/plugins/msteams/auth_id"    # Identity file
 #
 # When using --format=tls:
-# client_key = "/var/lib/teleport/plugins/ms-teams/auth.key" # Teleport TLS secret key
-# client_crt = "/var/lib/teleport/plugins/ms-teams/auth.crt" # Teleport TLS certificate
-# root_cas = "/var/lib/teleport/plugins/ms-teams/auth.cas"   # Teleport CA certs
+# client_key = "/var/lib/teleport/plugins/msteams/auth.key" # Teleport TLS secret key
+# client_crt = "/var/lib/teleport/plugins/msteams/auth.crt" # Teleport TLS certificate
+# root_cas = "/var/lib/teleport/plugins/msteams/auth.cas"   # Teleport CA certs
 addr = "localhost:3025"
 identity = "identity"
 
@@ -35,7 +35,7 @@ teams_app_id = "{{ .TeamsAppID }}"
 [role_to_recipients]
 # Map roles to recipients.
 #
-# Provide ms-teams user email/id recipients for access requests for specific roles. 
+# Provide msteams user email/id recipients for access requests for specific roles. 
 # role.suggested_reviewers will automatically be treated as additional email recipients.
 # "*" must be provided to match non-specified roles.
 #
@@ -44,5 +44,5 @@ teams_app_id = "{{ .TeamsAppID }}"
 "*" = ["foo@example.com"]
 
 [log]
-output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/ms-teams.log"
+output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/msteams.log"
 severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN".

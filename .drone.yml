@@ -201,7 +201,7 @@ trigger:
       - refs/tags/teleport-gitlab-v*
       - refs/tags/teleport-jira-v*
       - refs/tags/teleport-mattermost-v*
-      - refs/tags/teleport-ms-teams-v*
+      - refs/tags/teleport-msteams-v*
       - refs/tags/teleport-pagerduty-v*
       - refs/tags/teleport-slack-v*
       - refs/tags/teleport-email-v*
@@ -251,7 +251,7 @@ trigger:
       - refs/tags/teleport-gitlab-v*
       - refs/tags/teleport-jira-v*
       - refs/tags/teleport-mattermost-v*
-      - refs/tags/teleport-ms-teams-v*
+      - refs/tags/teleport-msteams-v*
       - refs/tags/teleport-pagerduty-v*
       - refs/tags/teleport-slack-v*
       - refs/tags/teleport-email-v*
@@ -661,7 +661,7 @@ trigger:
     include:
       - refs/tags/teleport-jira-v*
       - refs/tags/teleport-mattermost-v*
-      - refs/tags/teleport-ms-teams-v*
+      - refs/tags/teleport-msteams-v*
       - refs/tags/teleport-pagerduty-v*
       - refs/tags/teleport-slack-v*
       - refs/tags/teleport-email-v*

@@ -6,48 +6,48 @@ should match the snapshot:
       labels:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
-        app.kubernetes.io/name: teleport-plugin-ms-teams
+        app.kubernetes.io/name: teleport-plugin-msteams
         app.kubernetes.io/version: 10.1.4
-        helm.sh/chart: teleport-plugin-ms-teams-10.1.4
-      name: RELEASE-NAME-teleport-plugin-ms-teams
+        helm.sh/chart: teleport-plugin-msteams-10.1.4
+      name: RELEASE-NAME-teleport-plugin-msteams
     spec:
       replicas: 1
       selector:
         matchLabels:
           app.kubernetes.io/instance: RELEASE-NAME
-          app.kubernetes.io/name: teleport-plugin-ms-teams
+          app.kubernetes.io/name: teleport-plugin-msteams
       template:
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
-            app.kubernetes.io/name: teleport-plugin-ms-teams
+            app.kubernetes.io/name: teleport-plugin-msteams
         spec:
           containers:
           - command:
             - /usr/local/bin/teleport-plugin
             - start
             - --config
-            - /etc/teleport-ms-teams.toml
+            - /etc/teleport-msteams.toml
             image: gcr.io/overridden/repository:v98.76.54
             imagePullPolicy: IfNotPresent
-            name: teleport-plugin-ms-teams
+            name: teleport-plugin-msteams
             resources: {}
             securityContext: {}
             volumeMounts:
-            - mountPath: /etc/teleport-ms-teams.toml
+            - mountPath: /etc/teleport-msteams.toml
               name: config
-              subPath: teleport-ms-teams.toml
-            - mountPath: /var/lib/teleport/plugins/ms-teams/auth_id
+              subPath: teleport-msteams.toml
+            - mountPath: /var/lib/teleport/plugins/msteams/auth_id
               name: auth-id
               subPath: auth_id
-            - mountPath: /var/lib/teleport/plugins/ms-teams/appSecret
+            - mountPath: /var/lib/teleport/plugins/msteams/appSecret
               name: password-file
               subPath: appSecret
           securityContext: {}
           volumes:
           - configMap:
               defaultMode: 384
-              name: RELEASE-NAME-teleport-plugin-ms-teams
+              name: RELEASE-NAME-teleport-plugin-msteams
             name: config
           - name: auth-id
             secret:
@@ -56,4 +56,4 @@ should match the snapshot:
           - name: password-file
             secret:
               defaultMode: 384
-              secretName: RELEASE-NAME-teleport-plugin-ms-teams-secret
+              secretName: RELEASE-NAME-teleport-plugin-msteams-secret
