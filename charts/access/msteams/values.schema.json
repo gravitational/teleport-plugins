@@ -25,7 +25,7 @@
             "default": {},
             "examples": [
                 {
-                    "repository": "public.ecr.aws/gravitational/teleport-plugin-ms-teams",
+                    "repository": "public.ecr.aws/gravitational/teleport-plugin-msteams",
                     "pullPolicy": "IfNotPresent",
                     "tag": ""
                 }
@@ -39,9 +39,9 @@
                 "repository": {
                     "$id": "#/properties/image/properties/repository",
                     "type": "string",
-                    "default": "public.ecr.aws/gravitational/teleport-plugin-ms-teams",
+                    "default": "public.ecr.aws/gravitational/teleport-plugin-msteams",
                     "examples": [
-                        "public.ecr.aws/gravitational/teleport-plugin-ms-teams"
+                        "public.ecr.aws/gravitational/teleport-plugin-msteams"
                     ]
                 },
                 "pullPolicy": {
@@ -249,7 +249,7 @@
             "examples": [
                 {
                     "address": "auth.example.com:3025",
-                    "identitySecretName": "teleport-plugin-ms-teams-auth-id",
+                    "identitySecretName": "teleport-plugin-msteams-auth-id",
                     "identitySecretPath": "auth_id"
                 }
             ],

@@ -17,23 +17,23 @@ There are several methods to installing and using the Teleport MS Teams Plugin:
 Get the plugin distribution.
 
 ```bash
-$ curl -L https://get.gravitational.com/teleport-access-ms-teams-v7.0.2-linux-amd64-bin.tar.gz
-$ tar -xzf teleport-access-ms-teams-v7.0.2-linux-amd64-bin.tar.gz
-$ cd teleport-access-ms-teams
+$ curl -L https://get.gravitational.com/teleport-access-msteams-v7.0.2-linux-amd64-bin.tar.gz
+$ tar -xzf teleport-access-msteams-v7.0.2-linux-amd64-bin.tar.gz
+$ cd teleport-access-msteams
 $ ./install
 ```
 
 ### Docker Image
 ```bash
-$ docker pull quay.io/gravitational/teleport-plugin-ms-teams:9.0.2
+$ docker pull quay.io/gravitational/teleport-plugin-msteams:9.0.2
 ```
 
 ```bash
-$ docker run quay.io/gravitational/teleport-plugin-ms-teams:9.0.2 version
-teleport-ms-teams v9.0.2 git:teleport-ms-teams-v9.0.2-0-g9e149895 go1.17.8
+$ docker run quay.io/gravitational/teleport-plugin-msteams:9.0.2 version
+teleport-msteams v9.0.2 git:teleport-msteams-v9.0.2-0-g9e149895 go1.17.8
 ```
 
-For a list of available tags, visit [https://quay.io/](https://quay.io/repository/gravitational/teleport-plugin-ms-teams?tab=tags)
+For a list of available tags, visit [https://quay.io/](https://quay.io/repository/gravitational/teleport-plugin-msteams?tab=tags)
 
 ### Building from source
 
@@ -41,23 +41,23 @@ To build the plugin from source you need [Go](https://go.dev/) and `make`.
 
 ```bash
 $ git clone https://github.com/gravitational/teleport-plugins.git
-$ cd teleport-plugins/access/ms-teams
+$ cd teleport-plugins/access/msteams
 $ make
-$ ./build/teleport-ms-teams start
+$ ./build/teleport-msteams start
 ```
 
 
 
 ## Teleport User and Role
 
-Using Web UI or `tctl` CLI utility, create the role `access-ms-teams` and the user `access-ms-teams` belonging to the role `access-ms-teams`. You may use the following YAML declarations.
+Using Web UI or `tctl` CLI utility, create the role `access-msteams` and the user `access-msteams` belonging to the role `access-msteams`. You may use the following YAML declarations.
 
 ### Role
 
 ```yaml
 kind: role
 metadata:
-  name: access-ms-teams
+  name: access-msteams
 spec:
   allow:
     rules:
@@ -71,9 +71,9 @@ version: v5
 ```yaml
 kind: user
 metadata:
-  name: access-ms-teams
+  name: access-msteams
 spec:
-  roles: ['access-ms-teams']
+  roles: ['access-msteams']
 version: v2
 ```
 
@@ -110,7 +110,7 @@ Please note that you must have the appropriate Azure AD adminstrator permissions
 7. Goto the bot Configuration tab (back to step #3). Find "Microsoft App ID", "App Tenant ID" and run the following command:
 
 ```sh
-$ ./teleport-ms-teams configure ~/ms_teams --appID <Microsoft App ID value> --tenantID <App Tenant ID value> --appSecret <password value saved on step #4>
+$ ./teleport-msteams configure ~/ms_teams --appID <Microsoft App ID value> --tenantID <App Tenant ID value> --appSecret <password value saved on step #4>
 ```
 
 `~ms_teams` must be a path to non existent folder. It will be created. All required files will be generated.
@@ -128,7 +128,7 @@ $ ./teleport-ms-teams configure ~/ms_teams --appID <Microsoft App ID value> --te
 ## Validating the installation
 
 ```sh
-$ ./teleport-ms-teams validate -c ~/ms_teams/teleport-ms-teams.toml foo@example.com
+$ ./teleport-msteams validate -c ~/ms_teams/teleport-msteams.toml foo@example.com
 ```
 
 You'll see the following output:
@@ -157,13 +157,13 @@ You can use User ID instead of an email. To your User ID, open [Users](https://p
 With the config above, you should be able to run the bot invoking
 
 ```bash
-$ teleport-ms-teams start -c ~/ms-teams/teleport-ms-teams.toml
+$ teleport-msteams start -c ~/msteams/teleport-msteams.toml
 ```
 
 or with docker:
 
 ```bash
-$ docker run -v <path/to/config>:~/ms-teams/teleport-ms-teams.toml quay.io/gravitational/teleport-plugin-ms-teams:9.0.2 start
+$ docker run -v <path/to/config>:~/msteams/teleport-msteams.toml quay.io/gravitational/teleport-plugin-msteams:9.0.2 start
 ```
 
 ## Usage

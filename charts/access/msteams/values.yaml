@@ -32,7 +32,7 @@ secretVolumeName: "password-file"
 # Deployment
 #
 image:
-  repository: public.ecr.aws/gravitational/teleport-plugin-ms-teams
+  repository: public.ecr.aws/gravitational/teleport-plugin-msteams
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: ""

@@ -12,16 +12,16 @@ import (
 )
 
 var (
-	appName                 = "teleport-ms-teams"
+	appName                 = "teleport-msteams"
 	gracefulShutdownTimeout = 15 * time.Second
-	configPath              = "/etc/teleport-ms-teams.toml"
+	configPath              = "/etc/teleport-msteams.toml"
 )
 
 func main() {
 	logger.Init()
 	app := kingpin.New(appName, "Teleport MS Teams plugin")
 
-	app.Command("version", "Prints teleport-ms-teams version and exits")
+	app.Command("version", "Prints teleport-msteams version and exits")
 	configureCmd := app.Command("configure", "Generates plugin and bot configuration")
 
 	targetDir := configureCmd.Arg("dir", "Path to target directory").Required().String()

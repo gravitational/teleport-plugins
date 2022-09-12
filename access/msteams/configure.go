@@ -19,13 +19,13 @@ const (
 )
 
 var (
-	//go:embed _tpl/teleport-ms-teams.toml
+	//go:embed _tpl/teleport-msteams.toml
 	confTpl string
 
 	//go:embed _tpl/manifest.json
 	manifestTpl string
 
-	//go:embed _tpl/outline.png _tpl/color.png _tpl/teleport-ms-teams-role.yaml
+	//go:embed _tpl/outline.png _tpl/color.png _tpl/teleport-msteams-role.yaml
 	assets embed.FS
 
 	// zipFiles represents file names which should be compressed into app.zip
@@ -69,7 +69,7 @@ func configure(targetDir, appID, appSecret, tenantID string) error {
 
 	printStep(&step, "Created target directory: %s", targetDir)
 
-	renderTemplateTo(confTpl, p, path.Join(targetDir, "teleport-ms-teams.toml"))
+	renderTemplateTo(confTpl, p, path.Join(targetDir, "teleport-msteams.toml"))
 	renderTemplateTo(manifestTpl, p, path.Join(targetDir, "manifest.json"))
 
 	printStep(&step, "Generated configuration files")
