@@ -177,3 +177,54 @@ func (s *TerraformSuite) TestImportRole() {
 		},
 	})
 }
+
+func (s *TerraformSuite) TestRoleLoginsSplitBrain() {
+	checkDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetRole(s.Context(), "splitbrain")
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := "teleport_role.splitbrain"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("role_drift_0.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "role"),
+					resource.TestCheckResourceAttr(name, "version", "v5"),
+					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "one"),
+				),
+			},
+			{
+				Config:   s.getFixture("role_drift_0.tf"),
+				PlanOnly: true,
+			},
+			{
+				// Step to add an extra login
+				PreConfig: func() {
+					currentRole, err := s.client.GetRole(s.Context(), "splitbrain")
+					require.NoError(s.T(), err)
+
+					logins := currentRole.GetLogins(types.Allow)
+					logins = append(logins, "extraOne")
+					currentRole.SetLogins(types.Allow, logins)
+
+					require.NoError(s.T(), s.client.UpsertRole(s.Context(), currentRole))
+				},
+				Config: s.getFixture("role_drift_0.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "role"),
+					resource.TestCheckResourceAttr(name, "version", "v5"),
+					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "one"),
+				),
+			},
+		},
+	})
+}

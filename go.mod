@@ -3,6 +3,7 @@ module github.com/gravitational/teleport-plugins
 go 1.18
 
 require (
+	github.com/DanielTitkov/go-adaptive-cards v0.2.2
 	github.com/alecthomas/kong v0.2.17
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-resty/resty/v2 v2.3.0
@@ -10,7 +11,7 @@ require (
 	github.com/google/go-querystring v1.0.0
 	github.com/google/uuid v1.2.0
 	github.com/gravitational/kingpin v2.1.11-0.20190130013101-742f2714c145+incompatible
-	github.com/gravitational/teleport/api v0.0.0-20220801222506-5bc7caf752f6 // tag v10.1.2
+	github.com/gravitational/teleport/api v0.0.0-20220909201451-25604691898f // tag v10.2.1
 	github.com/gravitational/trace v1.1.17
 	github.com/hashicorp/go-version v1.3.0
 	github.com/hashicorp/terraform-plugin-framework v0.10.0
@@ -27,9 +28,10 @@ require (
 	github.com/sethvargo/go-limiter v0.7.2
 	github.com/sirupsen/logrus v1.8.1
 	github.com/stretchr/testify v1.7.2
+	github.com/tidwall/gjson v1.14.1
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/grpc v1.48.0
+	google.golang.org/grpc v1.49.0
 	google.golang.org/protobuf v1.28.0
 	gopkg.in/mail.v2 v2.3.1
 	k8s.io/apimachinery v0.24.1
@@ -91,6 +93,8 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russellhaering/gosaml2 v0.6.1-0.20210916051624-757d23f1bc28 // indirect
 	github.com/russellhaering/goxmldsig v1.1.1 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
 	github.com/vmihailenco/msgpack/v4 v4.3.12 // indirect
 	github.com/vmihailenco/tagparser v0.1.1 // indirect

@@ -36,15 +36,15 @@ $ ./install
 
 ### Docker Image
 ```bash
-$ docker pull quay.io/gravitational/teleport-plugin-event-handler:9.0.2
+$ docker pull public.ecr.aws/gravitational/teleport-plugin-event-handler:9.0.2
 ```
 
 ```bash
-$ docker run quay.io/gravitational/teleport-plugin-event-handler:9.0.2 version
+$ docker run public.ecr.aws/gravitational/teleport-plugin-event-handler:9.0.2 version
 Teleport event handler v9.0.2 git:teleport-event-handler-v9.0.2-0-g9e149895 go1.17.8
 ```
 
-For a list of available tags, visit [https://quay.io/](https://quay.io/gravitational/teleport-plugin-event-handler?tab=tags)
+For a list of available tags, visit [Amazon ECR Public Gallery](https://gallery.ecr.aws/gravitational/teleport-plugin-event-handler)
 
 ### Building from source
 
@@ -219,7 +219,7 @@ $ teleport-event-handler start --config teleport-event-handler.toml --start-time
 or with docker:
 
 ```sh
-$ docker run -v </path/to/config>:/etc/teleport-event-handler quay.io/gravitational/teleport-plugin-event-handler:9.0.2 start --config /etc/teleport-event-handler/teleport-event-handler.toml --start-time 2021-01-01T00:00:00Z
+$ docker run -v </path/to/config>:/etc/teleport-event-handler public.ecr.aws/gravitational/teleport-plugin-event-handler:9.0.2 start --config /etc/teleport-event-handler/teleport-event-handler.toml --start-time 2021-01-01T00:00:00Z
 ```
 
 Note that here we used start time at the beginning of year 2021. Supposedly you have some events at the Teleport instance you are connecting to. Otherwise, you can omit `--start-time` flag, start the service and generate an events using `tctl create -f teleport-event-handler.yaml` then from the first step. `teleport-event-handler` will wait for that new events to appear and will send them to the fluentd.

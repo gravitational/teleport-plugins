@@ -24,13 +24,13 @@ import (
 )
 
 // RenderTemplate renders passed template and writes it to writer
-func RenderTemplate(content string, pipeline interface{}, w io.Writer) error {
+func RenderTemplate(content string, payload interface{}, w io.Writer) error {
 	tpl, err := template.New("template").Parse(content)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	err = tpl.ExecuteTemplate(w, "template", pipeline)
+	err = tpl.ExecuteTemplate(w, "template", payload)
 	if err != nil {
 		return trace.Wrap(err)
 	}

@@ -65,12 +65,14 @@ func GenerateMTLSCerts(cn string, dnsNames []string, ips []string, ttl time.Dura
 
 	c := &MTLSCerts{
 		caCert: x509.Certificate{ // caCert is a fluentd CA certificate
+			Subject:               entity,
 			NotBefore:             notBefore,
 			NotAfter:              notAfter,
 			IsCA:                  true,
 			MaxPathLenZero:        true,
 			KeyUsage:              x509.KeyUsageCRLSign | x509.KeyUsageCertSign,
 			BasicConstraintsValid: true,
+			Issuer:                entity,
 		},
 		clientCert: x509.Certificate{ // clientCert is a fluentd client certificate
 			Subject:     entity,
@@ -78,6 +80,7 @@ func GenerateMTLSCerts(cn string, dnsNames []string, ips []string, ttl time.Dura
 			NotAfter:    notAfter,
 			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 			KeyUsage:    x509.KeyUsageDigitalSignature,
+			Issuer:      entity,
 		},
 		serverCert: x509.Certificate{ // Server CSR
 			Subject:     entity,
@@ -85,6 +88,7 @@ func GenerateMTLSCerts(cn string, dnsNames []string, ips []string, ttl time.Dura
 			NotAfter:    notAfter,
 			KeyUsage:    x509.KeyUsageDigitalSignature,
 			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+			Issuer:      entity,
 		},
 	}
 

@@ -23,7 +23,7 @@
             "default": {},
             "examples": [
                 {
-                    "repository": "quay.io/gravitational/teleport-plugin-event-handler",
+                    "repository": "public.ecr.aws/gravitational/teleport-plugin-event-handler",
                     "pullPolicy": "IfNotPresent",
                     "tag": ""
                 }
@@ -37,9 +37,9 @@
                 "repository": {
                     "$id": "#/properties/image/properties/repository",
                     "type": "string",
-                    "default": "quay.io/gravitational/teleport-plugin-event-handler",
+                    "default": "public.ecr.aws/gravitational/teleport-plugin-event-handler",
                     "examples": [
-                        "quay.io/gravitational/teleport-plugin-event-handler"
+                        "public.ecr.aws/gravitational/teleport-plugin-event-handler"
                     ]
                 },
                 "pullPolicy": {
