@@ -58,13 +58,6 @@ permission requests as Pagerduty incidents, and provides Pagerduty special
 actions to approve or deny permission requests. Run `make teleport-pagerduty` to
 build it. More docs in the [README](./access/pagerduty/README.md).
 
-### Webhooks
-
-`teleport-webhooks` provides webhooks compatibility for Teleport. It allows
-sendind webhooks when a new request is created, or a request state is changed,
-and it allows optionally listening for the 3rd party app callbacks to facilitate
-the approval workdlow. See more in the [access/webhooks/README.md](/access/webhooks/README.md)
-
 ## Event Handler
 
 The [Teleport Event Handler Plugin](./event-handler) is used to export audit log events to a fluentd service. For more information, visit the Fluentd setup guide at [goteleport.com](https://goteleport.com/docs/setup/guides/fluentd/) or checkout the [README](./event-handler/README.md).
