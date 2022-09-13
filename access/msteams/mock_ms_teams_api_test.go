@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gravitational/teleport-plugins/access/ms-teams/msapi"
+	"github.com/gravitational/teleport-plugins/access/msteams/msapi"
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
 

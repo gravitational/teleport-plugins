@@ -14,7 +14,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/gravitational/teleport-plugins/access/config"
-	"github.com/gravitational/teleport-plugins/access/ms-teams/msapi"
+	"github.com/gravitational/teleport-plugins/access/msteams/msapi"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
@@ -120,7 +120,7 @@ func (s *TeamsSuite) SetupSuite() {
 
 	// Set up plugin user.
 
-	role, err = bootstrap.AddRole("access-ms-teams", types.RoleSpecV5{
+	role, err = bootstrap.AddRole("access-msteams", types.RoleSpecV5{
 		Allow: types.RoleConditions{
 			Rules: []types.Rule{
 				types.NewRule("access_request", []string{"list", "read"}),
@@ -130,7 +130,7 @@ func (s *TeamsSuite) SetupSuite() {
 	})
 	require.NoError(t, err)
 
-	user, err = bootstrap.AddUserWithRoles("access-ms-teams", role.GetName())
+	user, err = bootstrap.AddUserWithRoles("access-msteams", role.GetName())
 	require.NoError(t, err)
 	s.userNames.plugin = user.GetName()
 
@@ -238,7 +238,7 @@ func (s *TeamsSuite) checkPluginData(reqID string, cond func(interface{}) bool) 
 	t.Helper()
 
 	for {
-		rawData, err := s.ruler().PollAccessRequestPluginData(s.Context(), "ms-teams", reqID)
+		rawData, err := s.ruler().PollAccessRequestPluginData(s.Context(), "msteams", reqID)
 		require.NoError(t, err)
 		if data := DecodePluginData(rawData); cond(data) {
 			return data

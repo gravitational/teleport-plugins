@@ -20,7 +20,7 @@ import (
 
 const (
 	// pluginName used as Teleport plugin identifier
-	pluginName = "ms-teams"
+	pluginName = "msteams"
 	// minServerVersion is the minimal teleport version the plugin supports.
 	minServerVersion = "8.0.0"
 	// grpcBackoffMaxDelay is a maximum time GRPC client waits before reconnection attempt.
@@ -44,7 +44,7 @@ type App struct {
 	*lib.Process
 }
 
-// NewApp initializes a new teleport-ms-teams app and returns it.
+// NewApp initializes a new teleport-msteams app and returns it.
 func NewApp(conf Config) (*App, error) {
 	app := &App{conf: conf}
 

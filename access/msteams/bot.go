@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/access/ms-teams/msapi"
+	"github.com/gravitational/teleport-plugins/access/msteams/msapi"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/plugindata"
 	"github.com/gravitational/teleport/api/types"

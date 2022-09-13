@@ -1,6 +1,6 @@
 kind: role
 metadata:
-  name: teleport-ms-teams
+  name: teleport-msteams
 spec:
   allow:
     rules:
@@ -10,7 +10,7 @@ version: v5
 ---
 kind: user
 metadata:
-  name: teleport-ms-teams
+  name: teleport-msteams
 spec:
-  roles: ['teleport-ms-teams']
+  roles: ['teleport-msteams']
 version: v2
