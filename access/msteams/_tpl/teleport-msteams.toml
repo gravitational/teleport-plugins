@@ -28,6 +28,7 @@ identity = "identity"
 [msapi]
 # MS API ID's. Please, check the documentation.
 app_id = "{{ .AppID }}"
+# Either contains the app secret or the path of a file containing the secret
 app_secret = "{{ .AppSecret }}"
 tenant_id = "{{ .TenantID }}"
 teams_app_id = "{{ .TeamsAppID }}"

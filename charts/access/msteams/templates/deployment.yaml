@@ -46,7 +46,7 @@ spec:
               subPath: {{ .Values.teleport.identitySecretPath }}
             - name: {{ .Values.secretVolumeName }}
               mountPath: /var/lib/teleport/plugins/msteams/appSecret
-              subPath: {{ .Values.msTeams.appSecretFromSecretPath }}
+              subPath: {{ .Values.msTeams.appSecretFromSecretKey }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

@@ -8,7 +8,7 @@ This chart sets up and configures a Deployment for the Access Request MsTeams pl
 
 As the MsTeams setup requires to download the plugin locally to generate assets to load in MsTeams,
 you must follow [the MsTeams access request guide](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-msteams/).
-When generating the identity file, choose the "proxy" solution that generates a single file `auth.pem`.
+When generating the identity file, choose the "Connect to the Proxy Service" tab that generates a single file `auth.pem`.
 
 Once the guide in finished, you should have a working `teleport-msteams.toml` configuration file.
 
@@ -58,6 +58,9 @@ roleToRecipients:
   "*": "YOUR.EMAIL@EXAMPLE.COM"
   "editor": ["YOUR.EMAIL@EXAMPLE.COM", "https://CHANNEL URL"]
 ```
+
+_Note: If you prefer to keep `appSecret` off your values you can put it in a Kubernetes secret and specify the secret
+name and secret key with the values `msTeams.appSecretFromSecret` and `msTeams.appSecretFromSecretKey`._
 
 Replace the placeholders by the values you recovered during the guide.
 The `roleToRecipient` map controls which channels and users will be notified if a role is requested.

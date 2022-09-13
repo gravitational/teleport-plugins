@@ -301,7 +301,7 @@
                 "teamsAppID",
                 "appSecret",
                 "appSecretFromSecret",
-                "appSecretFromSecretPath"
+                "appSecretFromSecretKey"
             ],
             "properties": {
                 "appID": {
@@ -344,8 +344,8 @@
                         "my-kubernetes-secret-name"
                     ]
                 },
-                "appSecretFromSecretPath": {
-                    "$id": "#/properties/msTeams/properties/appSecretFromSecretPath",
+                "appSecretFromSecretKey": {
+                    "$id": "#/properties/msTeams/properties/appSecretFromSecretKey",
                     "type": "string",
                     "default": "appSecret",
                     "examples": [

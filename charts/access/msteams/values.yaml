@@ -18,7 +18,7 @@ msTeams:
   appSecret: ""
   # Use this value if you're passing the appSecret through an existing Kubernetes secret
   appSecretFromSecret: ""
-  appSecretFromSecretPath: "appSecret"
+  appSecretFromSecretKey: "appSecret"
 
 roleToRecipients: {}
 
