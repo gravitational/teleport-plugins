@@ -1,4 +1,4 @@
-VERSION=11.0.0-hugoteams.6
+VERSION=11.0.0-hugoteams.7
 GO_VERSION=1.18.5
 
 OS ?= $(shell go env GOOS)
