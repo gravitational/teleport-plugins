@@ -201,6 +201,7 @@ trigger:
       - refs/tags/teleport-gitlab-v*
       - refs/tags/teleport-jira-v*
       - refs/tags/teleport-mattermost-v*
+      - refs/tags/teleport-msteams-v*
       - refs/tags/teleport-pagerduty-v*
       - refs/tags/teleport-slack-v*
       - refs/tags/teleport-email-v*
@@ -250,6 +251,7 @@ trigger:
       - refs/tags/teleport-gitlab-v*
       - refs/tags/teleport-jira-v*
       - refs/tags/teleport-mattermost-v*
+      - refs/tags/teleport-msteams-v*
       - refs/tags/teleport-pagerduty-v*
       - refs/tags/teleport-slack-v*
       - refs/tags/teleport-email-v*
@@ -659,6 +661,7 @@ trigger:
     include:
       - refs/tags/teleport-jira-v*
       - refs/tags/teleport-mattermost-v*
+      - refs/tags/teleport-msteams-v*
       - refs/tags/teleport-pagerduty-v*
       - refs/tags/teleport-slack-v*
       - refs/tags/teleport-email-v*
@@ -976,6 +979,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 055871a1987e46894123fc481363f93d285bd8029b65136dcbb83d98a2296bbf
+hmac: 075ee8a8ef69017f1ab6dc6ff5522d2f17bbdc6e05ab0c1e6a06ceac6418fcc4
 
 ...
