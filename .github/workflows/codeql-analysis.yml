@@ -1,0 +1,55 @@
+name: "CodeQL"
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+      - 'rfd/**'
+      - '**.md'
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'go', 'javascript' ]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version-file: 'go.mod'
+      if: ${{ matrix.language == 'go' }}
+
+    - name: Initialize the CodeQL tools for scanning
+      uses: github/codeql-action/init@v2
+      with:
+        languages: ${{ matrix.language }}
+
+    - name: Autobuild
+      uses: github/codeql-action/autobuild@v2
+      if: ${{ matrix.language != 'go' }}
+
+    - name: Build all Go plugins
+      run: |
+        make build-all
+      if: ${{ matrix.language == 'go' }}
+
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{matrix.language}}"
