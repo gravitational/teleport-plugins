@@ -796,17 +796,16 @@ steps:
       - helm repo index packages/
 
   - name: "Helm: Publish chart repository to S3"
-    image: plugins/s3
-    settings:
-      bucket:
+    image: amazon/aws-cli
+    environment:
+      AWS_S3_BUCKET:
         from_secret: HELM_CHART_PRODUCTION_BUCKET
-      access_key:
+      AWS_ACCESS_KEY_ID:
         from_secret: HELM_CHART_PRODUCTION_BUCKET_KEY
-      secret_key:
+      AWS_SECRET_ACCESS_KEY:
         from_secret: HELM_CHART_PRODUCTION_BUCKET_SECRET
-      region: us-east-2
-      source: packages/*
-      strip_prefix: packages
+    commands:
+      - aws s3 sync packages s3://$AWS_S3_BUCKET/ 
 
 ---
 # NOTE: Any changes here need to be reflected in the emergency deployment
@@ -976,6 +975,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 40579c57348e41258cec6f75e0846dc16fa7108e21f8e217b1d242622d1ac7f9
+hmac: e08af6b13bed90968288a930d863e55d733dd9eaf7171ef2178d6f108d1d3533
 
 ...
