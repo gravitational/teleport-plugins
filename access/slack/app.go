@@ -38,7 +38,7 @@ type App struct {
 	conf Config
 
 	apiClient *client.Client
-	bot       Bot
+	bot       MessagingBot
 	mainJob   lib.ServiceJob
 	pd        *pd.CompareAndSwap[PluginData]
 
@@ -137,7 +137,11 @@ func (a *App) init(ctx context.Context) error {
 	if pong.ServerFeatures.AdvancedAccessWorkflows {
 		webProxyAddr = pong.ProxyPublicAddr
 	}
-	a.bot, err = NewBot(a.conf, pong.ClusterName, webProxyAddr)
+	if a.conf.Slack.IsDiscord {
+		a.bot, err = NewDiscordBot(a.conf, pong.ClusterName, webProxyAddr)
+	} else {
+		a.bot, err = NewSlackBot(a.conf, pong.ClusterName, webProxyAddr)
+	}
 	if err != nil {
 		return trace.Wrap(err)
 	}
