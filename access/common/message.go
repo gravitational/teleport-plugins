@@ -1,4 +1,4 @@
-package main
+package common
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ Resolution: {{.ProposedStateEmoji}} {{.ProposedState}}.
 {{if .Reason}}Reason: {{.Reason}}.{{end}}`,
 ))
 
-func msgStatusText(tag pd.ResolutionTag, reason string) string {
+func MsgStatusText(tag pd.ResolutionTag, reason string) string {
 	var statusEmoji string
 	status := string(tag)
 	switch tag {
@@ -50,12 +50,12 @@ func msgStatusText(tag pd.ResolutionTag, reason string) string {
 	return statusText
 }
 
-func msgFields(reqID string, reqData pd.AccessRequestData, webProxyURL *url.URL) string {
+func MsgFields(reqID string, reqData pd.AccessRequestData, clusterName string, webProxyURL *url.URL) string {
 	var builder strings.Builder
 	builder.Grow(128)
 
 	msgFieldToBuilder(&builder, "ID", reqID)
-	msgFieldToBuilder(&builder, "Cluster", b.clusterName)
+	msgFieldToBuilder(&builder, "Cluster", clusterName)
 
 	if len(reqData.User) > 0 {
 		msgFieldToBuilder(&builder, "User", reqData.User)
@@ -80,7 +80,7 @@ func msgFields(reqID string, reqData pd.AccessRequestData, webProxyURL *url.URL)
 	return builder.String()
 }
 
-func msgReview(review types.AccessReview) (string, error) {
+func MsgReview(review types.AccessReview) (string, error) {
 	if review.Reason != "" {
 		review.Reason = lib.MarkdownEscape(review.Reason, reviewReasonLimit)
 	}
@@ -109,4 +109,12 @@ func msgReview(review types.AccessReview) (string, error) {
 		return "", trace.Wrap(err)
 	}
 	return builder.String(), nil
+}
+
+func msgFieldToBuilder(b *strings.Builder, field, value string) {
+	b.WriteString("*")
+	b.WriteString(field)
+	b.WriteString("*: ")
+	b.WriteString(value)
+	b.WriteString("\n")
 }

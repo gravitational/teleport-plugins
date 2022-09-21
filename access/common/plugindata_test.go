@@ -1,4 +1,4 @@
-package main
+package common
 
 import (
 	"testing"
@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var samplePluginData = PluginData{
+var samplePluginData = GenericPluginData{
 	AccessRequestData: plugindata.AccessRequestData{
 		User:             "user-foo",
 		Roles:            []string{"role-foo", "role-bar"},
@@ -16,9 +16,9 @@ var samplePluginData = PluginData{
 		ResolutionTag:    plugindata.ResolvedApproved,
 		ResolutionReason: "foo ok",
 	},
-	SlackData: SlackData{
-		{ChannelID: "CHANNEL1", TimestampOrDiscordID: "0000001"},
-		{ChannelID: "CHANNEL2", TimestampOrDiscordID: "0000002"},
+	SentMessages: SentMessages{
+		{ChannelID: "CHANNEL1", MessageID: "0000001"},
+		{ChannelID: "CHANNEL2", MessageID: "0000002"},
 	},
 }
 
@@ -48,7 +48,7 @@ func TestDecodePluginData(t *testing.T) {
 }
 
 func TestEncodeEmptyPluginData(t *testing.T) {
-	dataMap := EncodePluginData(PluginData{})
+	dataMap := EncodePluginData(GenericPluginData{})
 	assert.Len(t, dataMap, 7)
 	for key, value := range dataMap {
 		assert.Emptyf(t, value, "value at key %q must be empty", key)

@@ -13,7 +13,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/gravitational/teleport-plugins/access/config"
+	"github.com/gravitational/teleport-plugins/access/common"
 	"github.com/gravitational/teleport-plugins/access/msteams/msapi"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
@@ -288,7 +288,7 @@ func (s *TeamsSuite) TestRecipientsConfig() {
 
 	reviewer1 := s.mockAPI.StoreUser(msapi.User{Mail: s.userNames.reviewer1})
 	reviewer2 := s.mockAPI.StoreUser(msapi.User{Mail: s.userNames.reviewer2})
-	s.appConfig.Recipients = config.RecipientsMap{
+	s.appConfig.Recipients = common.RecipientsMap{
 		types.Wildcard: []string{reviewer2.Mail, reviewer1.ID},
 	}
 

@@ -1,5 +1,5 @@
 /*
-Copyright 2019 Gravitational, Inc.
+Copyright 2022 Gravitational, Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ var exampleConfig string
 
 func main() {
 	logger.Init()
-	app := kingpin.New("teleport-slack", "Teleport plugin for access requests approval via Slack.")
+	app := kingpin.New("teleport-discord", "Teleport plugin for access requests approval via Discord.")
 
 	app.Command("configure", "Prints an example .TOML configuration file.")
 	app.Command("version", "Prints teleport-slack version and exits.")
@@ -43,7 +43,7 @@ func main() {
 	startCmd := app.Command("start", "Starts a the Teleport Slack plugin.")
 	path := startCmd.Flag("config", "TOML config file path").
 		Short('c').
-		Default("/etc/teleport-slack.toml").
+		Default("/etc/teleport-discord.toml").
 		String()
 	debug := startCmd.Flag("debug", "Enable verbose logging to stderr").
 		Short('d').
@@ -69,7 +69,7 @@ func main() {
 }
 
 func run(configPath string, debug bool) error {
-	conf, err := LoadSlackConfig(configPath)
+	conf, err := LoadDiscordConfig(configPath)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -85,11 +85,11 @@ func run(configPath string, debug bool) error {
 		logger.Standard().Debugf("DEBUG logging enabled")
 	}
 
-	if conf.Slack.Recipients != nil {
+	if conf.Discord.Recipients != nil {
 		logger.Standard().Warn("The slack.recipients config option is deprecated, set role_to_recipients[\"*\"] instead for the same functionality")
 	}
 
-	app := NewSlackApp(*conf)
+	app := NewDiscordApp(*conf)
 	go lib.ServeSignals(app, 15*time.Second)
 
 	logger.Standard().Infof("Starting Teleport Access Slack Plugin %s:%s", Version, Gitref)

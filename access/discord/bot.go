@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"github.com/gravitational/teleport-plugins/access/common"
 	"net/http"
 	"net/url"
 	"time"
@@ -29,8 +30,8 @@ type DiscordBot struct {
 }
 
 // NewDiscordBot initializes the new Discord message generator (DiscordBot)
-// takes Config as an argument.
-func NewDiscordBot(conf Config, clusterName, webProxyAddr string) (DiscordBot, error) {
+// takes SlackConfig as an argument.
+func NewDiscordBot(conf DiscordConfig, clusterName, webProxyAddr string) (common.MessagingBot, error) {
 	var (
 		webProxyURL *url.URL
 		err         error
@@ -41,10 +42,7 @@ func NewDiscordBot(conf Config, clusterName, webProxyAddr string) (DiscordBot, e
 		}
 	}
 
-	token := "Bearer " + conf.Slack.Token
-	if conf.Slack.IsDiscord {
-		token = "SlackBot " + conf.Slack.Token
-	}
+	token := "Bot " + conf.Discord.Token
 
 	client := resty.
 		NewWithClient(&http.Client{
@@ -59,7 +57,7 @@ func NewDiscordBot(conf Config, clusterName, webProxyAddr string) (DiscordBot, e
 		SetHeader("Authorization", token)
 
 	// APIURL parameter is set only in tests
-	if endpoint := conf.Slack.APIURL; endpoint != "" {
+	if endpoint := conf.Discord.APIURL; endpoint != "" {
 		client.SetHostURL(endpoint)
 	} else {
 		client.SetHostURL("https://discord.com/api/")
@@ -103,8 +101,8 @@ func (b DiscordBot) HealthCheck(ctx context.Context) error {
 }
 
 // Broadcast posts request info to Slack with action buttons.
-func (b DiscordBot) Broadcast(ctx context.Context, channels []string, reqID string, reqData pd.AccessRequestData) (SlackData, error) {
-	var data SlackData
+func (b DiscordBot) Broadcast(ctx context.Context, channels []string, reqID string, reqData pd.AccessRequestData) (common.SentMessages, error) {
+	var data common.SentMessages
 	var errors []error
 
 	for _, channel := range channels {
@@ -118,7 +116,7 @@ func (b DiscordBot) Broadcast(ctx context.Context, channels []string, reqID stri
 			errors = append(errors, trace.Wrap(err))
 			continue
 		}
-		data = append(data, SlackDataMessage{ChannelID: channel, TimestampOrDiscordID: result.DiscordID})
+		data = append(data, common.MessageData{ChannelID: channel, MessageID: result.DiscordID})
 
 	}
 
@@ -130,32 +128,14 @@ func (b DiscordBot) PostReviewReply(ctx context.Context, channelID, timestamp st
 	return nil
 }
 
-// LookupDirectChannelByEmail fetches user's id by email.
-func (b DiscordBot) LookupDirectChannelByEmail(ctx context.Context, email string) (string, error) {
-	var result struct {
-		SlackResponse
-		User User `json:"user"`
-	}
-	_, err := b.client.NewRequest().
-		SetContext(ctx).
-		SetQueryParam("email", email).
-		SetResult(&result).
-		Get("users.lookupByEmail")
-	if err != nil {
-		return "", trace.Wrap(err)
-	}
-
-	return result.User.ID, nil
-}
-
 // Expire updates request's Slack post with EXPIRED status and removes action buttons.
-func (b DiscordBot) UpdateMessages(ctx context.Context, reqID string, reqData pd.AccessRequestData, messagingData SlackData, reviews []types.AccessReview) error {
+func (b DiscordBot) UpdateMessages(ctx context.Context, reqID string, reqData pd.AccessRequestData, messagingData common.SentMessages, reviews []types.AccessReview) error {
 	var errors []error
 	for _, msg := range messagingData {
 		_, err := b.client.NewRequest().
 			SetContext(ctx).
 			SetBody(DiscordMsg{Msg: Msg{Channel: msg.ChannelID}, Text: b.discordMsgText(reqID, reqData, reviews)}).
-			Patch("/channels/" + msg.ChannelID + "/messages/" + msg.TimestampOrDiscordID)
+			Patch("/channels/" + msg.ChannelID + "/messages/" + msg.MessageID)
 		if err != nil {
 			errors = append(errors, trace.Wrap(err))
 		}
@@ -170,9 +150,9 @@ func (b DiscordBot) UpdateMessages(ctx context.Context, reqID string, reqData pd
 
 func (b DiscordBot) discordMsgText(reqID string, reqData pd.AccessRequestData, reviews []types.AccessReview) string {
 	return "You have a new Role Request:\n" +
-		msgFields(reqID, reqData, b.webProxyURL) +
+		common.MsgFields(reqID, reqData, b.clusterName, b.webProxyURL) +
 		b.msgDiscordReviews(reviews) +
-		msgStatusText(reqData.ResolutionTag, reqData.ResolutionReason)
+		common.MsgStatusText(reqData.ResolutionTag, reqData.ResolutionReason)
 }
 
 func (b DiscordBot) msgDiscordReviews(reviews []types.AccessReview) string {
@@ -180,7 +160,7 @@ func (b DiscordBot) msgDiscordReviews(reviews []types.AccessReview) string {
 
 	// TODO: Update error propagation
 	for _, review := range reviews {
-		text, err := msgReview(review)
+		text, err := common.MsgReview(review)
 		if err != nil {
 			return ""
 		}
@@ -189,4 +169,15 @@ func (b DiscordBot) msgDiscordReviews(reviews []types.AccessReview) string {
 	}
 
 	return "\n" + result
+}
+
+func (b DiscordBot) FetchRecipient(ctx context.Context, recipient string) (*common.Recipient, error) {
+	// Discord does not support resolving email address, we only return the channel name
+	// TODO: check if channel exists ?
+	return &common.Recipient{
+		Name: recipient,
+		ID:   recipient,
+		Kind: "Channel",
+		Data: nil,
+	}, nil
 }

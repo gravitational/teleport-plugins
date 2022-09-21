@@ -20,7 +20,7 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/gravitational/teleport-plugins/access/config"
+	"github.com/gravitational/teleport-plugins/access/common"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport/api/types"
@@ -60,7 +60,7 @@ type Config struct {
 	Mailgun          *MailgunConfig       `toml:"mailgun"`
 	SMTP             *SMTPConfig          `toml:"smtp"`
 	Delivery         DeliveryConfig       `toml:"delivery"`
-	RoleToRecipients config.RecipientsMap `toml:"role_to_recipients"`
+	RoleToRecipients common.RecipientsMap `toml:"role_to_recipients"`
 	Log              logger.Config        `toml:"log"`
 }
 
@@ -216,7 +216,7 @@ func (c *Config) CheckAndSetDefaults() error {
 			return trace.BadParameter("provide either delivery.recipients or role_to_recipients, not both")
 		}
 
-		c.RoleToRecipients = config.RecipientsMap{
+		c.RoleToRecipients = common.RecipientsMap{
 			types.Wildcard: c.Delivery.Recipients,
 		}
 		c.Delivery.Recipients = nil

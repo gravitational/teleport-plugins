@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gravitational/teleport-plugins/access/config"
+	"github.com/gravitational/teleport-plugins/access/common"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/stretchr/testify/require"
@@ -16,7 +16,7 @@ func TestRecipients(t *testing.T) {
 		desc             string
 		in               string
 		expectErr        require.ErrorAssertionFunc
-		expectRecipients config.RecipientsMap
+		expectRecipients common.RecipientsMap
 	}{
 		{
 			desc: "test recipients",
@@ -25,7 +25,7 @@ func TestRecipients(t *testing.T) {
 			token = "token"
 			recipients = ["dev-channel","admin-channel"]
 			`,
-			expectRecipients: config.RecipientsMap{
+			expectRecipients: common.RecipientsMap{
 				types.Wildcard: []string{"dev-channel", "admin-channel"},
 			},
 		},
@@ -39,7 +39,7 @@ func TestRecipients(t *testing.T) {
 			"dev" = ["dev-channel","admin-channel"]
 			"*" = "admin-channel"
 			`,
-			expectRecipients: config.RecipientsMap{
+			expectRecipients: common.RecipientsMap{
 				"dev":          []string{"dev-channel", "admin-channel"},
 				types.Wildcard: []string{"admin-channel"},
 			},
@@ -79,7 +79,7 @@ func TestRecipients(t *testing.T) {
 			err := os.WriteFile(filePath, []byte(tc.in), 0777)
 			require.NoError(t, err)
 
-			c, err := LoadConfig(filePath)
+			c, err := LoadSlackConfig(filePath)
 			if tc.expectErr != nil {
 				tc.expectErr(t, err)
 				return

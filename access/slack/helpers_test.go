@@ -1,7 +1,11 @@
 package main
 
+import (
+	"github.com/gravitational/teleport-plugins/access/common"
+)
+
 type SlackMessageSlice []SlackMsg
-type SlackDataMessageSet map[SlackDataMessage]struct{}
+type SlackDataMessageSet map[common.MessageData]struct{}
 
 func (slice SlackMessageSlice) Len() int {
 	return len(slice)
@@ -18,11 +22,11 @@ func (slice SlackMessageSlice) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
-func (set SlackDataMessageSet) Add(msg SlackDataMessage) {
+func (set SlackDataMessageSet) Add(msg common.MessageData) {
 	set[msg] = struct{}{}
 }
 
-func (set SlackDataMessageSet) Contains(msg SlackDataMessage) bool {
+func (set SlackDataMessageSet) Contains(msg common.MessageData) bool {
 	_, ok := set[msg]
 	return ok
 }

@@ -14,7 +14,7 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/gravitational/teleport-plugins/access/config"
+	"github.com/gravitational/teleport-plugins/access/common"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
@@ -32,7 +32,7 @@ var requestReasonRegexp = regexp.MustCompile("(?im)^\\*Reason\\*:\\ ```\\n(.*?)`
 
 type SlackSuite struct {
 	integration.Suite
-	appConfig Config
+	appConfig SlackConfig
 	userNames struct {
 		ruler     string
 		requestor string
@@ -174,7 +174,7 @@ func (s *SlackSuite) SetupTest() {
 
 	s.fakeSlack.StoreUser(User{Name: "Vladimir", Profile: UserProfile{Email: s.userNames.requestor}})
 
-	var conf Config
+	var conf SlackConfig
 	conf.Teleport = s.teleportConfig
 	conf.Slack.Token = "000000"
 	conf.Slack.APIURL = s.fakeSlack.URL() + "/"
@@ -187,9 +187,7 @@ func (s *SlackSuite) startApp() {
 	t := s.T()
 	t.Helper()
 
-	app, err := NewApp(s.appConfig)
-	require.NoError(t, err)
-
+	app := NewSlackApp(s.appConfig)
 	s.StartApp(app)
 }
 
@@ -235,14 +233,14 @@ func (s *SlackSuite) createAccessRequest(reviewers []User) types.AccessRequest {
 	return req
 }
 
-func (s *SlackSuite) checkPluginData(reqID string, cond func(PluginData) bool) PluginData {
+func (s *SlackSuite) checkPluginData(reqID string, cond func(common.GenericPluginData) bool) common.GenericPluginData {
 	t := s.T()
 	t.Helper()
 
 	for {
 		rawData, err := s.ruler().PollAccessRequestPluginData(s.Context(), "slack", reqID)
 		require.NoError(t, err)
-		if data := DecodePluginData(rawData); cond(data) {
+		if data := common.DecodePluginData(rawData); cond(data) {
 			return data
 		}
 	}
@@ -257,23 +255,23 @@ func (s *SlackSuite) TestMessagePosting() {
 	s.startApp()
 	request := s.createAccessRequest([]User{reviewer2, reviewer1})
 
-	pluginData := s.checkPluginData(request.GetName(), func(data PluginData) bool {
-		return len(data.SlackData) > 0
+	pluginData := s.checkPluginData(request.GetName(), func(data common.GenericPluginData) bool {
+		return len(data.SentMessages) > 0
 	})
-	assert.Len(t, pluginData.SlackData, 2)
+	assert.Len(t, pluginData.SentMessages, 2)
 
 	var messages []SlackMsg
 	messageSet := make(SlackDataMessageSet)
 	for i := 0; i < 2; i++ {
 		msg, err := s.fakeSlack.CheckNewMessage(s.Context())
 		require.NoError(t, err)
-		messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, TimestampOrDiscordID: msg.Timestamp})
+		messageSet.Add(common.MessageData{ChannelID: msg.Channel, MessageID: msg.Timestamp})
 		messages = append(messages, msg)
 	}
 
 	assert.Len(t, messageSet, 2)
-	assert.Contains(t, messageSet, pluginData.SlackData[0])
-	assert.Contains(t, messageSet, pluginData.SlackData[1])
+	assert.Contains(t, messageSet, pluginData.SentMessages[0])
+	assert.Contains(t, messageSet, pluginData.SentMessages[1])
 
 	sort.Sort(SlackMessageSlice(messages))
 
@@ -303,17 +301,17 @@ func (s *SlackSuite) TestRecipientsConfig() {
 
 	reviewer1 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
 	reviewer2 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer2}})
-	s.appConfig.Recipients = config.RecipientsMap{
+	s.appConfig.Recipients = common.RecipientsMap{
 		types.Wildcard: []string{reviewer2.Profile.Email, reviewer1.ID},
 	}
 
 	s.startApp()
 
 	request := s.createAccessRequest(nil)
-	pluginData := s.checkPluginData(request.GetName(), func(data PluginData) bool {
-		return len(data.SlackData) > 0
+	pluginData := s.checkPluginData(request.GetName(), func(data common.GenericPluginData) bool {
+		return len(data.SentMessages) > 0
 	})
-	assert.Len(t, pluginData.SlackData, 2)
+	assert.Len(t, pluginData.SentMessages, 2)
 
 	var (
 		msg      SlackMsg
@@ -324,17 +322,17 @@ func (s *SlackSuite) TestRecipientsConfig() {
 
 	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
-	messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, TimestampOrDiscordID: msg.Timestamp})
+	messageSet.Add(common.MessageData{ChannelID: msg.Channel, MessageID: msg.Timestamp})
 	messages = append(messages, msg)
 
 	msg, err = s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
-	messageSet.Add(SlackDataMessage{ChannelID: msg.Channel, TimestampOrDiscordID: msg.Timestamp})
+	messageSet.Add(common.MessageData{ChannelID: msg.Channel, MessageID: msg.Timestamp})
 	messages = append(messages, msg)
 
 	assert.Len(t, messageSet, 2)
-	assert.Contains(t, messageSet, pluginData.SlackData[0])
-	assert.Contains(t, messageSet, pluginData.SlackData[1])
+	assert.Contains(t, messageSet, pluginData.SentMessages[0])
+	assert.Contains(t, messageSet, pluginData.SentMessages[1])
 
 	sort.Sort(SlackMessageSlice(messages))
 
@@ -404,8 +402,8 @@ func (s *SlackSuite) TestReviewReplies() {
 	s.startApp()
 
 	req := s.createAccessRequest([]User{reviewer})
-	s.checkPluginData(req.GetName(), func(data PluginData) bool {
-		return len(data.SlackData) > 0
+	s.checkPluginData(req.GetName(), func(data common.GenericPluginData) bool {
+		return len(data.SentMessages) > 0
 	})
 
 	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
@@ -488,6 +486,9 @@ func (s *SlackSuite) TestApprovalByReview() {
 	assert.Equal(t, msg.Channel, reply.Channel)
 	assert.Equal(t, msg.Timestamp, reply.ThreadTs)
 	assert.Contains(t, reply.Text, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
+	// When posting a review, the slack bot also updates the message to add the amount of reviewrs
+	// This update is soon superseded by the "access allowed" update
+	_, _ = s.fakeSlack.CheckMessageUpdateByAPI(s.Context())
 
 	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Context())
 	require.NoError(t, err)
@@ -542,6 +543,9 @@ func (s *SlackSuite) TestDenialByReview() {
 	assert.Equal(t, msg.Channel, reply.Channel)
 	assert.Equal(t, msg.Timestamp, reply.ThreadTs)
 	assert.Contains(t, reply.Text, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
+	// When posting a review, the slack bot also updates the message to add the amount of reviewrs
+	// This update is soon superseded by the "access allowed" update
+	_, _ = s.fakeSlack.CheckMessageUpdateByAPI(s.Context())
 
 	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Context())
 	require.NoError(t, err)
@@ -565,8 +569,8 @@ func (s *SlackSuite) TestExpiration() {
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msg.Channel)
 
-	s.checkPluginData(request.GetName(), func(data PluginData) bool {
-		return len(data.SlackData) > 0
+	s.checkPluginData(request.GetName(), func(data common.GenericPluginData) bool {
+		return len(data.SentMessages) > 0
 	})
 
 	err = s.ruler().DeleteAccessRequest(s.Context(), request.GetName()) // simulate expiration
@@ -643,7 +647,7 @@ func (s *SlackSuite) TestRace() {
 			if msg.ThreadTs == "" {
 				// Handle "root" notifications.
 
-				threadMsgKey := SlackDataMessage{ChannelID: msg.Channel, TimestampOrDiscordID: msg.Timestamp}
+				threadMsgKey := common.MessageData{ChannelID: msg.Channel, MessageID: msg.Timestamp}
 				if _, loaded := threadMsgIDs.LoadOrStore(threadMsgKey, struct{}{}); loaded {
 					return setRaceErr(trace.Errorf("thread %v already stored", threadMsgKey))
 				}
@@ -670,7 +674,7 @@ func (s *SlackSuite) TestRace() {
 			} else {
 				// Handle review comments.
 
-				threadMsgKey := SlackDataMessage{ChannelID: msg.Channel, TimestampOrDiscordID: msg.ThreadTs}
+				threadMsgKey := common.MessageData{ChannelID: msg.Channel, MessageID: msg.ThreadTs}
 				var newCounter int32
 				val, _ := reviewReplyCounters.LoadOrStore(threadMsgKey, &newCounter)
 				counterPtr := val.(*int32)
@@ -681,15 +685,15 @@ func (s *SlackSuite) TestRace() {
 		})
 	}
 
-	// Multiplier TWO means that we handle updates for each of the two messages posted to reviewers.
-	for i := 0; i < 2*s.raceNumber; i++ {
+	// Multiplier TWO means that we handle the 2 updates for each of the two messages posted to reviewers.
+	for i := 0; i < 2*2*s.raceNumber; i++ {
 		process.SpawnCritical(func(ctx context.Context) error {
 			msg, err := s.fakeSlack.CheckMessageUpdateByAPI(ctx)
 			if err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
 
-			threadMsgKey := SlackDataMessage{ChannelID: msg.Channel, TimestampOrDiscordID: msg.Timestamp}
+			threadMsgKey := common.MessageData{ChannelID: msg.Channel, MessageID: msg.Timestamp}
 			var newCounter int32
 			val, _ := msgUpdateCounters.LoadOrStore(threadMsgKey, &newCounter)
 			counterPtr := val.(*int32)
@@ -703,6 +707,7 @@ func (s *SlackSuite) TestRace() {
 	<-process.Done()
 	require.NoError(t, raceErr)
 
+	time.Sleep(5 * time.Second)
 	assert.Equal(t, int32(2*s.raceNumber), threadMsgsCount)
 	threadMsgIDs.Range(func(key, value interface{}) bool {
 		next := true
@@ -715,7 +720,8 @@ func (s *SlackSuite) TestRace() {
 		val, loaded = msgUpdateCounters.LoadAndDelete(key)
 		next = next && assert.True(t, loaded)
 		counterPtr = val.(*int32)
-		next = next && assert.Equal(t, int32(1), *counterPtr)
+		// Each message should be updated 2 times
+		next = next && assert.Equal(t, int32(2), *counterPtr)
 
 		return next
 	})

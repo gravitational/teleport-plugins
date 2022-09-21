@@ -8,14 +8,11 @@ import (
 
 // Slack API types
 
+// TODO: Move discord API types out of here
+
 type SlackResponse struct {
 	Ok    bool   `json:"ok"`
 	Error string `json:"error,omitempty"`
-}
-
-type DiscordResponse struct {
-	Code    int    `json:"code"`
-	Message string `json:"message,omitempty"`
 }
 
 type ChatMsgResponse struct {
@@ -23,7 +20,6 @@ type ChatMsgResponse struct {
 	Channel   string `json:"channel"`
 	Timestamp string `json:"ts"`
 	Text      string `json:"text"`
-	DiscordID string `json:"id"`
 }
 
 type Msg struct {
@@ -39,16 +35,6 @@ type SlackMsg struct {
 	Msg
 	BlockItems []BlockItem `json:"blocks,omitempty"`
 	Text       string      `json:"text,omitempty"`
-}
-
-type DiscordMsg struct {
-	Msg
-	Text string `json:"content,omitempty"`
-}
-
-type RespondMsg struct {
-	SlackMsg
-	ReplaceOriginal bool `json:"replace_original,omitempty"`
 }
 
 type User struct {

@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 
-	"github.com/gravitational/teleport-plugins/access/config"
+	"github.com/gravitational/teleport-plugins/access/common"
 	"github.com/gravitational/teleport-plugins/access/msteams/msapi"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
@@ -15,7 +15,7 @@ import (
 // Config represents plugin configuration
 type Config struct {
 	Teleport   lib.TeleportConfig
-	Recipients config.RecipientsMap `toml:"role_to_recipients"`
+	Recipients common.RecipientsMap `toml:"role_to_recipients"`
 	Log        logger.Config
 	MSAPI      msapi.Config `toml:"msapi"`
 	Preload    bool         `toml:"preload"`
