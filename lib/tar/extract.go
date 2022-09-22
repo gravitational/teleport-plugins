@@ -22,6 +22,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/gravitational/teleport-plugins/lib/stringset"
@@ -116,6 +117,11 @@ func Extract(reader io.Reader, options ExtractOptions) error {
 
 		outFilePath := path.Join(outDir, outFileName)
 		outFilePerm := os.FileMode(header.Mode).Perm()
+
+		// fail if the outFilePath is outside outDir, see the "zip slip" vulnerability
+		if !strings.HasPrefix(filepath.Clean(outFilePath), filepath.Clean(outDir)+string(os.PathSeparator)) {
+			return trace.Errorf("extraction target outside the root: %s", header.Name)
+		}
 		outFile, err := os.OpenFile(outFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, outFilePerm)
 		if err != nil {
 			return trace.Wrap(err)
