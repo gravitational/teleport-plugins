@@ -28,11 +28,15 @@ const (
 	handlerTimeout = time.Second * 5
 )
 
+// BaseApp is responsible for handling all the access-request logic.
+// It will start a Teleport client, listen for events and treat them.
+// It also handles signals and watches its thread.
+// To instantiate a new BaseApp, use NewApp()
 type BaseApp[T PluginConfiguration] struct {
 	PluginName string
-	ApiClient  *client.Client
-	Bot        MessagingBot
-	MainJob    lib.ServiceJob
+	apiClient  *client.Client
+	bot        MessagingBot
+	mainJob    lib.ServiceJob
 	pd         *pd.CompareAndSwap[GenericPluginData]
 	Conf       T
 	NewBot     func(T, string, string) (MessagingBot, error)
@@ -40,14 +44,14 @@ type BaseApp[T PluginConfiguration] struct {
 	*lib.Process
 }
 
-// NewApp creates a new base app and initialize its main job
+// NewApp creates a new BaseApp and initialize its main job
 func NewApp[T PluginConfiguration](conf T, pluginName string, newBot BotFactory[T]) *BaseApp[T] {
 	app := BaseApp[T]{
 		PluginName: pluginName,
 		Conf:       conf,
 		NewBot:     newBot,
 	}
-	app.MainJob = lib.NewServiceJob(app.run)
+	app.mainJob = lib.NewServiceJob(app.run)
 	return &app
 }
 
@@ -55,25 +59,25 @@ func NewApp[T PluginConfiguration](conf T, pluginName string, newBot BotFactory[
 func (a *BaseApp[T]) Run(ctx context.Context) error {
 	// Initialize the process.
 	a.Process = lib.NewProcess(ctx)
-	a.SpawnCriticalJob(a.MainJob)
+	a.SpawnCriticalJob(a.mainJob)
 	<-a.Process.Done()
 	return a.Err()
 }
 
 // Err returns the error app finished with.
 func (a *BaseApp[T]) Err() error {
-	return trace.Wrap(a.MainJob.Err())
+	return trace.Wrap(a.mainJob.Err())
 }
 
 // WaitReady waits for http and watcher service to start up.
 func (a *BaseApp[T]) WaitReady(ctx context.Context) (bool, error) {
-	return a.MainJob.WaitReady(ctx)
+	return a.mainJob.WaitReady(ctx)
 }
 
 func (a *BaseApp[T]) checkTeleportVersion(ctx context.Context) (proto.PingResponse, error) {
 	log := logger.Get(ctx)
 	log.Debug("Checking Teleport server version")
-	pong, err := a.ApiClient.WithCallOptions(grpc.WaitForReady(true)).Ping(ctx)
+	pong, err := a.apiClient.WithCallOptions(grpc.WaitForReady(true)).Ping(ctx)
 	if err != nil {
 		if trace.IsNotImplemented(err) {
 			return pong, trace.Wrap(err, "server version must be at least %s", minServerVersion)
@@ -85,6 +89,7 @@ func (a *BaseApp[T]) checkTeleportVersion(ctx context.Context) (proto.PingRespon
 	return pong, trace.Wrap(err)
 }
 
+// initTeleport creates a Teleport client and validates Teleport connectivity.
 func (a *BaseApp[T]) initTeleport(ctx context.Context, conf PluginConfiguration) (clusterName, webProxyAddr string, err error) {
 	var (
 		pong proto.PingResponse
@@ -92,7 +97,7 @@ func (a *BaseApp[T]) initTeleport(ctx context.Context, conf PluginConfiguration)
 
 	bk := grpcbackoff.DefaultConfig
 	bk.MaxDelay = grpcBackoffMaxDelay
-	if a.ApiClient, err = client.New(ctx, client.Config{
+	if a.apiClient, err = client.New(ctx, client.Config{
 		Addrs:       conf.GetTeleportConfig().GetAddrs(),
 		Credentials: conf.GetTeleportConfig().Credentials(),
 		DialOpts: []grpc.DialOption{
@@ -114,7 +119,9 @@ func (a *BaseApp[T]) initTeleport(ctx context.Context, conf PluginConfiguration)
 	return pong.ClusterName, webProxyAddr, nil
 }
 
-func (a *BaseApp[T]) OnWatcherEvent(ctx context.Context, event types.Event) error {
+// onWatcherEvent is called for every cluster Event. It will filter out non-access-request events and
+// call onPendingRequest, onResolvedRequest and on DeletedRequest depending on the event.
+func (a *BaseApp[T]) onWatcherEvent(ctx context.Context, event types.Event) error {
 	if kind := event.Resource.GetKind(); kind != types.KindAccessRequest {
 		return trace.Errorf("unexpected kind %s", kind)
 	}
@@ -163,6 +170,7 @@ func (a *BaseApp[T]) OnWatcherEvent(ctx context.Context, event types.Event) erro
 	}
 }
 
+// run starts the event watcher job and blocks utils it stops
 func (a *BaseApp[T]) run(ctx context.Context) error {
 	var err error
 
@@ -172,12 +180,12 @@ func (a *BaseApp[T]) run(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 	watcherJob := watcherjob.NewJob(
-		a.ApiClient,
+		a.apiClient,
 		watcherjob.Config{
 			Watch:            types.Watch{Kinds: []types.WatchKind{{Kind: types.KindAccessRequest}}},
 			EventFuncTimeout: handlerTimeout,
 		},
-		a.OnWatcherEvent,
+		a.onWatcherEvent,
 	)
 	a.SpawnCriticalJob(watcherJob)
 	ok, err := watcherJob.WaitReady(ctx)
@@ -185,7 +193,7 @@ func (a *BaseApp[T]) run(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	a.MainJob.SetReady(ok)
+	a.mainJob.SetReady(ok)
 	if ok {
 		log.Info("Plugin is ready")
 	} else {
@@ -207,13 +215,13 @@ func (a *BaseApp[T]) init(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	a.Bot, err = a.NewBot(a.Conf, clusterName, webProxyAddr)
+	a.bot, err = a.NewBot(a.Conf, clusterName, webProxyAddr)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
 	a.pd = pd.NewCAS(
-		a.ApiClient,
+		a.apiClient,
 		a.PluginName,
 		types.KindAccessRequest,
 		EncodePluginData,
@@ -221,7 +229,7 @@ func (a *BaseApp[T]) init(ctx context.Context) error {
 	)
 
 	log.Debug("Starting API health check...")
-	if err = a.Bot.HealthCheck(ctx); err != nil {
+	if err = a.bot.HealthCheck(ctx); err != nil {
 		return trace.Wrap(err, "API health check failed")
 	}
 
@@ -302,8 +310,10 @@ func (a *BaseApp[T]) onDeletedRequest(ctx context.Context, reqID string) error {
 	return a.updateMessages(ctx, reqID, pd.ResolvedExpired, "", nil)
 }
 
+// broadcastMessages sends nessages to each recipient for an access-request.
+// This method is only called when for new access-requests.
 func (a *BaseApp[T]) broadcastMessages(ctx context.Context, channels []string, reqID string, reqData pd.AccessRequestData) error {
-	sentMessages, err := a.Bot.Broadcast(ctx, channels, reqID, reqData)
+	sentMessages, err := a.bot.Broadcast(ctx, channels, reqID, reqData)
 	if len(sentMessages) == 0 && err != nil {
 		return trace.Wrap(err)
 	}
@@ -325,6 +335,8 @@ func (a *BaseApp[T]) broadcastMessages(ctx context.Context, channels []string, r
 	return trace.Wrap(err)
 }
 
+// postReviewReplies lists and updates existing messages belonging to an access request.
+// Posting reviews is done both by updating the original message and by replying in thread if possible.
 func (a *BaseApp[T]) postReviewReplies(ctx context.Context, reqID string, reqReviews []types.AccessReview) error {
 	var oldCount int
 
@@ -361,7 +373,7 @@ func (a *BaseApp[T]) postReviewReplies(ctx context.Context, reqID string, reqRev
 	for _, data := range pd.SentMessages {
 		ctx, _ = logger.WithFields(ctx, logger.Fields{"slack_channel": data.ChannelID, "slack_timestamp": data.MessageID})
 		for _, review := range slice {
-			if err := a.Bot.PostReviewReply(ctx, data.ChannelID, data.MessageID, review); err != nil {
+			if err := a.bot.PostReviewReply(ctx, data.ChannelID, data.MessageID, review); err != nil {
 				errors = append(errors, err)
 			}
 		}
@@ -369,6 +381,9 @@ func (a *BaseApp[T]) postReviewReplies(ctx context.Context, reqID string, reqRev
 	return trace.NewAggregate(errors...)
 }
 
+// getMessageRecipients takes an access request and returns a list of channelIDs that should be messaged.
+// channelIDs can represent any communication channel depending on the MessagingBot implementation:
+// a public channel, a private one, or a user direct message channel.
 func (a *BaseApp[T]) getMessageRecipients(ctx context.Context, req types.AccessRequest) []string {
 	log := logger.Get(ctx)
 
@@ -376,19 +391,19 @@ func (a *BaseApp[T]) getMessageRecipients(ctx context.Context, req types.AccessR
 	// This can happen if this set contains the channel `C` and the email for channel `C`.
 	channelSet := stringset.New()
 
-	validEmaislSuggReviewers := []string{}
+	validEmailSuggReviewers := []string{}
 	for _, reviewer := range req.GetSuggestedReviewers() {
 		if !lib.IsEmail(reviewer) {
 			log.Warningf("Failed to notify a suggested reviewer: %q does not look like a valid email", reviewer)
 			continue
 		}
 
-		validEmaislSuggReviewers = append(validEmaislSuggReviewers, reviewer)
+		validEmailSuggReviewers = append(validEmailSuggReviewers, reviewer)
 	}
 
-	recipients := a.Conf.GetRecipients().GetRecipientsFor(req.GetRoles(), validEmaislSuggReviewers)
+	recipients := a.Conf.GetRecipients().GetRecipientsFor(req.GetRoles(), validEmailSuggReviewers)
 	for _, recipient := range recipients {
-		channel, err := a.Bot.FetchRecipient(ctx, recipient)
+		channel, err := a.bot.FetchRecipient(ctx, recipient)
 		if err != nil {
 			// Something wrong happened, we log the error and continue to treat valid recipients
 			log.Warning(err)
@@ -429,7 +444,7 @@ func (a *BaseApp[T]) updateMessages(ctx context.Context, reqID string, tag pd.Re
 	}
 
 	reqData, sentMessages := pluginData.AccessRequestData, pluginData.SentMessages
-	if err := a.Bot.UpdateMessages(ctx, reqID, reqData, sentMessages, reviews); err != nil {
+	if err := a.bot.UpdateMessages(ctx, reqID, reqData, sentMessages, reviews); err != nil {
 		return trace.Wrap(err)
 	}
 

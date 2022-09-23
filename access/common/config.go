@@ -24,7 +24,9 @@ type BaseConfig struct {
 	Log        logger.Config
 }
 
-// GenericAPIConfig holds Slack-specific configuration options.
+// GenericAPIConfig holds common configuration use by a messaging service.
+// MessagingBots requiring more custom configuration (MSTeams for example) can
+// implement their own APIConfig instead.
 type GenericAPIConfig struct {
 	Token string
 	// DELETE IN 11.0.0 (Joerger) - use "role_to_recipients["*"]" instead
