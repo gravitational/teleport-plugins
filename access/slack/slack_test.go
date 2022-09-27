@@ -301,7 +301,7 @@ func (s *SlackSuite) TestRecipientsConfig() {
 
 	reviewer1 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
 	reviewer2 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer2}})
-	s.appConfig.Recipients = common.RecipientsMap{
+	s.appConfig.Recipients = common.RawRecipientsMap{
 		types.Wildcard: []string{reviewer2.Profile.Email, reviewer1.ID},
 	}
 

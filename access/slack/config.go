@@ -80,7 +80,7 @@ func (c *SlackConfig) CheckAndSetDefaults() error {
 			return trace.BadParameter("provide either slack.recipients or role_to_recipients, not both.")
 		}
 
-		c.Recipients = common.RecipientsMap{
+		c.Recipients = common.RawRecipientsMap{
 			types.Wildcard: c.Slack.Recipients,
 		}
 	}

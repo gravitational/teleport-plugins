@@ -158,7 +158,7 @@ func (a *App) initBot(ctx context.Context) error {
 
 	log.Info("Preloading recipient data...")
 
-	for _, recipient := range a.conf.Recipients.GetAllRecipients() {
+	for _, recipient := range a.conf.Recipients.GetAllRawRecipients() {
 		recipientData, err := a.bot.FetchRecipient(ctx, recipient)
 		if err != nil {
 			return trace.Wrap(err)
@@ -456,7 +456,7 @@ func (a *App) updateMessages(ctx context.Context, reqID string, tag pd.Resolutio
 func (a *App) getMessageRecipients(ctx context.Context, req types.AccessRequest) []string {
 	log := logger.Get(ctx)
 
-	// We receive a set from GetRecipientsFor but we still might end up with duplicate channel names.
+	// We receive a set from GetRawRecipientsFor but we still might end up with duplicate channel names.
 	// This can happen if this set contains the channel `C` and the email for channel `C`.
 	recipientSet := stringset.New()
 
@@ -470,7 +470,7 @@ func (a *App) getMessageRecipients(ctx context.Context, req types.AccessRequest)
 		validEmailsSuggReviewers = append(validEmailsSuggReviewers, reviewer)
 	}
 
-	recipients := a.conf.Recipients.GetRecipientsFor(req.GetRoles(), validEmailsSuggReviewers)
+	recipients := a.conf.Recipients.GetRawRecipientsFor(req.GetRoles(), validEmailsSuggReviewers)
 	for _, recipient := range recipients {
 		if recipient != "" {
 			recipientSet.Add(recipient)

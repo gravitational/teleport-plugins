@@ -288,7 +288,7 @@ func (s *TeamsSuite) TestRecipientsConfig() {
 
 	reviewer1 := s.mockAPI.StoreUser(msapi.User{Mail: s.userNames.reviewer1})
 	reviewer2 := s.mockAPI.StoreUser(msapi.User{Mail: s.userNames.reviewer2})
-	s.appConfig.Recipients = common.RecipientsMap{
+	s.appConfig.Recipients = common.RawRecipientsMap{
 		types.Wildcard: []string{reviewer2.Mail, reviewer1.ID},
 	}
 

@@ -16,7 +16,7 @@ func TestRecipients(t *testing.T) {
 		desc             string
 		in               string
 		expectErr        require.ErrorAssertionFunc
-		expectRecipients common.RecipientsMap
+		expectRecipients common.RawRecipientsMap
 	}{
 		{
 			desc: "test recipients",
@@ -25,7 +25,7 @@ func TestRecipients(t *testing.T) {
 			token = "token"
 			recipients = ["dev-channel","admin-channel"]
 			`,
-			expectRecipients: common.RecipientsMap{
+			expectRecipients: common.RawRecipientsMap{
 				types.Wildcard: []string{"dev-channel", "admin-channel"},
 			},
 		},
@@ -39,7 +39,7 @@ func TestRecipients(t *testing.T) {
 			"dev" = ["dev-channel","admin-channel"]
 			"*" = "admin-channel"
 			`,
-			expectRecipients: common.RecipientsMap{
+			expectRecipients: common.RawRecipientsMap{
 				"dev":          []string{"dev-channel", "admin-channel"},
 				types.Wildcard: []string{"admin-channel"},
 			},

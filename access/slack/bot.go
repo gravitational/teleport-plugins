@@ -119,15 +119,15 @@ func (b SlackBot) CheckHealth(ctx context.Context) error {
 }
 
 // Broadcast posts request info to Slack with action buttons.
-func (b SlackBot) Broadcast(ctx context.Context, channels []string, reqID string, reqData pd.AccessRequestData) (common.SentMessages, error) {
+func (b SlackBot) Broadcast(ctx context.Context, recipients []common.Recipient, reqID string, reqData pd.AccessRequestData) (common.SentMessages, error) {
 	var data common.SentMessages
 	var errors []error
 
-	for _, channel := range channels {
+	for _, recipient := range recipients {
 		var result ChatMsgResponse
 		_, err := b.client.NewRequest().
 			SetContext(ctx).
-			SetBody(SlackMsg{Msg: Msg{Channel: channel}, BlockItems: b.slackMsgSections(reqID, reqData)}).
+			SetBody(SlackMsg{Msg: Msg{Channel: recipient.ID}, BlockItems: b.slackMsgSections(reqID, reqData)}).
 			SetResult(&result).
 			Post("chat.postMessage")
 		if err != nil {

@@ -78,7 +78,7 @@ func (c *DiscordConfig) CheckAndSetDefaults() error {
 			return trace.BadParameter("provide either discord.recipients or role_to_recipients, not both.")
 		}
 
-		c.Recipients = common.RecipientsMap{
+		c.Recipients = common.RawRecipientsMap{
 			types.Wildcard: c.Discord.Recipients,
 		}
 	}

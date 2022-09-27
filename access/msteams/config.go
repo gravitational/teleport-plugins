@@ -15,7 +15,7 @@ import (
 // Config represents plugin configuration
 type Config struct {
 	Teleport   lib.TeleportConfig
-	Recipients common.RecipientsMap `toml:"role_to_recipients"`
+	Recipients common.RawRecipientsMap `toml:"role_to_recipients"`
 	Log        logger.Config
 	MSAPI      msapi.Config `toml:"msapi"`
 	Preload    bool         `toml:"preload"`

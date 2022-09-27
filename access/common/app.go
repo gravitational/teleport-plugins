@@ -1,9 +1,24 @@
+/*
+Copyright 2022 Gravitational, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package common
 
 import (
 	"context"
 	pd "github.com/gravitational/teleport-plugins/lib/plugindata"
-	"github.com/gravitational/teleport-plugins/lib/stringset"
 	"github.com/gravitational/teleport-plugins/lib/watcherjob"
 	"github.com/gravitational/teleport/api/types"
 	grpcbackoff "google.golang.org/grpc/backoff"
@@ -254,8 +269,8 @@ func (a *BaseApp[T]) onPendingRequest(ctx context.Context, req types.AccessReque
 		}
 
 		// This is a new access request, we should create new messages
-		if channels := a.getMessageRecipients(ctx, req); len(channels) > 0 {
-			if err := a.broadcastMessages(ctx, channels, reqID, reqData); err != nil {
+		if recipients := a.getMessageRecipients(ctx, req); len(recipients) > 0 {
+			if err := a.broadcastMessages(ctx, recipients, reqID, reqData); err != nil {
 				return trace.Wrap(err)
 			}
 		} else {
@@ -311,8 +326,8 @@ func (a *BaseApp[T]) onDeletedRequest(ctx context.Context, reqID string) error {
 
 // broadcastMessages sends nessages to each recipient for an access-request.
 // This method is only called when for new access-requests.
-func (a *BaseApp[T]) broadcastMessages(ctx context.Context, channels []string, reqID string, reqData pd.AccessRequestData) error {
-	sentMessages, err := a.bot.Broadcast(ctx, channels, reqID, reqData)
+func (a *BaseApp[T]) broadcastMessages(ctx context.Context, recipients []Recipient, reqID string, reqData pd.AccessRequestData) error {
+	sentMessages, err := a.bot.Broadcast(ctx, recipients, reqID, reqData)
 	if len(sentMessages) == 0 && err != nil {
 		return trace.Wrap(err)
 	}
@@ -383,12 +398,12 @@ func (a *BaseApp[T]) postReviewReplies(ctx context.Context, reqID string, reqRev
 // getMessageRecipients takes an access request and returns a list of channelIDs that should be messaged.
 // channelIDs can represent any communication channel depending on the MessagingBot implementation:
 // a public channel, a private one, or a user direct message channel.
-func (a *BaseApp[T]) getMessageRecipients(ctx context.Context, req types.AccessRequest) []string {
+func (a *BaseApp[T]) getMessageRecipients(ctx context.Context, req types.AccessRequest) []Recipient {
 	log := logger.Get(ctx)
 
-	// We receive a set from GetRecipientsFor but we still might end up with duplicate channel names.
+	// We receive a set from GetRawRecipientsFor but we still might end up with duplicate channel names.
 	// This can happen if this set contains the channel `C` and the email for channel `C`.
-	channelSet := stringset.New()
+	recipientSet := NewRecipientSet()
 
 	validEmailSuggReviewers := []string{}
 	for _, reviewer := range req.GetSuggestedReviewers() {
@@ -399,19 +414,18 @@ func (a *BaseApp[T]) getMessageRecipients(ctx context.Context, req types.AccessR
 
 		validEmailSuggReviewers = append(validEmailSuggReviewers, reviewer)
 	}
-
-	recipients := a.Conf.GetRecipients().GetRecipientsFor(req.GetRoles(), validEmailSuggReviewers)
-	for _, recipient := range recipients {
-		channel, err := a.bot.FetchRecipient(ctx, recipient)
+	rawRecipients := a.Conf.GetRecipients().GetRawRecipientsFor(req.GetRoles(), validEmailSuggReviewers)
+	for _, rawRecipient := range rawRecipients {
+		recipient, err := a.bot.FetchRecipient(ctx, rawRecipient)
 		if err != nil {
-			// Something wrong happened, we log the error and continue to treat valid recipients
+			// Something wrong happened, we log the error and continue to treat valid rawRecipients
 			log.Warning(err)
 		} else {
-			channelSet.Add(channel.ID)
+			recipientSet.Add(*recipient)
 		}
 	}
 
-	return channelSet.ToSlice()
+	return recipientSet.ToSlice()
 }
 
 // updateMessages updates the messages status and adds the resolve reason.

@@ -23,10 +23,10 @@ import (
 
 type PluginConfiguration interface {
 	GetTeleportConfig() lib.TeleportConfig
-	GetRecipients() RecipientsMap
+	GetRecipients() RawRecipientsMap
 }
 
-func (c BaseConfig) GetRecipients() RecipientsMap {
+func (c BaseConfig) GetRecipients() RawRecipientsMap {
 	return c.Recipients
 }
 
@@ -36,7 +36,7 @@ func (c BaseConfig) GetTeleportConfig() lib.TeleportConfig {
 
 type BaseConfig struct {
 	Teleport   lib.TeleportConfig
-	Recipients RecipientsMap `toml:"role_to_recipients"`
+	Recipients RawRecipientsMap `toml:"role_to_recipients"`
 	Log        logger.Config
 }
 

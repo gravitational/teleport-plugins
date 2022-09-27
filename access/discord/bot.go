@@ -117,22 +117,22 @@ func (b DiscordBot) CheckHealth(ctx context.Context) error {
 }
 
 // Broadcast posts request info to Discord.
-func (b DiscordBot) Broadcast(ctx context.Context, channels []string, reqID string, reqData pd.AccessRequestData) (common.SentMessages, error) {
+func (b DiscordBot) Broadcast(ctx context.Context, recipients []common.Recipient, reqID string, reqData pd.AccessRequestData) (common.SentMessages, error) {
 	var data common.SentMessages
 	var errors []error
 
-	for _, channel := range channels {
+	for _, recipient := range recipients {
 		var result ChatMsgResponse
 		_, err := b.client.NewRequest().
 			SetContext(ctx).
-			SetBody(DiscordMsg{Msg: Msg{Channel: channel}, Text: b.discordMsgText(reqID, reqData, nil)}).
+			SetBody(DiscordMsg{Msg: Msg{Channel: recipient.ID}, Text: b.discordMsgText(reqID, reqData, nil)}).
 			SetResult(&result).
-			Post("/channels/" + channel + "/messages")
+			Post("/channels/" + recipient.ID + "/messages")
 		if err != nil {
 			errors = append(errors, trace.Wrap(err))
 			continue
 		}
-		data = append(data, common.MessageData{ChannelID: channel, MessageID: result.DiscordID})
+		data = append(data, common.MessageData{ChannelID: recipient.ID, MessageID: result.DiscordID})
 
 	}
 

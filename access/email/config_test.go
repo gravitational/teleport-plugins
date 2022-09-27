@@ -33,7 +33,7 @@ func TestRecipients(t *testing.T) {
 		desc             string
 		in               string
 		expectErr        require.ErrorAssertionFunc
-		expectRecipients common.RecipientsMap
+		expectRecipients common.RawRecipientsMap
 	}{
 		{
 			desc: "test delivery recipients",
@@ -45,7 +45,7 @@ func TestRecipients(t *testing.T) {
             sender = "email@example.org"
 			recipients = ["email1@example.org","email2@example.org"]
 			`,
-			expectRecipients: common.RecipientsMap{
+			expectRecipients: common.RawRecipientsMap{
 				types.Wildcard: []string{"email1@example.org", "email2@example.org"},
 			},
 		},
@@ -62,7 +62,7 @@ func TestRecipients(t *testing.T) {
 			"dev" = ["dev@example.org","sre@example.org"]
 			"*" = "admin@example.org"
 			`,
-			expectRecipients: common.RecipientsMap{
+			expectRecipients: common.RawRecipientsMap{
 				"dev":          []string{"dev@example.org", "sre@example.org"},
 				types.Wildcard: []string{"admin@example.org"},
 			},
