@@ -37,9 +37,9 @@ type BaseApp[T PluginConfiguration] struct {
 	apiClient  *client.Client
 	bot        MessagingBot
 	mainJob    lib.ServiceJob
-	pd         *pd.CompareAndSwap[GenericPluginData]
+	pluginData *pd.CompareAndSwap[GenericPluginData]
 	Conf       T
-	NewBot     func(T, string, string) (MessagingBot, error)
+	NewBot     BotFactory[T]
 
 	*lib.Process
 }
@@ -82,8 +82,7 @@ func (a *BaseApp[T]) checkTeleportVersion(ctx context.Context) (proto.PingRespon
 		if trace.IsNotImplemented(err) {
 			return pong, trace.Wrap(err, "server version must be at least %s", minServerVersion)
 		}
-		log.Error("Unable to get Teleport server version")
-		return pong, trace.Wrap(err)
+		return pong, trace.Wrap(err, "Unable to get Teleport server version")
 	}
 	err = lib.AssertServerVersion(pong, minServerVersion)
 	return pong, trace.Wrap(err)
@@ -220,7 +219,7 @@ func (a *BaseApp[T]) init(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	a.pd = pd.NewCAS(
+	a.pluginData = pd.NewCAS(
 		a.apiClient,
 		a.PluginName,
 		types.KindAccessRequest,
@@ -229,7 +228,7 @@ func (a *BaseApp[T]) init(ctx context.Context) error {
 	)
 
 	log.Debug("Starting API health check...")
-	if err = a.bot.HealthCheck(ctx); err != nil {
+	if err = a.bot.CheckHealth(ctx); err != nil {
 		return trace.Wrap(err, "API health check failed")
 	}
 
@@ -247,7 +246,7 @@ func (a *BaseApp[T]) onPendingRequest(ctx context.Context, req types.AccessReque
 		RequestReason: req.GetRequestReason(),
 	}
 
-	_, err := a.pd.Create(ctx, reqID, GenericPluginData{AccessRequestData: reqData})
+	_, err := a.pluginData.Create(ctx, reqID, GenericPluginData{AccessRequestData: reqData})
 
 	if !trace.IsAlreadyExists(err) {
 		if err != nil {
@@ -319,15 +318,15 @@ func (a *BaseApp[T]) broadcastMessages(ctx context.Context, channels []string, r
 	}
 	for _, data := range sentMessages {
 		logger.Get(ctx).WithFields(logger.Fields{
-			"slack_channel":   data.ChannelID,
-			"slack_timestamp": data.MessageID,
-		}).Info("Successfully posted to Slack")
+			"channel_id": data.ChannelID,
+			"message_id": data.MessageID,
+		}).Info("Successfully posted messages")
 	}
 	if err != nil {
-		logger.Get(ctx).WithError(err).Error("Failed to post one or more messages to Slack")
+		logger.Get(ctx).WithError(err).Error("Failed to post one or more messages")
 	}
 
-	_, err = a.pd.Update(ctx, reqID, func(existing GenericPluginData) (GenericPluginData, error) {
+	_, err = a.pluginData.Update(ctx, reqID, func(existing GenericPluginData) (GenericPluginData, error) {
 		existing.SentMessages = sentMessages
 		return existing, nil
 	})
@@ -340,7 +339,7 @@ func (a *BaseApp[T]) broadcastMessages(ctx context.Context, channels []string, r
 func (a *BaseApp[T]) postReviewReplies(ctx context.Context, reqID string, reqReviews []types.AccessReview) error {
 	var oldCount int
 
-	pd, err := a.pd.Update(ctx, reqID, func(existing GenericPluginData) (GenericPluginData, error) {
+	pd, err := a.pluginData.Update(ctx, reqID, func(existing GenericPluginData) (GenericPluginData, error) {
 		sentMessages := existing.SentMessages
 		if len(sentMessages) == 0 {
 			// wait for the plugin data to be updated with SentMessages
@@ -371,7 +370,7 @@ func (a *BaseApp[T]) postReviewReplies(ctx context.Context, reqID string, reqRev
 
 	errors := make([]error, 0, len(slice))
 	for _, data := range pd.SentMessages {
-		ctx, _ = logger.WithFields(ctx, logger.Fields{"slack_channel": data.ChannelID, "slack_timestamp": data.MessageID})
+		ctx, _ = logger.WithFields(ctx, logger.Fields{"channel_id": data.ChannelID, "message_id": data.MessageID})
 		for _, review := range slice {
 			if err := a.bot.PostReviewReply(ctx, data.ChannelID, data.MessageID, review); err != nil {
 				errors = append(errors, err)
@@ -419,7 +418,7 @@ func (a *BaseApp[T]) getMessageRecipients(ctx context.Context, req types.AccessR
 func (a *BaseApp[T]) updateMessages(ctx context.Context, reqID string, tag pd.ResolutionTag, reason string, reviews []types.AccessReview) error {
 	log := logger.Get(ctx)
 
-	pluginData, err := a.pd.Update(ctx, reqID, func(existing GenericPluginData) (GenericPluginData, error) {
+	pluginData, err := a.pluginData.Update(ctx, reqID, func(existing GenericPluginData) (GenericPluginData, error) {
 		if len(existing.SentMessages) == 0 {
 			return GenericPluginData{}, trace.NotFound("plugin data not found")
 		}

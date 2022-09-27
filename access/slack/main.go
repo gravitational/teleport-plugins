@@ -79,7 +79,7 @@ func run(configPath string, debug bool) error {
 		logConfig.Severity = "debug"
 	}
 	if err = logger.Setup(logConfig); err != nil {
-		return err
+		return trace.Wrap(err)
 	}
 	if debug {
 		logger.Standard().Debugf("DEBUG logging enabled")

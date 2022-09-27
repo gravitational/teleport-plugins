@@ -707,7 +707,6 @@ func (s *SlackSuite) TestRace() {
 	<-process.Done()
 	require.NoError(t, raceErr)
 
-	time.Sleep(5 * time.Second)
 	assert.Equal(t, int32(2*s.raceNumber), threadMsgsCount)
 	threadMsgIDs.Range(func(key, value interface{}) bool {
 		next := true

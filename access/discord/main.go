@@ -38,9 +38,9 @@ func main() {
 	app := kingpin.New("teleport-discord", "Teleport plugin for access requests approval via Discord.")
 
 	app.Command("configure", "Prints an example .TOML configuration file.")
-	app.Command("version", "Prints teleport-slack version and exits.")
+	app.Command("version", "Prints teleport-discord version and exits.")
 
-	startCmd := app.Command("start", "Starts a the Teleport Slack plugin.")
+	startCmd := app.Command("start", "Starts a the Teleport Discord plugin.")
 	path := startCmd.Flag("config", "TOML config file path").
 		Short('c').
 		Default("/etc/teleport-discord.toml").
@@ -79,14 +79,14 @@ func run(configPath string, debug bool) error {
 		logConfig.Severity = "debug"
 	}
 	if err = logger.Setup(logConfig); err != nil {
-		return err
+		return trace.Wrap(err)
 	}
 	if debug {
 		logger.Standard().Debugf("DEBUG logging enabled")
 	}
 
 	if conf.Discord.Recipients != nil {
-		logger.Standard().Warn("The slack.recipients config option is deprecated, set role_to_recipients[\"*\"] instead for the same functionality")
+		logger.Standard().Warn("The discord.recipients config option is deprecated, set role_to_recipients[\"*\"] instead for the same functionality")
 	}
 
 	app := NewDiscordApp(*conf)

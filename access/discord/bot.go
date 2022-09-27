@@ -1,3 +1,19 @@
+/*
+Copyright 2022 Gravitational, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package main
 
 import (
@@ -30,7 +46,7 @@ type DiscordBot struct {
 }
 
 // NewDiscordBot initializes the new Discord message generator (DiscordBot)
-// takes SlackConfig as an argument.
+// takes DiscordConfig as an argument.
 func NewDiscordBot(conf DiscordConfig, clusterName, webProxyAddr string) (common.MessagingBot, error) {
 	var (
 		webProxyURL *url.URL
@@ -89,7 +105,7 @@ func onAfterResponseDiscord(_ *resty.Client, resp *resty.Response) error {
 	return trace.Errorf("Discord API returned error: %s (status: %d)", string(resp.Body()), resp.StatusCode())
 }
 
-func (b DiscordBot) HealthCheck(ctx context.Context) error {
+func (b DiscordBot) CheckHealth(ctx context.Context) error {
 	_, err := b.client.NewRequest().
 		SetContext(ctx).
 		Get("/users/@me")
@@ -100,7 +116,7 @@ func (b DiscordBot) HealthCheck(ctx context.Context) error {
 	return nil
 }
 
-// Broadcast posts request info to Slack with action buttons.
+// Broadcast posts request info to Discord.
 func (b DiscordBot) Broadcast(ctx context.Context, channels []string, reqID string, reqData pd.AccessRequestData) (common.SentMessages, error) {
 	var data common.SentMessages
 	var errors []error
