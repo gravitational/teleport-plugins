@@ -1,6 +1,18 @@
 # Set up a system-agnostic in-place sed command
 IS_GNU_SED = $(shell sed --version 1>/dev/null 2>&1 && echo true || echo false)
 
+DRONE ?= drone
+DRONE_REPO ?= gravitational/teleport-plugins
+DRONE_PROMOTE_ENV ?= production
+PLUGINS ?= teleport-event-handler \
+			teleport-jira \
+			teleport-mattermost \
+			teleport-msteams \
+			teleport-slack \
+			teleport-pagerduty \
+			teleport-email \
+			terraform-provider-teleport
+
 ifeq ($(IS_GNU_SED),true)
 	SED = sed -i
 else
@@ -209,6 +221,29 @@ update-tag:
 	git push origin terraform-provider-teleport-v$(VERSION)
 	git push origin v$(VERSION)
 
+# promote-tag executes Drone promotion pipeline for the plugins.
+#
+# It has to be run after tag builds triggered by the "update-tag" target have
+# been completed. Requires "drone" executable to be available and configured
+# to talk to our Drone cluster.
+#
+# To promote all plugins:
+#   VERSION=10.2.6 make promote-tag
+#
+# To promote a particular plugin:
+#   VERSION=10.2.6 PLUGINS=teleport-slack make promote-tag
+.PHONY: promote-tag
+promote-tag:
+	@test $(VERSION)
+	@for PLUGIN in $(PLUGINS); do \
+		BUILD=$$($(DRONE) build ls --status success --event tag --format "{{.Number}} {{.Ref}}" $(DRONE_REPO) | grep $${PLUGIN}-v$(VERSION) | cut -d ' ' -f1); \
+		if [ "$${BUILD}" = "" ]; then \
+			echo "Failed to find Drone build number for $${PLUGIN}-v$(VERSION)" && exit 1; \
+		else \
+			echo "\n\n --> Promoting build $${BUILD} for plugin $${PLUGIN}" to $(DRONE_PROMOTE_ENV); \
+			$(DRONE) build promote $(DRONE_REPO) $${BUILD} $(DRONE_PROMOTE_ENV); \
+		fi; \
+	done
 
 .PHONY: update-goversion
 update-goversion:
