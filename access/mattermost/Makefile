@@ -1,4 +1,4 @@
-VERSION=10.2.6
+VERSION=10.2.7-roman.1
 GO_VERSION=1.18.6
 
 BUILDDIR ?= build
