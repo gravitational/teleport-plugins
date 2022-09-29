@@ -100,3 +100,4 @@ func run(configPath string, debug bool) error {
 		app.Run(context.Background()),
 	)
 }
+
