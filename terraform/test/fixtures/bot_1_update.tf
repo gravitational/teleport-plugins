@@ -20,6 +20,9 @@ resource "teleport_bot" "test" {
   token_id = teleport_provision_token.bot_test.metadata.name
   roles = ["terraform"]
 
+  depends_on = [
+    teleport_provision_token.bot_test
+  ]
   traits = {
     logins1 = ["example"]
     logins2 = ["example"]
