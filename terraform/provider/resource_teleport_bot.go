@@ -33,6 +33,10 @@ import (
 func GenSchemaBot(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 	return tfsdk.Schema{
 		Attributes: map[string]tfsdk.Attribute{
+			"id": {
+				Type:     types.StringType,
+				Computed: true,
+			},
 			"name": {
 				Type:        types.StringType,
 				Required:    true,
@@ -82,6 +86,9 @@ func GenSchemaBot(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 					tfsdk.RequiresReplace(),
 				},
 			},
+			// Implementation note: This needs RequiresReplace() to handle
+			// updates properly but we aren't able to attach plan modifiers to
+			// fields from schema methods here. See ModifyPlan below.
 			"traits": tfschema.GenSchemaTraits(ctx),
 		},
 	}, nil
@@ -90,6 +97,7 @@ func GenSchemaBot(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 // Bot is a deserializes representation of the terraform state for this
 // resource.
 type Bot struct {
+	ID      types.String   `tfsdk:"id"`
 	Name    types.String   `tfsdk:"name"`
 	Roles   []types.String `tfsdk:"roles"`
 	TokenID types.String   `tfsdk:"token_id"`
@@ -169,6 +177,9 @@ func (r resourceTeleportBot) Create(ctx context.Context, req tfsdk.CreateResourc
 	plan.UserName = types.String{Value: response.UserName}
 	plan.RoleName = types.String{Value: response.RoleName}
 
+	// ID is for terraform-plugin-framework's acctests
+	plan.ID = types.String{Value: plan.Name.Value}
+
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -201,7 +212,15 @@ func (r resourceTeleportBot) Read(ctx context.Context, req tfsdk.ReadResourceReq
 
 func (r resourceTeleportBot) Update(ctx context.Context, req tfsdk.UpdateResourceRequest, resp *tfsdk.UpdateResourceResponse) {
 	// Nothing to do here: bots are currently immutable. In the future we'd
-	// ideally want to
+	// ideally want to add specific RPCs for desired mutable attributes, e.g.
+	// UpdateBotRoles(), UpdateBotToken(), etc.
+}
+
+func (r resourceTeleportBot) ModifyPlan(ctx context.Context, req tfsdk.ModifyResourcePlanRequest, resp *tfsdk.ModifyResourcePlanResponse) {
+	// Add .traits to RequiresReplace to ensure changes to this field trigger a
+	// replacement. We can't set it in the schema as the attribute is generated
+	// by a helper method.
+	resp.RequiresReplace = append(resp.RequiresReplace, path.Root("traits"))
 }
 
 func (r resourceTeleportBot) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
