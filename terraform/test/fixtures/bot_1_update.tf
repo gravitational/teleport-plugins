@@ -17,12 +17,13 @@ resource "teleport_provision_token" "bot_test" {
 
 resource "teleport_bot" "test" {
   name = local.bot_name
-  token_id = teleport_provision_token.bot_test.metadata.name
+  token_id = "bot-test"
   roles = ["terraform"]
 
   depends_on = [
     teleport_provision_token.bot_test
   ]
+
   traits = {
     logins1 = ["example"]
     logins2 = ["example"]
