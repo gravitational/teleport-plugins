@@ -24,5 +24,4 @@ resource "teleport_bot" "test" {
     logins1 = ["example"]
     logins2 = ["example"]
   }
-    
 }

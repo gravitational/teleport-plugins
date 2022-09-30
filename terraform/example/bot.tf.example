@@ -1,4 +1,4 @@
-# Teleport Provision Token resource
+# Teleport Machine ID Bot creation example
 
 locals {
   bot_name = "example"
