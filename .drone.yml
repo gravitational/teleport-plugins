@@ -301,7 +301,7 @@ steps:
       AWS_SECRET_ACCESS_KEY:
         from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
       AWS_ROLE:
-        from_secret: PLUGIN_BUILD_ROLE_STAGING
+        from_secret: PLUGIN_BUILD_STAGING_AWS_ROLE
     commands:
     - aws sts get-caller-identity
     - |-
@@ -375,7 +375,7 @@ steps:
       AWS_SECRET_ACCESS_KEY:
         from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
       AWS_ROLE:
-        from_secret: PLUGIN_BUILD_ROLE_STAGING
+        from_secret: PLUGIN_BUILD_STAGING_AWS_ROLE
     commands:
     - aws sts get-caller-identity
     - |-
@@ -1340,6 +1340,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 03c94d7d8c5ed871ef57dcc43a35358d359bfc650ae6855c83a34127dc198703
+hmac: a944a39d997d34da16afd17eb16845b4f3268e34213aad3a97a8bf713d9a5612
 
 ...
