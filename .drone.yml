@@ -362,7 +362,7 @@ trigger:
       - refs/tags/v*
 
 steps:
-  - name: "Helm: Package charts"
+  - name: Package charts
     image: alpine/helm:latest
     commands:
       - apk add --no-cache make
@@ -393,7 +393,7 @@ steps:
     - name: awsconfig
       path: /root/.aws
 
-  - name: "Helm: Publish charts to staging S3"
+  - name: Publish charts to staging S3
     image: amazon/aws-cli
     environment:
       AWS_S3_BUCKET:
@@ -1100,7 +1100,7 @@ steps:
     - unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
     - aws sts get-caller-identity
 
-  - name: "Helm: Download production chart repositories"
+  - name: Download production chart repositories
     image: amazon/aws-cli
     environment:
       AWS_S3_BUCKET:
@@ -1112,7 +1112,7 @@ steps:
       - mkdir -p packages
       - aws s3 sync s3://$AWS_S3_BUCKET/ packages/
 
-  - name: "Helm: Assume Staging AWS Role"
+  - name: Assume Staging AWS Role
     image: amazon/aws-cli
     environment:
       AWS_ACCESS_KEY_ID:
@@ -1138,7 +1138,7 @@ steps:
     - unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
     - aws sts get-caller-identity
 
-  - name: "Helm: Download staging chart repositories"
+  - name: Download staging chart repositories
     image: amazon/aws-cli
     environment:
       AWS_S3_BUCKET:
@@ -1149,7 +1149,7 @@ steps:
     commands:
       - aws s3 sync s3://$AWS_S3_BUCKET/ packages/
 
-  - name: "Helm: Generate index file"
+  - name: Generate index file
     image: alpine/helm:latest
     commands:
       - helm repo index packages/
@@ -1180,7 +1180,7 @@ steps:
     - unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
     - aws sts get-caller-identity
 
-  - name: "Helm: Publish chart repository to S3"
+  - name: Publish chart repository to S3
     image: amazon/aws-cli
     environment:
       AWS_S3_BUCKET:
@@ -1365,6 +1365,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 0fbd33ec093ebc9b57e568f2a4a4bc535d5f86aa838aa64ca96612feeca4f664
+hmac: 34bac6ffd47911002448ffd6b46754126c77f019c8b468acba47883c799d2ecc
 
 ...
