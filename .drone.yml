@@ -659,18 +659,41 @@ steps:
     commands:
       - git fetch --tags
 
-  - name: Build and push to ECR
-    image: docker:git
+  - name: Assume AWS Role
+    image: amazon/aws-cli
     environment:
       AWS_ACCESS_KEY_ID:
         from_secret: PLUGIN_BUILD_USER_STAGING_KEY
       AWS_SECRET_ACCESS_KEY:
         from_secret: PLUGIN_BUILD_USER_STAGING_SECRET
+      AWS_ROLE:
+        from_secret: PLUGIN_BUILD_STAGING_AWS_ROLE
+    volumes:
+      - name: awsconfig
+        path: /root/.aws
+    commands:
+    - aws sts get-caller-identity
+    - |-
+        printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
+          $(aws sts assume-role \
+            --role-arn "$AWS_ROLE" \
+            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
+            --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
+            --output text) \
+            > /root/.aws/credentials
+    - unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
+    - aws sts get-caller-identity
+
+  - name: Build and push to ECR
+    image: docker:git
+    environment:
       AWS_DEFAULT_REGION: us-west-2
       DOCKER_BUILDKIT: 1
     volumes:
       - name: dockersock
         path: /var/run
+      - name: awsconfig
+        path: /root/.aws
     commands:
       - apk add --no-cache make aws-cli
       - aws ecr get-login-password | docker login -u="AWS" --password-stdin 146628656107.dkr.ecr.us-west-2.amazonaws.com
@@ -686,6 +709,8 @@ services:
 
 volumes:
   - name: dockersock
+    temp: {}
+  - name: awsconfig
     temp: {}
 
 ---
@@ -1340,6 +1365,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: a944a39d997d34da16afd17eb16845b4f3268e34213aad3a97a8bf713d9a5612
+hmac: a68152b6d3d862d983b99ab06ba0da55d2068f23e3e6bb9b3835c2c45fbbd17c
 
 ...
