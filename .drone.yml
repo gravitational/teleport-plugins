@@ -524,7 +524,6 @@ steps:
       - ls -l .
 
   - name: Assume AWS Role
-    image: amazon/aws-cli
     environment:
       AWS_ACCESS_KEY_ID:
         from_secret: AWS_ACCESS_KEY_ID
@@ -759,7 +758,6 @@ steps:
       - ls -l .
 
   - name: Assume AWS Role
-    image: amazon/aws-cli
     environment:
       AWS_ACCESS_KEY_ID:
         from_secret: AWS_ACCESS_KEY_ID
