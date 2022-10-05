@@ -399,8 +399,7 @@ steps:
         from_secret: HELM_CHART_STAGING_BUCKET
       AWS_REGION: us-west-2
     commmands:
-    - cd packages
-    - aws s3 sync . s3://$AWS_S3_BUCKET/
+    - cd packages && aws s3 sync . s3://$AWS_S3_BUCKET/
     volumes:
     - name: awsconfig
       path: /root/.aws
@@ -467,8 +466,7 @@ steps:
         from_secret: AWS_S3_BUCKET
       AWS_REGION: us-west-2
     commmands:
-    - cd build
-    - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+    - cd build && aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
     volumes:
     - name: awsconfig
       path: /root/.aws
@@ -554,8 +552,7 @@ steps:
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
     commands:
       - export AWS_SHARED_CREDENTIALS_FILE="$TOOLCHAIN_DIR/credentials"
-      - cd build
-      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+      - cd build && aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
 
   - name: Clean up toolchains (post)
     environment:
@@ -627,8 +624,7 @@ steps:
         from_secret: AWS_S3_BUCKET
       AWS_REGION: us-west-2
     commmands:
-    - cd build
-    - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+    - cd build && aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
     volumes:
     - name: awsconfig
       path: /root/.aws
@@ -788,8 +784,7 @@ steps:
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
     commands:
       - export AWS_SHARED_CREDENTIALS_FILE="$TOOLCHAIN_DIR/credentials"
-      - cd build
-      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+      - cd build && aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
 
   - name: Clean up toolchains (post)
     environment:
@@ -1363,6 +1358,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: a68152b6d3d862d983b99ab06ba0da55d2068f23e3e6bb9b3835c2c45fbbd17c
+hmac: 3a4e57cc0c192e3c77ab4b3ecafc45dd1258d198783aa17198b817dfc116c6c5
 
 ...
