@@ -255,9 +255,10 @@ steps:
       AWS_S3_BUCKET:
         from_secret: AWS_S3_BUCKET
       AWS_REGION: us-west-2
-    commmands:
-    - cd build
-    - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+    commands:
+      - aws sts get-caller-identity
+      - cd build
+      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
     volumes:
     - name: awsconfig
       path: /root/.aws
@@ -398,7 +399,7 @@ steps:
       AWS_S3_BUCKET:
         from_secret: HELM_CHART_STAGING_BUCKET
       AWS_REGION: us-west-2
-    commmands:
+    commands:
     - cd packages
     - aws s3 sync . s3://$AWS_S3_BUCKET/
     volumes:
@@ -466,7 +467,7 @@ steps:
       AWS_S3_BUCKET:
         from_secret: AWS_S3_BUCKET
       AWS_REGION: us-west-2
-    commmands:
+    commands:
     - cd build
     - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
     volumes:
@@ -524,7 +525,6 @@ steps:
       - ls -l .
 
   - name: Assume AWS Role
-    image: amazon/aws-cli
     environment:
       AWS_ACCESS_KEY_ID:
         from_secret: AWS_ACCESS_KEY_ID
@@ -627,7 +627,7 @@ steps:
       AWS_S3_BUCKET:
         from_secret: AWS_S3_BUCKET
       AWS_REGION: us-west-2
-    commmands:
+    commands:
     - cd build
     - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
     volumes:
@@ -759,7 +759,6 @@ steps:
       - ls -l .
 
   - name: Assume AWS Role
-    image: amazon/aws-cli
     environment:
       AWS_ACCESS_KEY_ID:
         from_secret: AWS_ACCESS_KEY_ID
@@ -774,7 +773,7 @@ steps:
     - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
-            --role-arn "$aws_role" \
+            --role-arn "$AWS_ROLE" \
             --role-session-name $(echo "drone-${drone_repo}/${drone_build_number}" | sed "s|/|-|g") \
             --query "credentials.[accesskeyid,secretaccesskey,sessiontoken]" \
             --output text) \
@@ -1155,7 +1154,7 @@ steps:
     commands:
       - helm repo index packages/
 
-  - name: "Helm: Assume Production AWS Role"
+  - name: Reassume Production AWS Role
     image: amazon/aws-cli
     environment:
       AWS_ACCESS_KEY_ID:
@@ -1168,6 +1167,7 @@ steps:
       - name: awsconfig
         path: /root/.aws
     commands:
+    - rm /root/.aws/credentials
     - aws sts get-caller-identity
     - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
@@ -1365,6 +1365,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: a68152b6d3d862d983b99ab06ba0da55d2068f23e3e6bb9b3835c2c45fbbd17c
+hmac: 0fbd33ec093ebc9b57e568f2a4a4bc535d5f86aa838aa64ca96612feeca4f664
 
 ...
