@@ -223,6 +223,7 @@ steps:
       - cd build
       - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
       - ls -l .
+
   - name: Assume AWS Role
     image: amazon/aws-cli
     environment:
@@ -234,12 +235,11 @@ steps:
         from_secret: AWS_ROLE
     commands:
     - aws sts get-caller-identity
-    - SESSION_NAME=$(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g")
-    - |
+    - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
             --role-arn "$AWS_ROLE" \
-            --role-session-name "$SESSION_NAME" \
+            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
             --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
             --output text) \
             > /root/.aws/credentials
@@ -248,6 +248,7 @@ steps:
     volumes:
     - name: awsconfig
       path: /root/.aws
+
   - name: Upload to S3
     image: amazon/aws-cli
     environment:
@@ -291,6 +292,7 @@ steps:
     image: docker:git
     commands:
       - git fetch --tags
+
   - name: Assume AWS Role
     image: amazon/aws-cli
     environment:
@@ -302,12 +304,11 @@ steps:
         from_secret: PLUGIN_BUILD_ROLE_STAGING
     commands:
     - aws sts get-caller-identity
-    - SESSION_NAME=$(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g")
-    - |
+    - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
             --role-arn "$AWS_ROLE" \
-            --role-session-name "$SESSION_NAME" \
+            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
             --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
             --output text) \
             > /root/.aws/credentials
@@ -316,6 +317,7 @@ steps:
     volumes:
       - name: awsconfig
         path: /root/.aws
+
   - name: Build and push to ECR
     image: docker:git
     environment:
@@ -364,6 +366,7 @@ steps:
     commands:
       - apk add --no-cache make
       - make helm-package-charts
+
   - name: Assume AWS Role
     image: amazon/aws-cli
     environment:
@@ -375,12 +378,11 @@ steps:
         from_secret: PLUGIN_BUILD_ROLE_STAGING
     commands:
     - aws sts get-caller-identity
-    - SESSION_NAME=$(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g")
-    - |
+    - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
             --role-arn "$AWS_ROLE" \
-            --role-session-name "$SESSION_NAME" \
+            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
             --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
             --output text) \
             > /root/.aws/credentials
@@ -389,6 +391,7 @@ steps:
     volumes:
     - name: awsconfig
       path: /root/.aws
+
   - name: "Helm: Publish charts to staging S3"
     image: amazon/aws-cli
     environment:
@@ -431,6 +434,7 @@ steps:
       - cd build
       - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
       - ls -l .
+
   - name: Assume AWS Role
     image: amazon/aws-cli
     environment:
@@ -442,12 +446,11 @@ steps:
         from_secret: AWS_ROLE
     commands:
     - aws sts get-caller-identity
-    - SESSION_NAME=$(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g")
-    - |
+    - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
             --role-arn "$AWS_ROLE" \
-            --role-session-name "$SESSION_NAME" \
+            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
             --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
             --output text) \
             > /root/.aws/credentials
@@ -456,6 +459,7 @@ steps:
     volumes:
     - name: awsconfig
       path: /root/.aws
+
   - name: Upload to S3
     image: amazon/aws-cli
     environment:
@@ -532,12 +536,11 @@ steps:
     commands:
     - aws sts get-caller-identity
     - export AWS_SHARED_CREDENTIALS_FILE="$TOOLCHAIN_DIR/credentials"
-    - SESSION_NAME=$(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g")
-    - |
+    - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
             --role-arn "$AWS_ROLE" \
-            --role-session-name "$SESSION_NAME" \
+            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
             --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
             --output text) \
             > "$AWS_SHARED_CREDENTIALS_FILE"
@@ -604,12 +607,11 @@ steps:
         from_secret: AWS_ROLE
     commands:
     - aws sts get-caller-identity
-    - SESSION_NAME=$(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g")
-    - |
+    - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
             --role-arn "$AWS_ROLE" \
-            --role-session-name "$SESSION_NAME" \
+            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
             --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
             --output text) \
             > /root/.aws/credentials
@@ -744,13 +746,12 @@ steps:
     commands:
     - aws sts get-caller-identity
     - export AWS_SHARED_CREDENTIALS_FILE="$TOOLCHAIN_DIR/credentials"
-    - SESSION_NAME=$(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g")
-    - |
+    - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
-            --role-arn "$AWS_ROLE" \
-            --role-session-name "$SESSION_NAME" \
-            --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
+            --role-arn "$aws_role" \
+            --role-session-name $(echo "drone-${drone_repo}/${drone_build_number}" | sed "s|/|-|g") \
+            --query "credentials.[accesskeyid,secretaccesskey,sessiontoken]" \
             --output text) \
             > "$AWS_SHARED_CREDENTIALS_FILE"
     - unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
@@ -811,12 +812,11 @@ steps:
         path: /root/.aws
     commands:
     - aws sts get-caller-identity
-    - SESSION_NAME=$(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g")
-    - |
+    - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
             --role-arn "$AWS_ROLE" \
-            --role-session-name "$SESSION_NAME" \
+            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
             --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
             --output text) \
             > /root/.aws/credentials
@@ -847,12 +847,11 @@ steps:
     commands:
     - rm /root/.aws/credentials
     - aws sts get-caller-identity
-    - SESSION_NAME=$(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g")
-    - |
+    - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
             --role-arn "$AWS_ROLE" \
-            --role-session-name "$SESSION_NAME" \
+            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
             --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
             --output text) \
             > /root/.aws/credentials
@@ -915,12 +914,11 @@ steps:
         path: /root/.aws
     commands:
     - aws sts get-caller-identity
-    - SESSION_NAME=$(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g")
-    - |
+    - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
             --role-arn "$AWS_ROLE" \
-            --role-session-name "$SESSION_NAME" \
+            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
             --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
             --output text) \
             > /root/.aws/credentials
@@ -994,12 +992,11 @@ steps:
         path: /root/.aws
     commands:
     - aws sts get-caller-identity
-    - SESSION_NAME=$(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g")
-    - |
+    - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
             --role-arn "$AWS_ROLE" \
-            --role-session-name "$SESSION_NAME" \
+            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
             --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
             --output text) \
             > /root/.aws/credentials
@@ -1068,12 +1065,11 @@ steps:
         path: /root/.aws
     commands:
     - aws sts get-caller-identity
-    - SESSION_NAME=$(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g")
-    - |
+    - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
             --role-arn "$AWS_ROLE" \
-            --role-session-name "$SESSION_NAME" \
+            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
             --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
             --output text) \
             > /root/.aws/credentials
@@ -1107,12 +1103,11 @@ steps:
     commands:
     - rm /root/.aws/credentials
     - aws sts get-caller-identity
-    - SESSION_NAME=$(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g")
-    - |
+    - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
             --role-arn "$AWS_ROLE" \
-            --role-session-name "$SESSION_NAME" \
+            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
             --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
             --output text) \
             > /root/.aws/credentials
@@ -1149,12 +1144,11 @@ steps:
         path: /root/.aws
     commands:
     - aws sts get-caller-identity
-    - SESSION_NAME=$(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g")
-    - |
+    - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
             --role-arn "$AWS_ROLE" \
-            --role-session-name "$SESSION_NAME" \
+            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
             --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
             --output text) \
             > /root/.aws/credentials
@@ -1346,6 +1340,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 1249f431dda5ac8147b821e399fbb608cdd2fcf4bb95a67282e521bf2e41e305
+hmac: 03c94d7d8c5ed871ef57dcc43a35358d359bfc650ae6855c83a34127dc198703
 
 ...
