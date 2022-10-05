@@ -62,13 +62,24 @@ func GenSchemaBot(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 				Description: "The desired TTL for the token if one is created. If unset, a server default is used",
 			},
 			"token_id": {
-				Type:        types.StringType,
-				Optional:    true,
-				Computed:    true,
+				Type: types.StringType,
+				// Implementation note: the Terraform provider differs from the
+				// actual API here. `token_id` is technically optional and when
+				// unset, a new random token is created automatically. This
+				// behavior doesn't play nicely with Terraform's resource
+				// management, so we'll instead make it required. Users can use
+				// a `random_password` resource with `teleport_provision_token`
+				// to achieve a similar result. See also:
+				// `example/bot.tf.example`
+				Required:    true,
+				Sensitive:   true,
 				Description: "The bot joining token. If unset, a new random token is created and its name returned, otherwise a preexisting Bot token may be provided for IAM/OIDC joining.",
 
 				// TODO: Consider dropping RequiresReplace() in the future if a
-				// ResetBot() API becomes available.
+				// ResetBot() API becomes available to reset a bot's generation
+				// counter.
+				// See also:
+				// https://github.com/gravitational/teleport/issues/13091
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					tfsdk.RequiresReplace(),
 				},
@@ -81,7 +92,8 @@ func GenSchemaBot(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 				Description: "A list of roles the created bot should be allowed to assume via role impersonation.",
 
 				// TODO: Consider dropping RequiresReplace() in the future if a
-				// UpdateBotRoles() API becomes available.
+				// UpdateBotRoles() API becomes available that can modify the
+				// underlying bot user.
 				PlanModifiers: []tfsdk.AttributePlanModifier{
 					tfsdk.RequiresReplace(),
 				},
