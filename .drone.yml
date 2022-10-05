@@ -1148,7 +1148,7 @@ steps:
     commands:
       - helm repo index packages/
 
-  - name: Assume Production AWS Role
+  - name: Reassume Production AWS Role
     image: amazon/aws-cli
     environment:
       AWS_ACCESS_KEY_ID:
@@ -1161,6 +1161,7 @@ steps:
       - name: awsconfig
         path: /root/.aws
     commands:
+    - rm /root/.aws/credentials
     - aws sts get-caller-identity
     - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
@@ -1358,6 +1359,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 3a4e57cc0c192e3c77ab4b3ecafc45dd1258d198783aa17198b817dfc116c6c5
+hmac: 43738a112074edd2ed76ba60e3cf818fc5922b79836e2d58f2873011278c9d97
 
 ...
