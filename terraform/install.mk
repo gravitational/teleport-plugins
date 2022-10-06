@@ -1,4 +1,4 @@
-VERSION=11.0.0-dev-walt.5
+VERSION=11.0.0-dev-walt.6
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
