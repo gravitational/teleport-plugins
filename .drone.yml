@@ -624,7 +624,8 @@ steps:
         from_secret: AWS_S3_BUCKET
       AWS_REGION: us-west-2
     commmands:
-    - cd build && aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+    - cd build
+    - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
     volumes:
     - name: awsconfig
       path: /root/.aws
@@ -768,7 +769,7 @@ steps:
     - |-
         printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
           $(aws sts assume-role \
-            --role-arn "$aws_role" \
+            --role-arn "$AWS_ROLE" \
             --role-session-name $(echo "drone-${drone_repo}/${drone_build_number}" | sed "s|/|-|g") \
             --query "credentials.[accesskeyid,secretaccesskey,sessiontoken]" \
             --output text) \
@@ -1359,6 +1360,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 43738a112074edd2ed76ba60e3cf818fc5922b79836e2d58f2873011278c9d97
+hmac: 4d0b02a13a18b53e6d06952e28554f875ec00ff0971c2c8591531064a2797de3
 
 ...
