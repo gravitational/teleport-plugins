@@ -255,7 +255,7 @@ steps:
       AWS_S3_BUCKET:
         from_secret: AWS_S3_BUCKET
       AWS_REGION: us-west-2
-    commmands:
+    commands:
       - aws sts get-caller-identity
       - cd build
       - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
@@ -399,8 +399,9 @@ steps:
       AWS_S3_BUCKET:
         from_secret: HELM_CHART_STAGING_BUCKET
       AWS_REGION: us-west-2
-    commmands:
-    - cd packages && aws s3 sync . s3://$AWS_S3_BUCKET/
+    commands:
+    - cd packages
+    - aws s3 sync . s3://$AWS_S3_BUCKET/
     volumes:
     - name: awsconfig
       path: /root/.aws
@@ -466,8 +467,9 @@ steps:
       AWS_S3_BUCKET:
         from_secret: AWS_S3_BUCKET
       AWS_REGION: us-west-2
-    commmands:
-    - cd build && aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+    commands:
+    - cd build
+    - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
     volumes:
     - name: awsconfig
       path: /root/.aws
@@ -553,7 +555,8 @@ steps:
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
     commands:
       - export AWS_SHARED_CREDENTIALS_FILE="$TOOLCHAIN_DIR/credentials"
-      - cd build && aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+      - cd build
+      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
 
   - name: Clean up toolchains (post)
     environment:
@@ -624,7 +627,7 @@ steps:
       AWS_S3_BUCKET:
         from_secret: AWS_S3_BUCKET
       AWS_REGION: us-west-2
-    commmands:
+    commands:
     - cd build
     - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
     volumes:
@@ -786,7 +789,8 @@ steps:
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
     commands:
       - export AWS_SHARED_CREDENTIALS_FILE="$TOOLCHAIN_DIR/credentials"
-      - cd build && aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+      - cd build
+      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
 
   - name: Clean up toolchains (post)
     environment:
@@ -1361,6 +1365,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 3ed1c78c7f858c578a092ba5532dc93d9c1f0c68a111a3dd1c3c9ff46194f386
+hmac: 34bac6ffd47911002448ffd6b46754126c77f019c8b468acba47883c799d2ecc
 
 ...
