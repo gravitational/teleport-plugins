@@ -256,8 +256,9 @@ steps:
         from_secret: AWS_S3_BUCKET
       AWS_REGION: us-west-2
     commmands:
-    - cd build
-    - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
+      - aws sts get-caller-identity
+      - cd build
+      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
     volumes:
     - name: awsconfig
       path: /root/.aws
@@ -1360,6 +1361,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 4d0b02a13a18b53e6d06952e28554f875ec00ff0971c2c8591531064a2797de3
+hmac: 3ed1c78c7f858c578a092ba5532dc93d9c1f0c68a111a3dd1c3c9ff46194f386
 
 ...
