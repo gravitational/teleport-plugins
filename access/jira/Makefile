@@ -1,4 +1,4 @@
-VERSION=11.0.0-dev-walt.3
+VERSION=11.0.0-dev-walt.4
 GO_VERSION=1.18.6
 
 BUILDDIR ?= build
