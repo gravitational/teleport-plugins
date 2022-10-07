@@ -17,8 +17,11 @@ limitations under the License.
 package main
 
 import (
+	"net/http"
+	"net/url"
 	"strings"
 
+	"github.com/go-resty/resty/v2"
 	"github.com/gravitational/teleport-plugins/access/common"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport/api/types"
@@ -92,4 +95,46 @@ func (c *SlackConfig) CheckAndSetDefaults() error {
 	}
 
 	return nil
+}
+
+// NewBot initializes the new Slack message generator (SlackBot)
+// takes GenericAPIConfig as an argument.
+func (c *SlackConfig) NewBot(clusterName, webProxyAddr string) (common.MessagingBot, error) {
+	var (
+		webProxyURL *url.URL
+		err         error
+	)
+	if webProxyAddr != "" {
+		if webProxyURL, err = lib.AddrToURL(webProxyAddr); err != nil {
+			return SlackBot{}, trace.Wrap(err)
+		}
+	}
+
+	token := "Bearer " + c.Slack.Token
+
+	client := resty.
+		NewWithClient(&http.Client{
+			Timeout: slackHTTPTimeout,
+			Transport: &http.Transport{
+				MaxConnsPerHost:     slackMaxConns,
+				MaxIdleConnsPerHost: slackMaxConns,
+			},
+		}).
+		SetHeader("Content-Type", "application/json").
+		SetHeader("Accept", "application/json").
+		SetHeader("Authorization", token)
+
+	// APIURL parameter is set only in tests
+	if endpoint := c.Slack.APIURL; endpoint != "" {
+		client.SetHostURL(endpoint)
+	} else {
+		client.SetHostURL("https://slack.com/api/")
+		client.OnAfterResponse(onAfterResponseSlack)
+	}
+
+	return SlackBot{
+		client:      client,
+		clusterName: clusterName,
+		webProxyURL: webProxyURL,
+	}, nil
 }

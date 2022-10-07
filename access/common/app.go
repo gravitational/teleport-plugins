@@ -266,8 +266,9 @@ func (a *BaseApp) onPendingRequest(ctx context.Context, req types.AccessRequest)
 	}
 
 	_, err := a.pluginData.Create(ctx, reqID, GenericPluginData{AccessRequestData: reqData})
-	if trace.IsAlreadyExists(err) {
-		// This is a new access request, we should create new messages
+	switch {
+	case err == nil:
+		// This is a new access-request, we have to broadcast it first
 		if recipients := a.getMessageRecipients(ctx, req); len(recipients) > 0 {
 			if err := a.broadcastMessages(ctx, recipients, reqID, reqData); err != nil {
 				return trace.Wrap(err)
@@ -275,7 +276,10 @@ func (a *BaseApp) onPendingRequest(ctx context.Context, req types.AccessRequest)
 		} else {
 			log.Warning("No channel to post")
 		}
-	} else if err != nil {
+	case trace.IsAlreadyExists(err):
+		// The messages were already sent, nothing to do, we can update the reviews
+	default:
+		// This is an unexpected error, returning
 		return trace.Wrap(err)
 	}
 
