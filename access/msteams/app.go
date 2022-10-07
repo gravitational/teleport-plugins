@@ -8,6 +8,7 @@ import (
 	grpcbackoff "google.golang.org/grpc/backoff"
 
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/credentials"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	pd "github.com/gravitational/teleport-plugins/lib/plugindata"
 	"github.com/gravitational/teleport-plugins/lib/stringset"
@@ -89,6 +90,17 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 
 // init initializes the application
 func (a *App) init(ctx context.Context) error {
+	log := logger.Get(ctx)
+	if validCred, err := credentials.CheckIfExpired(a.conf.Teleport.Credentials()); err != nil {
+		log.Warn(err)
+		if !validCred {
+			return trace.BadParameter(
+				"No valid credentials found, this likely means credentials are expired. In this case, please sign new credentials and increase their TTL if needed.",
+			)
+		}
+		log.Info("At least one non-expired credential has been found, continuing startup")
+	}
+
 	bk := grpcbackoff.DefaultConfig
 	bk.MaxDelay = grpcBackoffMaxDelay
 
