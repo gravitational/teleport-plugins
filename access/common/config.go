@@ -26,18 +26,18 @@ type PluginConfiguration interface {
 	GetRecipients() RawRecipientsMap
 }
 
+type BaseConfig struct {
+	Teleport   lib.TeleportConfig
+	Recipients RawRecipientsMap `toml:"role_to_recipients"`
+	Log        logger.Config
+}
+
 func (c BaseConfig) GetRecipients() RawRecipientsMap {
 	return c.Recipients
 }
 
 func (c BaseConfig) GetTeleportConfig() lib.TeleportConfig {
 	return c.Teleport
-}
-
-type BaseConfig struct {
-	Teleport   lib.TeleportConfig
-	Recipients RawRecipientsMap `toml:"role_to_recipients"`
-	Log        logger.Config
 }
 
 // GenericAPIConfig holds common configuration use by a messaging service.

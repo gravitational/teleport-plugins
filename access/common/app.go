@@ -108,10 +108,6 @@ func (a *BaseApp[T]) checkTeleportVersion(ctx context.Context) (proto.PingRespon
 
 // initTeleport creates a Teleport client and validates Teleport connectivity.
 func (a *BaseApp[T]) initTeleport(ctx context.Context, conf PluginConfiguration) (clusterName, webProxyAddr string, err error) {
-	var (
-		pong proto.PingResponse
-	)
-
 	if validCred, err := credentials.CheckIfExpired(conf.GetTeleportConfig().Credentials()); err != nil {
 		log.Warn(err)
 		if !validCred {
@@ -135,7 +131,8 @@ func (a *BaseApp[T]) initTeleport(ctx context.Context, conf PluginConfiguration)
 		return "", "", trace.Wrap(err)
 	}
 
-	if pong, err = a.checkTeleportVersion(ctx); err != nil {
+	pong, err := a.checkTeleportVersion(ctx)
+	if err != nil {
 		return "", "", trace.Wrap(err)
 	}
 
@@ -169,9 +166,7 @@ func (a *BaseApp[T]) onWatcherEvent(ctx context.Context, event types.Event) erro
 		switch {
 		case req.GetState().IsPending():
 			err = a.onPendingRequest(ctx, req)
-		case req.GetState().IsApproved():
-			err = a.onResolvedRequest(ctx, req)
-		case req.GetState().IsDenied():
+		case req.GetState().IsApproved(), req.GetState().IsDenied():
 			err = a.onResolvedRequest(ctx, req)
 		default:
 			log.WithField("event", event).Warn("Unknown request state")
@@ -199,11 +194,9 @@ func (a *BaseApp[T]) onWatcherEvent(ctx context.Context, event types.Event) erro
 
 // run starts the event watcher job and blocks utils it stops
 func (a *BaseApp[T]) run(ctx context.Context) error {
-	var err error
-
 	log := logger.Get(ctx)
 
-	if err = a.init(ctx); err != nil {
+	if err := a.init(ctx); err != nil {
 		return trace.Wrap(err)
 	}
 	watcherJob := watcherjob.NewJob(
@@ -275,12 +268,7 @@ func (a *BaseApp[T]) onPendingRequest(ctx context.Context, req types.AccessReque
 	}
 
 	_, err := a.pluginData.Create(ctx, reqID, GenericPluginData{AccessRequestData: reqData})
-
-	if !trace.IsAlreadyExists(err) {
-		if err != nil {
-			return trace.Wrap(err)
-		}
-
+	if trace.IsAlreadyExists(err) {
 		// This is a new access request, we should create new messages
 		if recipients := a.getMessageRecipients(ctx, req); len(recipients) > 0 {
 			if err := a.broadcastMessages(ctx, recipients, reqID, reqData); err != nil {
@@ -289,6 +277,8 @@ func (a *BaseApp[T]) onPendingRequest(ctx context.Context, req types.AccessReque
 		} else {
 			log.Warning("No channel to post")
 		}
+	} else if err != nil {
+		return trace.Wrap(err)
 	}
 
 	// This is an already existing access request, we post reviews and update its status
@@ -307,14 +297,9 @@ func (a *BaseApp[T]) onPendingRequest(ctx context.Context, req types.AccessReque
 }
 
 func (a *BaseApp[T]) onResolvedRequest(ctx context.Context, req types.AccessRequest) error {
-	var replyErr error
-
 	// We always post review replies in thread. If the messaging service does not support
 	// threading this will do nothing
-	if err := a.postReviewReplies(ctx, req.GetName(), req.GetReviews()); err != nil {
-		replyErr = trace.Wrap(err)
-
-	}
+	replyErr := a.postReviewReplies(ctx, req.GetName(), req.GetReviews())
 
 	reason := req.GetResolveReason()
 	state := req.GetState()
