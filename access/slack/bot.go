@@ -45,9 +45,9 @@ type SlackBot struct {
 	webProxyURL *url.URL
 }
 
-// NewSlackBot initializes the new Slack message generator (SlackBot)
+// NewBot initializes the new Slack message generator (SlackBot)
 // takes GenericAPIConfig as an argument.
-func NewSlackBot(conf SlackConfig, clusterName, webProxyAddr string) (common.MessagingBot, error) {
+func (c *SlackConfig) NewBot(clusterName, webProxyAddr string) (common.MessagingBot, error) {
 	var (
 		webProxyURL *url.URL
 		err         error
@@ -58,7 +58,7 @@ func NewSlackBot(conf SlackConfig, clusterName, webProxyAddr string) (common.Mes
 		}
 	}
 
-	token := "Bearer " + conf.Slack.Token
+	token := "Bearer " + c.Slack.Token
 
 	client := resty.
 		NewWithClient(&http.Client{
@@ -73,7 +73,7 @@ func NewSlackBot(conf SlackConfig, clusterName, webProxyAddr string) (common.Mes
 		SetHeader("Authorization", token)
 
 	// APIURL parameter is set only in tests
-	if endpoint := conf.Slack.APIURL; endpoint != "" {
+	if endpoint := c.Slack.APIURL; endpoint != "" {
 		client.SetHostURL(endpoint)
 	} else {
 		client.SetHostURL("https://slack.com/api/")

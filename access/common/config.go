@@ -24,6 +24,7 @@ import (
 type PluginConfiguration interface {
 	GetTeleportConfig() lib.TeleportConfig
 	GetRecipients() RawRecipientsMap
+	NewBot(clusterName string, webProxyAddr string) (MessagingBot, error)
 }
 
 type BaseConfig struct {

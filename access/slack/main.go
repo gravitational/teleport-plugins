@@ -89,7 +89,7 @@ func run(configPath string, debug bool) error {
 		logger.Standard().Warn("The slack.recipients config option is deprecated, set role_to_recipients[\"*\"] instead for the same functionality")
 	}
 
-	app := NewSlackApp(*conf)
+	app := NewSlackApp(conf)
 	go lib.ServeSignals(app, 15*time.Second)
 
 	logger.Standard().Infof("Starting Teleport Access Slack Plugin %s:%s", Version, Gitref)

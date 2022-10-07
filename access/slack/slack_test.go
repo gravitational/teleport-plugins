@@ -32,7 +32,7 @@ var requestReasonRegexp = regexp.MustCompile("(?im)^\\*Reason\\*:\\ ```\\n(.*?)`
 
 type SlackSuite struct {
 	integration.Suite
-	appConfig SlackConfig
+	appConfig *SlackConfig
 	userNames struct {
 		ruler     string
 		requestor string
@@ -179,7 +179,7 @@ func (s *SlackSuite) SetupTest() {
 	conf.Slack.Token = "000000"
 	conf.Slack.APIURL = s.fakeSlack.URL() + "/"
 
-	s.appConfig = conf
+	s.appConfig = &conf
 	s.SetContextTimeout(5 * time.Second)
 }
 

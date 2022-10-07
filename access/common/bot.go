@@ -37,9 +37,7 @@ type MessagingBot interface {
 	// This is used to change the access-request status and number of required approval remaining
 	UpdateMessages(ctx context.Context, reqID string, data pd.AccessRequestData, messageData SentMessages, reviews []types.AccessReview) error
 	// FetchRecipient fetches recipient data from the messaging service API. It can also be used to check and initialize
-	// a communication channel (e.g. MsTeams needs to instal the app for the user before being able to send
+	// a communication channel (e.g. MsTeams needs to install the app for the user before being able to send
 	// notifications)
 	FetchRecipient(ctx context.Context, recipient string) (*Recipient, error)
 }
-
-type BotFactory[T PluginConfiguration] func(T, string, string) (MessagingBot, error)

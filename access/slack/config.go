@@ -60,7 +60,7 @@ func LoadSlackConfig(filepath string) (*SlackConfig, error) {
 
 // CheckAndSetDefaults checks the config struct for any logical errors, and sets default values
 // if some values are missing.
-// If critical values are missing and we can't set defaults for them — this will return an error.
+// If critical values are missing and we can't set defaults for them, this will return an error.
 func (c *SlackConfig) CheckAndSetDefaults() error {
 	if err := c.Teleport.CheckAndSetDefaults(); err != nil {
 		return trace.Wrap(err)

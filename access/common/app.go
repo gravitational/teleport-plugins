@@ -50,31 +50,29 @@ const (
 // It will start a Teleport client, listen for events and treat them.
 // It also handles signals and watches its thread.
 // To instantiate a new BaseApp, use NewApp()
-type BaseApp[T PluginConfiguration] struct {
+type BaseApp struct {
 	PluginName string
 	apiClient  *client.Client
 	bot        MessagingBot
 	mainJob    lib.ServiceJob
 	pluginData *pd.CompareAndSwap[GenericPluginData]
-	Conf       T
-	NewBot     BotFactory[T]
+	Conf       PluginConfiguration
 
 	*lib.Process
 }
 
 // NewApp creates a new BaseApp and initialize its main job
-func NewApp[T PluginConfiguration](conf T, pluginName string, newBot BotFactory[T]) *BaseApp[T] {
-	app := BaseApp[T]{
+func NewApp(conf PluginConfiguration, pluginName string) *BaseApp {
+	app := BaseApp{
 		PluginName: pluginName,
 		Conf:       conf,
-		NewBot:     newBot,
 	}
 	app.mainJob = lib.NewServiceJob(app.run)
 	return &app
 }
 
 // Run initializes and runs a watcher and a callback server
-func (a *BaseApp[T]) Run(ctx context.Context) error {
+func (a *BaseApp) Run(ctx context.Context) error {
 	// Initialize the process.
 	a.Process = lib.NewProcess(ctx)
 	a.SpawnCriticalJob(a.mainJob)
@@ -83,16 +81,16 @@ func (a *BaseApp[T]) Run(ctx context.Context) error {
 }
 
 // Err returns the error app finished with.
-func (a *BaseApp[T]) Err() error {
+func (a *BaseApp) Err() error {
 	return trace.Wrap(a.mainJob.Err())
 }
 
 // WaitReady waits for http and watcher service to start up.
-func (a *BaseApp[T]) WaitReady(ctx context.Context) (bool, error) {
+func (a *BaseApp) WaitReady(ctx context.Context) (bool, error) {
 	return a.mainJob.WaitReady(ctx)
 }
 
-func (a *BaseApp[T]) checkTeleportVersion(ctx context.Context) (proto.PingResponse, error) {
+func (a *BaseApp) checkTeleportVersion(ctx context.Context) (proto.PingResponse, error) {
 	log := logger.Get(ctx)
 	log.Debug("Checking Teleport server version")
 	pong, err := a.apiClient.WithCallOptions(grpc.WaitForReady(true)).Ping(ctx)
@@ -107,7 +105,7 @@ func (a *BaseApp[T]) checkTeleportVersion(ctx context.Context) (proto.PingRespon
 }
 
 // initTeleport creates a Teleport client and validates Teleport connectivity.
-func (a *BaseApp[T]) initTeleport(ctx context.Context, conf PluginConfiguration) (clusterName, webProxyAddr string, err error) {
+func (a *BaseApp) initTeleport(ctx context.Context, conf PluginConfiguration) (clusterName, webProxyAddr string, err error) {
 	if validCred, err := credentials.CheckIfExpired(conf.GetTeleportConfig().Credentials()); err != nil {
 		log.Warn(err)
 		if !validCred {
@@ -145,7 +143,7 @@ func (a *BaseApp[T]) initTeleport(ctx context.Context, conf PluginConfiguration)
 
 // onWatcherEvent is called for every cluster Event. It will filter out non-access-request events and
 // call onPendingRequest, onResolvedRequest and on DeletedRequest depending on the event.
-func (a *BaseApp[T]) onWatcherEvent(ctx context.Context, event types.Event) error {
+func (a *BaseApp) onWatcherEvent(ctx context.Context, event types.Event) error {
 	if kind := event.Resource.GetKind(); kind != types.KindAccessRequest {
 		return trace.Errorf("unexpected kind %s", kind)
 	}
@@ -193,7 +191,7 @@ func (a *BaseApp[T]) onWatcherEvent(ctx context.Context, event types.Event) erro
 }
 
 // run starts the event watcher job and blocks utils it stops
-func (a *BaseApp[T]) run(ctx context.Context) error {
+func (a *BaseApp) run(ctx context.Context) error {
 	log := logger.Get(ctx)
 
 	if err := a.init(ctx); err != nil {
@@ -225,7 +223,7 @@ func (a *BaseApp[T]) run(ctx context.Context) error {
 	return trace.Wrap(watcherJob.Err())
 }
 
-func (a *BaseApp[T]) init(ctx context.Context) error {
+func (a *BaseApp) init(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, initTimeout)
 	defer cancel()
 	log := logger.Get(ctx)
@@ -235,7 +233,7 @@ func (a *BaseApp[T]) init(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	a.bot, err = a.NewBot(a.Conf, clusterName, webProxyAddr)
+	a.bot, err = a.Conf.NewBot(clusterName, webProxyAddr)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -257,7 +255,7 @@ func (a *BaseApp[T]) init(ctx context.Context) error {
 	return nil
 }
 
-func (a *BaseApp[T]) onPendingRequest(ctx context.Context, req types.AccessRequest) error {
+func (a *BaseApp) onPendingRequest(ctx context.Context, req types.AccessRequest) error {
 	log := logger.Get(ctx)
 
 	reqID := req.GetName()
@@ -296,7 +294,7 @@ func (a *BaseApp[T]) onPendingRequest(ctx context.Context, req types.AccessReque
 	return nil
 }
 
-func (a *BaseApp[T]) onResolvedRequest(ctx context.Context, req types.AccessRequest) error {
+func (a *BaseApp) onResolvedRequest(ctx context.Context, req types.AccessRequest) error {
 	// We always post review replies in thread. If the messaging service does not support
 	// threading this will do nothing
 	replyErr := a.postReviewReplies(ctx, req.GetName(), req.GetReviews())
@@ -318,13 +316,13 @@ func (a *BaseApp[T]) onResolvedRequest(ctx context.Context, req types.AccessRequ
 	return trace.NewAggregate(replyErr, err)
 }
 
-func (a *BaseApp[T]) onDeletedRequest(ctx context.Context, reqID string) error {
+func (a *BaseApp) onDeletedRequest(ctx context.Context, reqID string) error {
 	return a.updateMessages(ctx, reqID, pd.ResolvedExpired, "", nil)
 }
 
 // broadcastMessages sends nessages to each recipient for an access-request.
 // This method is only called when for new access-requests.
-func (a *BaseApp[T]) broadcastMessages(ctx context.Context, recipients []Recipient, reqID string, reqData pd.AccessRequestData) error {
+func (a *BaseApp) broadcastMessages(ctx context.Context, recipients []Recipient, reqID string, reqData pd.AccessRequestData) error {
 	sentMessages, err := a.bot.Broadcast(ctx, recipients, reqID, reqData)
 	if len(sentMessages) == 0 && err != nil {
 		return trace.Wrap(err)
@@ -349,7 +347,7 @@ func (a *BaseApp[T]) broadcastMessages(ctx context.Context, recipients []Recipie
 
 // postReviewReplies lists and updates existing messages belonging to an access request.
 // Posting reviews is done both by updating the original message and by replying in thread if possible.
-func (a *BaseApp[T]) postReviewReplies(ctx context.Context, reqID string, reqReviews []types.AccessReview) error {
+func (a *BaseApp) postReviewReplies(ctx context.Context, reqID string, reqReviews []types.AccessReview) error {
 	var oldCount int
 
 	pd, err := a.pluginData.Update(ctx, reqID, func(existing GenericPluginData) (GenericPluginData, error) {
@@ -396,7 +394,7 @@ func (a *BaseApp[T]) postReviewReplies(ctx context.Context, reqID string, reqRev
 // getMessageRecipients takes an access request and returns a list of channelIDs that should be messaged.
 // channelIDs can represent any communication channel depending on the MessagingBot implementation:
 // a public channel, a private one, or a user direct message channel.
-func (a *BaseApp[T]) getMessageRecipients(ctx context.Context, req types.AccessRequest) []Recipient {
+func (a *BaseApp) getMessageRecipients(ctx context.Context, req types.AccessRequest) []Recipient {
 	log := logger.Get(ctx)
 
 	// We receive a set from GetRawRecipientsFor but we still might end up with duplicate channel names.
@@ -427,7 +425,7 @@ func (a *BaseApp[T]) getMessageRecipients(ctx context.Context, req types.AccessR
 }
 
 // updateMessages updates the messages status and adds the resolve reason.
-func (a *BaseApp[T]) updateMessages(ctx context.Context, reqID string, tag pd.ResolutionTag, reason string, reviews []types.AccessReview) error {
+func (a *BaseApp) updateMessages(ctx context.Context, reqID string, tag pd.ResolutionTag, reason string, reviews []types.AccessReview) error {
 	log := logger.Get(ctx)
 
 	pluginData, err := a.pluginData.Update(ctx, reqID, func(existing GenericPluginData) (GenericPluginData, error) {
