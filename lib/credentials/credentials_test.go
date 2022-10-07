@@ -6,13 +6,14 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"math/big"
+	"testing"
+	"time"
+
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/trace"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/ssh"
-	"math/big"
-	"testing"
-	"time"
 )
 
 // mockTLSCredentials mocks insecure Client credentials.

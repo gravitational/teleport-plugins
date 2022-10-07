@@ -3,16 +3,17 @@ package credentials
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"time"
+
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/trace"
-	"time"
 )
 
 // CheckIfExpired returns true if there's at least 1 non-expired credential in the creds list. It also returns
 // an error aggregate with an individual error for each invalid credential
 func CheckIfExpired(credentials []client.Credentials) (bool, error) {
-	var validCredentials []client.Credentials
 	var errors []error
+	validCredentials := false
 
 	for _, credential := range credentials {
 		tlsConfig, err := credential.TLSConfig()
@@ -57,9 +58,9 @@ func CheckIfExpired(credentials []client.Credentials) (bool, error) {
 			}
 		}
 		if isValid {
-			validCredentials = append(validCredentials, credential)
+			validCredentials = true
 		}
 	}
 
-	return len(validCredentials) != 0, trace.NewAggregate(errors...)
+	return validCredentials, trace.NewAggregate(errors...)
 }
