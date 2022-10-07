@@ -11,6 +11,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/backoff"
+	"github.com/gravitational/teleport-plugins/lib/credentials"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/stringset"
 	"github.com/gravitational/teleport-plugins/lib/watcherjob"
@@ -113,6 +114,16 @@ func (a *App) init(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, initTimeout)
 	defer cancel()
 	log := logger.Get(ctx)
+
+	if validCred, err := credentials.CheckIfExpired(a.conf.Teleport.Credentials()); err != nil {
+		log.Warn(err)
+		if !validCred {
+			return trace.BadParameter(
+				"No valid credentials found, this likely means credentials are expired. In this case, please sign new credentials and increase their TTL if needed.",
+			)
+		}
+		log.Info("At least one non-expired credential has been found, continuing startup")
+	}
 
 	var (
 		err  error
