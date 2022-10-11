@@ -1,22 +1,24 @@
-package main
+package common
 
 import (
 	"testing"
 
+	"github.com/gravitational/teleport-plugins/lib/plugindata"
 	"github.com/stretchr/testify/assert"
 )
 
-var samplePluginData = PluginData{
-	RequestData: RequestData{
-		User:          "user-foo",
-		Roles:         []string{"role-foo", "role-bar"},
-		RequestReason: "foo reason",
-		ReviewsCount:  3,
-		Resolution:    Resolution{Tag: ResolvedApproved, Reason: "foo ok"},
+var samplePluginData = GenericPluginData{
+	AccessRequestData: plugindata.AccessRequestData{
+		User:             "user-foo",
+		Roles:            []string{"role-foo", "role-bar"},
+		RequestReason:    "foo reason",
+		ReviewsCount:     3,
+		ResolutionTag:    plugindata.ResolvedApproved,
+		ResolutionReason: "foo ok",
 	},
-	SlackData: SlackData{
-		{ChannelID: "CHANNEL1", Timestamp: "0000001"},
-		{ChannelID: "CHANNEL2", Timestamp: "0000002"},
+	SentMessages: SentMessages{
+		{ChannelID: "CHANNEL1", MessageID: "0000001"},
+		{ChannelID: "CHANNEL2", MessageID: "0000002"},
 	},
 }
 
@@ -46,7 +48,7 @@ func TestDecodePluginData(t *testing.T) {
 }
 
 func TestEncodeEmptyPluginData(t *testing.T) {
-	dataMap := EncodePluginData(PluginData{})
+	dataMap := EncodePluginData(GenericPluginData{})
 	assert.Len(t, dataMap, 7)
 	for key, value := range dataMap {
 		assert.Emptyf(t, value, "value at key %q must be empty", key)
