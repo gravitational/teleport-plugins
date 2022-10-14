@@ -44,7 +44,7 @@ func (s *TerraformSuite) TestGithubConnector() {
 				Config: s.getFixture("github_connector_0_create.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "github"),
-					resource.TestCheckResourceAttr(name, "metadata.expires", "2022-10-12T07:20:50Z"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2032-10-12T07:20:50Z"),
 					resource.TestCheckResourceAttr(name, "spec.client_id", "Iv1.3386eee92ff932a4"),
 					resource.TestCheckResourceAttr(name, "spec.teams_to_logins.0.organization", "evilmartians"),
 					resource.TestCheckResourceAttr(name, "spec.teams_to_logins.0.team", "devs"),
@@ -59,7 +59,7 @@ func (s *TerraformSuite) TestGithubConnector() {
 				Config: s.getFixture("github_connector_1_update.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "github"),
-					resource.TestCheckResourceAttr(name, "metadata.expires", "2022-10-12T07:20:50Z"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2032-10-12T07:20:50Z"),
 					resource.TestCheckResourceAttr(name, "spec.client_id", "Iv1.3386eee92ff932a4"),
 					resource.TestCheckResourceAttr(name, "spec.teams_to_logins.0.organization", "gravitational"),
 					resource.TestCheckResourceAttr(name, "spec.teams_to_logins.0.team", "devs"),

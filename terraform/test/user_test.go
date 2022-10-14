@@ -43,7 +43,7 @@ func (s *TerraformSuite) TestUser() {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "user"),
 					resource.TestCheckResourceAttr(name, "version", "v2"),
-					resource.TestCheckResourceAttr(name, "metadata.expires", "2025-10-12T07:20:50Z"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2035-10-12T07:20:50Z"),
 					resource.TestCheckResourceAttr(name, "spec.roles.0", "terraform"),
 					resource.TestCheckResourceAttr(name, "spec.traits.logins1.0", "example"),
 					resource.TestCheckResourceAttr(name, "spec.traits.logins2.0", "example"),
@@ -63,7 +63,7 @@ func (s *TerraformSuite) TestUser() {
 				Config: s.getFixture("user_1_update.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "user"),
-					resource.TestCheckResourceAttr(name, "metadata.expires", "2025-10-12T07:20:52Z"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2035-10-12T07:20:52Z"),
 					resource.TestCheckResourceAttr(name, "spec.roles.0", "terraform"),
 					resource.TestCheckResourceAttr(name, "spec.traits.logins2.0", "example"),
 					resource.TestCheckNoResourceAttr(name, "spec.traits.logins1"),

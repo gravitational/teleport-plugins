@@ -1,7 +1,7 @@
 resource "teleport_saml_connector" "test" {
     metadata = {
         name    = "test"
-        expires = "2022-10-12T07:20:50Z"
+        expires = "2032-10-12T07:20:50Z"
         labels  = {
             example = "no"
         }
