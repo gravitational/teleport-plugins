@@ -1,7 +1,7 @@
 resource "teleport_oidc_connector" "test_multiple_redirects" {
     metadata = {
         name    = "test_multiple_redirects"
-        expires = "2022-10-12T07:20:50Z"
+        expires = "2032-10-12T07:20:50Z"
         labels  = {
             example = "yes"
         }
