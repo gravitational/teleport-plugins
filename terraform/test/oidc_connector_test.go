@@ -45,7 +45,7 @@ func (s *TerraformSuite) TestOIDCConnector() {
 				Config: s.getFixture("oidc_connector_0_create.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "oidc"),
-					resource.TestCheckResourceAttr(name, "metadata.expires", "2022-10-12T07:20:50Z"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2032-10-12T07:20:50Z"),
 					resource.TestCheckResourceAttr(name, "spec.client_id", "client"),
 					resource.TestCheckResourceAttr(name, "spec.claims_to_roles.0.claim", "test"),
 					resource.TestCheckResourceAttr(name, "spec.claims_to_roles.0.roles.0", "terraform"),
@@ -59,7 +59,7 @@ func (s *TerraformSuite) TestOIDCConnector() {
 				Config: s.getFixture("oidc_connector_1_update.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "oidc"),
-					resource.TestCheckResourceAttr(name, "metadata.expires", "2022-10-12T07:20:50Z"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2032-10-12T07:20:50Z"),
 					resource.TestCheckResourceAttr(name, "spec.client_id", "client"),
 					resource.TestCheckResourceAttr(name, "spec.claims_to_roles.0.claim", "test"),
 					resource.TestCheckResourceAttr(name, "spec.claims_to_roles.0.roles.0", "teleport"),

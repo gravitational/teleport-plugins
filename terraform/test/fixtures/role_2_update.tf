@@ -2,7 +2,7 @@ resource "teleport_role" "test" {
     metadata = {
         name = "test"
         description = "Test role"
-        expires = "2022-12-12T00:00:00Z"
+        expires = "2032-12-12T00:00:00Z"
     }
 
     spec = {
