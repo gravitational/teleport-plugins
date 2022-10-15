@@ -4,7 +4,7 @@ locals {
 
 resource "teleport_provision_token" "bot_test" {
   metadata = {
-    expires = "2028-01-01T00:00:00Z"
+    expires = "2038-01-01T00:00:00Z"
     name = "bot-test"
   }
 
