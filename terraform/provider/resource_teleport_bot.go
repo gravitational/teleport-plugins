@@ -180,7 +180,6 @@ func (r resourceTeleportBot) Create(ctx context.Context, req tfsdk.CreateResourc
 		Traits:  traits,
 	})
 	if err != nil {
-		// TODO: "bot" isn't a real kind, is this appropriate?
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating Bot", trace.Wrap(err), "bot"))
 		return
 	}
