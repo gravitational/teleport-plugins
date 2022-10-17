@@ -1285,7 +1285,8 @@ steps:
           --registry-url https://terraform-staging.releases.teleport.dev/      \
           --namespace gravitational                                            \
           --name teleport                                                      \
-          --deployment-role $DEPLOYMENT_ROLE
+          --deployment-role $DEPLOYMENT_ROLE                                   \
+          --staging-role $STAGING_ROLE
 
     environment:
       STAGING_REGION: us-west-2
@@ -1295,6 +1296,8 @@ steps:
         from_secret: AWS_ACCESS_KEY_ID
       STAGING_SECRET_ACCESS_KEY:
         from_secret: AWS_SECRET_ACCESS_KEY
+      STAGING_ROLE:
+        from_secret: AWS_ROLE
 
       PROD_REGION:
         from_secret: STAGING_TERRAFORM_AWS_REGION
@@ -1340,7 +1343,8 @@ steps:
           --registry-url https://terraform.releases.teleport.dev/      \
           --namespace gravitational                                    \
           --name teleport                                              \
-          --deployment-role $DEPLOYMENT_ROLE
+          --deployment-role $DEPLOYMENT_ROLE                           \
+          --staging-role $STAGING_ROLE
 
     environment:
       STAGING_REGION: us-west-2
@@ -1350,6 +1354,8 @@ steps:
         from_secret: AWS_ACCESS_KEY_ID
       STAGING_SECRET_ACCESS_KEY:
         from_secret: AWS_SECRET_ACCESS_KEY
+      STAGING_ROLE:
+        from_secret: AWS_ROLE
 
       PROD_REGION:
         from_secret: PRODUCTION_TERRAFORM_AWS_REGION
