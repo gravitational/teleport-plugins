@@ -71,6 +71,11 @@ func parseCommandLine() *args {
 		Required().
 		StringVar(&result.staging.secretAccessKey)
 
+	app.Flag("staging-role", "AWS role to use when interacting with the staging bucket.").
+		Required().
+		PlaceHolder("ARN").
+		StringVar(&result.staging.roleARN)
+
 	app.Flag("prod-bucket", "S3 production bucket url (where to push the resulting registry)").
 		Envar("PROD_BUCKET").
 		StringVar(&result.production.bucketName)

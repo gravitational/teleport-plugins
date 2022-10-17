@@ -8,7 +8,8 @@ export STAGING_REGION=us-west-2
 export STAGING_BUCKET=$AWS_S3_BUCKET
 export STAGING_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 export STAGING_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-    
+export STAGING_ROLE=$AWS_ROLE
+
 export PROD_REGION=$PRODUCTION_TERRAFORM_AWS_REGION
 export PROD_BUCKET=$PRODUCTION_TERRAFORM_AWS_BUCKET
 export PROD_ACCESS_KEY_ID=$PRODUCTION_TERRAFORM_AWS_ACCESS_KEY_ID_nope
@@ -26,5 +27,6 @@ go run ./cmd/promote-terraform                                 \
   --registry-url https://terraform.releases.teleport.dev/      \
   --namespace gravitational                                    \
   --name teleport                                              \
-  --deployment-role $DEPLOYMENT_ROLE
+  --deployment-role $DEPLOYMENT_ROLE                           \
+  --staging-role $STAGING_ROLE
 
