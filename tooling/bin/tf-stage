@@ -2,7 +2,7 @@
 
 # NOTE: The variable mappings here need to match those in the
 #       tag-stage-terraform-provider and promote-staging-terraform-provider
-#       Drone pipelines. Any change here should be reflected there, and vice 
+#       Drone pipelines. Any change here should be reflected there, and vice
 #       versa.
 
 
@@ -10,7 +10,8 @@ export STAGING_REGION=us-west-2
 export STAGING_BUCKET=$AWS_S3_BUCKET
 export STAGING_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
 export STAGING_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-    
+export STAGING_ROLE=$AWS_ROLE
+
 export PROD_REGION=$STAGING_TERRAFORM_AWS_REGION
 export PROD_BUCKET=$STAGING_TERRAFORM_AWS_BUCKET
 export PROD_ACCESS_KEY_ID=$STAGING_TERRAFORM_AWS_ACCESS_KEY_ID
@@ -28,4 +29,5 @@ go run ./cmd/promote-terraform                                         \
   --registry-url https://terraform-staging.releases.teleport.dev/      \
   --namespace gravitational                                            \
   --name teleport                                                      \
-  --deployment-role $DEPLOYMENT_ROLE
+  --deployment-role $DEPLOYMENT_ROLE                                   \
+  --staging-role $STAGING_ROLE
