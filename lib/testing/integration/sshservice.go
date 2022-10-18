@@ -145,24 +145,24 @@ func (ssh *SSHService) Run(ctx context.Context) error {
 		stdout := bufio.NewReader(stdoutPipe)
 		for {
 			line, err := stdout.ReadString('\n')
-			if line != "" {
-				ssh.saveStdout(line)
-				ssh.parseLine(ctx, line)
-				if !ssh.IsReady() {
-					if addr := ssh.Addr(); !addr.IsEmpty() {
-						if strings.Contains(line, "The new service has started successfully.") {
-							log.Debugf("Found addr of SSH service process: %v", addr)
-							ssh.setReady(true)
-						}
-					}
-				}
-			}
 			if err == io.EOF {
 				return
 			}
 			if err := trace.Wrap(err); err != nil {
 				log.WithError(err).Error("failed to read process stdout")
 				return
+			}
+
+			ssh.saveStdout(line)
+
+			if ssh.IsReady() {
+				continue
+			}
+
+			ssh.parseLine(ctx, line)
+			if strings.Contains(line, "The new service has started successfully.") {
+				log.Debugf("Found addr of SSH service process: %v", ssh.sshAddr)
+				ssh.setReady(true)
 			}
 		}
 	}()
