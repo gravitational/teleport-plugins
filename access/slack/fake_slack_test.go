@@ -20,7 +20,7 @@ import (
 type FakeSlack struct {
 	srv *httptest.Server
 
-	botUser                    User
+	botUser                    SlackUser
 	objects                    sync.Map
 	newMessages                chan SlackMsg
 	messageUpdatesByAPI        chan SlackMsg
@@ -30,7 +30,7 @@ type FakeSlack struct {
 	startTime                  time.Time
 }
 
-func NewFakeSlack(botUser User, concurrency int) *FakeSlack {
+func NewFakeSlack(botUser SlackUser, concurrency int) *FakeSlack {
 	router := httprouter.New()
 
 	s := &FakeSlack{
@@ -180,8 +180,8 @@ func NewFakeSlack(botUser User, concurrency int) *FakeSlack {
 		}
 
 		err := json.NewEncoder(rw).Encode(struct {
-			User User `json:"user"`
-			Ok   bool `json:"ok"`
+			User SlackUser `json:"user"`
+			Ok   bool      `json:"ok"`
 		}{user, true})
 		panicIf(err)
 	})
@@ -204,8 +204,8 @@ func NewFakeSlack(botUser User, concurrency int) *FakeSlack {
 		}
 
 		err := json.NewEncoder(rw).Encode(struct {
-			User User `json:"user"`
-			Ok   bool `json:"ok"`
+			User SlackUser `json:"user"`
+			Ok   bool      `json:"ok"`
 		}{user, true})
 		panicIf(err)
 	})
@@ -242,7 +242,7 @@ func (s *FakeSlack) GetMessage(id string) (SlackMsg, bool) {
 	return SlackMsg{}, false
 }
 
-func (s *FakeSlack) StoreUser(user User) User {
+func (s *FakeSlack) StoreUser(user SlackUser) SlackUser {
 	if user.ID == "" {
 		user.ID = fmt.Sprintf("U%d", atomic.AddUint64(&s.userIDCounter, 1))
 	}
@@ -251,20 +251,20 @@ func (s *FakeSlack) StoreUser(user User) User {
 	return user
 }
 
-func (s *FakeSlack) GetUser(id string) (User, bool) {
+func (s *FakeSlack) GetUser(id string) (SlackUser, bool) {
 	if obj, ok := s.objects.Load(fmt.Sprintf("user-%s", id)); ok {
-		user, ok := obj.(User)
+		user, ok := obj.(SlackUser)
 		return user, ok
 	}
-	return User{}, false
+	return SlackUser{}, false
 }
 
-func (s *FakeSlack) GetUserByEmail(email string) (User, bool) {
+func (s *FakeSlack) GetUserByEmail(email string) (SlackUser, bool) {
 	if obj, ok := s.objects.Load(fmt.Sprintf("userByEmail-%s", email)); ok {
-		user, ok := obj.(User)
+		user, ok := obj.(SlackUser)
 		return user, ok
 	}
-	return User{}, false
+	return SlackUser{}, false
 }
 
 func (s *FakeSlack) CheckNewMessage(ctx context.Context) (SlackMsg, error) {

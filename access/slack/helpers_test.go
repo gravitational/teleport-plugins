@@ -1,8 +1,6 @@
 package main
 
-import (
-	"github.com/gravitational/teleport-plugins/access/common"
-)
+import "github.com/gravitational/teleport-plugins/access/common"
 
 type SlackMessageSlice []SlackMsg
 type SlackDataMessageSet map[common.MessageData]struct{}
