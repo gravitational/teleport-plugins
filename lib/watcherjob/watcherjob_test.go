@@ -62,7 +62,7 @@ func TestSequential(t *testing.T) {
 	require.NoError(t, countdown.Wait(ctx))
 
 	timeAfter := time.Now()
-	assert.InDelta(t, 4*time.Second, timeAfter.Sub(timeBefore), float64(500*time.Millisecond))
+	assert.InDelta(t, 4*time.Second, timeAfter.Sub(timeBefore), float64(750*time.Millisecond))
 }
 
 // TestConcurrencyLimit checks the case when the queue is full and there're incoming requests
