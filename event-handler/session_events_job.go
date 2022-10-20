@@ -71,7 +71,10 @@ func (j *SessionEventsJob) run(ctx context.Context) error {
 	for {
 		select {
 		case s := <-j.sessions:
-			j.semaphore.Acquire(ctx, 1)
+			if err := j.semaphore.Acquire(ctx, 1); err != nil {
+				log.WithError(err).Error("Failed to acquire semaphore")
+				continue
+			}
 
 			log.WithField("id", s.ID).WithField("index", s.Index).Info("Starting session ingest")
 
