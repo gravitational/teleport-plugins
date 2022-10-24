@@ -1,5 +1,5 @@
 VERSION=10.3.2
-GO_VERSION=1.18.6
+GO_VERSION=1.19.2
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)

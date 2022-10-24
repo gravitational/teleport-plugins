@@ -61,13 +61,14 @@ endif
 release: build
 	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
 
-TERRAFORM_EXISTS := $(shell terraform -version | grep 'Terraform v1.2')
+TERRAFORM_EXISTS := $(shell terraform -version | grep 'Terraform v1.3')
 CURRENT_ULIMIT := $(shell ulimit -n)
 
 .PHONY: test
 test: install
 ifndef TERRAFORM_EXISTS
-	@echo "Terraform v1.2+ is not installed (tfenv install 1.2.8 && tfenv use 1.2.8)."
+	@echo "Terraform v1.3+ is not installed (tfenv install 1.3.3 && tfenv use 1.3.3)."
+	terraform -version
 	@exit -1
 endif
 # NOTE: This is related to an old bug in Terraform and will be fixed in future releases (possibly, by a workaround on our side)
