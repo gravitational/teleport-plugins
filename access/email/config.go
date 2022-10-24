@@ -20,18 +20,20 @@ import (
 	_ "embed"
 	"fmt"
 
+	"github.com/gravitational/trace"
+	"github.com/pelletier/go-toml"
+	"gopkg.in/mail.v2"
+
 	"github.com/gravitational/teleport-plugins/access/common"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/trace"
-	"github.com/pelletier/go-toml"
-	"gopkg.in/mail.v2"
 )
 
 // DeliveryConfig represents email recipients config
 type DeliveryConfig struct {
-	Sender     string
+	Sender string
+	// DELETE IN 12.0.0
 	Recipients []string
 }
 
