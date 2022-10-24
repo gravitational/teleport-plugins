@@ -255,7 +255,7 @@ update-goversion:
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/slack/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/pagerduty/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/email/Makefile
-	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/ms-teams/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/msteams/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/Makefile
 	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
 	$(SED) 's/- name: golang:.*/- name: golang:$(GOVERSION)/' .cloudbuild/ci/unit-tests-linux.yaml
