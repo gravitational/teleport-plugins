@@ -22,11 +22,13 @@ import (
 	"strings"
 
 	"github.com/go-resty/resty/v2"
-	"github.com/gravitational/teleport-plugins/access/common"
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/pelletier/go-toml"
+
+	"github.com/gravitational/teleport-plugins/access/common"
+
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport/api/types"
 )
 
 // SlackConfig stores the full configuration for the teleport-slack plugin to run.
@@ -76,16 +78,6 @@ func (c *SlackConfig) CheckAndSetDefaults() error {
 	}
 	if c.Log.Severity == "" {
 		c.Log.Severity = "info"
-	}
-
-	if len(c.Slack.Recipients) > 0 {
-		if len(c.Recipients) > 0 {
-			return trace.BadParameter("provide either slack.recipients or role_to_recipients, not both.")
-		}
-
-		c.Recipients = common.RawRecipientsMap{
-			types.Wildcard: c.Slack.Recipients,
-		}
 	}
 
 	if len(c.Recipients) == 0 {
