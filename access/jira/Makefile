@@ -1,4 +1,4 @@
-VERSION=11.0.0
+VERSION=11.0.1-joerger.1
 GO_VERSION=1.19.2
 
 BUILDDIR ?= build
