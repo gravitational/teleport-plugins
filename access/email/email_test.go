@@ -190,7 +190,7 @@ func (s *EmailSuite) SetupSuite() {
 func (s *EmailSuite) SetupTest() {
 	t := s.T()
 
-	logger.Setup(logger.Config{Severity: "debug"})
+	_ = logger.Setup(logger.Config{Severity: "debug"})
 
 	s.mockMailgun = NewMockMailgunServer(s.raceNumber)
 	s.mockMailgun.Start()
@@ -499,7 +499,7 @@ func (s *EmailSuite) TestRace() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	_ = logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
 
 	s.SetContextTimeout(20 * time.Second)
 

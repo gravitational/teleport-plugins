@@ -48,7 +48,7 @@ type SSHSetup struct {
 
 func (s *BaseSetup) SetupSuite() {
 	logger.Init()
-	logger.Setup(logger.Config{Severity: "debug"})
+	_ = logger.Setup(logger.Config{Severity: "debug"})
 }
 
 func (s *BaseSetup) SetupService() {

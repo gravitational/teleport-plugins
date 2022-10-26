@@ -117,7 +117,7 @@ func (s *EventHandlerSuite) SetupSuite() {
 func (s *EventHandlerSuite) SetupTest() {
 	t := s.T()
 
-	logger.Setup(logger.Config{Severity: "debug"})
+	_ = logger.Setup(logger.Config{Severity: "debug"})
 
 	fd, err := NewFakeFluentd()
 	require.NoError(t, err)
