@@ -385,7 +385,8 @@ func (s *PagerdutySuite) TestApproval() {
 	incident, err := s.fakePagerduty.CheckNewIncident(s.Context())
 	require.NoError(t, err, "no new incidents stored")
 
-	s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	err = s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	require.NoError(t, err)
 
 	note, err := s.fakePagerduty.CheckNewIncidentNote(s.Context())
 	require.NoError(t, err)
@@ -408,7 +409,8 @@ func (s *PagerdutySuite) TestDenial() {
 	incident, err := s.fakePagerduty.CheckNewIncident(s.Context())
 	require.NoError(t, err, "no new incidents stored")
 
-	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay")
+	err = s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay")
+	require.NoError(t, err)
 
 	note, err := s.fakePagerduty.CheckNewIncidentNote(s.Context())
 	require.NoError(t, err)

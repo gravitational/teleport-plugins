@@ -352,7 +352,8 @@ func (s *SlackSuite) TestApproval() {
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msg.Channel)
 
-	s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	err = s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	require.NoError(t, err)
 
 	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Context())
 	require.NoError(t, err)
@@ -377,7 +378,7 @@ func (s *SlackSuite) TestDenial() {
 	assert.Equal(t, reviewer.ID, msg.Channel)
 
 	// max size of request was decreased here: https://github.com/gravitational/teleport/pull/13298
-	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay "+strings.Repeat("A", 4000))
+	err = s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay "+strings.Repeat("A", 4000))
 	require.NoError(t, err)
 
 	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Context())

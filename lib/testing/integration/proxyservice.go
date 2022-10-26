@@ -123,7 +123,9 @@ func (proxy *ProxyService) Run(ctx context.Context) error {
 		terminateOnce.Do(func() {
 			log.Debug("Terminating Proxy service process")
 			// Signal the process to gracefully terminate by sending SIGQUIT.
-			cmd.Process.Signal(syscall.SIGQUIT)
+			if err := cmd.Process.Signal(syscall.SIGQUIT); err != nil {
+				log.Warn(err)
+			}
 			// If we're not done in 5 minutes, just kill the process by cancelling its context.
 			go func() {
 				select {

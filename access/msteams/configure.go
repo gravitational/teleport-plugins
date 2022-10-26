@@ -69,8 +69,12 @@ func configure(targetDir, appID, appSecret, tenantID string) error {
 
 	printStep(&step, "Created target directory: %s", targetDir)
 
-	renderTemplateTo(confTpl, p, path.Join(targetDir, "teleport-msteams.toml"))
-	renderTemplateTo(manifestTpl, p, path.Join(targetDir, "manifest.json"))
+	if err := renderTemplateTo(confTpl, p, path.Join(targetDir, "teleport-msteams.toml")); err != nil {
+		return trace.Wrap(err)
+	}
+	if err := renderTemplateTo(manifestTpl, p, path.Join(targetDir, "manifest.json")); err != nil {
+		return trace.Wrap(err)
+	}
 
 	printStep(&step, "Generated configuration files")
 

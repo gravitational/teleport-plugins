@@ -323,7 +323,8 @@ func (s *TeamsSuite) TestApproval() {
 	require.NoError(t, err)
 	require.Equal(t, reviewer.ID, msg.RecipientID)
 
-	s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	err = s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	require.NoError(t, err)
 
 	msgUpdate, err := s.mockAPI.CheckMessageUpdate(s.Context())
 	require.NoError(t, err)
@@ -350,7 +351,7 @@ func (s *TeamsSuite) TestDenial() {
 	require.Equal(t, reviewer.ID, msg.RecipientID)
 
 	// max size of request was decreased here: https://github.com/gravitational/teleport/pull/13298
-	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay")
+	err = s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay")
 	require.NoError(t, err)
 
 	msgUpdate, err := s.mockAPI.CheckMessageUpdate(s.Context())

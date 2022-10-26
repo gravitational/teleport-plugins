@@ -321,7 +321,8 @@ func (s *MattermostSuite) TestApproval() {
 	directChannelID := s.fakeMattermost.GetDirectChannelFor(s.fakeMattermost.GetBotUser(), reviewer).ID
 	assert.Equal(t, directChannelID, post.ChannelID)
 
-	s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	err = s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	require.NoError(t, err)
 
 	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.Context())
 	require.NoError(t, err, "no messages updated")
@@ -353,7 +354,7 @@ func (s *MattermostSuite) TestDenial() {
 	assert.Equal(t, directChannelID, post.ChannelID)
 
 	// max size of request was decreased here: https://github.com/gravitational/teleport/pull/13298
-	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay "+strings.Repeat("A", 4000))
+	err = s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay "+strings.Repeat("A", 4000))
 	require.NoError(t, err)
 
 	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.Context())
