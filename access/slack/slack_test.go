@@ -55,7 +55,8 @@ func (s *SlackSuite) SetupSuite() {
 	t := s.T()
 
 	logger.Init()
-	_ = logger.Setup(logger.Config{Severity: "debug"})
+	err = logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
@@ -167,7 +168,8 @@ func (s *SlackSuite) SetupSuite() {
 func (s *SlackSuite) SetupTest() {
 	t := s.T()
 
-	_ = logger.Setup(logger.Config{Severity: "debug"})
+	err := logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 
 	s.fakeSlack = NewFakeSlack(User{Name: "slackbot"}, s.raceNumber)
 	t.Cleanup(s.fakeSlack.Close)
@@ -594,7 +596,8 @@ func (s *SlackSuite) TestRace() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	_ = logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	err := logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	require.NoError(t, err)
 
 	reviewer1 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
 	reviewer2 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer2}})

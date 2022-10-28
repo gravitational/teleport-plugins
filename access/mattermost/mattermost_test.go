@@ -56,7 +56,8 @@ func (s *MattermostSuite) SetupSuite() {
 	t := s.T()
 
 	logger.Init()
-	_ = logger.Setup(logger.Config{Severity: "debug"})
+	err = logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
@@ -168,7 +169,8 @@ func (s *MattermostSuite) SetupSuite() {
 func (s *MattermostSuite) SetupTest() {
 	t := s.T()
 
-	_ = logger.Setup(logger.Config{Severity: "debug"})
+	err := logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 
 	s.fakeMattermost = NewFakeMattermost(User{Username: "bot", Email: "bot@example.com"}, s.raceNumber)
 	t.Cleanup(s.fakeMattermost.Close)
@@ -586,7 +588,8 @@ func (s *MattermostSuite) TestRace() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	_ = logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	err := logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	require.NoError(t, err)
 
 	reviewer1 := s.fakeMattermost.StoreUser(User{Email: s.userNames.reviewer1})
 	reviewer2 := s.fakeMattermost.StoreUser(User{Email: s.userNames.reviewer2})

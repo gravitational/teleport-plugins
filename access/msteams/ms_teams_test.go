@@ -54,7 +54,8 @@ func (s *TeamsSuite) SetupSuite() {
 	t := s.T()
 
 	logger.Init()
-	_ = logger.Setup(logger.Config{Severity: "debug"})
+	err = logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
@@ -166,7 +167,8 @@ func (s *TeamsSuite) SetupSuite() {
 func (s *TeamsSuite) SetupTest() {
 	t := s.T()
 
-	_ = logger.Setup(logger.Config{Severity: "debug"})
+	err := logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 
 	s.mockAPI = NewMockMSTeamsAPI(s.raceNumber)
 	t.Cleanup(s.mockAPI.Close)
@@ -562,7 +564,8 @@ func (s *TeamsSuite) TestRace() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	_ = logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	err := logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	require.NoError(t, err)
 
 	reviewer1 := s.mockAPI.StoreUser(msapi.User{Mail: s.userNames.reviewer1})
 	reviewer2 := s.mockAPI.StoreUser(msapi.User{Mail: s.userNames.reviewer2})

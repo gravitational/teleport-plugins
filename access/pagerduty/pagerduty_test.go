@@ -84,7 +84,8 @@ func (s *PagerdutySuite) SetupSuite() {
 	t := s.T()
 
 	logger.Init()
-	_ = logger.Setup(logger.Config{Severity: "debug"})
+	err = logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 	s.raceNumber = 2 * runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
@@ -263,7 +264,8 @@ func (s *PagerdutySuite) SetupSuite() {
 func (s *PagerdutySuite) SetupTest() {
 	t := s.T()
 
-	_ = logger.Setup(logger.Config{Severity: "debug"})
+	err := logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 
 	fakePagerduty := NewFakePagerduty(s.raceNumber)
 	t.Cleanup(fakePagerduty.Close)
@@ -787,7 +789,8 @@ func (s *PagerdutySuite) TestRace() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	_ = logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	err := logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	require.NoError(t, err)
 
 	s.SetContextTimeout(20 * time.Second)
 	s.startApp()

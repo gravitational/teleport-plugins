@@ -18,6 +18,7 @@ package integration
 
 import (
 	"context"
+	"testing"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib/logger"
@@ -46,9 +47,10 @@ type SSHSetup struct {
 	SSH *SSHService
 }
 
-func (s *BaseSetup) SetupSuite() {
+func (s *BaseSetup) SetupSuite(t *testing.T) {
 	logger.Init()
-	_ = logger.Setup(logger.Config{Severity: "debug"})
+	err := logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 }
 
 func (s *BaseSetup) SetupService() {
@@ -64,9 +66,9 @@ func (s *BaseSetup) SetupService() {
 	s.Integration = integration
 }
 
-func (s *AuthSetup) SetupSuite() {
+func (s *AuthSetup) SetupSuite(t *testing.T) {
 	s.CacheEnabled = false
-	s.BaseSetup.SetupSuite()
+	s.BaseSetup.SetupSuite(t)
 }
 
 func (s *AuthSetup) SetupService(authServiceOptions ...AuthServiceOption) {
@@ -86,8 +88,8 @@ func (s *AuthSetup) SetupService(authServiceOptions ...AuthServiceOption) {
 	require.NoError(t, err)
 }
 
-func (s *ProxySetup) SetupSuite() {
-	s.AuthSetup.SetupSuite()
+func (s *ProxySetup) SetupSuite(t *testing.T) {
+	s.AuthSetup.SetupSuite(t)
 }
 
 func (s *ProxySetup) SetupService() {
@@ -99,8 +101,8 @@ func (s *ProxySetup) SetupService() {
 	s.Proxy = proxy
 }
 
-func (s *SSHSetup) SetupSuite() {
-	s.ProxySetup.SetupSuite()
+func (s *SSHSetup) SetupSuite(t *testing.T) {
+	s.ProxySetup.SetupSuite(t)
 }
 
 func (s *SSHSetup) SetupService() {

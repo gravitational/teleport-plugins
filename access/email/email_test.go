@@ -87,7 +87,7 @@ func (s *EmailSuite) SetupSuite() {
 	var err error
 	t := s.T()
 
-	s.AuthSetup.SetupSuite()
+	s.AuthSetup.SetupSuite(t)
 	s.AuthSetup.SetupService()
 
 	ctx := s.Context()
@@ -190,7 +190,8 @@ func (s *EmailSuite) SetupSuite() {
 func (s *EmailSuite) SetupTest() {
 	t := s.T()
 
-	_ = logger.Setup(logger.Config{Severity: "debug"})
+	err := logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 
 	s.mockMailgun = NewMockMailgunServer(s.raceNumber)
 	s.mockMailgun.Start()
@@ -499,7 +500,8 @@ func (s *EmailSuite) TestRace() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	_ = logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	err := logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	require.NoError(t, err)
 
 	s.SetContextTimeout(20 * time.Second)
 
