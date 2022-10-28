@@ -22,6 +22,6 @@ resource "teleport_oidc_connector" "example" {
       roles = ["terraform"]
     }]
 
-    redirect_urls = ["https://example.com/redirect"]
+    redirect_url = ["https://example.com/redirect"]
   }
 }

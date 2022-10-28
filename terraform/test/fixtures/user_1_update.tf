@@ -1,7 +1,7 @@
 resource "teleport_user" "test" {
     metadata = {
         name    = "test"			
-        expires = "2025-10-12T07:20:52Z"
+        expires = "2035-10-12T07:20:52Z"
         labels  = {
             example = "yes"
         }

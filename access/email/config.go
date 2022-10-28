@@ -20,18 +20,20 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/gravitational/teleport-plugins/access/config"
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/logger"
-	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/pelletier/go-toml"
 	"gopkg.in/mail.v2"
+
+	"github.com/gravitational/teleport-plugins/access/common"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/api/types"
 )
 
 // DeliveryConfig represents email recipients config
 type DeliveryConfig struct {
-	Sender     string
+	Sender string
+	// DELETE IN 12.0.0
 	Recipients []string
 }
 
@@ -56,12 +58,12 @@ type SMTPConfig struct {
 
 // Config stores the full configuration for the teleport-email plugin to run.
 type Config struct {
-	Teleport         lib.TeleportConfig   `toml:"teleport"`
-	Mailgun          *MailgunConfig       `toml:"mailgun"`
-	SMTP             *SMTPConfig          `toml:"smtp"`
-	Delivery         DeliveryConfig       `toml:"delivery"`
-	RoleToRecipients config.RecipientsMap `toml:"role_to_recipients"`
-	Log              logger.Config        `toml:"log"`
+	Teleport         lib.TeleportConfig      `toml:"teleport"`
+	Mailgun          *MailgunConfig          `toml:"mailgun"`
+	SMTP             *SMTPConfig             `toml:"smtp"`
+	Delivery         DeliveryConfig          `toml:"delivery"`
+	RoleToRecipients common.RawRecipientsMap `toml:"role_to_recipients"`
+	Log              logger.Config           `toml:"log"`
 }
 
 // TODO: Replace auth_server with addr once it is merged
@@ -216,7 +218,7 @@ func (c *Config) CheckAndSetDefaults() error {
 			return trace.BadParameter("provide either delivery.recipients or role_to_recipients, not both")
 		}
 
-		c.RoleToRecipients = config.RecipientsMap{
+		c.RoleToRecipients = common.RawRecipientsMap{
 			types.Wildcard: c.Delivery.Recipients,
 		}
 		c.Delivery.Recipients = nil

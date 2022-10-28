@@ -45,7 +45,7 @@ func (s *TerraformSuite) TestProvisionToken() {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "token"),
 					resource.TestCheckResourceAttr(name, "metadata.name", "test"),
-					resource.TestCheckResourceAttr(name, "metadata.expires", "2028-01-01T00:00:00Z"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2038-01-01T00:00:00Z"),
 					resource.TestCheckResourceAttr(name, "metadata.labels.example", "yes"),
 					resource.TestCheckResourceAttr(name, "spec.roles.0", "Node"),
 					resource.TestCheckResourceAttr(name, "spec.roles.1", "Auth"),
@@ -62,7 +62,7 @@ func (s *TerraformSuite) TestProvisionToken() {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "token"),
 					resource.TestCheckResourceAttr(name, "metadata.name", "test"),
-					resource.TestCheckResourceAttr(name, "metadata.expires", "2028-01-01T00:00:00Z"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2038-01-01T00:00:00Z"),
 					resource.TestCheckNoResourceAttr(name, "metadata.labels.example"),
 					resource.TestCheckResourceAttr(name, "spec.roles.0", "Node"),
 					resource.TestCheckNoResourceAttr(name, "spec.roles.1"),

@@ -1,7 +1,20 @@
+resource "teleport_role" "admin" {
+    metadata = {
+        name = "admin"
+        description = "admin role"
+        expires = "2032-12-12T00:00:00Z"
+    }
+
+    spec = {
+        options = {}
+        allow = {}
+    }
+}
+
 resource "teleport_saml_connector" "test" {
     metadata = {
         name    = "test"
-        expires = "2022-10-12T07:20:50Z"
+        expires = "2032-10-12T07:20:50Z"
         labels  = {
             example = "no"
         }

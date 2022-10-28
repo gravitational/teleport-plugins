@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"os/user"
@@ -106,6 +107,11 @@ func (s *EventHandlerSuite) SetupSuite() {
 	s.teleportConfig.Identity = identityPath
 
 	s.SetContextTimeout(5 * time.Minute)
+
+	// Wait for service to show up
+	require.Eventually(t, func() bool {
+		return s.SSH.IsReady()
+	}, 5*time.Second, time.Second)
 }
 
 func (s *EventHandlerSuite) SetupTest() {
@@ -221,13 +227,24 @@ func (s *EventHandlerSuite) TestEvents() {
 	stdinPipe, err := cmd.StdinPipe()
 	require.NoError(t, err)
 
+	cmdStdout := &bytes.Buffer{}
+	cmdStderr := &bytes.Buffer{}
+
+	cmd.Stdout = cmdStdout
+	cmd.Stderr = cmdStderr
+
 	err = cmd.Start()
 	require.NoError(t, err)
 
-	_, err = stdinPipe.Write([]byte("exit\n"))
+	_, err = stdinPipe.Write([]byte("whoami\n\r"))
+	require.NoError(t, err)
+
+	_, err = stdinPipe.Write([]byte("exit\n\r"))
 	require.NoError(t, err)
 
 	err = cmd.Wait()
+	t.Log("STDOUT", cmdStdout.String())
+	t.Log("STDERR", cmdStderr.String())
 	require.NoError(t, err)
 
 	err = stdinPipe.Close()

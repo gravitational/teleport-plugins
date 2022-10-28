@@ -1,7 +1,7 @@
 steps:
-  - name: golang:1.18.5
+  - name: golang:1.19.2
     env:
-      - TELEPORT_GET_VERSION=v10.0.0
+      - TELEPORT_GET_VERSION=v10.2.0
     secretEnv:
       - TELEPORT_ENTERPRISE_LICENSE
     entrypoint: /bin/bash
@@ -11,7 +11,7 @@ steps:
         curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add - &&
         apt update && apt install -y software-properties-common &&
         apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main" &&
-        apt update && apt install -y terraform=1.2.2 &&
+        apt update && apt install -y terraform=1.3.3 &&
         make test
 
 availableSecrets:

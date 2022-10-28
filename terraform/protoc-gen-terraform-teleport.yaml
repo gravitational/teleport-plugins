@@ -135,25 +135,29 @@ exclude_fields:
     - "UserSpecV2.Status"
 
 name_overrides:
-    # Teleport API has a new field: RedirectURLs which maps to `redirect_url` - an already existing field name
-    # This `name_overrides` entry will override the name for RedirectURLs: `redirect_urls`
+    # Teleport API has two new fields: AuthPreference.Spec.RequireMFAType and Role.Spec.Options.RequireMFAType
+    # The following explanation is valid for both fields, but we only mention the first one so that's easier to understand.
+    #
+    # Teleport API has a new field: AuthPreference.Spec.RequireMFAType which maps to `require_session_mfa` - an already existing field name
+    # This `name_overrides` entry will override the name for RequireMFAType: `require_mfa_type`
     # This way, users can use both:
-    # - `redirect_url` for a single string: now deprecated (https://github.com/gravitational/teleport/pull/13046)
-    # - `redirect_urls` for a list of strings: the recommended way from now on
+    # - `require_session_mfa` for a boolean: now deprecated (https://github.com/gravitational/teleport/pull/16034)
+    # - `require_mfa_type` an enum OFF|SESSION|SESSION_AND_HARDWARE_KEY|HARDWARE_KEY_TOUCH
+    #     the recommended setting https://github.com/gravitational/teleport/blob/1edafaab3360f42f037a81c7baeabfa0627a7b66/api/proto/teleport/legacy/types/types.proto#L4325-L4338
 
     # Going forward we want to:
-    # - change the type of `redirect_url` from string into list of strings to match the resource's yaml representation in Teleport
-    # - after doing the above, remove `redirect_urls` field
+    # - change the type of `require_session_mfa` from boolean into an enum to match the resource's yaml representation in Teleport
+    # - after doing the above, remove `require_mfa_type` field
     
-    # When we change the type of `redirect_url` from string to list of strings we break user's configurations
+    # When we change the type of `require_session_mfa` from boolean to enum we break user's configurations
     # They'll need to change
-    # redirect_url: "https://example.org/redirect"
+    # require_session_mfa: true
     # into
-    # redirect_url: ["https://example.org/redirect"]
+    # require_session_mfa: HARDWARE_KEY_TOUCH
 
-    # This must happen at most in V11.0.0, because RedirectURL will be removed
-    # We could do it at V10.0.0, but the field will exist throughout v10.x and we are really close to v11
-    "OIDCConnectorV3.Spec.RedirectURLs": "redirect_urls"
+    # This must happen at most in V13.0.0, because RequireSessionMFA will be removed
+    "AuthPreferenceV2.Spec.RequireMFAType": "require_mfa_type"
+    "RoleV5.Spec.Options.RequireMFAType": "require_mfa_type"
 
 # These fields will be marked as Computed: true
 computed_fields:

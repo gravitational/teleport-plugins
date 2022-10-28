@@ -69,7 +69,7 @@ func main() {
 }
 
 func run(configPath string, debug bool) error {
-	conf, err := LoadConfig(configPath)
+	conf, err := LoadSlackConfig(configPath)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -79,23 +79,16 @@ func run(configPath string, debug bool) error {
 		logConfig.Severity = "debug"
 	}
 	if err = logger.Setup(logConfig); err != nil {
-		return err
+		return trace.Wrap(err)
 	}
 	if debug {
 		logger.Standard().Debugf("DEBUG logging enabled")
 	}
 
-	if conf.Slack.Recipients != nil {
-		logger.Standard().Warn("The slack.recipients config option is deprecated, set role_to_recipients[\"*\"] instead for the same functionality")
-	}
-
-	app, err := NewApp(*conf)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
+	app := NewSlackApp(conf)
 	go lib.ServeSignals(app, 15*time.Second)
 
+	logger.Standard().Infof("Starting Teleport Access Slack Plugin %s:%s", Version, Gitref)
 	return trace.Wrap(
 		app.Run(context.Background()),
 	)

@@ -1,6 +1,18 @@
 # Set up a system-agnostic in-place sed command
 IS_GNU_SED = $(shell sed --version 1>/dev/null 2>&1 && echo true || echo false)
 
+DRONE ?= drone
+DRONE_REPO ?= gravitational/teleport-plugins
+DRONE_PROMOTE_ENV ?= production
+PLUGINS ?= teleport-event-handler \
+			teleport-jira \
+			teleport-mattermost \
+			teleport-msteams \
+			teleport-slack \
+			teleport-pagerduty \
+			teleport-email \
+			terraform-provider-teleport
+
 ifeq ($(IS_GNU_SED),true)
 	SED = sed -i
 else
@@ -18,6 +30,10 @@ access-jira:
 .PHONY: access-mattermost
 access-mattermost:
 	make -C access/mattermost
+
+.PHONY: access-msteams
+access-msteams:
+	make -C access/msteams
 
 .PHONY: access-pagerduty
 access-pagerduty:
@@ -41,6 +57,7 @@ docker-build-access-%:
 docker-build-access-plugins: docker-build-access-email \
  docker-build-access-jira \
  docker-build-access-mattermost \
+ docker-build-access-msteams \
  docker-build-access-pagerduty \
  docker-build-access-slack
 
@@ -76,6 +93,7 @@ helm-package-charts:
 	helm package -d packages charts/access/slack
 	helm package -d packages charts/access/pagerduty
 	helm package -d packages charts/access/mattermost
+	helm package -d packages charts/access/msteams
 	helm package -d packages charts/event-handler
 
 .PHONY: terraform
@@ -117,6 +135,10 @@ release/access-jira:
 release/access-mattermost:
 	make -C access/mattermost clean release
 
+.PHONY: release/access-msteams
+release/access-msteams:
+	make -C access/msteams clean release
+
 .PHONY: release/access-pagerduty
 release/access-pagerduty:
 	make -C access/pagerduty clean release
@@ -135,10 +157,10 @@ release/event-handler:
 
 # Run all releases
 .PHONY: releases
-releases: release/access-slack release/access-jira release/access-mattermost release/access-pagerduty release/access-email
+releases: release/access-slack release/access-jira release/access-mattermost release/access-msteams release/access-pagerduty release/access-email
 
 .PHONY: build-all
-build-all: access-slack access-jira access-mattermost access-pagerduty access-email terraform event-handler
+build-all: access-slack access-jira access-mattermost access-msteams access-pagerduty access-email terraform event-handler
 
 .PHONY: update-version
 update-version:
@@ -147,6 +169,7 @@ update-version:
 	$(SED) '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/jira/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/mattermost/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/msteams/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/slack/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
@@ -162,6 +185,7 @@ update-helm-version:
 	$(MAKE) update-helm-version-access-slack
 	$(MAKE) update-helm-version-access-pagerduty
 	$(MAKE) update-helm-version-access-mattermost
+	$(MAKE) update-helm-version-access-msteams
 	$(MAKE) update-helm-version-event-handler
 
 # Update specific chart
@@ -180,6 +204,7 @@ update-tag:
 	git tag teleport-event-handler-v$(VERSION)
 	git tag teleport-jira-v$(VERSION)
 	git tag teleport-mattermost-v$(VERSION)
+	git tag teleport-msteams-v$(VERSION)
 	git tag teleport-slack-v$(VERSION)
 	git tag teleport-pagerduty-v$(VERSION)
 	git tag teleport-email-v$(VERSION)
@@ -189,12 +214,36 @@ update-tag:
 	git push origin teleport-event-handler-v$(VERSION)
 	git push origin teleport-jira-v$(VERSION)
 	git push origin teleport-mattermost-v$(VERSION)
+	git push origin teleport-msteams-v$(VERSION)
 	git push origin teleport-slack-v$(VERSION)
 	git push origin teleport-pagerduty-v$(VERSION)
 	git push origin teleport-email-v$(VERSION)
 	git push origin terraform-provider-teleport-v$(VERSION)
 	git push origin v$(VERSION)
 
+# promote-tag executes Drone promotion pipeline for the plugins.
+#
+# It has to be run after tag builds triggered by the "update-tag" target have
+# been completed. Requires "drone" executable to be available and configured
+# to talk to our Drone cluster.
+#
+# To promote all plugins:
+#   VERSION=10.2.6 make promote-tag
+#
+# To promote a particular plugin:
+#   VERSION=10.2.6 PLUGINS=teleport-slack make promote-tag
+.PHONY: promote-tag
+promote-tag:
+	@test $(VERSION)
+	@for PLUGIN in $(PLUGINS); do \
+		BUILD=$$($(DRONE) build ls --status success --event tag --format "{{.Number}} {{.Ref}}" $(DRONE_REPO) | grep $${PLUGIN}-v$(VERSION) | cut -d ' ' -f1); \
+		if [ "$${BUILD}" = "" ]; then \
+			echo "Failed to find Drone build number for $${PLUGIN}-v$(VERSION)" && exit 1; \
+		else \
+			echo "\n\n --> Promoting build $${BUILD} for plugin $${PLUGIN}" to $(DRONE_PROMOTE_ENV); \
+			$(DRONE) build promote $(DRONE_REPO) $${BUILD} $(DRONE_PROMOTE_ENV); \
+		fi; \
+	done
 
 .PHONY: update-goversion
 update-goversion:
@@ -202,9 +251,11 @@ update-goversion:
 	@test $(GOVERSION)
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/jira/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/mattermost/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/msteams/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/slack/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/pagerduty/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/email/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/msteams/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/Makefile
 	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
 	$(SED) 's/- name: golang:.*/- name: golang:$(GOVERSION)/' .cloudbuild/ci/unit-tests-linux.yaml
@@ -233,4 +284,5 @@ test-helm:
 	$(MAKE) test-helm-access-slack
 	$(MAKE) test-helm-access-pagerduty
 	$(MAKE) test-helm-access-mattermost
+	$(MAKE) test-helm-access-msteams
 	$(MAKE) test-helm-event-handler
