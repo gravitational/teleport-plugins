@@ -258,6 +258,8 @@ update-goversion:
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/msteams/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/Makefile
 	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
+	go mod edit -go=`cut -d '.' -f 1,2 <<< $(GOVERSION)`
+	go mod tidy
 	$(SED) 's/- name: golang:.*/- name: golang:$(GOVERSION)/' .cloudbuild/ci/unit-tests-linux.yaml
 	$(SED) 's/image: golang:.*/image: golang:$(GOVERSION)/g' .drone.yml
 	$(SED) 's/GO_VERSION: go.*/GO_VERSION: go$(GOVERSION)/g' .drone.yml
