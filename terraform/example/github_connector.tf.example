@@ -19,10 +19,10 @@ resource "teleport_github_connector" "github" {
     client_id = "client"
     client_secret = var.github_secret
 
-    teams_to_logins = [{
+    teams_to_roles = [{
        organization = "gravitational"
        team = "devs"
-       logins = ["example"]
+       roles = ["example"]
     }]
   }
 }

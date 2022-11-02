@@ -17,6 +17,8 @@ limitations under the License.
 package test
 
 import (
+	"regexp"
+
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -119,6 +121,63 @@ func (s *TerraformSuite) TestImportGithubConnector() {
 
 					return nil
 				},
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestGithubConnectorTeamsToRoles() {
+	checkDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetGithubConnector(s.Context(), "test", false)
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := "teleport_github_connector.test"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("github_connector_teams_to_roles.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "github"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2032-10-12T07:20:50Z"),
+					resource.TestCheckResourceAttr(name, "spec.client_id", "Iv1.3386eee92ff932a4"),
+					resource.TestCheckResourceAttr(name, "spec.teams_to_roles.0.organization", "evilmartians"),
+					resource.TestCheckResourceAttr(name, "spec.teams_to_roles.0.team", "devs"),
+					resource.TestCheckResourceAttr(name, "spec.teams_to_roles.0.roles.0", "myrole"),
+				),
+			},
+			{
+				Config:   s.getFixture("github_connector_teams_to_roles.tf"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestGithubConnectorWithoutMapping() {
+	checkDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetGithubConnector(s.Context(), "test", false)
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config:      s.getFixture("github_connector_without_mapping.tf"),
+				ExpectError: regexp.MustCompile("team_to_logins or team_to_roles mapping is invalid, no mappings defined"),
 			},
 		},
 	})
