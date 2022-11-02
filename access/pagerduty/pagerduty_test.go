@@ -84,7 +84,8 @@ func (s *PagerdutySuite) SetupSuite() {
 	t := s.T()
 
 	logger.Init()
-	logger.Setup(logger.Config{Severity: "debug"})
+	err = logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 	s.raceNumber = 2 * runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
@@ -263,7 +264,8 @@ func (s *PagerdutySuite) SetupSuite() {
 func (s *PagerdutySuite) SetupTest() {
 	t := s.T()
 
-	logger.Setup(logger.Config{Severity: "debug"})
+	err := logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 
 	fakePagerduty := NewFakePagerduty(s.raceNumber)
 	t.Cleanup(fakePagerduty.Close)
@@ -385,7 +387,8 @@ func (s *PagerdutySuite) TestApproval() {
 	incident, err := s.fakePagerduty.CheckNewIncident(s.Context())
 	require.NoError(t, err, "no new incidents stored")
 
-	s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	err = s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	require.NoError(t, err)
 
 	note, err := s.fakePagerduty.CheckNewIncidentNote(s.Context())
 	require.NoError(t, err)
@@ -408,7 +411,8 @@ func (s *PagerdutySuite) TestDenial() {
 	incident, err := s.fakePagerduty.CheckNewIncident(s.Context())
 	require.NoError(t, err, "no new incidents stored")
 
-	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay")
+	err = s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay")
+	require.NoError(t, err)
 
 	note, err := s.fakePagerduty.CheckNewIncidentNote(s.Context())
 	require.NoError(t, err)
@@ -785,7 +789,8 @@ func (s *PagerdutySuite) TestRace() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	err := logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	require.NoError(t, err)
 
 	s.SetContextTimeout(20 * time.Second)
 	s.startApp()

@@ -120,8 +120,12 @@ func (j *EventsJob) handleEvent(ctx context.Context, evt *TeleportEvent) error {
 	}
 
 	// Save last event id and cursor to disk
-	j.app.State.SetID(evt.ID)
-	j.app.State.SetCursor(evt.Cursor)
+	if err := j.app.State.SetID(evt.ID); err != nil {
+		return trace.Wrap(err)
+	}
+	if err := j.app.State.SetCursor(evt.Cursor); err != nil {
+		return trace.Wrap(err)
+	}
 
 	return nil
 }

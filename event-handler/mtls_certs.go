@@ -115,7 +115,9 @@ func GenerateMTLSCerts(cn string, dnsNames []string, ips []string, ttl time.Dura
 	c.serverCert.SerialNumber = sn
 
 	// Append SANs and IPs
-	c.appendSANs(&c.serverCert, dnsNames, ips)
+	if err := c.appendSANs(&c.serverCert, dnsNames, ips); err != nil {
+		return nil, trace.Wrap(err)
+	}
 
 	// Run the generator
 	err = c.generate(length)

@@ -87,7 +87,7 @@ func (s *EmailSuite) SetupSuite() {
 	var err error
 	t := s.T()
 
-	s.AuthSetup.SetupSuite()
+	s.AuthSetup.SetupSuite(t)
 	s.AuthSetup.SetupService()
 
 	ctx := s.Context()
@@ -190,7 +190,8 @@ func (s *EmailSuite) SetupSuite() {
 func (s *EmailSuite) SetupTest() {
 	t := s.T()
 
-	logger.Setup(logger.Config{Severity: "debug"})
+	err := logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 
 	s.mockMailgun = NewMockMailgunServer(s.raceNumber)
 	s.mockMailgun.Start()
@@ -320,7 +321,8 @@ func (s *EmailSuite) TestApproval() {
 
 	s.skipMessages(s.Context(), t, 2)
 
-	s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	err := s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	require.NoError(t, err)
 
 	messages := s.getMessages(s.Context(), t, 2)
 
@@ -339,7 +341,8 @@ func (s *EmailSuite) TestDenial() {
 
 	s.skipMessages(s.Context(), t, 2)
 
-	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay")
+	err := s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay")
+	require.NoError(t, err)
 
 	messages := s.getMessages(s.Context(), t, 2)
 
@@ -365,12 +368,13 @@ func (s *EmailSuite) TestReviewReplies() {
 
 	s.skipMessages(s.Context(), t, 2)
 
-	s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
+	err := s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
 		Reason:        "okay",
 	})
+	require.NoError(t, err)
 
 	messages := s.getMessages(s.Context(), t, 2)
 
@@ -380,12 +384,13 @@ func (s *EmailSuite) TestReviewReplies() {
 	require.Contains(t, reply, "Resolution: ✅ APPROVED", "reply must contain a proposed state")
 	require.Contains(t, reply, "Reason: okay", "reply must contain a reason")
 
-	s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
+	err = s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
 		Reason:        "not okay",
 	})
+	require.NoError(t, err)
 
 	messages = s.getMessages(s.Context(), t, 2)
 
@@ -407,23 +412,25 @@ func (s *EmailSuite) TestApprovalByReview() {
 
 	s.skipMessages(s.Context(), t, 2)
 
-	s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
+	err := s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
 		Reason:        "okay",
 	})
+	require.NoError(t, err)
 
 	messages := s.getMessages(s.Context(), t, 2)
 
 	require.Contains(t, messages[0].Body, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
 
-	s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
+	err = s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_APPROVED,
 		Created:       time.Now(),
 		Reason:        "finally okay",
 	})
+	require.NoError(t, err)
 
 	messages = s.getMessages(s.Context(), t, 2)
 	require.Contains(t, messages[0].Body, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
@@ -443,22 +450,24 @@ func (s *EmailSuite) TestDenialByReview() {
 
 	s.skipMessages(s.Context(), t, 2)
 
-	s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
+	err := s.reviewer1().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer1,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
 		Reason:        "not okay",
 	})
+	require.NoError(t, err)
 
 	messages := s.getMessages(s.Context(), t, 2)
 	require.Contains(t, messages[0].Body, s.userNames.reviewer1+" reviewed the request", "reply must contain a review author")
 
-	s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
+	err = s.reviewer2().SubmitAccessRequestReview(s.Context(), req.GetName(), types.AccessReview{
 		Author:        s.userNames.reviewer2,
 		ProposedState: types.RequestState_DENIED,
 		Created:       time.Now(),
 		Reason:        "finally not okay",
 	})
+	require.NoError(t, err)
 
 	messages = s.getMessages(s.Context(), t, 2)
 	require.Contains(t, messages[0].Body, s.userNames.reviewer2+" reviewed the request", "reply must contain a review author")
@@ -491,7 +500,8 @@ func (s *EmailSuite) TestRace() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	err := logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	require.NoError(t, err)
 
 	s.SetContextTimeout(20 * time.Second)
 

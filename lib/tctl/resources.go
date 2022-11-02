@@ -33,9 +33,13 @@ func writeResourcesYAML(w io.Writer, resources []types.Resource) error {
 		if err != nil {
 			return trace.Wrap(err)
 		}
-		w.Write(data)
+		if _, err := w.Write(data); err != nil {
+			return trace.Wrap(err)
+		}
 		if i != len(resources) {
-			io.WriteString(w, "\n---\n")
+			if _, err := io.WriteString(w, "\n---\n"); err != nil {
+				return trace.Wrap(err)
+			}
 		}
 	}
 	return nil

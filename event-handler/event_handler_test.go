@@ -58,7 +58,7 @@ func (s *EventHandlerSuite) SetupSuite() {
 	var err error
 	t := s.T()
 
-	s.SSHSetup.SetupSuite()
+	s.SSHSetup.SetupSuite(t)
 	s.SSHSetup.SetupService()
 
 	me, err := user.Current()
@@ -117,7 +117,8 @@ func (s *EventHandlerSuite) SetupSuite() {
 func (s *EventHandlerSuite) SetupTest() {
 	t := s.T()
 
-	logger.Setup(logger.Config{Severity: "debug"})
+	err := logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 
 	fd, err := NewFakeFluentd()
 	require.NoError(t, err)

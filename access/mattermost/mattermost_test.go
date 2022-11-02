@@ -56,7 +56,8 @@ func (s *MattermostSuite) SetupSuite() {
 	t := s.T()
 
 	logger.Init()
-	logger.Setup(logger.Config{Severity: "debug"})
+	err = logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
@@ -168,7 +169,8 @@ func (s *MattermostSuite) SetupSuite() {
 func (s *MattermostSuite) SetupTest() {
 	t := s.T()
 
-	logger.Setup(logger.Config{Severity: "debug"})
+	err := logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 
 	s.fakeMattermost = NewFakeMattermost(User{Username: "bot", Email: "bot@example.com"}, s.raceNumber)
 	t.Cleanup(s.fakeMattermost.Close)
@@ -321,7 +323,8 @@ func (s *MattermostSuite) TestApproval() {
 	directChannelID := s.fakeMattermost.GetDirectChannelFor(s.fakeMattermost.GetBotUser(), reviewer).ID
 	assert.Equal(t, directChannelID, post.ChannelID)
 
-	s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	err = s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	require.NoError(t, err)
 
 	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.Context())
 	require.NoError(t, err, "no messages updated")
@@ -353,7 +356,7 @@ func (s *MattermostSuite) TestDenial() {
 	assert.Equal(t, directChannelID, post.ChannelID)
 
 	// max size of request was decreased here: https://github.com/gravitational/teleport/pull/13298
-	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay "+strings.Repeat("A", 4000))
+	err = s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay "+strings.Repeat("A", 4000))
 	require.NoError(t, err)
 
 	postUpdate, err := s.fakeMattermost.CheckPostUpdate(s.Context())
@@ -585,7 +588,8 @@ func (s *MattermostSuite) TestRace() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	err := logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	require.NoError(t, err)
 
 	reviewer1 := s.fakeMattermost.StoreUser(User{Email: s.userNames.reviewer1})
 	reviewer2 := s.fakeMattermost.StoreUser(User{Email: s.userNames.reviewer2})
