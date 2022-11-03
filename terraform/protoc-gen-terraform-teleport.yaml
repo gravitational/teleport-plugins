@@ -254,9 +254,6 @@ required_fields:
     - "GithubConnectorV3.Spec"
     - "GithubConnectorV3.Spec.ClientID"
     - "GithubConnectorV3.Spec.ClientSecret"
-    - "GithubConnectorV3.Spec.TeamsToLogins"
-    - "GithubConnectorV3.Spec.TeamsToLogins.Team"
-    - "GithubConnectorV3.Spec.TeamsToLogins.Logins"
     - "GithubConnectorV3.Metadata.Name"
 
     # OIDC connector
