@@ -45,7 +45,7 @@ func (c *tokenWithTTL) Bearer(ctx context.Context, config Config) (string, error
 	expiresAt := c.expiresAt
 	c.mu.RUnlock()
 
-	if expiresAt == 0 || expiresAt > time.Now().UnixNano() {
+	if expiresAt == 0 || expiresAt < time.Now().UnixNano() {
 		token, err := c.getToken(ctx, c.scope, config)
 		if err != nil {
 			return "", trace.Wrap(err)
