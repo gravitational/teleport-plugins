@@ -55,7 +55,8 @@ func (s *SlackSuite) SetupSuite() {
 	t := s.T()
 
 	logger.Init()
-	logger.Setup(logger.Config{Severity: "debug"})
+	err = logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
@@ -167,7 +168,8 @@ func (s *SlackSuite) SetupSuite() {
 func (s *SlackSuite) SetupTest() {
 	t := s.T()
 
-	logger.Setup(logger.Config{Severity: "debug"})
+	err := logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 
 	s.fakeSlack = NewFakeSlack(SlackUser{Name: "slackbot"}, s.raceNumber)
 	t.Cleanup(s.fakeSlack.Close)
@@ -352,7 +354,8 @@ func (s *SlackSuite) TestApproval() {
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msg.Channel)
 
-	s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	err = s.ruler().ApproveAccessRequest(s.Context(), req.GetName(), "okay")
+	require.NoError(t, err)
 
 	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Context())
 	require.NoError(t, err)
@@ -377,7 +380,7 @@ func (s *SlackSuite) TestDenial() {
 	assert.Equal(t, reviewer.ID, msg.Channel)
 
 	// max size of request was decreased here: https://github.com/gravitational/teleport/pull/13298
-	s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay "+strings.Repeat("A", 4000))
+	err = s.ruler().DenyAccessRequest(s.Context(), req.GetName(), "not okay "+strings.Repeat("A", 4000))
 	require.NoError(t, err)
 
 	msgUpdate, err := s.fakeSlack.CheckMessageUpdateByAPI(s.Context())
@@ -593,7 +596,8 @@ func (s *SlackSuite) TestRace() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	err := logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	require.NoError(t, err)
 
 	reviewer1 := s.fakeSlack.StoreUser(SlackUser{Profile: UserProfile{Email: s.userNames.reviewer1}})
 	reviewer2 := s.fakeSlack.StoreUser(SlackUser{Profile: UserProfile{Email: s.userNames.reviewer2}})

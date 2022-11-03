@@ -64,14 +64,19 @@ func (j *SessionEventsJob) run(ctx context.Context) error {
 		return nil
 	})
 
-	j.restartPausedSessions()
+	if err := j.restartPausedSessions(); err != nil {
+		log.WithError(err).Error("Restarting paused sessions")
+	}
 
 	j.SetReady(true)
 
 	for {
 		select {
 		case s := <-j.sessions:
-			j.semaphore.Acquire(ctx, 1)
+			if err := j.semaphore.Acquire(ctx, 1); err != nil {
+				log.WithError(err).Error("Failed to acquire semaphore")
+				continue
+			}
 
 			log.WithField("id", s.ID).WithField("index", s.Index).Info("Starting session ingest")
 
@@ -231,12 +236,13 @@ func (j *SessionEventsJob) RegisterSession(ctx context.Context, e *TeleportEvent
 
 	s := session{ID: e.SessionID, Index: 0}
 
-	go func() error {
+	go func() {
 		select {
 		case j.sessions <- s:
-			return nil
+			return
 		case <-ctx.Done():
-			return ctx.Err()
+			log.Error(ctx.Err())
+			return
 		}
 	}()
 

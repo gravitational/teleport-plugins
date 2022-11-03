@@ -227,5 +227,8 @@ func (a *App) setStartTime(ctx context.Context, s *State) error {
 
 // RegisterSession registers new session
 func (a *App) RegisterSession(ctx context.Context, e *TeleportEvent) {
-	a.sessionEventsJob.RegisterSession(ctx, e)
+	log := logger.Get(ctx)
+	if err := a.sessionEventsJob.RegisterSession(ctx, e); err != nil {
+		log.Error("Registering session: ", err)
+	}
 }

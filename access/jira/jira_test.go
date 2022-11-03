@@ -71,7 +71,8 @@ func (s *JiraSuite) SetupSuite() {
 	t := s.T()
 
 	logger.Init()
-	logger.Setup(logger.Config{Severity: "debug"})
+	err = logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
@@ -187,7 +188,8 @@ func (s *JiraSuite) SetupSuite() {
 func (s *JiraSuite) SetupTest() {
 	t := s.T()
 
-	logger.Setup(logger.Config{Severity: "debug"})
+	err := logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 
 	s.fakeJira = NewFakeJira(s.authorUser, s.raceNumber)
 	t.Cleanup(s.fakeJira.Close)
@@ -719,7 +721,8 @@ func (s *JiraSuite) TestExpiration() {
 func (s *JiraSuite) TestRace() {
 	t := s.T()
 
-	logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	err := logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	require.NoError(t, err)
 
 	s.SetContextTimeout(20 * time.Second)
 	app := s.startApp()

@@ -87,7 +87,7 @@ func (s *TerraformBaseSuite) SetupSuite() {
 	var err error
 	t := s.T()
 
-	s.AuthSetup.SetupSuite()
+	s.AuthSetup.SetupSuite(t)
 	authOptions := []integration.AuthServiceOption{}
 	if s.cacheEnabled {
 		authOptions = append(authOptions, integration.WithCache())
