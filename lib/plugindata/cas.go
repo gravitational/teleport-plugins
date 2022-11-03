@@ -98,9 +98,11 @@ func (c *CompareAndSwap[T]) Update(
 	modifyT func(T) (T, error),
 ) (T, error) {
 	emptyData := *new(T)
+	var failedAttempts []error
 
 	backoff := backoff.NewDecorr(c.backoffBase, c.backoffMax, clockwork.NewRealClock())
 	for {
+		// Get existing data
 		oldData, err := c.getPluginData(ctx, resource)
 		if err != nil {
 			return emptyData, trace.Wrap(err)
@@ -109,11 +111,14 @@ func (c *CompareAndSwap[T]) Update(
 		cbData := *oldData
 		expectData := *oldData
 
+		// Modify data
 		newData, err := modifyT(cbData)
 		if trace.IsCompareFailed(err) {
-			err := backoff.Do(ctx)
-			if err != nil {
-				return emptyData, trace.Wrap(err)
+			failedAttempts = append(failedAttempts, trace.Wrap(err))
+			backoffErr := backoff.Do(ctx)
+			if backoffErr != nil {
+				failedAttempts = append(failedAttempts, trace.Wrap(backoffErr))
+				return emptyData, trace.NewAggregate(failedAttempts...)
 			}
 
 			continue
@@ -121,6 +126,7 @@ func (c *CompareAndSwap[T]) Update(
 			return emptyData, trace.Wrap(err)
 		}
 
+		// SUbmit modifications
 		err = c.updatePluginData(ctx, resource, newData, expectData)
 		if err == nil {
 			return newData, nil
@@ -128,9 +134,12 @@ func (c *CompareAndSwap[T]) Update(
 		if !trace.IsCompareFailed(err) {
 			return emptyData, trace.Wrap(err)
 		}
-		err = backoff.Do(ctx)
-		if err != nil {
-			return emptyData, trace.Wrap(err)
+		// A conflict happened, we register the failed attempt and wait before retrying
+		failedAttempts = append(failedAttempts, trace.Wrap(err))
+		backoffErr := backoff.Do(ctx)
+		if backoffErr != nil {
+			failedAttempts = append(failedAttempts, trace.Wrap(backoffErr))
+			return emptyData, trace.NewAggregate(failedAttempts...)
 		}
 	}
 }

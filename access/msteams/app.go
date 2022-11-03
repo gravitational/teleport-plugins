@@ -437,12 +437,12 @@ func (a *App) updateMessages(ctx context.Context, reqID string, tag pd.Resolutio
 
 	pluginData, err := a.pd.Update(ctx, reqID, func(existing PluginData) (PluginData, error) {
 		if len(existing.TeamsData) == 0 {
-			return PluginData{}, nil
+			return PluginData{}, trace.CompareFailed("existing teamsData is empty")
 		}
 
 		// If resolution field is not empty then we already resolved the incident before. In this case we just quit.
 		if existing.AccessRequestData.ResolutionTag != pd.Unresolved {
-			return PluginData{}, trace.CompareFailed("existing teamsData is empty")
+			return PluginData{}, nil
 		}
 
 		// Mark plugin data as resolved.

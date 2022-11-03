@@ -1,7 +1,8 @@
 package main
 
 import (
-	"fmt"
+	"encoding/base64"
+	"encoding/json"
 	"strings"
 
 	"github.com/gravitational/teleport-plugins/lib/plugindata"
@@ -15,9 +16,9 @@ type PluginData struct {
 
 // TeamsMessage represents sent message information
 type TeamsMessage struct {
-	ID          string
-	Timestamp   string
-	RecipientID string
+	ID          string `json:"id"`
+	Timestamp   string `json:"ts"`
+	RecipientID string `json:"rid"`
 }
 
 // DecodePluginData deserializes a string map to PluginData struct.
@@ -26,14 +27,22 @@ func DecodePluginData(dataMap map[string]string) PluginData {
 
 	data.AccessRequestData = plugindata.DecodeAccessRequestData(dataMap)
 
-	if channelID, timestamp := dataMap["channel_id"], dataMap["timestamp"]; channelID != "" && timestamp != "" {
-		data.TeamsData = append(data.TeamsData, TeamsMessage{ID: channelID, Timestamp: timestamp})
-	}
 	if str := dataMap["messages"]; str != "" {
 		for _, encodedMsg := range strings.Split(str, ",") {
-			parts := strings.Split(encodedMsg, "/")
-			if len(parts) == 3 {
-				data.TeamsData = append(data.TeamsData, TeamsMessage{ID: parts[0], Timestamp: parts[1], RecipientID: parts[2]})
+			decodedMsg, err := base64.StdEncoding.DecodeString(encodedMsg)
+			if err != nil {
+				// Backward compatibility
+				parts := strings.Split(encodedMsg, "/")
+				if len(parts) == 3 {
+					data.TeamsData = append(data.TeamsData, TeamsMessage{ID: parts[0], Timestamp: parts[1], RecipientID: parts[2]})
+				}
+			} else {
+				msg := &TeamsMessage{}
+				err = json.Unmarshal(decodedMsg, msg)
+				if err != nil {
+					continue
+				}
+				data.TeamsData = append(data.TeamsData, *msg)
 			}
 		}
 	}
@@ -47,7 +56,12 @@ func EncodePluginData(data PluginData) map[string]string {
 
 	var encodedMessages []string
 	for _, msg := range data.TeamsData {
-		encodedMessages = append(encodedMessages, fmt.Sprintf("%s/%s/%s", msg.ID, msg.Timestamp, msg.RecipientID))
+		jsonMessage, err := json.Marshal(msg)
+		if err != nil {
+			continue
+		}
+		encodedMessage := base64.StdEncoding.EncodeToString(jsonMessage)
+		encodedMessages = append(encodedMessages, encodedMessage)
 	}
 
 	result["messages"] = strings.Join(encodedMessages, ",")
