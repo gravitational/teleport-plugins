@@ -2423,7 +2423,7 @@ func GenSchemaGithubConnectorV3(ctx context.Context) (github_com_hashicorp_terra
 						},
 						"logins": {
 							Description: "Logins is a list of allowed logins for this org/team.",
-							Required:    true,
+							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
 						"organization": {
@@ -2433,12 +2433,12 @@ func GenSchemaGithubConnectorV3(ctx context.Context) (github_com_hashicorp_terra
 						},
 						"team": {
 							Description: "Team is a team within the organization a user belongs to.",
-							Required:    true,
+							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
 					}),
 					Description: "TeamsToLogins maps Github team memberships onto allowed logins/roles.  DELETE IN 11.0.0 Deprecated: use GithubTeamsToRoles instead.",
-					Required:    true,
+					Optional:    true,
 				},
 				"teams_to_roles": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
