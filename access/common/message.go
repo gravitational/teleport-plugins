@@ -35,7 +35,7 @@ import (
 const (
 	requestReasonLimit = 500
 	resolutionReasonLimit
-	reviewReasonLimit
+	ReviewReasonLimit
 )
 
 var reviewReplyTemplate = template.Must(template.New("review reply").Parse(
@@ -59,7 +59,7 @@ func MsgStatusText(tag pd.ResolutionTag, reason string) string {
 		statusEmoji = "⌛"
 	}
 
-	statusText := fmt.Sprintf("*Status:* %s %s", statusEmoji, status)
+	statusText := fmt.Sprintf("*Status*: %s %s", statusEmoji, status)
 	if reason != "" {
 		statusText += fmt.Sprintf("\n*Resolution reason*: %s", lib.MarkdownEscape(reason, resolutionReasonLimit))
 	}
@@ -99,7 +99,7 @@ func MsgFields(reqID string, reqData pd.AccessRequestData, clusterName string, w
 
 func MsgReview(review types.AccessReview) (string, error) {
 	if review.Reason != "" {
-		review.Reason = lib.MarkdownEscape(review.Reason, reviewReasonLimit)
+		review.Reason = lib.MarkdownEscape(review.Reason, ReviewReasonLimit)
 	}
 
 	var proposedStateEmoji string

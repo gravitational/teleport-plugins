@@ -24,8 +24,6 @@ import (
 
 // Slack API types
 
-// TODO: Move discord API types out of here
-
 type SlackResponse struct {
 	Ok    bool   `json:"ok"`
 	Error string `json:"error,omitempty"`
@@ -53,7 +51,7 @@ type SlackMsg struct {
 	Text       string      `json:"text,omitempty"`
 }
 
-type User struct {
+type SlackUser struct {
 	ID      string      `json:"id"`
 	Name    string      `json:"name"`
 	Profile UserProfile `json:"profile"`

@@ -114,7 +114,7 @@ func (b SlackBot) PostReviewReply(ctx context.Context, channelID, timestamp stri
 func (b SlackBot) lookupDirectChannelByEmail(ctx context.Context, email string) (string, error) {
 	var result struct {
 		SlackResponse
-		User User `json:"user"`
+		User SlackUser `json:"user"`
 	}
 	_, err := b.client.NewRequest().
 		SetContext(ctx).
