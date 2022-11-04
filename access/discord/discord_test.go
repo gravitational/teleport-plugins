@@ -55,7 +55,8 @@ func (s *DiscordSuite) SetupSuite() {
 	t := s.T()
 
 	logger.Init()
-	logger.Setup(logger.Config{Severity: "debug"})
+	err = logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 	s.raceNumber = runtime.GOMAXPROCS(0)
 	me, err := user.Current()
 	require.NoError(t, err)
@@ -166,7 +167,8 @@ func (s *DiscordSuite) SetupSuite() {
 func (s *DiscordSuite) SetupTest() {
 	t := s.T()
 
-	logger.Setup(logger.Config{Severity: "debug"})
+	err := logger.Setup(logger.Config{Severity: "debug"})
+	require.NoError(t, err)
 
 	s.fakeDiscord = NewFakeDiscord(s.raceNumber)
 	t.Cleanup(s.fakeDiscord.Close)
@@ -573,7 +575,8 @@ func (s *DiscordSuite) TestRace() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	err := logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
+	require.NoError(t, err)
 
 	s.appConfig.Recipients = common.RawRecipientsMap{
 		"editor": []string{
