@@ -26,7 +26,8 @@ var samplePluginData = PluginData{
 const messageData = "eyJpZCI6IkNIQU5ORUwxIiwidHMiOiIwMDAwMDAxIiwicmlkIjoiZm9vQGV4YW1wbGUuY29tIn0=,eyJpZCI6IkNIQU5ORUwyIiwidHMiOiIwMDAwMDAyIiwicmlkIjoiMmNhMjM1ZWMtMzdkMC00NGIwLTk2NGQtY2EzNTllNzcwNjAzIn0=,eyJpZCI6IkNIQU5ORUwzIiwidHMiOiIwMDAwMDAzIiwicmlkIjoiaHR0cHM6Ly90ZWFtcy5taWNyb3NvZnQuY29tL2wvY2hhbm5lbC8xOSUzYWYwOWYzOGQ2ZDE1OTQwNjU4NjJiMWNhNGE0MTczMTllJTQwdGhyZWFkLnRhY3YyL0FwcHJvdmFsJTI1MjBDaGFubmVsJTI1MjAzP2dyb3VwSWQ9ZjJiM2M4ZWQtNTUwMi00NDQ5LWI3NmYtZGMzYWNlYTgxZjFjXHUwMDI2dGVuYW50SWQ9ZmY4ODI0MzItMDliMC00MzdiLWJkMjItY2ExM2MwMDM3ZGVkIn0="
 
 func TestEncodePluginData(t *testing.T) {
-	dataMap := EncodePluginData(samplePluginData)
+	dataMap, err := EncodePluginData(samplePluginData)
+	assert.NoError(t, err)
 	assert.Len(t, dataMap, 7)
 	assert.Equal(t, "user-foo", dataMap["user"])
 	assert.Equal(t, "role-foo,role-bar", dataMap["roles"])
@@ -41,7 +42,7 @@ func TestEncodePluginData(t *testing.T) {
 }
 
 func TestDecodePluginDataCompatibility(t *testing.T) {
-	pluginData := DecodePluginData(map[string]string{
+	pluginData, err := DecodePluginData(map[string]string{
 		"user":           "user-foo",
 		"roles":          "role-foo,role-bar",
 		"request_reason": "foo reason",
@@ -50,6 +51,7 @@ func TestDecodePluginDataCompatibility(t *testing.T) {
 		"resolve_reason": "foo ok",
 		"messages":       "CHANNEL1/0000001/foo@example.com,CHANNEL2/0000002/2ca235ec-37d0-44b0-964d-ca359e770603",
 	})
+	assert.NoError(t, err)
 	assert.Equal(t, samplePluginData.AccessRequestData, pluginData.AccessRequestData)
 	// Legacy way of encoding messages does not support recipients containing '/' or ','
 	// Hence we don't test the CHANNEL3
@@ -58,7 +60,7 @@ func TestDecodePluginDataCompatibility(t *testing.T) {
 }
 
 func TestDecodePluginData(t *testing.T) {
-	pluginData := DecodePluginData(map[string]string{
+	pluginData, err := DecodePluginData(map[string]string{
 		"user":           "user-foo",
 		"roles":          "role-foo,role-bar",
 		"request_reason": "foo reason",
@@ -67,11 +69,13 @@ func TestDecodePluginData(t *testing.T) {
 		"resolve_reason": "foo ok",
 		"messages":       messageData,
 	})
+	assert.NoError(t, err)
 	assert.Equal(t, samplePluginData, pluginData)
 }
 
 func TestEncodeEmptyPluginData(t *testing.T) {
-	dataMap := EncodePluginData(PluginData{})
+	dataMap, err := EncodePluginData(PluginData{})
+	assert.NoError(t, err)
 	assert.Len(t, dataMap, 7)
 	for key, value := range dataMap {
 		assert.Emptyf(t, value, "value at key %q must be empty", key)
@@ -79,6 +83,11 @@ func TestEncodeEmptyPluginData(t *testing.T) {
 }
 
 func TestDecodeEmptyPluginData(t *testing.T) {
-	assert.Empty(t, DecodePluginData(nil))
-	assert.Empty(t, DecodePluginData(make(map[string]string)))
+	result, err := DecodePluginData(nil)
+	assert.NoError(t, err)
+	assert.Empty(t, result)
+
+	result, err = DecodePluginData(make(map[string]string))
+	assert.NoError(t, err)
+	assert.Empty(t, result)
 }

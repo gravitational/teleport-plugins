@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/gravitational/trace"
+
 	"github.com/gravitational/teleport-plugins/lib/plugindata"
 )
 
@@ -22,8 +24,9 @@ type TeamsMessage struct {
 }
 
 // DecodePluginData deserializes a string map to PluginData struct.
-func DecodePluginData(dataMap map[string]string) PluginData {
+func DecodePluginData(dataMap map[string]string) (PluginData, error) {
 	data := PluginData{}
+	var errors []error
 
 	data.AccessRequestData = plugindata.DecodeAccessRequestData(dataMap)
 
@@ -32,6 +35,7 @@ func DecodePluginData(dataMap map[string]string) PluginData {
 			decodedMsg, err := base64.StdEncoding.DecodeString(encodedMsg)
 			if err != nil {
 				// Backward compatibility
+				// TODO(hugoShaka): remove in v12
 				parts := strings.Split(encodedMsg, "/")
 				if len(parts) == 3 {
 					data.TeamsData = append(data.TeamsData, TeamsMessage{ID: parts[0], Timestamp: parts[1], RecipientID: parts[2]})
@@ -40,25 +44,26 @@ func DecodePluginData(dataMap map[string]string) PluginData {
 				msg := &TeamsMessage{}
 				err = json.Unmarshal(decodedMsg, msg)
 				if err != nil {
-					continue
+					errors = append(errors, err)
 				}
 				data.TeamsData = append(data.TeamsData, *msg)
 			}
 		}
 	}
 
-	return data
+	return data, trace.NewAggregate(errors...)
 }
 
 // EncodePluginData serializes plugin data to a string map
-func EncodePluginData(data PluginData) map[string]string {
+func EncodePluginData(data PluginData) (map[string]string, error) {
 	result := plugindata.EncodeAccessRequestData(data.AccessRequestData)
+	var errors []error
 
 	var encodedMessages []string
 	for _, msg := range data.TeamsData {
 		jsonMessage, err := json.Marshal(msg)
 		if err != nil {
-			continue
+			errors = append(errors, err)
 		}
 		encodedMessage := base64.StdEncoding.EncodeToString(jsonMessage)
 		encodedMessages = append(encodedMessages, encodedMessage)
@@ -66,5 +71,5 @@ func EncodePluginData(data PluginData) map[string]string {
 
 	result["messages"] = strings.Join(encodedMessages, ",")
 
-	return result
+	return result, trace.NewAggregate(errors...)
 }

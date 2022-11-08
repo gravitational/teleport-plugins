@@ -18,22 +18,26 @@ type mockData struct {
 	Bar string
 }
 
-func mockEncode(source mockData) map[string]string {
+func mockEncode(source mockData) (map[string]string, error) {
 	result := make(map[string]string)
 
 	result["foo"] = source.Foo
 	result["bar"] = source.Bar
 
-	return result
+	return result, nil
 }
 
-func mockDecode(source map[string]string) mockData {
+func mockDecode(source map[string]string) (mockData, error) {
 	result := mockData{}
 
 	result.Foo = source["foo"]
 	result.Bar = source["bar"]
 
-	return result
+	return result, nil
+}
+
+func mockDecodeFail(source map[string]string) (mockData, error) {
+	return mockData{}, trace.BadParameter("Failed to decode data")
 }
 
 type mockClient struct {
@@ -144,4 +148,19 @@ func TestBackoff(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, r)
 	require.Equal(t, r.Foo, "yes")
+}
+
+func TestWrongData(t *testing.T) {
+	c := &mockClient{
+		oldData: []map[string]string{{"foo": "value"}},
+	}
+	cas := NewCAS(c, resourceKind, types.KindAccessRequest, mockEncode, mockDecodeFail)
+
+	_, err := cas.Update(context.Background(), "foo", func(i mockData) (mockData, error) {
+		i.Foo = "other value"
+		return i, nil
+	})
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, trace.BadParameter("Failed to decode data"))
 }
