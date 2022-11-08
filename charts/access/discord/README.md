@@ -67,11 +67,11 @@ The following values can be set for the Helm chart:
   <tr>
     <td><code>roleToRecipients</code></td>
     <td>
-      Mapping of roles to a list of channels and Discord emails. <br />
+      Mapping of roles to a list of Discord channel IDs. <br />
       Example:
       <pre>
-"dev" = ["dev-access-requests", "user@example.com"]
-"*" = ["access-requests"]</pre>
+"dev" = ["0987654321", "1234567890"]
+"*" = ["1234567890"]</pre>
     </td>
     <td>map</td>
     <td><code>{}</code></td>

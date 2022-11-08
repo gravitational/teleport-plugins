@@ -7,8 +7,7 @@ should match the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-discord
-        app.kubernetes.io/version: 10.3.2
-        helm.sh/chart: teleport-plugin-discord-10.3.2
+        helm.sh/chart: teleport-plugin-discord-11.0.1
       name: RELEASE-NAME-teleport-plugin-discord
     spec:
       replicas: 1
