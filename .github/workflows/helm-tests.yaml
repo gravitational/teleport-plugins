@@ -1,0 +1,31 @@
+name: tests-helm
+run-name: Tests (helm)
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    paths:
+      - charts/**
+
+jobs:
+  test:
+    name: Tests (helm)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Teleport Plugins
+        uses: actions/checkout@v3
+
+      - name: Setup Helm 3.5.2
+        uses: azure/setup-helm@v3
+        with:
+          version: '3.5.2'
+
+      - name: Setup helm-unittest
+        run: |
+            helm plugin install --version=v1.0.16 https://github.com/vbehar/helm3-unittest
+            helm plugin list
+
+      - name: Run tests
+        run: make test-helm

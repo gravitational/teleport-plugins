@@ -18,7 +18,6 @@ package integration
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
@@ -140,7 +139,7 @@ func (s *Suite) NewTmpFile(pattern string) *os.File {
 	t := s.T()
 	t.Helper()
 
-	file, err := ioutil.TempFile("", pattern)
+	file, err := os.CreateTemp("", pattern)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		err := os.Remove(file.Name())
