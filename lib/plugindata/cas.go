@@ -126,7 +126,7 @@ func (c *CompareAndSwap[T]) Update(
 			return emptyData, trace.Wrap(err)
 		}
 
-		// SUbmit modifications
+		// Submit modifications
 		err = c.updatePluginData(ctx, resource, newData, expectData)
 		if err == nil {
 			return newData, nil
