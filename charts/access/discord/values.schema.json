@@ -332,11 +332,11 @@
             "examples": [
                 {
                     "dev": [
-                        "devs-discord-channel"
+                        "1234567890",
+			"0987654321"
                     ],
                     "*": [
-                        "admin@email.com",
-                        "admin-discord-channel"
+                        "1234567890"
                     ]
                 }
             ],
