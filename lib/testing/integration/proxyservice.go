@@ -150,31 +150,29 @@ func (proxy *ProxyService) Run(ctx context.Context) error {
 		stdout := bufio.NewReader(stdoutPipe)
 		for {
 			line, err := stdout.ReadString('\n')
-			if line != "" {
-				proxy.saveStdout(line)
-				proxy.parseLine(ctx, line)
-				if !proxy.IsReady() {
-					proxy.mu.Lock()
-					webAddr := proxy.webProxyAddr
-					sshAddr := proxy.sshProxyAddr
-					tunAddr := proxy.reverseTunnelAddr
-					proxy.mu.Unlock()
-					if !webAddr.IsEmpty() && !sshAddr.IsEmpty() && !tunAddr.IsEmpty() {
-						log.WithFields(logger.Fields{
-							"addr_web": webAddr,
-							"addr_ssh": sshAddr,
-							"addr_tun": tunAddr,
-						}).Debugf("Found all addrs of Proxy service process")
-						proxy.setReady(true)
-					}
-				}
-			}
 			if err == io.EOF {
 				return
 			}
 			if err := trace.Wrap(err); err != nil {
 				log.WithError(err).Error("failed to read process stdout")
 				return
+			}
+
+			proxy.saveStdout(line)
+
+			if proxy.IsReady() {
+				continue
+			}
+
+			proxy.parseLine(ctx, line)
+
+			if strings.Contains(line, "List of known proxies updated:") {
+				log.WithFields(logger.Fields{
+					"addr_web": proxy.webProxyAddr,
+					"addr_ssh": proxy.sshProxyAddr,
+					"addr_tun": proxy.reverseTunnelAddr,
+				}).Debugf("Found all addrs of Proxy service process")
+				proxy.setReady(true)
 			}
 		}
 	}()

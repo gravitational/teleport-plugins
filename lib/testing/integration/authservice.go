@@ -145,22 +145,24 @@ func (auth *AuthService) Run(ctx context.Context) error {
 		stdout := bufio.NewReader(stdoutPipe)
 		for {
 			line, err := stdout.ReadString('\n')
-			if line != "" {
-				auth.saveStdout(line)
-				auth.parseLine(ctx, line)
-				if !auth.IsReady() {
-					if addr := auth.AuthAddr(); !addr.IsEmpty() {
-						log.Debugf("Found addr of Auth service process: %v", addr)
-						auth.setReady(true)
-					}
-				}
-			}
 			if err == io.EOF {
 				return
 			}
 			if err := trace.Wrap(err); err != nil {
 				log.WithError(err).Error("failed to read process stdout")
 				return
+			}
+
+			auth.saveStdout(line)
+
+			if auth.IsReady() {
+				continue
+			}
+
+			auth.parseLine(ctx, line)
+			if addr := auth.AuthAddr(); !addr.IsEmpty() {
+				log.Debugf("Found addr of Auth service process: %v", addr)
+				auth.setReady(true)
 			}
 		}
 	}()
