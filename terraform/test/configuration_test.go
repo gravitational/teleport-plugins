@@ -19,6 +19,7 @@ package test
 import (
 	"encoding/base64"
 	"os"
+	"regexp"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/stretchr/testify/require"
@@ -107,6 +108,56 @@ provider "teleport" {
 					resource.TestCheckResourceAttr(name, "kind", "app"),
 					resource.TestCheckResourceAttr(name, "spec.uri", "localhost:3000"),
 				),
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestConfigureIdentityFileBase64() {
+	name := "teleport_app.test"
+
+	identity, err := os.ReadFile(s.teleportConfig.Identity)
+	require.NoError(s.T(), err)
+	identityAsB64 := base64.RawStdEncoding.EncodeToString(identity)
+
+	providerConfigUsingAuthFiles := `
+provider "teleport" {
+	addr = "` + s.teleportConfig.Addr + `"
+	identity_file_base64 = "` + identityAsB64 + `"
+}
+	`
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixtureWithCustomConfig("app_0_create.tf", providerConfigUsingAuthFiles),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "app"),
+					resource.TestCheckResourceAttr(name, "spec.uri", "localhost:3000"),
+				),
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestConfigureIdentityFileBase64_InvalidBase64() {
+	identityAsB64 := base64.RawStdEncoding.EncodeToString([]byte("invalid"))
+
+	providerConfigUsingAuthFiles := `
+provider "teleport" {
+	addr = "` + s.teleportConfig.Addr + `"
+	identity_file_base64 = "` + identityAsB64 + `"
+	dial_timeout_duration = "1s"
+}
+	`
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      s.getFixtureWithCustomConfig("app_0_create.tf", providerConfigUsingAuthFiles),
+				ExpectError: regexp.MustCompile("identity file could not be decoded"),
 			},
 		},
 	})

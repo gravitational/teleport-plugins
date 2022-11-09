@@ -79,7 +79,7 @@ func (s *AuthSetup) SetupService(authServiceOptions ...AuthServiceOption) {
 	s.StartApp(auth)
 	s.Auth = auth
 
-	ready, err := s.Auth.WaitReady(context.Background())
+	ready, err := s.Auth.WaitReady(s.Context())
 	require.NoError(t, err)
 	require.True(t, ready, "auth is not ready")
 
@@ -99,6 +99,9 @@ func (s *ProxySetup) SetupService() {
 	require.NoError(t, err)
 	s.StartApp(proxy)
 	s.Proxy = proxy
+	ready, err := s.Proxy.WaitReady(s.Context())
+	require.NoError(t, err)
+	require.True(t, ready, "proxy is not ready")
 }
 
 func (s *SSHSetup) SetupSuite(t *testing.T) {
@@ -115,4 +118,12 @@ func (s *SSHSetup) SetupService() {
 	ready, err := s.SSH.WaitReady(context.Background())
 	require.NoError(t, err)
 	require.True(t, ready, "ssh is not ready")
+
+	// Wait for node to show up on the server.
+	require.Eventually(t, func() bool {
+		resources, err := s.Integration.tctl(s.Auth).GetAll(s.Context(), "nodes")
+		require.NoError(t, err)
+
+		return len(resources) != 0
+	}, 5*time.Second, time.Second)
 }
