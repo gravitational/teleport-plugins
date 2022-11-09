@@ -26,6 +26,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gravitational/teleport-plugins/lib"
@@ -400,11 +401,13 @@ func (p *Provider) stringFromConfigOrEnv(value types.String, env string, def str
 		}
 	}
 
-	if value.Value == "" {
+	configValue := strings.TrimSpace(value.Value)
+
+	if configValue == "" {
 		return def
 	}
 
-	return value.Value
+	return configValue
 }
 
 // validateAddr validates passed addr
