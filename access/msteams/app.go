@@ -378,6 +378,7 @@ func (a *App) postMessages(ctx context.Context, recipients []string, id string, 
 	teamsData, err := a.bot.PostMessages(ctx, recipients, id, data)
 	if err != nil {
 		if len(teamsData) == 0 {
+			// TODO: add better logging here
 			return trace.Wrap(err)
 		}
 
@@ -406,14 +407,17 @@ func (a *App) postReviews(ctx context.Context, id string, reviews []types.Access
 	pluginData, err := a.pd.Update(ctx, id, func(existing PluginData) (PluginData, error) {
 		teamsData := existing.TeamsData
 		if len(teamsData) == 0 {
-			// wait for the plugin data to be updated with TeamsData
-			return PluginData{}, trace.CompareFailed("existing teamsData is empty")
+			// No teamsData found in the plugin data. This might be because of a race condition
+			// (messages not sent yet) or because sending failed (msapi error or no recipient)
+			// We don't know which one is true, so we'll still return `CompareFailed` to retry
+			// TODO: find a better way to handle failures
+			return existing, trace.CompareFailed("existing teamsData is empty, no messages were sent about this access request")
 		}
 
 		count := len(reviews)
 		oldCount := existing.ReviewsCount
 		if oldCount >= count {
-			return PluginData{}, trace.AlreadyExists("reviews are sent already")
+			return existing, trace.AlreadyExists("reviews are sent already")
 		}
 
 		existing.ReviewsCount = count
@@ -436,13 +440,17 @@ func (a *App) updateMessages(ctx context.Context, reqID string, tag pd.Resolutio
 	log := logger.Get(ctx)
 
 	pluginData, err := a.pd.Update(ctx, reqID, func(existing PluginData) (PluginData, error) {
+		// No teamsData found in the plugin data. This might be because of a race condition
+		// (messages not sent yet) or because sending failed (msapi error or no recipient)
+		// We don't know which one is true, so we'll still return `CompareFailed` to retry
+		// TODO: find a better way to handle failures
 		if len(existing.TeamsData) == 0 {
-			return PluginData{}, nil
+			return existing, trace.CompareFailed("existing teamsData is empty")
 		}
 
 		// If resolution field is not empty then we already resolved the incident before. In this case we just quit.
 		if existing.AccessRequestData.ResolutionTag != pd.Unresolved {
-			return PluginData{}, trace.CompareFailed("existing teamsData is empty")
+			return existing, trace.AlreadyExists("request has already been resolved, skipping message update")
 		}
 
 		// Mark plugin data as resolved.

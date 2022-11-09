@@ -12,21 +12,19 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gravitational/teleport/api/client/proto"
+	"github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+	"github.com/tidwall/gjson"
 
 	"github.com/gravitational/teleport-plugins/access/common"
 	"github.com/gravitational/teleport-plugins/access/msteams/msapi"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
-	"github.com/gravitational/teleport/api/client/proto"
-	"github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/trace"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
-
-	"github.com/tidwall/gjson"
 )
 
 type TeamsSuite struct {
@@ -242,7 +240,9 @@ func (s *TeamsSuite) checkPluginData(reqID string, cond func(interface{}) bool) 
 	for {
 		rawData, err := s.ruler().PollAccessRequestPluginData(s.Context(), "msteams", reqID)
 		require.NoError(t, err)
-		if data := DecodePluginData(rawData); cond(data) {
+		data, err := DecodePluginData(rawData)
+		require.NoError(t, err)
+		if cond(data) {
 			return data
 		}
 	}
