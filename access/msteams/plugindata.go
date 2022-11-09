@@ -39,9 +39,10 @@ func DecodePluginData(dataMap map[string]string) (PluginData, error) {
 				parts := strings.Split(encodedMsg, "/")
 				if len(parts) == 3 {
 					data.TeamsData = append(data.TeamsData, TeamsMessage{ID: parts[0], Timestamp: parts[1], RecipientID: parts[2]})
+				}
 				continue
 			}
-			
+
 			msg := &TeamsMessage{}
 			err = json.Unmarshal(decodedMsg, msg)
 			if err != nil {
