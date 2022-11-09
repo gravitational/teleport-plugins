@@ -72,6 +72,13 @@ func (res *streamResource) UnmarshalJSON(raw []byte) error {
 
 	var resource types.Resource
 	switch header.Kind {
+	case types.KindNode:
+		switch header.Version {
+		case types.V2:
+			resource = &types.ServerV2{}
+		default:
+			return trace.BadParameter("unsupported resource version %s", header.Version)
+		}
 	case types.KindUser:
 		switch header.Version {
 		case types.V2:
