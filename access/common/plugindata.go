@@ -41,7 +41,7 @@ type MessageData struct {
 type SentMessages = []MessageData
 
 // DecodePluginData deserializes a string map to GenericPluginData struct.
-func DecodePluginData(dataMap map[string]string) GenericPluginData {
+func DecodePluginData(dataMap map[string]string) (GenericPluginData, error) {
 	data := GenericPluginData{}
 
 	data.AccessRequestData = plugindata.DecodeAccessRequestData(dataMap)
@@ -57,19 +57,19 @@ func DecodePluginData(dataMap map[string]string) GenericPluginData {
 			}
 		}
 	}
-	return data
+	return data, nil
 }
 
 // EncodePluginData serializes a GenericPluginData struct into a string map.
-func EncodePluginData(data GenericPluginData) map[string]string {
+func EncodePluginData(data GenericPluginData) (map[string]string, error) {
 	result := plugindata.EncodeAccessRequestData(data.AccessRequestData)
 
 	var encodedMessages []string
 	for _, msg := range data.SentMessages {
-		// TODO: base64 encode to avoid having / and , characters that could lead to bad parsing
+		// TODO(hugoShaka): switch to base64 encode to avoid having / and , characters that could lead to bad parsing
 		encodedMessages = append(encodedMessages, fmt.Sprintf("%s/%s", msg.ChannelID, msg.MessageID))
 	}
 	result["messages"] = strings.Join(encodedMessages, ",")
 
-	return result
+	return result, nil
 }

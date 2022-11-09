@@ -30,16 +30,16 @@ type CompareAndSwap[T any] struct {
 	kind        string
 	backoffBase time.Duration
 	backoffMax  time.Duration
-	encode      func(T) map[string]string
-	decode      func(map[string]string) T
+	encode      func(T) (map[string]string, error)
+	decode      func(map[string]string) (T, error)
 }
 
 // NewCAS returns modifier struct
 func NewCAS[T any](
 	client Client, name,
 	kind string,
-	encode func(T) map[string]string,
-	decode func(map[string]string) T,
+	encode func(T) (map[string]string, error),
+	decode func(map[string]string) (T, error),
 ) *CompareAndSwap[T] {
 	return &CompareAndSwap[T]{
 		client,
@@ -98,9 +98,11 @@ func (c *CompareAndSwap[T]) Update(
 	modifyT func(T) (T, error),
 ) (T, error) {
 	emptyData := *new(T)
+	var failedAttempts []error
 
 	backoff := backoff.NewDecorr(c.backoffBase, c.backoffMax, clockwork.NewRealClock())
 	for {
+		// Get existing data
 		oldData, err := c.getPluginData(ctx, resource)
 		if err != nil {
 			return emptyData, trace.Wrap(err)
@@ -109,11 +111,14 @@ func (c *CompareAndSwap[T]) Update(
 		cbData := *oldData
 		expectData := *oldData
 
+		// Modify data
 		newData, err := modifyT(cbData)
 		if trace.IsCompareFailed(err) {
-			err := backoff.Do(ctx)
-			if err != nil {
-				return emptyData, trace.Wrap(err)
+			failedAttempts = append(failedAttempts, trace.Wrap(err))
+			backoffErr := backoff.Do(ctx)
+			if backoffErr != nil {
+				failedAttempts = append(failedAttempts, trace.Wrap(backoffErr))
+				return emptyData, trace.NewAggregate(failedAttempts...)
 			}
 
 			continue
@@ -121,6 +126,7 @@ func (c *CompareAndSwap[T]) Update(
 			return emptyData, trace.Wrap(err)
 		}
 
+		// Submit modifications
 		err = c.updatePluginData(ctx, resource, newData, expectData)
 		if err == nil {
 			return newData, nil
@@ -128,14 +134,17 @@ func (c *CompareAndSwap[T]) Update(
 		if !trace.IsCompareFailed(err) {
 			return emptyData, trace.Wrap(err)
 		}
-		err = backoff.Do(ctx)
-		if err != nil {
-			return emptyData, trace.Wrap(err)
+		// A conflict happened, we register the failed attempt and wait before retrying
+		failedAttempts = append(failedAttempts, trace.Wrap(err))
+		backoffErr := backoff.Do(ctx)
+		if backoffErr != nil {
+			failedAttempts = append(failedAttempts, trace.Wrap(backoffErr))
+			return emptyData, trace.NewAggregate(failedAttempts...)
 		}
 	}
 }
 
-// NOTE: Implement Upsert method when it is be required
+// NOTE: Implement Upsert method when it will be required
 
 // getPluginData loads a plugin data for a given resource. It returns nil if it's not found.
 func (c *CompareAndSwap[T]) getPluginData(ctx context.Context, resource string) (*T, error) {
@@ -154,17 +163,25 @@ func (c *CompareAndSwap[T]) getPluginData(ctx context.Context, resource string) 
 	if entry == nil || entry.Data == nil {
 		return nil, trace.NotFound("plugin data entry not found")
 	}
-	d := c.decode(entry.Data)
-	return &d, nil
+	d, err := c.decode(entry.Data)
+	return &d, err
 }
 
 // updatePluginData updates an existing plugin data or sets a new one if it didn't exist.
 func (c *CompareAndSwap[T]) updatePluginData(ctx context.Context, resource string, data T, expectData T) error {
+	set, err := c.encode(data)
+	if err != nil {
+		return err
+	}
+	expect, err := c.encode(expectData)
+	if err != nil {
+		return err
+	}
 	return c.client.UpdatePluginData(ctx, types.PluginDataUpdateParams{
 		Kind:     c.kind,
 		Resource: resource,
 		Plugin:   c.name,
-		Set:      c.encode(data),
-		Expect:   c.encode(expectData),
+		Set:      set,
+		Expect:   expect,
 	})
 }

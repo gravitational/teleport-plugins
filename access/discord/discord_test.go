@@ -13,18 +13,17 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/gravitational/teleport/api/client/proto"
+	"github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/gravitational/teleport-plugins/access/common"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
-	"github.com/gravitational/teleport/api/client/proto"
-	"github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/trace"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 var msgFieldRegexp = regexp.MustCompile(`(?im)^\*([a-zA-Z ]+)\*: (.+)$`)
@@ -234,7 +233,9 @@ func (s *DiscordSuite) checkPluginData(reqID string, cond func(common.GenericPlu
 	for {
 		rawData, err := s.ruler().PollAccessRequestPluginData(s.Context(), "discord", reqID)
 		require.NoError(t, err)
-		if data := common.DecodePluginData(rawData); cond(data) {
+		data, err := common.DecodePluginData(rawData)
+		require.NoError(t, err)
+		if cond(data) {
 			return data
 		}
 	}
