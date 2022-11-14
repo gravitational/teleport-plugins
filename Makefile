@@ -114,13 +114,17 @@ event-handler:
 
 # Run all tests
 .PHONY: test
-test: test-tooling test-terraform
+test: test-tooling test-unit test-terraform
 	@echo Testing plugins against Teleport $(TELEPORT_GET_VERSION)
-	go test -race -count 1 $(shell go list ./... | grep -v -e '/terraform/' -e '/tooling/')
+	go test -race -count 1 $(shell go list ./... | grep -v -e '/terraform/' -e '/tooling/' -e '/lib')
 
 .PHONY: test-tooling
 test-tooling:
 	(cd tooling; go test -v -race ./...)
+
+.PHONY: test-unit
+test-unit:
+	(cd lib; go test -v -race ./...)
 
 # Individual releases
 .PHONY: release/access-slack

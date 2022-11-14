@@ -31,5 +31,5 @@ jobs:
       - name: make test-tooling
         run: make test-tooling
 
-      - name: go test lib
-        run: cd lib && go test -v ./...
+      - name: make test-unit
+        run: make test-unit
