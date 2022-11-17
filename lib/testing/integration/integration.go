@@ -21,7 +21,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -110,7 +109,7 @@ func New(ctx context.Context, paths BinPaths, licenseStr string) (*Integration, 
 		}
 	}()
 
-	integration.workDir, err = ioutil.TempDir("", "teleport-plugins-integration-*")
+	integration.workDir, err = os.MkdirTemp("", "teleport-plugins-integration-*")
 	if err != nil {
 		return nil, trace.Wrap(err, "failed to initialize work directory")
 	}
@@ -546,7 +545,7 @@ func (integration *Integration) registerService(service Service) {
 }
 
 func (integration *Integration) tempFile(pattern string) (*os.File, error) {
-	file, err := ioutil.TempFile(integration.workDir, pattern)
+	file, err := os.CreateTemp(integration.workDir, pattern)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -555,7 +554,7 @@ func (integration *Integration) tempFile(pattern string) (*os.File, error) {
 }
 
 func (integration *Integration) tempDir(pattern string) (string, error) {
-	dir, err := ioutil.TempDir(integration.workDir, pattern)
+	dir, err := os.MkdirTemp(integration.workDir, pattern)
 	if err != nil {
 		return "", trace.Wrap(err)
 	}
