@@ -16,7 +16,7 @@ resource "teleport_saml_connector" "example" {
   #   ]
   # }
 
-  # This section tells Terraform that role example must be created before the GitHub connector
+  # This section tells Terraform that role example must be created before the SAML connector
   depends_on = [
     teleport_role.example
   ]
@@ -27,18 +27,17 @@ resource "teleport_saml_connector" "example" {
 
   spec = {
     attributes_to_roles = [{
-      name = "groups"
+      name  = "groups"
       roles = ["example"]
       value = "okta-admin"
-    }]
-
-    attributes_to_roles = [{
-      name = "groups"
+    },
+    {
+      name  = "groups"
       roles = ["example"]
       value = "okta-dev"
     }]
 
-    acs = "https://localhost:3025/v1/webapi/saml/acs"
+    acs               = "https://localhost:3025/v1/webapi/saml/acs"
     entity_descriptor = ""
   }
 }
