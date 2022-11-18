@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/url"
 	"strings"
 	"time"
@@ -33,6 +34,10 @@ func BuildCard(id string, webProxyURL *url.URL, clusterName string, data plugind
 
 	var actions []cards.Node
 
+	log.Default().Printf("Cluster : %s", clusterName)
+	log.Default().Printf("User : %s", data.User)
+	log.Default().Printf("Roles : %s", strings.Join(data.Roles, ", "))
+
 	facts := []*cards.Fact{
 		{Title: "Cluster", Value: clusterName},
 		{Title: "User", Value: data.User},
@@ -40,10 +45,12 @@ func BuildCard(id string, webProxyURL *url.URL, clusterName string, data plugind
 	}
 
 	if data.RequestReason != "" {
+		log.Default().Printf("Reason : %s", data.RequestReason)
 		facts = append(facts, &cards.Fact{Title: "Reason", Value: data.RequestReason})
 	}
 
 	if data.ResolutionReason != "" {
+		log.Default().Printf("Resolution Reason : %s", data.ResolutionReason)
 		facts = append(facts, &cards.Fact{Title: "Resolution reason", Value: data.ResolutionReason})
 	}
 
@@ -113,7 +120,11 @@ func BuildCard(id string, webProxyURL *url.URL, clusterName string, data plugind
 
 		nodes := make([]cards.Node, 0)
 
-		for _, r := range reviews {
+		for i, r := range reviews {
+			log.Default().Printf("Review %d - Proposed state : %s", i, r.ProposedState.String())
+			log.Default().Printf("Review %d - Status : %s", i, resolutionIcon(plugindata.ResolutionTag(r.ProposedState.String())))
+			log.Default().Printf("Review %d - Author : %s", i, r.Author)
+			log.Default().Printf("Review %d - Created at : %s", i, r.Created.Format(time.RFC822))
 			facts := []*cards.Fact{
 				{
 					Title: "Status",
@@ -130,6 +141,7 @@ func BuildCard(id string, webProxyURL *url.URL, clusterName string, data plugind
 			}
 
 			if r.Reason != "" {
+				log.Default().Printf("Review %d - Reason : %s", i, r.Reason)
 				facts = append(facts, &cards.Fact{
 					Title: "Reason",
 					Value: r.Reason,
