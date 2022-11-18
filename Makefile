@@ -5,6 +5,7 @@ DRONE ?= drone
 DRONE_REPO ?= gravitational/teleport-plugins
 DRONE_PROMOTE_ENV ?= production
 PLUGINS ?= teleport-event-handler \
+			teleport-discord \
 			teleport-jira \
 			teleport-mattermost \
 			teleport-msteams \
@@ -22,6 +23,10 @@ endif
 .PHONY: access-slack
 access-slack:
 	make -C access/slack
+
+.PHONY: access-discord
+access-discord:
+	make -C access/discord
 
 .PHONY: access-jira
 access-jira:
@@ -55,6 +60,7 @@ docker-build-access-%:
 # Build all access plugins with docker
 .PHONY: docker-build-access-plugins
 docker-build-access-plugins: docker-build-access-email \
+ docker-build-access-discord \
  docker-build-access-jira \
  docker-build-access-mattermost \
  docker-build-access-msteams \
@@ -89,6 +95,7 @@ docker-promote-event-handler:
 helm-package-charts:
 	mkdir -p packages
 	helm package -d packages charts/access/email
+	helm package -d packages charts/access/discord
 	helm package -d packages charts/access/jira
 	helm package -d packages charts/access/slack
 	helm package -d packages charts/access/pagerduty
@@ -131,6 +138,10 @@ test-unit:
 release/access-slack:
 	make -C access/slack clean release
 
+.PHONY: release/access-discord
+release/access-discord:
+	make -C access/discord clean release
+
 .PHONY: release/access-jira
 release/access-jira:
 	make -C access/jira clean release
@@ -161,16 +172,17 @@ release/event-handler:
 
 # Run all releases
 .PHONY: releases
-releases: release/access-slack release/access-jira release/access-mattermost release/access-msteams release/access-pagerduty release/access-email
+releases: release/access-slack release/access-discord release/access-jira release/access-mattermost release/access-msteams release/access-pagerduty release/access-email
 
 .PHONY: build-all
-build-all: access-slack access-jira access-mattermost access-msteams access-pagerduty access-email terraform event-handler
+build-all: access-slack access-discord access-jira access-mattermost access-msteams access-pagerduty access-email terraform event-handler
 
 .PHONY: update-version
 update-version:
 	# Make sure VERSION is set on the command line "make update-version VERSION=x.y.z".
 	@test $(VERSION)
 	$(SED) '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
+	$(SED) '1s/.*/VERSION=$(VERSION)/' access/discord/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/jira/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/mattermost/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/msteams/Makefile
@@ -185,6 +197,7 @@ update-version:
 .PHONY: update-helm-version
 update-helm-version:
 	$(MAKE) update-helm-version-access-email
+	$(MAKE) update-helm-version-access-discord
 	$(MAKE) update-helm-version-access-jira
 	$(MAKE) update-helm-version-access-slack
 	$(MAKE) update-helm-version-access-pagerduty
@@ -206,6 +219,7 @@ update-tag:
 	@test $(VERSION)
 	# Tag all releases first locally.
 	git tag teleport-event-handler-v$(VERSION)
+	git tag teleport-discord-v$(VERSION)
 	git tag teleport-jira-v$(VERSION)
 	git tag teleport-mattermost-v$(VERSION)
 	git tag teleport-msteams-v$(VERSION)
@@ -216,6 +230,7 @@ update-tag:
 	git tag v$(VERSION)
 	# Push all releases to origin.
 	git push origin teleport-event-handler-v$(VERSION)
+	git push origin teleport-discord-v$(VERSION)
 	git push origin teleport-jira-v$(VERSION)
 	git push origin teleport-mattermost-v$(VERSION)
 	git push origin teleport-msteams-v$(VERSION)
@@ -253,13 +268,13 @@ promote-tag:
 update-goversion:
 	# Make sure GOVERSION is set on the command line "make update-goversion GOVERSION=x.y.z".
 	@test $(GOVERSION)
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/discord/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/jira/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/mattermost/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/msteams/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/slack/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/pagerduty/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/email/Makefile
-	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/msteams/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/Makefile
 	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
 	$(SED) 's/- name: golang:.*/- name: golang:$(GOVERSION)/' .cloudbuild/ci/unit-tests-linux.yaml
@@ -284,6 +299,7 @@ test-helm-%:
 .PHONY: test-helm
 test-helm:
 	$(MAKE) test-helm-access-email
+	$(MAKE) test-helm-access-discord
 	$(MAKE) test-helm-access-jira
 	$(MAKE) test-helm-access-slack
 	$(MAKE) test-helm-access-pagerduty

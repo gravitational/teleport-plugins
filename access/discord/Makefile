@@ -44,7 +44,6 @@ release: clean $(BINARY)
 	mkdir $(RELEASE_NAME)
 	cp -rf $(BINARY) \
 		README.md \
-		CHANGELOG.md \
 		install \
 		$(RELEASE_NAME)/
 	echo $(GITTAG) > $(RELEASE_NAME)/VERSION

@@ -208,6 +208,7 @@ trigger:
   ref:
     include:
       - refs/tags/teleport-gitlab-v*
+      - refs/tags/teleport-discord-v*
       - refs/tags/teleport-jira-v*
       - refs/tags/teleport-mattermost-v*
       - refs/tags/teleport-msteams-v*
@@ -287,6 +288,7 @@ trigger:
   ref:
     include:
       - refs/tags/teleport-gitlab-v*
+      - refs/tags/teleport-discord-v*
       - refs/tags/teleport-jira-v*
       - refs/tags/teleport-mattermost-v*
       - refs/tags/teleport-msteams-v*
@@ -925,6 +927,7 @@ trigger:
     - publish-access-images
   ref:
     include:
+      - refs/tags/teleport-discord-v*
       - refs/tags/teleport-jira-v*
       - refs/tags/teleport-mattermost-v*
       - refs/tags/teleport-msteams-v*
@@ -1383,6 +1386,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 3114210fcad056f742dc9402903cd0ba8d404117c3533b2a841bbb17ec4d4605
+hmac: 0505467b33b27df4605979c0460b2d1760ec7498de27166bfb61fcb1449e4399
 
 ...
