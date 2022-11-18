@@ -1,0 +1,32 @@
+name: go-lint
+run-name: make lint
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+jobs:
+  lint:
+    name: make lint
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Teleport Plugins
+        uses: actions/checkout@v3
+
+      - name: Setup Go 1.19.3
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.19.3'
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.50.1
+
+      - name: Run linter
+        run: make lint

@@ -21,9 +21,9 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path"
 	"strings"
 	"time"
@@ -51,7 +51,7 @@ const (
 
 // NewFakeFluentd creates new unstarted fake server instance
 func NewFakeFluentd() (*FakeFluentd, error) {
-	dir, err := ioutil.TempDir("", "teleport-plugins-event-handler-*")
+	dir, err := os.MkdirTemp("", "teleport-plugins-event-handler-*")
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -106,7 +106,7 @@ func (f *FakeFluentd) writeCerts() error {
 
 // createServer initialises new server instance
 func (f *FakeFluentd) createServer() error {
-	caCert, err := ioutil.ReadFile(f.caCertPath)
+	caCert, err := os.ReadFile(f.caCertPath)
 	if err != nil {
 		return trace.Wrap(err)
 	}

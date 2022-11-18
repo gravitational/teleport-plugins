@@ -1,0 +1,44 @@
+name: tests-integration
+run-name: Tests (integration)
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+env:
+  TELEPORT_GET_VERSION: v10.2.0
+  TELEPORT_ENTERPRISE_LICENSE: ${{ secrets.TELEPORT_ENTERPRISE_LICENSE }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    strategy:
+      matrix:
+        plugin:
+          - access/discord
+          - access/email
+          - access/jira
+          - access/mattermost
+          - access/msteams
+          - access/pagerduty
+          - access/slack
+          - event-handler
+
+    steps:
+      - name: Checkout Teleport Plugins
+        uses: actions/checkout@v3
+
+      - name: Setup Go 1.19.3
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.19.3'
+
+      - name: Run tests (${{ matrix.plugin }})
+        run: |
+          make -C ${{ matrix.plugin }} test

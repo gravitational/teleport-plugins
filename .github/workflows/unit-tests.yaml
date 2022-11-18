@@ -1,0 +1,35 @@
+name: tests-unit
+run-name: Tests (unit)
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+env:
+  TELEPORT_GET_VERSION: v10.2.0
+  TELEPORT_ENTERPRISE_LICENSE: ${{ secrets.TELEPORT_ENTERPRISE_LICENSE }}
+
+jobs:
+  test:
+    name: Tests (unit)
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Teleport Plugins
+        uses: actions/checkout@v3
+
+      - name: Setup Go 1.19.3
+        uses: actions/setup-go@v3
+        with:
+          go-version: '1.19.3'
+
+      - name: make test-tooling
+        run: make test-tooling
+
+      - name: make test-unit
+        run: make test-unit

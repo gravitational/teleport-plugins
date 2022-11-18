@@ -22,7 +22,7 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"os"
 	"path"
@@ -287,7 +287,7 @@ func (c *ConfigureCmd) getPwd() (string, error) {
 	stat, _ := os.Stdin.Stat()
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		// Get password from provided file
-		pwdFromStdin, err := ioutil.ReadAll(os.Stdin)
+		pwdFromStdin, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			return "", err
 		}
@@ -311,7 +311,7 @@ func (c *ConfigureCmd) writeFile(path string, content []byte) error {
 		return nil
 	}
 
-	err := ioutil.WriteFile(path, content, perms)
+	err := os.WriteFile(path, content, perms)
 	if err != nil {
 		return trace.Wrap(err)
 	}

@@ -22,8 +22,8 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
-	"io/ioutil"
 	"net"
+	"os"
 	"time"
 
 	"github.com/gravitational/trace"
@@ -232,12 +232,12 @@ func (c *keyPair) WriteFile(certPath, keyPath, pwd string) error {
 		return trace.Wrap(err)
 	}
 
-	err = ioutil.WriteFile(certPath, bytesPEM, perms)
+	err = os.WriteFile(certPath, bytesPEM, perms)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	err = ioutil.WriteFile(keyPath, pkBytesPEM, perms)
+	err = os.WriteFile(keyPath, pkBytesPEM, perms)
 	if err != nil {
 		return trace.Wrap(err)
 	}

@@ -19,7 +19,7 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"io/ioutil"
+	"io"
 	"os"
 	"strings"
 
@@ -153,7 +153,7 @@ func (c *Config) LoadTLSConfig() (*tls.Config, error) {
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
-	caCerts, err := ioutil.ReadAll(caFile)
+	caCerts, err := io.ReadAll(caFile)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
