@@ -85,7 +85,7 @@ teleport:
 slack:
   token: xoxb-testtoken
 
-role_to_recipients:
+roleToRecipients:
   '*': access-requests@example.com
 ```
 
