@@ -278,6 +278,14 @@ update-goversion:
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/Makefile
 	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
 	$(SED) 's/- name: golang:.*/- name: golang:$(GOVERSION)/' .cloudbuild/ci/unit-tests-linux.yaml
+	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/unit-tests.yaml
+	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/integration-tests.yaml
+	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/terraform-tests.yaml
+	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/lint.yaml
+	$(SED) "s/go-version: '.*/go-version: '$(GOVERSION)'/g" .github/workflows/unit-tests.yaml
+	$(SED) "s/go-version: '.*/go-version: '$(GOVERSION)'/g" .github/workflows/integration-tests.yaml
+	$(SED) "s/go-version: '.*/go-version: '$(GOVERSION)'/g" .github/workflows/terraform-tests.yaml
+	$(SED) "s/go-version: '.*/go-version: '$(GOVERSION)'/g" .github/workflows/lint.yaml
 	$(SED) 's/image: golang:.*/image: golang:$(GOVERSION)/g' .drone.yml
 	$(SED) 's/GO_VERSION: go.*/GO_VERSION: go$(GOVERSION)/g' .drone.yml
 	@echo Please sign .drone.yml before staging and committing the changes
