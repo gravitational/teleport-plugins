@@ -1,5 +1,5 @@
 VERSION=11.1.2
-GO_VERSION=1.19.3
+GO_VERSION=1.19.4
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-slack
