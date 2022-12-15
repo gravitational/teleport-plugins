@@ -78,6 +78,65 @@ func (s *TerraformSuite) TestProvisionToken() {
 	})
 }
 
+func (s *TerraformSuite) TestProvisionTokenV2() {
+	checkRoleDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetToken(s.Context(), "test")
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := "teleport_provision_token.test2"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkRoleDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("provision_token_v2_0_create.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "token"),
+					resource.TestCheckResourceAttr(name, "metadata.name", "test2"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2038-01-01T00:00:00Z"),
+					resource.TestCheckResourceAttr(name, "metadata.labels.example", "yes"),
+					resource.TestCheckResourceAttr(name, "spec.roles.0", "Node"),
+					resource.TestCheckResourceAttr(name, "spec.roles.1", "Auth"),
+					resource.TestCheckResourceAttr(name, "spec.join_method", "iam"),
+					resource.TestCheckResourceAttr(name, "spec.allow.0.aws_account", "1234567890"),
+
+					resource.TestCheckResourceAttr(name, "version", "v2"),
+				),
+			},
+			{
+				Config:   s.getFixture("provision_token_v2_0_create.tf"),
+				PlanOnly: true,
+			},
+			{
+				Config: s.getFixture("provision_token_v2_1_update.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "token"),
+					resource.TestCheckResourceAttr(name, "metadata.name", "test2"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2038-01-01T00:00:00Z"),
+					resource.TestCheckResourceAttr(name, "metadata.labels.example", "yes"),
+					resource.TestCheckResourceAttr(name, "spec.roles.0", "Node"),
+					resource.TestCheckResourceAttr(name, "spec.roles.1", "Auth"),
+					resource.TestCheckResourceAttr(name, "spec.join_method", "iam"),
+					resource.TestCheckResourceAttr(name, "spec.allow.0.aws_account", "1234567890"),
+					resource.TestCheckResourceAttr(name, "spec.allow.1.aws_account", "1111111111"),
+
+					resource.TestCheckResourceAttr(name, "version", "v2"),
+				),
+			},
+			{
+				Config:   s.getFixture("provision_token_v2_1_update.tf"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
 func (s *TerraformSuite) TestImportProvisionToken() {
 	r := "teleport_provision_token"
 	id := "test_import"

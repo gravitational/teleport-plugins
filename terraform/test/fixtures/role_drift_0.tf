@@ -1,13 +1,13 @@
 resource "teleport_role" "splitbrain" {
-    metadata = {
-        name = "splitbrain"
-    }
+  metadata = {
+    name = "splitbrain"
+  }
 
-    spec = {
-        allow = {
-            logins = ["one"]
-        }
+  spec = {
+    allow = {
+      logins = ["one"]
     }
+  }
 
-    version = "v5"
+  version = "v5"
 }

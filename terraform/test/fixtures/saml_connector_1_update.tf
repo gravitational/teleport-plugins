@@ -1,34 +1,34 @@
 resource "teleport_role" "admin" {
-    metadata = {
-        name = "admin"
-        description = "admin role"
-        expires = "2032-12-12T00:00:00Z"
-    }
+  metadata = {
+    name        = "admin"
+    description = "admin role"
+    expires     = "2032-12-12T00:00:00Z"
+  }
 
-    spec = {
-        options = {}
-        allow = {}
-    }
+  spec = {
+    options = {}
+    allow   = {}
+  }
 }
 
 resource "teleport_saml_connector" "test" {
-    metadata = {
-        name    = "test"
-        expires = "2032-10-12T07:20:50Z"
-        labels  = {
-            example = "no"
-        }
+  metadata = {
+    name    = "test"
+    expires = "2032-10-12T07:20:50Z"
+    labels = {
+      example = "no"
     }
+  }
 
-    spec = {
-        attributes_to_roles = [{
-            name = "groups"
-            roles = ["admin"]
-            value = "okta-admin"
-        }]
-                        
-        acs = "https://example.com/v1/webapi/saml/acs"
-        entity_descriptor = <<EOT
+  spec = {
+    attributes_to_roles = [{
+      name  = "groups"
+      roles = ["admin"]
+      value = "okta-admin"
+    }]
+
+    acs               = "https://example.com/v1/webapi/saml/acs"
+    entity_descriptor = <<EOT
 <md:EntityDescriptor xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata" entityID="http://www.okta.com/exk1hqp7cwfwMSmWU5d7">
 <md:IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
 <md:KeyDescriptor use="signing">
@@ -44,5 +44,5 @@ resource "teleport_saml_connector" "test" {
 </md:IDPSSODescriptor>
 </md:EntityDescriptor>				
 EOT
-    }
+  }
 }
