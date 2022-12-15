@@ -1,33 +1,33 @@
 resource "teleport_role" "admin" {
-    metadata = {
-        name = "admin"
-        description = "admin role"
-        expires = "2032-12-12T00:00:00Z"
-    }
+  metadata = {
+    name        = "admin"
+    description = "admin role"
+    expires     = "2032-12-12T00:00:00Z"
+  }
 
-    spec = {
-        options = {}
-        allow = {}
-    }
+  spec = {
+    options = {}
+    allow   = {}
+  }
 }
 
 resource "teleport_saml_connector" "test" {
-    metadata = {
-        name    = "test"
-        expires = "2032-10-12T07:20:50Z"
-        labels  = {
-            example = "yes"
-        }
+  metadata = {
+    name    = "test"
+    expires = "2032-10-12T07:20:50Z"
+    labels = {
+      example = "yes"
     }
+  }
 
-    spec = {
-        attributes_to_roles = [{
-            name = "groups"
-            roles = ["admin"]
-            value = "okta-admin"
-        }]
-        
-        acs = "https://example.com/v1/webapi/saml/acs"
-        entity_descriptor_url = "https://dev-84961217.okta.com/app/exk4d7tmnz9DEaEw85d7/sso/saml/metadata"
-    }
+  spec = {
+    attributes_to_roles = [{
+      name  = "groups"
+      roles = ["admin"]
+      value = "okta-admin"
+    }]
+
+    acs                   = "https://example.com/v1/webapi/saml/acs"
+    entity_descriptor_url = "https://dev-84961217.okta.com/app/exk4d7tmnz9DEaEw85d7/sso/saml/metadata"
+  }
 }
