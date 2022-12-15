@@ -5,20 +5,20 @@ locals {
 resource "teleport_provision_token" "bot_test" {
   metadata = {
     expires = "2038-01-01T00:00:00Z"
-    name = "bot-test"
+    name    = "bot-test"
   }
 
   spec = {
-    roles = ["Bot"]
-    bot_name = local.bot_name
+    roles       = ["Bot"]
+    bot_name    = local.bot_name
     join_method = "token"
   }
 }
 
 resource "teleport_bot" "test" {
-  name = local.bot_name
+  name     = local.bot_name
   token_id = "bot-test"
-  roles = ["terraform"]
+  roles    = ["terraform"]
 
   depends_on = [
     teleport_provision_token.bot_test

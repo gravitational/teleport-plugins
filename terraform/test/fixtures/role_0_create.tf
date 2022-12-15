@@ -1,13 +1,13 @@
 resource "teleport_role" "test" {
-    metadata = {
-        name = "test"
-    }
+  metadata = {
+    name = "test"
+  }
 
-    spec = {
-        allow = {
-            logins = ["anonymous"]
-        }
+  spec = {
+    allow = {
+      logins = ["anonymous"]
     }
+  }
 
-    version = "v4"
+  version = "v4"
 }
