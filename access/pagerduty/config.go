@@ -77,10 +77,7 @@ severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN"
 
 # Plugin will only process requests containing specified roles. If contains "*" (default) all requests will be processed.
 [roles]
-allowlist = [
-  "role1", 
-  "role2"
-]
+allowlist = ["*"]
 `
 
 func LoadConfig(filepath string) (*Config, error) {
@@ -125,9 +122,6 @@ func (c *Config) CheckAndSetDefaults() error {
 	}
 	if c.Log.Severity == "" {
 		c.Log.Severity = "info"
-	}
-	if len(c.Roles.Allowlist) == 0 {
-		c.Roles.Allowlist = append(c.Roles.Allowlist, "*")
 	}
 	return nil
 }

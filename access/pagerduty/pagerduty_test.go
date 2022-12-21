@@ -130,7 +130,7 @@ func (s *PagerdutySuite) SetupSuite() {
 		},
 	}
 	if teleportFeatures.AdvancedAccessWorkflows {
-		conditions.Request.Thresholds = []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}}
+		conditions.Request.Thresholds = []types.AccessReviewThreshold{{Approve: 2, Deny: 2}}
 	}
 	// This is the role for testing notification incident creation.
 	role, err := bootstrap.AddRole("foo", types.RoleSpecV5{Allow: conditions})
@@ -186,7 +186,7 @@ func (s *PagerdutySuite) SetupSuite() {
 						NotifyServiceDefaultAnnotation: []string{NotifyServiceName},
 						ServicesDefaultAnnotation:      []string{ServiceName1, ServiceName2},
 					},
-					Thresholds: []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}},
+					Thresholds: []types.AccessReviewThreshold{{Approve: 2, Deny: 2}},
 				},
 			},
 		})
@@ -292,7 +292,6 @@ func (s *PagerdutySuite) SetupTest() {
 	conf.Pagerduty.UserEmail = "bot@example.com"
 	conf.Pagerduty.RequestAnnotations.NotifyService = NotifyServiceDefaultAnnotation
 	conf.Pagerduty.RequestAnnotations.Services = ServicesDefaultAnnotation
-	conf.Roles.Allowlist = []string{"*"}
 
 	s.appConfig = conf
 	s.currentRequestor = s.userNames.requestor

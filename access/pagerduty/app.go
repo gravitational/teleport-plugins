@@ -107,7 +107,7 @@ func (a *App) run(ctx context.Context) error {
 	watcherJob := watcherjob.NewJob(
 		a.apiClient,
 		watcherjob.Config{
-			Watch:            types.Watch{Kinds: []types.WatchKind{types.WatchKind{Kind: types.KindAccessRequest}}},
+			Watch:            types.Watch{Kinds: []types.WatchKind{{Kind: types.KindAccessRequest}}},
 			EventFuncTimeout: handlerTimeout,
 		},
 		a.onWatcherEvent,
@@ -204,11 +204,13 @@ func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
 		}
 		ctx, log := logger.WithField(ctx, "request_state", req.GetState().String())
 
-		var err error
-		switch {
-		case !a.maybeProcessRequest(ctx, req):
+		if !a.maybeProcessRequest(ctx, req) {
 			log.Info("Request skipped.")
 			return nil
+		}
+
+		var err error
+		switch {
 		case req.GetState().IsPending():
 			err = a.onPendingRequest(ctx, req)
 		case req.GetState().IsApproved():
@@ -239,22 +241,22 @@ func (a *App) onWatcherEvent(ctx context.Context, event types.Event) error {
 	}
 }
 
-// maybeProcessRequest checks request against the configured filter and decides if request should be processed.
-// When Approve field is unset or contains "*", all requests will be processed.
-// When Approve field is configured, requests with roles specified in config will be processed.
+// maybeProcessRequest checks request against the configured allowlist filter and decides if request should be processed.
+// When the allowlist is unset or contains "*", all requests will be processed.
+// When the allowlist is configured, requests with roles presented in the allowlist will be processed.
 func (a *App) maybeProcessRequest(ctx context.Context, req types.AccessRequest) bool {
 	rolesToProcess := stringset.New(a.conf.Roles.Allowlist...)
-	if rolesToProcess.Contains("*") {
-		logger.Get(ctx).Debug("All roles accepted, processing all requests.")
+	if rolesToProcess.Len() == 0 || rolesToProcess.Contains("*") {
+		logger.Get(ctx).Debug("Filter 'roles.allowlist' is unset or contains \"*\", processing.")
 		return true
 	}
 	for _, r := range req.GetRoles() {
 		if rolesToProcess.Contains(r) {
-			logger.Get(ctx).Debug("Requested role found in RolesToProcess, processing.")
+			logger.Get(ctx).Debugf("Filter 'roles.allowlist' contains a requested role %q, processing.", r)
 			return true
 		}
 	}
-	logger.Get(ctx).Debug("Requested role not found in RolesToProcess, skipping.")
+	logger.Get(ctx).Debug("Filter 'roles.allowlist' does not contain any requested role, skipping.")
 	return false
 }
 
