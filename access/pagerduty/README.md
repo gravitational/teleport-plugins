@@ -172,10 +172,21 @@ Then, edit the config as needed.
 ```TOML
 # example teleport-pagerduty configuration TOML file
 [teleport]
-addr = "example.com:3025"                                   # Teleport Auth Server GRPC API address
-client_key = "/var/lib/teleport/plugins/pagerduty/auth.key" # Teleport GRPC client secret key
-client_crt = "/var/lib/teleport/plugins/pagerduty/auth.crt" # Teleport GRPC client certificate
-root_cas = "/var/lib/teleport/plugins/pagerduty/auth.cas"   # Teleport cluster CA certs
+# Teleport Auth/Proxy Server address.
+#
+# Should be port 3025 for Auth Server and 3080 or 443 for Proxy.
+# For Teleport Cloud, should be in the form "your-account.teleport.sh:443".
+addr = "example.com:3025"
+
+# Credentials.
+#
+# When using --format=file:
+# identity = "/var/lib/teleport/plugins/pagerduty/auth_id"    # Identity file
+#
+# When using --format=tls:
+# client_key = "/var/lib/teleport/plugins/pagerduty/auth.key" # Teleport TLS secret key
+# client_crt = "/var/lib/teleport/plugins/pagerduty/auth.crt" # Teleport TLS certificate
+# root_cas = "/var/lib/teleport/plugins/pagerduty/auth.cas"   # Teleport CA certs
 
 [pagerduty]
 api_key = "key"               # PagerDuty API Key
@@ -187,10 +198,7 @@ severity = "INFO" # Logger severity. Could be "INFO", "ERROR", "DEBUG" or "WARN"
 
 # Plugin will only process requests containing specified roles. If contains "*" (default) all requests will be processed.
 [roles]
-allowlist = [
-  "role1", 
-  "role2"
-]
+allowlist = ["*"]
 ```
 
 ## Running the plugin
