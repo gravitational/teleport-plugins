@@ -1,4 +1,4 @@
-# Set up a system-agnostic in-place sed command
+# Set up a system-agnostic in-place sed command.
 IS_GNU_SED = $(shell sed --version 1>/dev/null 2>&1 && echo true || echo false)
 
 DRONE ?= drone
