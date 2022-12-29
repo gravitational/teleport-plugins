@@ -1,17 +1,15 @@
-name: tests-helm
-run-name: Tests (helm)
+name: Plugins Tests (Helm)
+run-name: Plugins Tests (Helm) - ${{ github.run_id }} - @${{ github.actor }}
 
 on:
   push:
     branches:
       - master
   pull_request:
-    paths:
-      - charts/**
 
 jobs:
   test:
-    name: Tests (helm)
+    name: Plugins Tests (Helm)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Teleport Plugins
