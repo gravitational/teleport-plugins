@@ -1,5 +1,5 @@
-name: tests-terraform
-run-name: Tests (Terraform)
+name: Plugins Tests (Terraform)
+run-name: Plugins Tests (Terraform) - ${{ github.run_id }} - @${{ github.actor }}
 
 on:
   push:
@@ -13,7 +13,7 @@ env:
 
 jobs:
   test:
-    name: Tests (Terraform)
+    name: Plugins Tests (Terraform)
     runs-on: ubuntu-latest
 
     permissions:

@@ -1,5 +1,5 @@
-name: Lint (Terraform)
-
+name: Plugins Lint (Terraform)
+run-name: Plugins Lint (Terraform) - ${{ github.run_id }} - @${{ github.actor }}
 on:
   push:
     branches:
@@ -17,6 +17,7 @@ on:
 
 jobs:
   terraform-lint:
+    name: Plugins Lint (Terraform)
     uses: gravitational/shared-workflows/.github/workflows/terraform-lint.yaml@main
     permissions:
       actions: read

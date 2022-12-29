@@ -1,5 +1,5 @@
-name: go-lint
-run-name: make lint
+name: Plugins Lint (Go)
+run-name: Plugins Lint (Go) - ${{ github.run_id }} - @${{ github.actor }}
 on:
   push:
     branches:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint:
-    name: make lint
+    name: Plugins Lint (Go)
     runs-on: ubuntu-latest
 
     permissions:
