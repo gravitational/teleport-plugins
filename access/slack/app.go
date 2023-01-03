@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package slack
 
 import (
 	"github.com/gravitational/teleport-plugins/access/common"
