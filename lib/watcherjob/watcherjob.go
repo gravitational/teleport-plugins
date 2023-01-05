@@ -18,13 +18,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/gravitational/teleport-plugins/access/common/teleport"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
-
-	"google.golang.org/grpc"
 )
 
 const DefaultMaxConcurrency = 128
@@ -51,8 +49,7 @@ type eventKey struct {
 	name string
 }
 
-func NewJob(client *client.Client, config Config, fn EventFunc) lib.ServiceJob {
-	client = client.WithCallOptions(grpc.WaitForReady(true)) // Enable backoff on reconnecting.
+func NewJob(client teleport.Client, config Config, fn EventFunc) lib.ServiceJob {
 	return NewJobWithEvents(client, config, fn)
 }
 

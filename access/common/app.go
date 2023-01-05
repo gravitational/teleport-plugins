@@ -20,19 +20,15 @@ import (
 	"context"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/lib/credentials"
+	"github.com/gravitational/teleport-plugins/access/common/teleport"
 	pd "github.com/gravitational/teleport-plugins/lib/plugindata"
 	"github.com/gravitational/teleport-plugins/lib/watcherjob"
 	"github.com/gravitational/teleport/api/types"
-	log "github.com/sirupsen/logrus"
-	grpcbackoff "google.golang.org/grpc/backoff"
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/trace"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -52,7 +48,7 @@ const (
 // To instantiate a new BaseApp, use NewApp()
 type BaseApp struct {
 	PluginName string
-	apiClient  *client.Client
+	apiClient  teleport.Client
 	bot        MessagingBot
 	mainJob    lib.ServiceJob
 	pluginData *pd.CompareAndSwap[GenericPluginData]
@@ -93,7 +89,8 @@ func (a *BaseApp) WaitReady(ctx context.Context) (bool, error) {
 func (a *BaseApp) checkTeleportVersion(ctx context.Context) (proto.PingResponse, error) {
 	log := logger.Get(ctx)
 	log.Debug("Checking Teleport server version")
-	pong, err := a.apiClient.WithCallOptions(grpc.WaitForReady(true)).Ping(ctx)
+
+	pong, err := a.apiClient.Ping(ctx)
 	if err != nil {
 		if trace.IsNotImplemented(err) {
 			return pong, trace.Wrap(err, "server version must be at least %s", minServerVersion)
@@ -106,29 +103,12 @@ func (a *BaseApp) checkTeleportVersion(ctx context.Context) (proto.PingResponse,
 
 // initTeleport creates a Teleport client and validates Teleport connectivity.
 func (a *BaseApp) initTeleport(ctx context.Context, conf PluginConfiguration) (clusterName, webProxyAddr string, err error) {
-	if validCred, err := credentials.CheckIfExpired(conf.GetTeleportConfig().Credentials()); err != nil {
-		log.Warn(err)
-		if !validCred {
-			return "", "", trace.BadParameter(
-				"No valid credentials found, this likely means credentials are expired. In this case, please sign new credentials and increase their TTL if needed.",
-			)
-		}
-		log.Info("At least one non-expired credential has been found, continuing startup")
-	}
-
-	bk := grpcbackoff.DefaultConfig
-	bk.MaxDelay = grpcBackoffMaxDelay
-	if a.apiClient, err = client.New(ctx, client.Config{
-		Addrs:       conf.GetTeleportConfig().GetAddrs(),
-		Credentials: conf.GetTeleportConfig().Credentials(),
-		DialOpts: []grpc.DialOption{
-			grpc.WithConnectParams(grpc.ConnectParams{Backoff: bk, MinConnectTimeout: initTimeout}),
-			grpc.WithReturnConnectionError(),
-		},
-	}); err != nil {
+	clt, err := conf.GetTeleportClient(ctx)
+	if err != nil {
 		return "", "", trace.Wrap(err)
 	}
 
+	a.apiClient = clt
 	pong, err := a.checkTeleportVersion(ctx)
 	if err != nil {
 		return "", "", trace.Wrap(err)
