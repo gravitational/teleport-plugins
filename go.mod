@@ -11,7 +11,7 @@ require (
 	github.com/google/go-querystring v1.0.0
 	github.com/google/uuid v1.2.0
 	github.com/gravitational/kingpin v2.1.11-0.20190130013101-742f2714c145+incompatible
-	github.com/gravitational/teleport/api v0.0.0-20221223193647-e4ac5f67177c // tag v11.1.2
+	github.com/gravitational/teleport/api v0.0.0-20230107012923-7591b8da43c5 // tag v11.1.2
 	github.com/gravitational/trace v1.2.0
 	github.com/hashicorp/go-version v1.3.0
 	github.com/hashicorp/terraform-plugin-framework v0.10.0
@@ -112,7 +112,8 @@ require (
 	go.opentelemetry.io/otel/sdk v1.10.0 // indirect
 	go.opentelemetry.io/otel/trace v1.10.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
-	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
+	golang.org/x/exp v0.0.0-20230105202349-8879d0199aa3 // indirect
+	golang.org/x/sys v0.1.0 // indirect
 	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/appengine v1.6.6 // indirect
