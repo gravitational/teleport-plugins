@@ -2,7 +2,7 @@ package slack
 
 import "github.com/gravitational/teleport-plugins/access/common"
 
-type SlackMessageSlice []SlackMsg
+type SlackMessageSlice []Message
 type SlackDataMessageSet map[common.MessageData]struct{}
 
 func (slice SlackMessageSlice) Len() int {

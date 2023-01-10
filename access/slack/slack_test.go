@@ -31,7 +31,7 @@ var requestReasonRegexp = regexp.MustCompile("(?im)^\\*Reason\\*:\\ ```\\n(.*?)`
 
 type SlackSuite struct {
 	integration.Suite
-	appConfig *SlackConfig
+	appConfig *Config
 	userNames struct {
 		ruler     string
 		requestor string
@@ -170,12 +170,12 @@ func (s *SlackSuite) SetupTest() {
 	err := logger.Setup(logger.Config{Severity: "debug"})
 	require.NoError(t, err)
 
-	s.fakeSlack = NewFakeSlack(SlackUser{Name: "slackbot"}, s.raceNumber)
+	s.fakeSlack = NewFakeSlack(User{Name: "slackbot"}, s.raceNumber)
 	t.Cleanup(s.fakeSlack.Close)
 
-	s.fakeSlack.StoreUser(SlackUser{Name: "Vladimir", Profile: UserProfile{Email: s.userNames.requestor}})
+	s.fakeSlack.StoreUser(User{Name: "Vladimir", Profile: UserProfile{Email: s.userNames.requestor}})
 
-	var conf SlackConfig
+	var conf Config
 	conf.Teleport = s.teleportConfig
 	conf.Slack.Token = "000000"
 	conf.Slack.APIURL = s.fakeSlack.URL() + "/"
@@ -208,7 +208,7 @@ func (s *SlackSuite) reviewer2() *integration.Client {
 	return s.clients[s.userNames.reviewer2]
 }
 
-func (s *SlackSuite) newAccessRequest(reviewers []SlackUser) types.AccessRequest {
+func (s *SlackSuite) newAccessRequest(reviewers []User) types.AccessRequest {
 	t := s.T()
 	t.Helper()
 
@@ -224,7 +224,7 @@ func (s *SlackSuite) newAccessRequest(reviewers []SlackUser) types.AccessRequest
 	return req
 }
 
-func (s *SlackSuite) createAccessRequest(reviewers []SlackUser) types.AccessRequest {
+func (s *SlackSuite) createAccessRequest(reviewers []User) types.AccessRequest {
 	t := s.T()
 	t.Helper()
 
@@ -252,18 +252,18 @@ func (s *SlackSuite) checkPluginData(reqID string, cond func(common.GenericPlugi
 func (s *SlackSuite) TestMessagePosting() {
 	t := s.T()
 
-	reviewer1 := s.fakeSlack.StoreUser(SlackUser{Profile: UserProfile{Email: s.userNames.reviewer1}})
-	reviewer2 := s.fakeSlack.StoreUser(SlackUser{Profile: UserProfile{Email: s.userNames.reviewer2}})
+	reviewer1 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
+	reviewer2 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer2}})
 
 	s.startApp()
-	request := s.createAccessRequest([]SlackUser{reviewer2, reviewer1})
+	request := s.createAccessRequest([]User{reviewer2, reviewer1})
 
 	pluginData := s.checkPluginData(request.GetName(), func(data common.GenericPluginData) bool {
 		return len(data.SentMessages) > 0
 	})
 	assert.Len(t, pluginData.SentMessages, 2)
 
-	var messages []SlackMsg
+	var messages []Message
 	messageSet := make(SlackDataMessageSet)
 	for i := 0; i < 2; i++ {
 		msg, err := s.fakeSlack.CheckNewMessage(s.Context())
@@ -302,8 +302,8 @@ func (s *SlackSuite) TestMessagePosting() {
 func (s *SlackSuite) TestRecipientsConfig() {
 	t := s.T()
 
-	reviewer1 := s.fakeSlack.StoreUser(SlackUser{Profile: UserProfile{Email: s.userNames.reviewer1}})
-	reviewer2 := s.fakeSlack.StoreUser(SlackUser{Profile: UserProfile{Email: s.userNames.reviewer2}})
+	reviewer1 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
+	reviewer2 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer2}})
 	s.appConfig.Recipients = common.RawRecipientsMap{
 		types.Wildcard: []string{reviewer2.Profile.Email, reviewer1.ID},
 	}
@@ -317,8 +317,8 @@ func (s *SlackSuite) TestRecipientsConfig() {
 	assert.Len(t, pluginData.SentMessages, 2)
 
 	var (
-		msg      SlackMsg
-		messages []SlackMsg
+		msg      Message
+		messages []Message
 	)
 
 	messageSet := make(SlackDataMessageSet)
@@ -346,11 +346,11 @@ func (s *SlackSuite) TestRecipientsConfig() {
 func (s *SlackSuite) TestApproval() {
 	t := s.T()
 
-	reviewer := s.fakeSlack.StoreUser(SlackUser{Profile: UserProfile{Email: s.userNames.reviewer1}})
+	reviewer := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
 
 	s.startApp()
 
-	req := s.createAccessRequest([]SlackUser{reviewer})
+	req := s.createAccessRequest([]User{reviewer})
 	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msg.Channel)
@@ -371,11 +371,11 @@ func (s *SlackSuite) TestApproval() {
 func (s *SlackSuite) TestDenial() {
 	t := s.T()
 
-	reviewer := s.fakeSlack.StoreUser(SlackUser{Profile: UserProfile{Email: s.userNames.reviewer1}})
+	reviewer := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
 
 	s.startApp()
 
-	req := s.createAccessRequest([]SlackUser{reviewer})
+	req := s.createAccessRequest([]User{reviewer})
 	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msg.Channel)
@@ -401,11 +401,11 @@ func (s *SlackSuite) TestReviewReplies() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	reviewer := s.fakeSlack.StoreUser(SlackUser{Profile: UserProfile{Email: s.userNames.reviewer1}})
+	reviewer := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
 
 	s.startApp()
 
-	req := s.createAccessRequest([]SlackUser{reviewer})
+	req := s.createAccessRequest([]User{reviewer})
 	s.checkPluginData(req.GetName(), func(data common.GenericPluginData) bool {
 		return len(data.SentMessages) > 0
 	})
@@ -454,11 +454,11 @@ func (s *SlackSuite) TestApprovalByReview() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	reviewer := s.fakeSlack.StoreUser(SlackUser{Profile: UserProfile{Email: s.userNames.reviewer1}})
+	reviewer := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
 
 	s.startApp()
 
-	req := s.createAccessRequest([]SlackUser{reviewer})
+	req := s.createAccessRequest([]User{reviewer})
 	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msg.Channel)
@@ -511,11 +511,11 @@ func (s *SlackSuite) TestDenialByReview() {
 		t.Skip("Doesn't work in OSS version")
 	}
 
-	reviewer := s.fakeSlack.StoreUser(SlackUser{Profile: UserProfile{Email: s.userNames.reviewer1}})
+	reviewer := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
 
 	s.startApp()
 
-	req := s.createAccessRequest([]SlackUser{reviewer})
+	req := s.createAccessRequest([]User{reviewer})
 	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msg.Channel)
@@ -564,11 +564,11 @@ func (s *SlackSuite) TestDenialByReview() {
 func (s *SlackSuite) TestExpiration() {
 	t := s.T()
 
-	reviewer := s.fakeSlack.StoreUser(SlackUser{Profile: UserProfile{Email: s.userNames.reviewer1}})
+	reviewer := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
 
 	s.startApp()
 
-	request := s.createAccessRequest([]SlackUser{reviewer})
+	request := s.createAccessRequest([]User{reviewer})
 	msg, err := s.fakeSlack.CheckNewMessage(s.Context())
 	require.NoError(t, err)
 	assert.Equal(t, reviewer.ID, msg.Channel)
@@ -600,8 +600,8 @@ func (s *SlackSuite) TestRace() {
 	err := logger.Setup(logger.Config{Severity: "info"}) // Turn off noisy debug logging
 	require.NoError(t, err)
 
-	reviewer1 := s.fakeSlack.StoreUser(SlackUser{Profile: UserProfile{Email: s.userNames.reviewer1}})
-	reviewer2 := s.fakeSlack.StoreUser(SlackUser{Profile: UserProfile{Email: s.userNames.reviewer2}})
+	reviewer1 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer1}})
+	reviewer2 := s.fakeSlack.StoreUser(User{Profile: UserProfile{Email: s.userNames.reviewer2}})
 
 	s.SetContextTimeout(20 * time.Second)
 	s.startApp()
@@ -731,7 +731,7 @@ func (s *SlackSuite) TestRace() {
 	})
 }
 
-func parseMessageField(msg SlackMsg, field string) (string, error) {
+func parseMessageField(msg Message, field string) (string, error) {
 	block := msg.BlockItems[1].Block
 	sectionBlock, ok := block.(SectionBlock)
 	if !ok {
@@ -757,7 +757,7 @@ func parseMessageField(msg SlackMsg, field string) (string, error) {
 	return "", trace.Errorf("cannot find field %s in %v", field, fields)
 }
 
-func getStatusLine(msg SlackMsg) (string, error) {
+func getStatusLine(msg Message) (string, error) {
 	block := msg.BlockItems[2].Block
 	contextBlock, ok := block.(ContextBlock)
 	if !ok {
