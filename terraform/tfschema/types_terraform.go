@@ -661,52 +661,59 @@ func GenSchemaProvisionTokenV2(ctx context.Context) (github_com_hashicorp_terraf
 					Optional:    true,
 				},
 				"github": {
-					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"allow": {
-						Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
-							"actor": {
-								Description: "The personal account that initiated the workflow run.",
-								Optional:    true,
-								Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-							},
-							"environment": {
-								Description: "The name of the environment used by the job.",
-								Optional:    true,
-								Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-							},
-							"ref": {
-								Description: "The git ref that triggered the workflow run.",
-								Optional:    true,
-								Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-							},
-							"ref_type": {
-								Description: "The type of ref, for example: \"branch\".",
-								Optional:    true,
-								Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-							},
-							"repository": {
-								Description: "The repository from where the workflow is running. This includes the name of the owner e.g `gravitational/teleport`",
-								Optional:    true,
-								Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-							},
-							"repository_owner": {
-								Description: "The name of the organization in which the repository is stored.",
-								Optional:    true,
-								Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-							},
-							"sub": {
-								Description: "Sub also known as Subject is a string that roughly uniquely indentifies the workload. The format of this varies depending on the type of github action run.",
-								Optional:    true,
-								Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-							},
-							"workflow": {
-								Description: "The name of the workflow.",
-								Optional:    true,
-								Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-							},
-						}),
-						Description: "Allow is a list of TokenRules, nodes using this token must match one allow rule to use this token.",
-						Optional:    true,
-					}}),
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+						"allow": {
+							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+								"actor": {
+									Description: "The personal account that initiated the workflow run.",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+								},
+								"environment": {
+									Description: "The name of the environment used by the job.",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+								},
+								"ref": {
+									Description: "The git ref that triggered the workflow run.",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+								},
+								"ref_type": {
+									Description: "The type of ref, for example: \"branch\".",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+								},
+								"repository": {
+									Description: "The repository from where the workflow is running. This includes the name of the owner e.g `gravitational/teleport`",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+								},
+								"repository_owner": {
+									Description: "The name of the organization in which the repository is stored.",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+								},
+								"sub": {
+									Description: "Sub also known as Subject is a string that roughly uniquely indentifies the workload. The format of this varies depending on the type of github action run.",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+								},
+								"workflow": {
+									Description: "The name of the workflow.",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+								},
+							}),
+							Description: "Allow is a list of TokenRules, nodes using this token must match one allow rule to use this token.",
+							Optional:    true,
+						},
+						"enterprise_server_host": {
+							Description: "EnterpriseServerHost allows joining from runners associated with a GitHub Enterprise Server instance. When unconfigured, tokens will be validated against github.com, but when configured to the host of a GHES instance, then the tokens will be validated against host.  This value should be the hostname of the GHES instance, and should not include the scheme or a path. The instance must be accessible over HTTPS at this hostname and the certificate must be trusted by the Auth Server.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
+					}),
 					Description: "GitHub allows the configuration of options specific to the \"github\" join method.",
 					Optional:    true,
 				},
@@ -7170,6 +7177,23 @@ func CopyProvisionTokenV2FromTerraform(_ context.Context, tf github_com_hashicor
 											}
 										}
 									}
+									{
+										a, ok := tf.Attrs["enterprise_server_host"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"ProvisionTokenV2.Spec.GitHub.EnterpriseServerHost"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"ProvisionTokenV2.Spec.GitHub.EnterpriseServerHost", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.EnterpriseServerHost = t
+											}
+										}
+									}
 								}
 							}
 						}
@@ -8120,6 +8144,28 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravita
 												c.Unknown = false
 												tf.Attrs["allow"] = c
 											}
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["enterprise_server_host"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"ProvisionTokenV2.Spec.GitHub.EnterpriseServerHost"})
+										} else {
+											v, ok := tf.Attrs["enterprise_server_host"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"ProvisionTokenV2.Spec.GitHub.EnterpriseServerHost", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Spec.GitHub.EnterpriseServerHost", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.EnterpriseServerHost) == ""
+											}
+											v.Value = string(obj.EnterpriseServerHost)
+											v.Unknown = false
+											tf.Attrs["enterprise_server_host"] = v
 										}
 									}
 								}
