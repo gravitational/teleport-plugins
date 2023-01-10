@@ -64,7 +64,7 @@ type UserProfile struct {
 // Slack API: OAuth
 
 type AccessResponse struct {
-	SlackResponse
+	APIResponse
 	AccessToken      string `json:"access_token"`
 	RefreshToken     string `json:"refresh_token"`
 	ExpiresInSeconds int    `json:"expires_in"`
