@@ -17,7 +17,6 @@ limitations under the License.
 package slack
 
 import (
-	"net/http"
 	"net/url"
 	"strings"
 
@@ -109,16 +108,7 @@ func (c *Config) NewBot(clusterName, webProxyAddr string) (common.MessagingBot, 
 		}
 	}
 
-	client := resty.
-		NewWithClient(&http.Client{
-			Timeout: slackHTTPTimeout,
-			Transport: &http.Transport{
-				MaxConnsPerHost:     slackMaxConns,
-				MaxIdleConnsPerHost: slackMaxConns,
-			},
-		}).
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Accept", "application/json").
+	client := makeSlackClient().
 		OnBeforeRequest(func(_ *resty.Client, r *resty.Request) error {
 			token, err := c.AccessTokenProvider.GetAccessToken()
 			if err != nil {

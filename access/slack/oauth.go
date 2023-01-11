@@ -2,7 +2,6 @@ package slack
 
 import (
 	"context"
-	"net/http"
 	"time"
 
 	"github.com/go-resty/resty/v2"
@@ -19,19 +18,7 @@ type Authorizer struct {
 }
 
 func NewAuthorizer(clientID string, clientSecret string) *Authorizer {
-	// TODO: Deduplicate with (*SlackConfig).NewBot
-	client := resty.
-		NewWithClient(&http.Client{
-			Timeout: slackHTTPTimeout,
-			Transport: &http.Transport{
-				MaxConnsPerHost:     slackMaxConns,
-				MaxIdleConnsPerHost: slackMaxConns,
-			},
-		}).
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Accept", "application/json").
-		SetHostURL("https://slack.com/api/")
-
+	client := makeSlackClient()
 	return &Authorizer{
 		client:       client,
 		clientID:     clientID,
