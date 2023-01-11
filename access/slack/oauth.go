@@ -16,10 +16,9 @@ type Authorizer struct {
 
 	clientID     string
 	clientSecret string
-	redirectURI  string
 }
 
-func NewAuthorizer(clientID string, clientSecret string, redirectURI string) *Authorizer {
+func NewAuthorizer(clientID string, clientSecret string) *Authorizer {
 	// TODO: Deduplicate with (*SlackConfig).NewBot
 	client := resty.
 		NewWithClient(&http.Client{
@@ -37,13 +36,34 @@ func NewAuthorizer(clientID string, clientSecret string, redirectURI string) *Au
 		client:       client,
 		clientID:     clientID,
 		clientSecret: clientSecret,
-		redirectURI:  redirectURI,
 	}
 }
 
 // Exchange implements oauth.Authorizer
-func (a *Authorizer) Exchange(ctx context.Context, authorizationCode string) (*state.Credentials, error) {
-	return nil, trace.NotImplemented("Exchange")
+func (a *Authorizer) Exchange(ctx context.Context, authorizationCode string, redirectURI string) (*state.Credentials, error) {
+	var result AccessResponse
+
+	_, err := a.client.R().
+		SetQueryParam("client_id", a.clientID).
+		SetQueryParam("client_secret", a.clientSecret).
+		SetQueryParam("code", authorizationCode).
+		SetQueryParam("redirect_uri", redirectURI).
+		SetResult(&result).
+		Post("https://slack.com/api/oauth.v2.access")
+
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	if !result.Ok {
+		return nil, trace.Errorf("%s", result.Error)
+	}
+
+	return &state.Credentials{
+		AccessToken:  result.AccessToken,
+		RefreshToken: result.RefreshToken,
+		ExpiresAt:    time.Now().UTC().Add(time.Duration(result.ExpiresInSeconds) * time.Second),
+	}, nil
 }
 
 // Refresh implements oauth.Authorizer
@@ -54,7 +74,6 @@ func (a *Authorizer) Refresh(ctx context.Context, refreshToken string) (*state.C
 		SetQueryParam("client_secret", a.clientSecret).
 		SetQueryParam("grant_type", "refresh_token").
 		SetQueryParam("refresh_token", refreshToken).
-		SetQueryParam("redirect_uri", a.redirectURI).
 		SetResult(&result).
 		Post("https://slack.com/api/oauth.v2.access")
 
