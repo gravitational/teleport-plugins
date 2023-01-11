@@ -24,7 +24,7 @@ DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg ACCESS_PLUG
 
 .PHONY: $(BINARY)
 $(BINARY):
-	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BINARY) $(BUILDFLAGS)
+	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BINARY) $(BUILDFLAGS) ./cmd/slack
 
 .PHONY: test
 test: FLAGS ?= '-race'

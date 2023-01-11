@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package slack
 
 import (
 	"github.com/gravitational/teleport-plugins/access/common"
@@ -26,6 +26,6 @@ const (
 )
 
 // NewSlackApp initializes a new teleport-slack app and returns it.
-func NewSlackApp(conf *SlackConfig) *common.BaseApp {
+func NewSlackApp(conf *Config) *common.BaseApp {
 	return common.NewApp(conf, slackPluginName)
 }

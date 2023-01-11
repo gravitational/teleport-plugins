@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package slack
 
 import (
 	"encoding/json"
@@ -24,19 +24,19 @@ import (
 
 // Slack API types
 
-type SlackResponse struct {
+type APIResponse struct {
 	Ok    bool   `json:"ok"`
 	Error string `json:"error,omitempty"`
 }
 
 type ChatMsgResponse struct {
-	SlackResponse
+	APIResponse
 	Channel   string `json:"channel"`
 	Timestamp string `json:"ts"`
 	Text      string `json:"text"`
 }
 
-type Msg struct {
+type BaseMessage struct {
 	Type      string `json:"type,omitempty"`
 	Channel   string `json:"channel,omitempty"`
 	User      string `json:"user,omitempty"`
@@ -45,13 +45,13 @@ type Msg struct {
 	ThreadTs  string `json:"thread_ts,omitempty"`
 }
 
-type SlackMsg struct {
-	Msg
+type Message struct {
+	BaseMessage
 	BlockItems []BlockItem `json:"blocks,omitempty"`
 	Text       string      `json:"text,omitempty"`
 }
 
-type SlackUser struct {
+type User struct {
 	ID      string      `json:"id"`
 	Name    string      `json:"name"`
 	Profile UserProfile `json:"profile"`

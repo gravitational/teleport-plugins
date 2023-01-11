@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package slack
 
 import (
 	"net/http"
@@ -31,21 +31,21 @@ import (
 	"github.com/gravitational/teleport/api/types"
 )
 
-// SlackConfig stores the full configuration for the teleport-slack plugin to run.
-type SlackConfig struct {
+// Config stores the full configuration for the teleport-slack plugin to run.
+type Config struct {
 	common.BaseConfig
 	Slack common.GenericAPIConfig
 }
 
 // LoadSlackConfig reads the config file, initializes a new SlackConfig struct object, and returns it.
 // Optionally returns an error if the file is not readable, or if file format is invalid.
-func LoadSlackConfig(filepath string) (*SlackConfig, error) {
+func LoadSlackConfig(filepath string) (*Config, error) {
 	t, err := toml.LoadFile(filepath)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
-	conf := &SlackConfig{}
+	conf := &Config{}
 	if err := t.Unmarshal(conf); err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -66,7 +66,7 @@ func LoadSlackConfig(filepath string) (*SlackConfig, error) {
 // CheckAndSetDefaults checks the config struct for any logical errors, and sets default values
 // if some values are missing.
 // If critical values are missing and we can't set defaults for them, this will return an error.
-func (c *SlackConfig) CheckAndSetDefaults() error {
+func (c *Config) CheckAndSetDefaults() error {
 	if err := c.Teleport.CheckAndSetDefaults(); err != nil {
 		return trace.Wrap(err)
 	}
@@ -91,14 +91,14 @@ func (c *SlackConfig) CheckAndSetDefaults() error {
 
 // NewBot initializes the new Slack message generator (SlackBot)
 // takes GenericAPIConfig as an argument.
-func (c *SlackConfig) NewBot(clusterName, webProxyAddr string) (common.MessagingBot, error) {
+func (c *Config) NewBot(clusterName, webProxyAddr string) (common.MessagingBot, error) {
 	var (
 		webProxyURL *url.URL
 		err         error
 	)
 	if webProxyAddr != "" {
 		if webProxyURL, err = lib.AddrToURL(webProxyAddr); err != nil {
-			return SlackBot{}, trace.Wrap(err)
+			return Bot{}, trace.Wrap(err)
 		}
 	}
 
@@ -124,7 +124,7 @@ func (c *SlackConfig) NewBot(clusterName, webProxyAddr string) (common.Messaging
 		client.OnAfterResponse(onAfterResponseSlack)
 	}
 
-	return SlackBot{
+	return Bot{
 		client:      client,
 		clusterName: clusterName,
 		webProxyURL: webProxyURL,

@@ -23,6 +23,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gravitational/teleport-plugins/access/slack"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 
@@ -69,7 +70,7 @@ func main() {
 }
 
 func run(configPath string, debug bool) error {
-	conf, err := LoadSlackConfig(configPath)
+	conf, err := slack.LoadSlackConfig(configPath)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -85,7 +86,7 @@ func run(configPath string, debug bool) error {
 		logger.Standard().Debugf("DEBUG logging enabled")
 	}
 
-	app := NewSlackApp(conf)
+	app := slack.NewSlackApp(conf)
 	go lib.ServeSignals(app, 15*time.Second)
 
 	logger.Standard().Infof("Starting Teleport Access Slack Plugin %s:%s", Version, Gitref)

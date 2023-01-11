@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package main
+package slack
 
 import (
 	"context"
@@ -34,11 +34,11 @@ import (
 const slackMaxConns = 100
 const slackHTTPTimeout = 10 * time.Second
 
-// SlackBot is a slack client that works with AccessRequest.
+// Bot is a slack client that works with AccessRequest.
 // It's responsible for formatting and posting a message on Slack when an
 // action occurs with an access request: a new request popped up, or a
 // request is processed/updated.
-type SlackBot struct {
+type Bot struct {
 	client      *resty.Client
 	clusterName string
 	webProxyURL *url.URL
@@ -50,7 +50,7 @@ func onAfterResponseSlack(_ *resty.Client, resp *resty.Response) error {
 		return trace.Errorf("slack api returned unexpected code %v", resp.StatusCode())
 	}
 
-	var result SlackResponse
+	var result APIResponse
 	if err := json.Unmarshal(resp.Body(), &result); err != nil {
 		return trace.Wrap(err)
 	}
@@ -62,7 +62,7 @@ func onAfterResponseSlack(_ *resty.Client, resp *resty.Response) error {
 	return nil
 }
 
-func (b SlackBot) CheckHealth(ctx context.Context) error {
+func (b Bot) CheckHealth(ctx context.Context) error {
 	_, err := b.client.NewRequest().
 		SetContext(ctx).
 		Post("auth.test")
@@ -76,7 +76,7 @@ func (b SlackBot) CheckHealth(ctx context.Context) error {
 }
 
 // Broadcast posts request info to Slack with action buttons.
-func (b SlackBot) Broadcast(ctx context.Context, recipients []common.Recipient, reqID string, reqData pd.AccessRequestData) (common.SentMessages, error) {
+func (b Bot) Broadcast(ctx context.Context, recipients []common.Recipient, reqID string, reqData pd.AccessRequestData) (common.SentMessages, error) {
 	var data common.SentMessages
 	var errors []error
 
@@ -84,7 +84,7 @@ func (b SlackBot) Broadcast(ctx context.Context, recipients []common.Recipient, 
 		var result ChatMsgResponse
 		_, err := b.client.NewRequest().
 			SetContext(ctx).
-			SetBody(SlackMsg{Msg: Msg{Channel: recipient.ID}, BlockItems: b.slackMsgSections(reqID, reqData)}).
+			SetBody(Message{BaseMessage: BaseMessage{Channel: recipient.ID}, BlockItems: b.slackMsgSections(reqID, reqData)}).
 			SetResult(&result).
 			Post("chat.postMessage")
 		if err != nil {
@@ -97,7 +97,7 @@ func (b SlackBot) Broadcast(ctx context.Context, recipients []common.Recipient, 
 	return data, trace.NewAggregate(errors...)
 }
 
-func (b SlackBot) PostReviewReply(ctx context.Context, channelID, timestamp string, review types.AccessReview) error {
+func (b Bot) PostReviewReply(ctx context.Context, channelID, timestamp string, review types.AccessReview) error {
 	text, err := common.MsgReview(review)
 	if err != nil {
 		return trace.Wrap(err)
@@ -105,16 +105,16 @@ func (b SlackBot) PostReviewReply(ctx context.Context, channelID, timestamp stri
 
 	_, err = b.client.NewRequest().
 		SetContext(ctx).
-		SetBody(SlackMsg{Msg: Msg{Channel: channelID, ThreadTs: timestamp}, Text: text}).
+		SetBody(Message{BaseMessage: BaseMessage{Channel: channelID, ThreadTs: timestamp}, Text: text}).
 		Post("chat.postMessage")
 	return trace.Wrap(err)
 }
 
 // LookupDirectChannelByEmail fetches user's id by email.
-func (b SlackBot) lookupDirectChannelByEmail(ctx context.Context, email string) (string, error) {
+func (b Bot) lookupDirectChannelByEmail(ctx context.Context, email string) (string, error) {
 	var result struct {
-		SlackResponse
-		User SlackUser `json:"user"`
+		APIResponse
+		User User `json:"user"`
 	}
 	_, err := b.client.NewRequest().
 		SetContext(ctx).
@@ -129,12 +129,12 @@ func (b SlackBot) lookupDirectChannelByEmail(ctx context.Context, email string) 
 }
 
 // Expire updates request's Slack post with EXPIRED status and removes action buttons.
-func (b SlackBot) UpdateMessages(ctx context.Context, reqID string, reqData pd.AccessRequestData, slackData common.SentMessages, reviews []types.AccessReview) error {
+func (b Bot) UpdateMessages(ctx context.Context, reqID string, reqData pd.AccessRequestData, slackData common.SentMessages, reviews []types.AccessReview) error {
 	var errors []error
 	for _, msg := range slackData {
 		_, err := b.client.NewRequest().
 			SetContext(ctx).
-			SetBody(SlackMsg{Msg: Msg{
+			SetBody(Message{BaseMessage: BaseMessage{
 				Channel:   msg.ChannelID,
 				Timestamp: msg.MessageID,
 			}, BlockItems: b.slackMsgSections(reqID, reqData)}).
@@ -157,7 +157,7 @@ func (b SlackBot) UpdateMessages(ctx context.Context, reqID string, reqData pd.A
 	return nil
 }
 
-func (b SlackBot) FetchRecipient(ctx context.Context, recipient string) (*common.Recipient, error) {
+func (b Bot) FetchRecipient(ctx context.Context, recipient string) (*common.Recipient, error) {
 	if lib.IsEmail(recipient) {
 		channel, err := b.lookupDirectChannelByEmail(ctx, recipient)
 		if err != nil {
@@ -183,7 +183,7 @@ func (b SlackBot) FetchRecipient(ctx context.Context, recipient string) (*common
 }
 
 // msgSection builds a Slack message section (obeys markdown).
-func (b SlackBot) slackMsgSections(reqID string, reqData pd.AccessRequestData) []BlockItem {
+func (b Bot) slackMsgSections(reqID string, reqData pd.AccessRequestData) []BlockItem {
 	fields := common.MsgFields(reqID, reqData, b.clusterName, b.webProxyURL)
 	statusText := common.MsgStatusText(reqData.ResolutionTag, reqData.ResolutionReason)
 
