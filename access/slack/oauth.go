@@ -18,14 +18,18 @@ type Authorizer struct {
 	clientSecret string
 }
 
-// NewAuthorizer returns a new Authorizer
-func NewAuthorizer(clientID string, clientSecret string) *Authorizer {
-	client := makeSlackClient(slackAPIURL)
+func newAuthorizer(client *resty.Client, clientID string, clientSecret string) *Authorizer {
 	return &Authorizer{
 		client:       client,
 		clientID:     clientID,
 		clientSecret: clientSecret,
 	}
+}
+
+// NewAuthorizer returns a new Authorizer
+func NewAuthorizer(clientID string, clientSecret string) *Authorizer {
+	client := makeSlackClient(slackAPIURL)
+	return newAuthorizer(client, clientID, clientSecret)
 }
 
 // Exchange implements oauth.Exchanger
