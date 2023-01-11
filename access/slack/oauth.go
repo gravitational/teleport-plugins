@@ -10,6 +10,7 @@ import (
 	"github.com/gravitational/trace"
 )
 
+// Authorizer implements oauth2.Authorizer for Slack API.
 type Authorizer struct {
 	client *resty.Client
 
@@ -17,6 +18,7 @@ type Authorizer struct {
 	clientSecret string
 }
 
+// NewAuthorizer returns a new Authorizer
 func NewAuthorizer(clientID string, clientSecret string) *Authorizer {
 	client := makeSlackClient()
 	return &Authorizer{
@@ -26,7 +28,7 @@ func NewAuthorizer(clientID string, clientSecret string) *Authorizer {
 	}
 }
 
-// Exchange implements oauth.Authorizer
+// Exchange implements oauth.Exchanger
 func (a *Authorizer) Exchange(ctx context.Context, authorizationCode string, redirectURI string) (*state.Credentials, error) {
 	var result AccessResponse
 
@@ -53,7 +55,7 @@ func (a *Authorizer) Exchange(ctx context.Context, authorizationCode string, red
 	}, nil
 }
 
-// Refresh implements oauth.Authorizer
+// Refresh implements oauth.Refresher
 func (a *Authorizer) Refresh(ctx context.Context, refreshToken string) (*state.Credentials, error) {
 	var result AccessResponse
 	_, err := a.client.R().

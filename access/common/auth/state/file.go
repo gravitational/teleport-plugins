@@ -8,11 +8,12 @@ import (
 	"github.com/gravitational/trace"
 )
 
-// NB: racy, does not use file-locking or similar
 type fileState struct {
 	filename string
 }
 
+// NewFileState creates an instance of State
+// that uses a local file as its backing storage.
 func NewFileState(filename string) (State, error) {
 	return &fileState{filename: filename}, nil
 }
