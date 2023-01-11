@@ -108,7 +108,12 @@ func (c *Config) NewBot(clusterName, webProxyAddr string) (common.MessagingBot, 
 		}
 	}
 
-	client := makeSlackClient().
+	var apiURL = slackAPIURL
+	if endpoint := c.Slack.APIURL; endpoint != "" {
+		apiURL = endpoint
+	}
+
+	client := makeSlackClient(apiURL).
 		OnBeforeRequest(func(_ *resty.Client, r *resty.Request) error {
 			token, err := c.AccessTokenProvider.GetAccessToken()
 			if err != nil {
@@ -116,15 +121,8 @@ func (c *Config) NewBot(clusterName, webProxyAddr string) (common.MessagingBot, 
 			}
 			r.SetHeader("Authorization", "Bearer "+token)
 			return nil
-		})
-
-	// APIURL parameter is set only in tests
-	if endpoint := c.Slack.APIURL; endpoint != "" {
-		client.SetHostURL(endpoint)
-	} else {
-		client.SetHostURL("https://slack.com/api/")
-		client.OnAfterResponse(onAfterResponseSlack)
-	}
+		}).
+		OnAfterResponse(onAfterResponseSlack)
 
 	return Bot{
 		client:      client,

@@ -20,7 +20,7 @@ type Authorizer struct {
 
 // NewAuthorizer returns a new Authorizer
 func NewAuthorizer(clientID string, clientSecret string) *Authorizer {
-	client := makeSlackClient()
+	client := makeSlackClient(slackAPIURL)
 	return &Authorizer{
 		client:       client,
 		clientID:     clientID,
@@ -38,7 +38,7 @@ func (a *Authorizer) Exchange(ctx context.Context, authorizationCode string, red
 		SetQueryParam("code", authorizationCode).
 		SetQueryParam("redirect_uri", redirectURI).
 		SetResult(&result).
-		Post("https://slack.com/api/oauth.v2.access")
+		Post("oauth.v2.access")
 
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -64,7 +64,7 @@ func (a *Authorizer) Refresh(ctx context.Context, refreshToken string) (*state.C
 		SetQueryParam("grant_type", "refresh_token").
 		SetQueryParam("refresh_token", refreshToken).
 		SetResult(&result).
-		Post("https://slack.com/api/oauth.v2.access")
+		Post("oauth.v2.access")
 
 	if err != nil {
 		return nil, trace.Wrap(err)

@@ -6,7 +6,9 @@ import (
 	"github.com/go-resty/resty/v2"
 )
 
-func makeSlackClient() *resty.Client {
+const slackAPIURL = "https://slack.com/api/"
+
+func makeSlackClient(apiURL string) *resty.Client {
 	return resty.
 		NewWithClient(&http.Client{
 			Timeout: slackHTTPTimeout,
@@ -16,5 +18,6 @@ func makeSlackClient() *resty.Client {
 			},
 		}).
 		SetHeader("Content-Type", "application/json").
-		SetHeader("Accept", "application/json")
+		SetHeader("Accept", "application/json").
+		SetHostURL(apiURL)
 }
