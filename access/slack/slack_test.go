@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/gravitational/teleport-plugins/access/common"
+	"github.com/gravitational/teleport-plugins/access/common/auth"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/testing/integration"
@@ -179,6 +180,7 @@ func (s *SlackSuite) SetupTest() {
 	conf.Teleport = s.teleportConfig
 	conf.Slack.Token = "000000"
 	conf.Slack.APIURL = s.fakeSlack.URL() + "/"
+	conf.AccessTokenProvider = auth.NewStaticAccessTokenProvider(conf.Slack.Token)
 
 	s.appConfig = &conf
 	s.SetContextTimeout(5 * time.Second)
