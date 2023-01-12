@@ -15,22 +15,29 @@ import (
 const defaultRefreshRetryInterval = 1 * time.Minute
 const defaultTokenBufferInterval = 1 * time.Hour
 
+// AccessTokenProvider provides a method to get the bearer token
+// for use when authorizing to a 3rd-party provider API.
 type AccessTokenProvider interface {
 	GetAccessToken() (string, error)
 }
 
+// StaticAccessTokenProvider is an implementation of AccessTokenProvider
+// that always returns the specified token.
 type StaticAccessTokenProvider struct {
 	token string
 }
 
+// NewStaticAccessTokenProvider creates a new StaticAccessTokenProvider.
 func NewStaticAccessTokenProvider(token string) *StaticAccessTokenProvider {
 	return &StaticAccessTokenProvider{token: token}
 }
 
+// GetAccessToken implements AccessTokenProvider
 func (s *StaticAccessTokenProvider) GetAccessToken() (string, error) {
 	return s.token, nil
 }
 
+// RotatedAccessTokenProviderConfig contains parameters and dependencies for RotatedAccessTokenProvider
 type RotatedAccessTokenProviderConfig struct {
 	Ctx                 context.Context
 	RetryInterval       time.Duration
@@ -43,6 +50,7 @@ type RotatedAccessTokenProviderConfig struct {
 	Log *logrus.Entry
 }
 
+// CheckAndSetDefaults validates a configuration and sets default values
 func (c *RotatedAccessTokenProviderConfig) CheckAndSetDefaults() error {
 	if c.Ctx == nil {
 		return trace.BadParameter("Ctx must be set")
@@ -69,6 +77,11 @@ func (c *RotatedAccessTokenProviderConfig) CheckAndSetDefaults() error {
 	return nil
 }
 
+// RotatedAccessTokenProvider is an implementation of AccessTokenProvider
+// that uses OAuth2 refresh token flow to renew the acess token.
+// The credentials are stored in the given persistent store.
+//
+// To have an up-to-date token, one must run RefreshLoop() in a background goroutine.
 type RotatedAccessTokenProvider struct {
 	ctx                 context.Context
 	retryInterval       time.Duration
@@ -83,6 +96,9 @@ type RotatedAccessTokenProvider struct {
 	creds *state.Credentials
 }
 
+// NewRotatedTokenProvider creates a new RotatedAccessTokenProvider from the given config.
+// NewRotatedTokenProvider will return an error if the state does not have existing credentials,
+// meaning they need to be acquired first (e.g. via OAuth2 authorization code flow).
 func NewRotatedTokenProvider(cfg RotatedAccessTokenProviderConfig) (*RotatedAccessTokenProvider, error) {
 	if err := cfg.CheckAndSetDefaults(); err != nil {
 		return nil, trace.Wrap(err)
@@ -116,12 +132,14 @@ func (r *RotatedAccessTokenProvider) init() error {
 	return nil
 }
 
+// GetAccessToken implements AccessTokenProvider()
 func (r *RotatedAccessTokenProvider) GetAccessToken() (string, error) {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 	return r.creds.AccessToken, nil
 }
 
+// RefreshLoop runs the credential refresh process.
 func (r *RotatedAccessTokenProvider) RefreshLoop() {
 	r.lock.RLock()
 	creds := r.creds
