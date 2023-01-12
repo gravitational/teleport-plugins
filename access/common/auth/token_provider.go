@@ -7,13 +7,12 @@ import (
 
 	"github.com/gravitational/teleport-plugins/access/common/auth/oauth"
 	"github.com/gravitational/teleport-plugins/access/common/auth/state"
-	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 	"github.com/sirupsen/logrus"
 )
 
 const defaultRefreshRetryPeriod = 1 * time.Minute
-const tokenRotationBufferPeriod = 1 * time.Hour
+const defaultTokenRotationBufferPeriod = 1 * time.Hour
 
 type AccessTokenProvider interface {
 	GetAccessToken() (string, error)
@@ -31,11 +30,46 @@ func (s *StaticAccessTokenProvider) GetAccessToken() (string, error) {
 	return s.token, nil
 }
 
+type RotatedAccessTokenProviderConfig struct {
+	Ctx                       context.Context
+	RetryPeriod               time.Duration
+	TokenRotationBufferPeriod time.Duration
+
+	State      state.State
+	Authorizer oauth.Authorizer
+
+	Log *logrus.Entry
+}
+
+func (c *RotatedAccessTokenProviderConfig) CheckAndSetDefaults() error {
+	if c.Ctx == nil {
+		return trace.BadParameter("Ctx must be set")
+	}
+	if c.RetryPeriod == 0 {
+		c.RetryPeriod = defaultRefreshRetryPeriod
+	}
+	if c.TokenRotationBufferPeriod == 0 {
+		c.TokenRotationBufferPeriod = defaultTokenRotationBufferPeriod
+	}
+
+	if c.State == nil {
+		return trace.BadParameter("State must be set")
+	}
+	if c.Authorizer == nil {
+		return trace.BadParameter("Authorizer must be set")
+	}
+	if c.Log == nil {
+		c.Log = logrus.NewEntry(logrus.StandardLogger())
+	}
+	return nil
+}
+
 type RotatedAccessTokenProvider struct {
-	ctx         context.Context
-	retryPeriod time.Duration
-	state       state.State
-	authorizer  oauth.Authorizer
+	ctx                       context.Context
+	retryPeriod               time.Duration
+	tokenRotationBufferPeriod time.Duration
+	state                     state.State
+	authorizer                oauth.Authorizer
 
 	log logrus.FieldLogger
 
@@ -43,13 +77,18 @@ type RotatedAccessTokenProvider struct {
 	creds *state.Credentials
 }
 
-func NewRotatedTokenProvider(ctx context.Context, state state.State, authorizer oauth.Authorizer) (*RotatedAccessTokenProvider, error) {
+func NewRotatedTokenProvider(cfg RotatedAccessTokenProviderConfig) (*RotatedAccessTokenProvider, error) {
+	if err := cfg.CheckAndSetDefaults(); err != nil {
+		return nil, trace.Wrap(err)
+	}
+
 	provider := &RotatedAccessTokenProvider{
-		ctx:         ctx,
-		retryPeriod: defaultRefreshRetryPeriod,
-		state:       state,
-		authorizer:  authorizer,
-		log:         logger.Standard(),
+		ctx:                       cfg.Ctx,
+		retryPeriod:               cfg.RetryPeriod,
+		tokenRotationBufferPeriod: cfg.TokenRotationBufferPeriod,
+		state:                     cfg.State,
+		authorizer:                cfg.Authorizer,
+		log:                       cfg.Log,
 	}
 
 	err := provider.init()
@@ -133,7 +172,7 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 }
 
 func (r *RotatedAccessTokenProvider) getRefreshPeriod(creds *state.Credentials) time.Duration {
-	d := creds.ExpiresAt.Sub(time.Now()) - tokenRotationBufferPeriod
+	d := creds.ExpiresAt.Sub(time.Now()) - r.tokenRotationBufferPeriod
 
 	// Ticker panics of duration is negative
 	if d < 0 {
@@ -151,5 +190,5 @@ func (r *RotatedAccessTokenProvider) refresh(ctx context.Context) (*state.Creden
 }
 
 func (r *RotatedAccessTokenProvider) shouldRefresh(creds *state.Credentials) bool {
-	return time.Now().After(creds.ExpiresAt.Add(-tokenRotationBufferPeriod))
+	return time.Now().After(creds.ExpiresAt.Add(-r.tokenRotationBufferPeriod))
 }
