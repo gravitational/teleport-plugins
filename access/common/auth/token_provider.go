@@ -11,8 +11,8 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const defaultRefreshRetryPeriod = 1 * time.Minute
-const defaultTokenRotationBufferPeriod = 1 * time.Hour
+const defaultRefreshRetryInterval = 1 * time.Minute
+const defaultTokenBufferInterval = 1 * time.Hour
 
 type AccessTokenProvider interface {
 	GetAccessToken() (string, error)
@@ -31,9 +31,9 @@ func (s *StaticAccessTokenProvider) GetAccessToken() (string, error) {
 }
 
 type RotatedAccessTokenProviderConfig struct {
-	Ctx                       context.Context
-	RetryPeriod               time.Duration
-	TokenRotationBufferPeriod time.Duration
+	Ctx                 context.Context
+	RetryInterval       time.Duration
+	TokenBufferInterval time.Duration
 
 	State      state.State
 	Authorizer oauth.Authorizer
@@ -45,11 +45,11 @@ func (c *RotatedAccessTokenProviderConfig) CheckAndSetDefaults() error {
 	if c.Ctx == nil {
 		return trace.BadParameter("Ctx must be set")
 	}
-	if c.RetryPeriod == 0 {
-		c.RetryPeriod = defaultRefreshRetryPeriod
+	if c.RetryInterval == 0 {
+		c.RetryInterval = defaultRefreshRetryInterval
 	}
-	if c.TokenRotationBufferPeriod == 0 {
-		c.TokenRotationBufferPeriod = defaultTokenRotationBufferPeriod
+	if c.TokenBufferInterval == 0 {
+		c.TokenBufferInterval = defaultTokenBufferInterval
 	}
 
 	if c.State == nil {
@@ -65,11 +65,11 @@ func (c *RotatedAccessTokenProviderConfig) CheckAndSetDefaults() error {
 }
 
 type RotatedAccessTokenProvider struct {
-	ctx                       context.Context
-	retryPeriod               time.Duration
-	tokenRotationBufferPeriod time.Duration
-	state                     state.State
-	authorizer                oauth.Authorizer
+	ctx                 context.Context
+	retryInterval       time.Duration
+	tokenBufferInterval time.Duration
+	state               state.State
+	authorizer          oauth.Authorizer
 
 	log logrus.FieldLogger
 
@@ -83,12 +83,12 @@ func NewRotatedTokenProvider(cfg RotatedAccessTokenProviderConfig) (*RotatedAcce
 	}
 
 	provider := &RotatedAccessTokenProvider{
-		ctx:                       cfg.Ctx,
-		retryPeriod:               cfg.RetryPeriod,
-		tokenRotationBufferPeriod: cfg.TokenRotationBufferPeriod,
-		state:                     cfg.State,
-		authorizer:                cfg.Authorizer,
-		log:                       cfg.Log,
+		ctx:                 cfg.Ctx,
+		retryInterval:       cfg.RetryInterval,
+		tokenBufferInterval: cfg.TokenBufferInterval,
+		state:               cfg.State,
+		authorizer:          cfg.Authorizer,
+		log:                 cfg.Log,
 	}
 
 	err := provider.init()
@@ -120,7 +120,7 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 	creds := r.creds
 	r.lock.RUnlock()
 
-	period := r.getRefreshPeriod(creds)
+	period := r.getRefreshInterval(creds)
 
 	timer := time.NewTimer(period)
 	defer timer.Stop()
@@ -141,7 +141,7 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 				r.creds = creds
 				r.lock.Unlock()
 
-				period := r.getRefreshPeriod(creds)
+				period := r.getRefreshInterval(creds)
 				timer.Reset(period)
 				r.log.Debugf("Next refresh in: %s", period)
 				continue
@@ -150,12 +150,12 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 			creds, err := r.refresh(r.ctx)
 			if err != nil {
 				r.log.Errorf("Error while refreshing: %s", err)
-				timer.Reset(r.retryPeriod)
+				timer.Reset(r.retryInterval)
 			} else {
 				err := r.state.PutCredentials(r.ctx, creds)
 				if err != nil {
 					r.log.Errorf("Error while storing the refreshed credentials: %s", err)
-					timer.Reset(r.retryPeriod)
+					timer.Reset(r.retryInterval)
 					continue
 				}
 
@@ -163,7 +163,7 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 				r.creds = creds
 				r.lock.Unlock()
 
-				period := r.getRefreshPeriod(creds)
+				period := r.getRefreshInterval(creds)
 				timer.Reset(period)
 				r.log.Debugf("Successfully refreshed credentials. Next refresh in: %s", period)
 			}
@@ -171,8 +171,8 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 	}
 }
 
-func (r *RotatedAccessTokenProvider) getRefreshPeriod(creds *state.Credentials) time.Duration {
-	d := creds.ExpiresAt.Sub(time.Now()) - r.tokenRotationBufferPeriod
+func (r *RotatedAccessTokenProvider) getRefreshInterval(creds *state.Credentials) time.Duration {
+	d := creds.ExpiresAt.Sub(time.Now()) - r.tokenBufferInterval
 
 	// Ticker panics of duration is negative
 	if d < 0 {
@@ -190,5 +190,5 @@ func (r *RotatedAccessTokenProvider) refresh(ctx context.Context) (*state.Creden
 }
 
 func (r *RotatedAccessTokenProvider) shouldRefresh(creds *state.Credentials) bool {
-	return time.Now().After(creds.ExpiresAt.Add(-r.tokenRotationBufferPeriod))
+	return time.Now().After(creds.ExpiresAt.Add(-r.tokenBufferInterval))
 }
