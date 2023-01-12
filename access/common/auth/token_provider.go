@@ -197,5 +197,7 @@ func (r *RotatedAccessTokenProvider) refresh(ctx context.Context) (*state.Creden
 }
 
 func (r *RotatedAccessTokenProvider) shouldRefresh(creds *state.Credentials) bool {
-	return r.clock.Now().After(creds.ExpiresAt.Add(-r.tokenBufferInterval))
+	now := r.clock.Now()
+	refreshAt := creds.ExpiresAt.Add(-r.tokenBufferInterval)
+	return now.After(refreshAt) || now.Equal(refreshAt)
 }
