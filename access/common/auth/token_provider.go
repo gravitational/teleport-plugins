@@ -31,12 +31,6 @@ func (s *StaticAccessTokenProvider) GetAccessToken() (string, error) {
 	return s.token, nil
 }
 
-type shortLivedToken struct {
-	accessToken  string
-	expiresAt    time.Time
-	refreshToken string
-}
-
 type RotatedAccessTokenProvider struct {
 	ctx         context.Context
 	retryPeriod time.Duration
