@@ -36,9 +36,9 @@ type RotatedAccessTokenProviderConfig struct {
 	RetryInterval       time.Duration
 	TokenBufferInterval time.Duration
 
-	State      state.State
-	Authorizer oauth.Authorizer
-	Clock      clockwork.Clock
+	State     state.State
+	Refresher oauth.Refresher
+	Clock     clockwork.Clock
 
 	Log *logrus.Entry
 }
@@ -57,8 +57,8 @@ func (c *RotatedAccessTokenProviderConfig) CheckAndSetDefaults() error {
 	if c.State == nil {
 		return trace.BadParameter("State must be set")
 	}
-	if c.Authorizer == nil {
-		return trace.BadParameter("Authorizer must be set")
+	if c.Refresher == nil {
+		return trace.BadParameter("Refresher must be set")
 	}
 	if c.Clock == nil {
 		c.Clock = clockwork.NewRealClock()
@@ -74,7 +74,7 @@ type RotatedAccessTokenProvider struct {
 	retryInterval       time.Duration
 	tokenBufferInterval time.Duration
 	state               state.State
-	authorizer          oauth.Authorizer
+	refresher           oauth.Refresher
 	clock               clockwork.Clock
 
 	log logrus.FieldLogger
@@ -93,7 +93,7 @@ func NewRotatedTokenProvider(cfg RotatedAccessTokenProviderConfig) (*RotatedAcce
 		retryInterval:       cfg.RetryInterval,
 		tokenBufferInterval: cfg.TokenBufferInterval,
 		state:               cfg.State,
-		authorizer:          cfg.Authorizer,
+		refresher:           cfg.Refresher,
 		clock:               cfg.Clock,
 		log:                 cfg.Log,
 	}
@@ -189,7 +189,7 @@ func (r *RotatedAccessTokenProvider) getRefreshInterval(creds *state.Credentials
 }
 
 func (r *RotatedAccessTokenProvider) refresh(ctx context.Context) (*state.Credentials, error) {
-	creds, err := r.authorizer.Refresh(ctx, r.creds.RefreshToken)
+	creds, err := r.refresher.Refresh(ctx, r.creds.RefreshToken)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
