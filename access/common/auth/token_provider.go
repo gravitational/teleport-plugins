@@ -8,6 +8,7 @@ import (
 	"github.com/gravitational/teleport-plugins/access/common/auth/oauth"
 	"github.com/gravitational/teleport-plugins/access/common/auth/state"
 	"github.com/gravitational/trace"
+	"github.com/jonboulle/clockwork"
 	"github.com/sirupsen/logrus"
 )
 
@@ -37,6 +38,7 @@ type RotatedAccessTokenProviderConfig struct {
 
 	State      state.State
 	Authorizer oauth.Authorizer
+	Clock      clockwork.Clock
 
 	Log *logrus.Entry
 }
@@ -58,6 +60,9 @@ func (c *RotatedAccessTokenProviderConfig) CheckAndSetDefaults() error {
 	if c.Authorizer == nil {
 		return trace.BadParameter("Authorizer must be set")
 	}
+	if c.Clock == nil {
+		c.Clock = clockwork.NewRealClock()
+	}
 	if c.Log == nil {
 		c.Log = logrus.NewEntry(logrus.StandardLogger())
 	}
@@ -70,6 +75,7 @@ type RotatedAccessTokenProvider struct {
 	tokenBufferInterval time.Duration
 	state               state.State
 	authorizer          oauth.Authorizer
+	clock               clockwork.Clock
 
 	log logrus.FieldLogger
 
@@ -88,6 +94,7 @@ func NewRotatedTokenProvider(cfg RotatedAccessTokenProviderConfig) (*RotatedAcce
 		tokenBufferInterval: cfg.TokenBufferInterval,
 		state:               cfg.State,
 		authorizer:          cfg.Authorizer,
+		clock:               cfg.Clock,
 		log:                 cfg.Log,
 	}
 
@@ -122,7 +129,7 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 
 	period := r.getRefreshInterval(creds)
 
-	timer := time.NewTimer(period)
+	timer := r.clock.NewTimer(period)
 	defer timer.Stop()
 	r.log.Debugf("Will attempt token refresh in: %s", period)
 
@@ -131,7 +138,7 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 		case <-r.ctx.Done():
 			r.log.Debug("Shutting down")
 			return
-		case <-timer.C:
+		case <-timer.Chan():
 			creds, _ := r.state.GetCredentials(r.ctx)
 
 			// Skip if the credentials are sufficiently fresh
@@ -172,7 +179,7 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 }
 
 func (r *RotatedAccessTokenProvider) getRefreshInterval(creds *state.Credentials) time.Duration {
-	d := creds.ExpiresAt.Sub(time.Now()) - r.tokenBufferInterval
+	d := creds.ExpiresAt.Sub(r.clock.Now()) - r.tokenBufferInterval
 
 	// Ticker panics of duration is negative
 	if d < 0 {
@@ -190,5 +197,5 @@ func (r *RotatedAccessTokenProvider) refresh(ctx context.Context) (*state.Creden
 }
 
 func (r *RotatedAccessTokenProvider) shouldRefresh(creds *state.Credentials) bool {
-	return time.Now().After(creds.ExpiresAt.Add(-r.tokenBufferInterval))
+	return r.clock.Now().After(creds.ExpiresAt.Add(-r.tokenBufferInterval))
 }
