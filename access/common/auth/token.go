@@ -84,10 +84,10 @@ func (r *RotatedAccessTokenProvider) GetAccessToken() (string, error) {
 
 func (r *RotatedAccessTokenProvider) RefreshLoop() {
 	r.lock.RLock()
-	expiresAt := r.creds.ExpiresAt
+	creds := r.creds
 	r.lock.RUnlock()
 
-	period := r.getAdjustedPeriod(expiresAt.Sub(time.Now()))
+	period := r.getRefreshPeriod(creds)
 
 	timer := time.NewTimer(period)
 	defer timer.Stop()
@@ -99,26 +99,49 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 			r.log.Debug("Shutting down")
 			return
 		case <-timer.C:
+			creds, _ := r.state.GetCredentials(r.ctx)
+
+			// Skip if the credentials are sufficiently fresh
+			// (in a HA setup another instance might have refreshed the credentials).
+			if creds != nil && !r.shouldRefresh(creds) {
+				r.lock.Lock()
+				r.creds = creds
+				r.lock.Unlock()
+
+				period := r.getRefreshPeriod(creds)
+				timer.Reset(period)
+				r.log.Debugf("Next refresh in: %s", period)
+				continue
+			}
+
 			creds, err := r.refresh(r.ctx)
 			if err != nil {
+				r.log.Errorf("Error while refreshing: %s", err)
 				timer.Reset(r.retryPeriod)
 			} else {
-				r.state.PutCredentials(r.ctx, creds)
+				err := r.state.PutCredentials(r.ctx, creds)
+				if err != nil {
+					r.log.Errorf("Error while storing the refreshed credentials: %s", err)
+					timer.Reset(r.retryPeriod)
+					continue
+				}
 
 				r.lock.Lock()
 				r.creds = creds
 				r.lock.Unlock()
 
-				period := r.getAdjustedPeriod(creds.ExpiresAt.Sub(time.Now()))
+				period := r.getRefreshPeriod(creds)
 				timer.Reset(period)
-				r.log.Debugf("Next refresh in: %s", period)
+				r.log.Debugf("Successfully refreshed credentials. Next refresh in: %s", period)
 			}
 		}
 	}
 }
 
-func (r *RotatedAccessTokenProvider) getAdjustedPeriod(d time.Duration) time.Duration {
-	d = d - tokenRotationBufferPeriod
+func (r *RotatedAccessTokenProvider) getRefreshPeriod(creds *state.Credentials) time.Duration {
+	d := creds.ExpiresAt.Sub(time.Now()) - tokenRotationBufferPeriod
+
+	// Ticker panics of duration is negative
 	if d < 0 {
 		d = time.Duration(1)
 	}
@@ -131,4 +154,8 @@ func (r *RotatedAccessTokenProvider) refresh(ctx context.Context) (*state.Creden
 		return nil, trace.Wrap(err)
 	}
 	return creds, nil
+}
+
+func (r *RotatedAccessTokenProvider) shouldRefresh(creds *state.Credentials) bool {
+	return time.Now().After(creds.ExpiresAt.Add(-tokenRotationBufferPeriod))
 }
