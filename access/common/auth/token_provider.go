@@ -149,12 +149,12 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 
 	timer := r.clock.NewTimer(period)
 	defer timer.Stop()
-	r.log.Debugf("Will attempt token refresh in: %s", period)
+	r.log.Infof("Will attempt token refresh in: %s", period)
 
 	for {
 		select {
 		case <-r.ctx.Done():
-			r.log.Debug("Shutting down")
+			r.log.Info("Shutting down")
 			return
 		case <-timer.Chan():
 			creds, _ := r.state.GetCredentials(r.ctx)
@@ -168,7 +168,7 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 
 				period := r.getRefreshInterval(creds)
 				timer.Reset(period)
-				r.log.Debugf("Next refresh in: %s", period)
+				r.log.Infof("Next refresh in: %s", period)
 				continue
 			}
 
@@ -190,7 +190,7 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 
 				period := r.getRefreshInterval(creds)
 				timer.Reset(period)
-				r.log.Debugf("Successfully refreshed credentials. Next refresh in: %s", period)
+				r.log.Infof("Successfully refreshed credentials. Next refresh in: %s", period)
 			}
 		}
 	}
