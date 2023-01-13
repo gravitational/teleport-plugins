@@ -174,7 +174,7 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 
 			creds, err := r.refresh(r.ctx)
 			if err != nil {
-				r.log.Errorf("Error while refreshing: %s", err)
+				r.log.Errorf("Error while refreshing: %s. Will retry after: %s", err, r.retryInterval)
 				timer.Reset(r.retryInterval)
 			} else {
 				err := r.state.PutCredentials(r.ctx, creds)
