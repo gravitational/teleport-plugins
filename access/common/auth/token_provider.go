@@ -12,7 +12,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const defaultRefreshRetryInterval = 1 * time.Minute
+const defaultRefreshRetryInterval = 5 * time.Minute
 const defaultTokenBufferInterval = 1 * time.Hour
 
 // AccessTokenProvider provides a method to get the bearer token
