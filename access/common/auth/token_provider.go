@@ -145,11 +145,11 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 	creds := r.creds
 	r.lock.RUnlock()
 
-	period := r.getRefreshInterval(creds)
+	interval := r.getRefreshInterval(creds)
 
-	timer := r.clock.NewTimer(period)
+	timer := r.clock.NewTimer(interval)
 	defer timer.Stop()
-	r.log.Infof("Will attempt token refresh in: %s", period)
+	r.log.Infof("Will attempt token refresh in: %s", interval)
 
 	for {
 		select {
@@ -166,9 +166,9 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 				r.creds = creds
 				r.lock.Unlock()
 
-				period := r.getRefreshInterval(creds)
-				timer.Reset(period)
-				r.log.Infof("Next refresh in: %s", period)
+				interval := r.getRefreshInterval(creds)
+				timer.Reset(interval)
+				r.log.Infof("Next refresh in: %s", interval)
 				continue
 			}
 
@@ -188,9 +188,9 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 				r.creds = creds
 				r.lock.Unlock()
 
-				period := r.getRefreshInterval(creds)
-				timer.Reset(period)
-				r.log.Infof("Successfully refreshed credentials. Next refresh in: %s", period)
+				interval := r.getRefreshInterval(creds)
+				timer.Reset(interval)
+				r.log.Infof("Successfully refreshed credentials. Next refresh in: %s", interval)
 			}
 		}
 	}
@@ -199,7 +199,7 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 func (r *RotatedAccessTokenProvider) getRefreshInterval(creds *state.Credentials) time.Duration {
 	d := creds.ExpiresAt.Sub(r.clock.Now()) - r.tokenBufferInterval
 
-	// Ticker panics of duration is negative
+	// Timer panics of duration is negative
 	if d < 0 {
 		d = time.Duration(1)
 	}
