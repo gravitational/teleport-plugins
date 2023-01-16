@@ -83,6 +83,25 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 		require.Equal(t, initialCreds.AccessToken, creds)
 	})
 
+	t.Run("InitFail", func(t *testing.T) {
+		clock := clockwork.NewFakeClock()
+		refresher := &mockRefresher{}
+		mockState := &mockState{
+			getCredentials: func() (*state.Credentials, error) {
+				return nil, trace.NotFound("not found")
+			},
+		}
+
+		provider, err := NewRotatedTokenProvider(RotatedAccessTokenProviderConfig{
+			Ctx:       context.Background(),
+			State:     mockState,
+			Refresher: refresher,
+			Clock:     clock,
+		})
+		require.Error(t, err)
+		require.Nil(t, provider)
+	})
+
 	t.Run("Refresh", func(t *testing.T) {
 		clock := clockwork.NewFakeClock()
 		initialCreds := &state.Credentials{
