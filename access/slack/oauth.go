@@ -26,7 +26,10 @@ func newAuthorizer(client *resty.Client, clientID string, clientSecret string) *
 	}
 }
 
-// NewAuthorizer returns a new Authorizer
+// NewAuthorizer returns a new Authorizer.
+//
+// clientID is the Client ID for this Slack app as specified by OAuth2.
+// clientSecret is the Client Secret for this Slack app as specified by OAuth2.
 func NewAuthorizer(clientID string, clientSecret string) *Authorizer {
 	client := makeSlackClient(slackAPIURL)
 	return newAuthorizer(client, clientID, clientSecret)
