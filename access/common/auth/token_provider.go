@@ -39,7 +39,6 @@ func (s *StaticAccessTokenProvider) GetAccessToken() (string, error) {
 
 // RotatedAccessTokenProviderConfig contains parameters and dependencies for RotatedAccessTokenProvider
 type RotatedAccessTokenProviderConfig struct {
-	Ctx                 context.Context
 	RetryInterval       time.Duration
 	TokenBufferInterval time.Duration
 
@@ -52,9 +51,6 @@ type RotatedAccessTokenProviderConfig struct {
 
 // CheckAndSetDefaults validates a configuration and sets default values
 func (c *RotatedAccessTokenProviderConfig) CheckAndSetDefaults() error {
-	if c.Ctx == nil {
-		return trace.BadParameter("Ctx must be set")
-	}
 	if c.RetryInterval == 0 {
 		c.RetryInterval = defaultRefreshRetryInterval
 	}
@@ -83,7 +79,6 @@ func (c *RotatedAccessTokenProviderConfig) CheckAndSetDefaults() error {
 //
 // To have an up-to-date token, one must run RefreshLoop() in a background goroutine.
 type RotatedAccessTokenProvider struct {
-	ctx                 context.Context
 	retryInterval       time.Duration
 	tokenBufferInterval time.Duration
 	state               state.State
@@ -99,13 +94,12 @@ type RotatedAccessTokenProvider struct {
 // NewRotatedTokenProvider creates a new RotatedAccessTokenProvider from the given config.
 // NewRotatedTokenProvider will return an error if the state does not have existing credentials,
 // meaning they need to be acquired first (e.g. via OAuth2 authorization code flow).
-func NewRotatedTokenProvider(cfg RotatedAccessTokenProviderConfig) (*RotatedAccessTokenProvider, error) {
+func NewRotatedTokenProvider(ctx context.Context, cfg RotatedAccessTokenProviderConfig) (*RotatedAccessTokenProvider, error) {
 	if err := cfg.CheckAndSetDefaults(); err != nil {
 		return nil, trace.Wrap(err)
 	}
 
 	provider := &RotatedAccessTokenProvider{
-		ctx:                 cfg.Ctx,
 		retryInterval:       cfg.RetryInterval,
 		tokenBufferInterval: cfg.TokenBufferInterval,
 		state:               cfg.State,
@@ -114,7 +108,7 @@ func NewRotatedTokenProvider(cfg RotatedAccessTokenProviderConfig) (*RotatedAcce
 		log:                 cfg.Log,
 	}
 
-	err := provider.init()
+	err := provider.init(ctx)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -122,10 +116,10 @@ func NewRotatedTokenProvider(cfg RotatedAccessTokenProviderConfig) (*RotatedAcce
 	return provider, nil
 }
 
-func (r *RotatedAccessTokenProvider) init() error {
+func (r *RotatedAccessTokenProvider) init(ctx context.Context) error {
 	var err error
 
-	r.creds, err = r.state.GetCredentials(r.ctx)
+	r.creds, err = r.state.GetCredentials(ctx)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -140,7 +134,7 @@ func (r *RotatedAccessTokenProvider) GetAccessToken() (string, error) {
 }
 
 // RefreshLoop runs the credential refresh process.
-func (r *RotatedAccessTokenProvider) RefreshLoop() {
+func (r *RotatedAccessTokenProvider) RefreshLoop(ctx context.Context) {
 	r.lock.RLock()
 	creds := r.creds
 	r.lock.RUnlock()
@@ -153,11 +147,11 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 
 	for {
 		select {
-		case <-r.ctx.Done():
+		case <-ctx.Done():
 			r.log.Info("Shutting down")
 			return
 		case <-timer.Chan():
-			creds, _ := r.state.GetCredentials(r.ctx)
+			creds, _ := r.state.GetCredentials(ctx)
 
 			// Skip if the credentials are sufficiently fresh
 			// (in a HA setup another instance might have refreshed the credentials).
@@ -172,12 +166,12 @@ func (r *RotatedAccessTokenProvider) RefreshLoop() {
 				continue
 			}
 
-			creds, err := r.refresh(r.ctx)
+			creds, err := r.refresh(ctx)
 			if err != nil {
 				r.log.Errorf("Error while refreshing: %s. Will retry after: %s", err, r.retryInterval)
 				timer.Reset(r.retryInterval)
 			} else {
-				err := r.state.PutCredentials(r.ctx, creds)
+				err := r.state.PutCredentials(ctx, creds)
 				if err != nil {
 					r.log.Errorf("Error while storing the refreshed credentials: %s", err)
 					timer.Reset(r.retryInterval)

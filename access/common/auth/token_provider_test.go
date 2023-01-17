@@ -43,7 +43,6 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 
 	newProvider := func(ctx context.Context, state state.State, refresher oauth.Refresher, clock clockwork.Clock, initialCreds *state.Credentials) *RotatedAccessTokenProvider {
 		return &RotatedAccessTokenProvider{
-			ctx:       ctx,
 			state:     state,
 			refresher: refresher,
 			clock:     clock,
@@ -71,8 +70,7 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 			},
 		}
 
-		provider, err := NewRotatedTokenProvider(RotatedAccessTokenProviderConfig{
-			Ctx:       context.Background(),
+		provider, err := NewRotatedTokenProvider(context.Background(), RotatedAccessTokenProviderConfig{
 			State:     mockState,
 			Refresher: refresher,
 			Clock:     clock,
@@ -92,8 +90,7 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 			},
 		}
 
-		provider, err := NewRotatedTokenProvider(RotatedAccessTokenProviderConfig{
-			Ctx:       context.Background(),
+		provider, err := NewRotatedTokenProvider(context.Background(), RotatedAccessTokenProviderConfig{
 			State:     mockState,
 			Refresher: refresher,
 			Clock:     clock,
@@ -146,7 +143,7 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 
 		provider := newProvider(ctx, mockState, refresher, clock, initialCreds)
 
-		go provider.RefreshLoop()
+		go provider.RefreshLoop(ctx)
 
 		clock.BlockUntil(1)
 		require.Nil(t, storedCreds) // before attempting refresh
@@ -178,7 +175,7 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 		finished := make(chan struct{}, 1)
 
 		go func() {
-			provider.RefreshLoop()
+			provider.RefreshLoop(ctx)
 			finished <- struct{}{}
 		}()
 
