@@ -77,6 +77,10 @@ func (c *Config) CheckAndSetDefaults() error {
 			return trace.BadParameter("missing required value slack.token")
 		}
 		c.AccessTokenProvider = auth.NewStaticAccessTokenProvider(c.Slack.Token)
+	} else {
+		if c.Slack.Token != "" {
+			return trace.BadParameter("exactly one of slack.token and AccessTokenProvider must be set")
+		}
 	}
 
 	if c.Log.Output == "" {
