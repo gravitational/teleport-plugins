@@ -10,6 +10,6 @@ resource "teleport_database" "test" {
 
   spec = {
     protocol = "postgres"
-    uri      = "localhost"
+    uri      = "localhost:5432"
   }
 }

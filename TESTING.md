@@ -141,12 +141,12 @@ func (s *TestSuite) SetupSuite() {
 	conditions := types.RoleConditions{
 		Request: &types.AccessRequestConditions{Roles: []string{"editor"}},
 	}
-	role, _ := bootstrap.AddRole("foo", types.RoleSpecV5{Allow: conditions})
+	role, _ := bootstrap.AddRole("foo", types.RoleSpecV6{Allow: conditions})
 	user, _ := bootstrap.AddUserWithRoles("user@example.com", role.GetName())
 	s.regularUser = user.GetName()
 
 	// Set up the plugin user
-	role, _ = bootstrap.AddRole("access-email", types.RoleSpecV5{
+	role, _ = bootstrap.AddRole("access-email", types.RoleSpecV6{
 		Allow: types.RoleConditions{
 			Rules: []types.Rule{
 				types.NewRule("access_request", []string{"list", "read"}),

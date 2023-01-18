@@ -249,7 +249,7 @@ func (proxy *ProxyService) ReverseTunnelAddr() Addr {
 	return proxy.reverseTunnelAddr
 }
 
-// WebAndSSHProxyAddr returns string in a format "host:webport/sshport" needed as tsh --proxy option.
+// WebAndSSHProxyAddr returns string in a format "host:webport,sshport" needed as tsh --proxy option.
 func (proxy *ProxyService) WebAndSSHProxyAddr() string {
 	proxy.mu.Lock()
 	defer proxy.mu.Unlock()

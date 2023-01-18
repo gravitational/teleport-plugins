@@ -18,7 +18,7 @@ package lib
 
 // SliceToAnonymousMap converts string slice to map of anonymous structs
 func SliceToAnonymousMap(keys []string) map[string]struct{} {
-	var result map[string]struct{} = make(map[string]struct{})
+	var result = make(map[string]struct{})
 
 	for _, v := range keys {
 		result[v] = struct{}{}

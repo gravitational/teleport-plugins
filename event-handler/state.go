@@ -212,7 +212,7 @@ func (s *State) GetSessions() (map[string]int64, error) {
 
 // SetSessionIndex writes current session index into state
 func (s *State) SetSessionIndex(id string, index int64) error {
-	var b []byte = make([]byte, 8)
+	var b = make([]byte, 8)
 
 	binary.BigEndian.PutUint64(b, uint64(index))
 

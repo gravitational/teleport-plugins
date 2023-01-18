@@ -48,16 +48,16 @@ type downloadVersion struct {
 }
 
 var downloadVersions = map[downloadVersionKey]downloadVersion{
-	// Teleport v10.2.0 Enterprise binaries
-	{"v10.2.0", "darwin", "amd64", true}: {sha256: lib.MustHexSHA256("3d33c9e082188d9c962a57df6f2a0cf1716d6a6ba1e8e7969f2e1ce7d151ec89")},
-	{"v10.2.0", "linux", "amd64", true}:  {sha256: lib.MustHexSHA256("a20bc7ce72eca6ff2e2681aaa3f214505d45cb02b612f7820e7c168bef6c786e")},
-	{"v10.2.0", "linux", "arm64", true}:  {sha256: lib.MustHexSHA256("61a76d84600ba93d173b9469067b706f3bb922d0fd85d29ce5404326c5552fda")},
-	{"v10.2.0", "linux", "arm", true}:    {sha256: lib.MustHexSHA256("e23e5a64e8d95dabb65c13ebab62550f78257ce985335b9cc56e16f365b9c704")},
-	// Teleport v10.2.0 OSS binaries
-	{"v10.2.0", "darwin", "amd64", false}: {sha256: lib.MustHexSHA256("7ae6b38898793bf389974cda366ea5c1d20529001b461ca5eacba9a44ff1bd57")},
-	{"v10.2.0", "linux", "amd64", false}:  {sha256: lib.MustHexSHA256("c3186c1685fc9004ca86a0c65c295b6c2f352b147d3e3e1bc7b3023ed15f9d0c")},
-	{"v10.2.0", "linux", "arm64", false}:  {sha256: lib.MustHexSHA256("b2e0ca1f757a4de38b28485a2ea1143b878fe485988cce257f6c86c3eea7d516")},
-	{"v10.2.0", "linux", "arm", false}:    {sha256: lib.MustHexSHA256("210f0d702973de4e1c3e5d88640da5abbd14d266c315946aa6cfb5eead14ef31")},
+	// Teleport v12.0.0-alpha.1 Enterprise binaries
+	{"v12.0.0-alpha.1", "darwin", "amd64", true}: {sha256: lib.MustHexSHA256("d72653ff3aae7843dd39b4827f871b70104ac22c749bbb651a65beffba1f0f34")},
+	{"v12.0.0-alpha.1", "linux", "amd64", true}:  {sha256: lib.MustHexSHA256("2207ac812a6d5c03e99f2639a7ac4da431d7f5f311e154adf2ea95777f25a072")},
+	{"v12.0.0-alpha.1", "linux", "arm64", true}:  {sha256: lib.MustHexSHA256("19f7a0b762ae0679815653422c47751c77f2e83334d7fe86ec37d20e9f0827b2")},
+	{"v12.0.0-alpha.1", "linux", "arm", true}:    {sha256: lib.MustHexSHA256("ddbf1e4a878c76e091e45f413f74c2719ebea8a4e4a5f4ede68aaaaff456817d")},
+	// Teleport v12.0.0-alpha.1 OSS binaries
+	{"v12.0.0-alpha.1", "darwin", "amd64", false}: {sha256: lib.MustHexSHA256("faa911b64c4d4349f1e7b881c12889acf81c0ae14fff3fcc0097f132c3e78229")},
+	{"v12.0.0-alpha.1", "linux", "amd64", false}:  {sha256: lib.MustHexSHA256("6f2ee4f613de34cb27a9c3b8d7e633a46e11f999c2617ee18bbe3952e376c175")},
+	{"v12.0.0-alpha.1", "linux", "arm64", false}:  {sha256: lib.MustHexSHA256("5e42ace11a7e1f47ca07e21eb59cdabcd834fb5ac1eafa6f35cf800218d0f738")},
+	{"v12.0.0-alpha.1", "linux", "arm", false}:    {sha256: lib.MustHexSHA256("dfbde17bad448c52e392fd3cb4b8a2cb49cf1ec6b0c7c1fdb025c6d739613809")},
 }
 
 // GetEnterprise downloads a Teleport Enterprise distribution.
@@ -77,7 +77,7 @@ func GetEnterprise(ctx context.Context, ver, outDir string) (BinPaths, error) {
 	return getBinaries(ctx, distStr, outDir, version.sha256)
 }
 
-// GetEnterprise downloads a Teleport OSS distribution.
+// GetOSS downloads a Teleport OSS distribution.
 func GetOSS(ctx context.Context, ver, outDir string) (BinPaths, error) {
 	logger.Get(ctx).Debugf("Looking up Teleport OSS distribution %s", ver)
 	key := downloadVersionKey{

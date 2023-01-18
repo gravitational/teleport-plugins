@@ -83,7 +83,7 @@ type ConfigureCmd struct {
 
 var (
 	// maxBigInt is serial number random max
-	maxBigInt *big.Int = new(big.Int).Lsh(big.NewInt(1), 128)
+	maxBigInt = new(big.Int).Lsh(big.NewInt(1), 128)
 
 	//go:embed tpl/teleport-event-handler-role.yaml.tpl
 	roleTpl string

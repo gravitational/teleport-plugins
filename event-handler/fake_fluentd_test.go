@@ -153,7 +153,7 @@ func (f *FakeFluentd) GetURL() string {
 
 // Respond is the response function
 func (f *FakeFluentd) Respond(w http.ResponseWriter, r *http.Request) {
-	var req []byte = make([]byte, r.ContentLength)
+	var req = make([]byte, r.ContentLength)
 
 	_, err := r.Body.Read(req)
 	// We omit err here because it always returns weird EOF.

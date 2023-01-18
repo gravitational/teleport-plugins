@@ -81,7 +81,7 @@ func (s *TerraformSuite) TestImportSAMLConnector() {
 
 	// Set up role.
 	roleName := "rolex"
-	rolexSpec, err := types.NewRole(roleName, types.RoleSpecV5{})
+	rolexSpec, err := types.NewRole(roleName, types.RoleSpecV6{})
 	require.NoError(s.T(), err)
 
 	err = s.client.UpsertRole(s.Context(), rolexSpec)

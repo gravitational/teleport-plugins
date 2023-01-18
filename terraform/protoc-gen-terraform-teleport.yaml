@@ -13,7 +13,7 @@ types:
     - "GithubConnectorV3"
     - "OIDCConnectorV3"
     - "ProvisionTokenV2"
-    - "RoleV5"
+    - "RoleV6"
     - "SAMLConnectorV2"
     - "SessionRecordingConfigV2"
     - "TrustedClusterV2"
@@ -71,7 +71,7 @@ injected_fields:
       computed: true
       plan_modifiers:
         - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
-  RoleV5:
+  RoleV6:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
@@ -122,8 +122,8 @@ exclude_fields:
     - "DatabaseV3.Status"
 
     # Role
-    - "RoleV5.Spec.Allow.Namespaces" # These fields are not settable via API
-    - "RoleV5.Spec.Deny.Namespaces"
+    - "RoleV6.Spec.Allow.Namespaces" # These fields are not settable via API
+    - "RoleV6.Spec.Deny.Namespaces"
 
     # SessionRecordingConfig
     - "SessionRecordingConfigV2.Metadata.Name" # It's a signleton resource
@@ -157,7 +157,7 @@ name_overrides:
 
     # This must happen at most in V13.0.0, because RequireSessionMFA will be removed
     "AuthPreferenceV2.Spec.RequireMFAType": "require_mfa_type"
-    "RoleV5.Spec.Options.RequireMFAType": "require_mfa_type"
+    "RoleV6.Spec.Options.RequireMFAType": "require_mfa_type"
 
 # These fields will be marked as Computed: true
 computed_fields:
@@ -203,11 +203,34 @@ computed_fields:
     - "OIDCConnectorV3.Version"
 
     # Role
-    - "RoleV5.Spec.Options.MaxSessionTTL"
-    - "RoleV5.Spec.Options.CertificateFormat"
-    - "RoleV5.Spec.Options.BPF"
-    - "RoleV5.Kind"
-    - "RoleV5.Version"
+    - "RoleV6.Spec.Options.MaxSessionTTL"
+    - "RoleV6.Spec.Options.CertificateFormat"
+    # KubernetesResources was added in v12
+    # When not set, the api returns kind:Pod/name:*/namespace:*
+    # We must include this as computed, otherwise terraform would complain about an unexpected field:
+    # https://developer.hashicorp.com/terraform/plugin/sdkv2/schemas/schema-behaviors#computed
+    # Computed is often used to represent values that are not user configurable or can not be known at time of terraform plan or apply,
+    #------------------------------------
+    # role_test.go:244: Step 1/8 error: Error running apply: exit status 1
+    #    
+    #     Error: Provider produced inconsistent result after apply
+    #    
+    #     When applying changes to teleport_role.upgrade, provider
+    #     "provider[\"registry.terraform.io/hashicorp/teleport\"]" produced an
+    #     unexpected new value: .spec.allow.kubernetes_resources: was null, but now
+    #     cty.ListVal([]cty.Value{cty.ObjectVal(map[string]cty.Value{"kind":cty.StringVal("pod"),
+    #     "name":cty.StringVal("*"), "namespace":cty.StringVal("*")})}).
+    #    
+    #     This is a bug in the provider, which should be reported in the provider's own
+    #     issue tracker.
+    #------------------------------------
+    # The following tests were added to validate the behavior:
+    # - TestTerraform/TestRoleVersionUpgrade
+    # - TestTerraform/TestRoleWithKubernetesResources
+    - "RoleV6.Spec.Allow.KubernetesResources"
+    - "RoleV6.Spec.Options.BPF"
+    - "RoleV6.Kind"
+    - "RoleV6.Version"
 
     # SAML connector
     - "SAMLConnectorV2.Spec.Audience"
@@ -267,7 +290,7 @@ required_fields:
     - "ProvisionTokenV2.Metadata.Expires"
 
     # Role
-    - "RoleV5.Metadata.Name"    
+    - "RoleV6.Metadata.Name"    
 
     # SAML connector
     - "SAMLConnectorV2.Spec"
@@ -308,7 +331,7 @@ plan_modifiers:
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
     ProvisionTokenV2.Metadata.Name:
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
-      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"      
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
 
 validators:
   # Expires must be in the future
@@ -334,8 +357,8 @@ validators:
     - UseVersionBetween(3,3)
   ProvisionTokenV2.Version:
     - UseVersionBetween(2,2)
-  RoleV5.Version:
-    - UseVersionBetween(3,5)
+  RoleV6.Version:
+    - UseVersionBetween(3,6)
   SAMLConnectorV2.Version:
     - UseVersionBetween(2,2)
   SAMLConnectorV2.Spec:

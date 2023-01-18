@@ -107,7 +107,7 @@ func (s *TeamsSuite) SetupSuite() {
 	if teleportFeatures.AdvancedAccessWorkflows {
 		conditions.Request.Thresholds = []types.AccessReviewThreshold{types.AccessReviewThreshold{Approve: 2, Deny: 2}}
 	}
-	role, err := bootstrap.AddRole("foo", types.RoleSpecV5{Allow: conditions})
+	role, err := bootstrap.AddRole("foo", types.RoleSpecV6{Allow: conditions})
 	require.NoError(t, err)
 
 	user, err := bootstrap.AddUserWithRoles(me.Username+"@example.com", role.GetName())
@@ -120,7 +120,7 @@ func (s *TeamsSuite) SetupSuite() {
 	if teleportFeatures.AdvancedAccessWorkflows {
 		conditions.ReviewRequests = &types.AccessReviewConditions{Roles: []string{"editor"}}
 	}
-	role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV5{Allow: conditions})
+	role, err = bootstrap.AddRole("foo-reviewer", types.RoleSpecV6{Allow: conditions})
 	require.NoError(t, err)
 
 	user, err = bootstrap.AddUserWithRoles(me.Username+"-reviewer1@example.com", role.GetName())
@@ -133,7 +133,7 @@ func (s *TeamsSuite) SetupSuite() {
 
 	// Set up plugin user.
 
-	role, err = bootstrap.AddRole("access-msteams", types.RoleSpecV5{
+	role, err = bootstrap.AddRole("access-msteams", types.RoleSpecV6{
 		Allow: types.RoleConditions{
 			Rules: []types.Rule{
 				types.NewRule("access_request", []string{"list", "read"}),
