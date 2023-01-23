@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access/common/auth/oauth"
-	"github.com/gravitational/teleport-plugins/access/common/auth/state"
+	"github.com/gravitational/teleport-plugins/access/common/auth/storage"
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
 	"github.com/sirupsen/logrus"
@@ -14,26 +14,26 @@ import (
 )
 
 type mockRefresher struct {
-	refresh func(string) (*state.Credentials, error)
+	refresh func(string) (*storage.Credentials, error)
 }
 
 // Refresh implements oauth.Refresher
-func (r *mockRefresher) Refresh(ctx context.Context, refreshToken string) (*state.Credentials, error) {
+func (r *mockRefresher) Refresh(ctx context.Context, refreshToken string) (*storage.Credentials, error) {
 	return r.refresh(refreshToken)
 }
 
 type mockState struct {
-	getCredentials func() (*state.Credentials, error)
-	putCredentials func(*state.Credentials) error
+	getCredentials func() (*storage.Credentials, error)
+	putCredentials func(*storage.Credentials) error
 }
 
-// GetCredentials implements state.State
-func (s *mockState) GetCredentials(ctx context.Context) (*state.Credentials, error) {
+// GetCredentials implements storage.Storage
+func (s *mockState) GetCredentials(ctx context.Context) (*storage.Credentials, error) {
 	return s.getCredentials()
 }
 
-// PutCredentials implements state.State
-func (s *mockState) PutCredentials(ctx context.Context, creds *state.Credentials) error {
+// PutCredentials implements storage.Storage
+func (s *mockState) PutCredentials(ctx context.Context, creds *storage.Credentials) error {
 	return s.putCredentials(creds)
 }
 
@@ -41,7 +41,7 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 	log := logrus.New()
 	log.Level = logrus.DebugLevel
 
-	newProvider := func(ctx context.Context, state state.Storage, refresher oauth.Refresher, clock clockwork.Clock, initialCreds *state.Credentials) *RotatedAccessTokenProvider {
+	newProvider := func(ctx context.Context, state storage.Storage, refresher oauth.Refresher, clock clockwork.Clock, initialCreds *storage.Credentials) *RotatedAccessTokenProvider {
 		return &RotatedAccessTokenProvider{
 			state:     state,
 			refresher: refresher,
@@ -57,7 +57,7 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 
 	t.Run("Init", func(t *testing.T) {
 		clock := clockwork.NewFakeClock()
-		initialCreds := &state.Credentials{
+		initialCreds := &storage.Credentials{
 			AccessToken:  "my-access-token",
 			RefreshToken: "my-refresh-token",
 			ExpiresAt:    clock.Now().Add(2 * time.Hour),
@@ -65,7 +65,7 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 
 		refresher := &mockRefresher{}
 		mockState := &mockState{
-			getCredentials: func() (*state.Credentials, error) {
+			getCredentials: func() (*storage.Credentials, error) {
 				return initialCreds, nil
 			},
 		}
@@ -85,7 +85,7 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 		clock := clockwork.NewFakeClock()
 		refresher := &mockRefresher{}
 		mockState := &mockState{
-			getCredentials: func() (*state.Credentials, error) {
+			getCredentials: func() (*storage.Credentials, error) {
 				return nil, trace.NotFound("not found")
 			},
 		}
@@ -101,22 +101,22 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 
 	t.Run("Refresh", func(t *testing.T) {
 		clock := clockwork.NewFakeClock()
-		initialCreds := &state.Credentials{
+		initialCreds := &storage.Credentials{
 			AccessToken:  "my-access-token",
 			RefreshToken: "my-refresh-token",
 			ExpiresAt:    clock.Now().Add(2 * time.Hour),
 		}
-		newCreds := &state.Credentials{
+		newCreds := &storage.Credentials{
 			AccessToken:  "my-access-token2",
 			RefreshToken: "my-refresh-token2",
 			ExpiresAt:    clock.Now().Add(4 * time.Hour),
 		}
 
-		var storedCreds *state.Credentials
+		var storedCreds *storage.Credentials
 		var refreshCalled int
 
 		refresher := &mockRefresher{
-			refresh: func(refreshToken string) (*state.Credentials, error) {
+			refresh: func(refreshToken string) (*storage.Credentials, error) {
 				refreshCalled++
 				require.Equal(t, refreshToken, initialCreds.RefreshToken)
 
@@ -129,10 +129,10 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 			},
 		}
 		mockState := &mockState{
-			getCredentials: func() (*state.Credentials, error) {
+			getCredentials: func() (*storage.Credentials, error) {
 				return initialCreds, nil
 			},
-			putCredentials: func(creds *state.Credentials) error {
+			putCredentials: func(creds *storage.Credentials) error {
 				storedCreds = creds
 				return nil
 			},
@@ -162,7 +162,7 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 		refresher := &mockRefresher{}
 		mockState := &mockState{}
 
-		initialCreds := &state.Credentials{
+		initialCreds := &storage.Credentials{
 			AccessToken:  "my-access-token",
 			RefreshToken: "my-refresh-token",
 			ExpiresAt:    clock.Now().Add(2 * time.Hour),

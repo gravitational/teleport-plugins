@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport-plugins/access/common/auth/oauth"
-	"github.com/gravitational/teleport-plugins/access/common/auth/state"
+	"github.com/gravitational/teleport-plugins/access/common/auth/storage"
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
 	"github.com/sirupsen/logrus"
@@ -42,7 +42,7 @@ type RotatedAccessTokenProviderConfig struct {
 	RetryInterval       time.Duration
 	TokenBufferInterval time.Duration
 
-	State     state.Storage
+	State     storage.Storage
 	Refresher oauth.Refresher
 	Clock     clockwork.Clock
 
@@ -81,14 +81,14 @@ func (c *RotatedAccessTokenProviderConfig) CheckAndSetDefaults() error {
 type RotatedAccessTokenProvider struct {
 	retryInterval       time.Duration
 	tokenBufferInterval time.Duration
-	state               state.Storage
+	state               storage.Storage
 	refresher           oauth.Refresher
 	clock               clockwork.Clock
 
 	log logrus.FieldLogger
 
 	lock  sync.RWMutex // protects the below fields
-	creds *state.Credentials
+	creds *storage.Credentials
 }
 
 // NewRotatedTokenProvider creates a new RotatedAccessTokenProvider from the given config.
@@ -183,7 +183,7 @@ func (r *RotatedAccessTokenProvider) RefreshLoop(ctx context.Context) {
 	}
 }
 
-func (r *RotatedAccessTokenProvider) getRefreshInterval(creds *state.Credentials) time.Duration {
+func (r *RotatedAccessTokenProvider) getRefreshInterval(creds *storage.Credentials) time.Duration {
 	d := creds.ExpiresAt.Sub(r.clock.Now()) - r.tokenBufferInterval
 
 	// Timer panics of duration is negative
@@ -193,7 +193,7 @@ func (r *RotatedAccessTokenProvider) getRefreshInterval(creds *state.Credentials
 	return d
 }
 
-func (r *RotatedAccessTokenProvider) refresh(ctx context.Context) (*state.Credentials, error) {
+func (r *RotatedAccessTokenProvider) refresh(ctx context.Context) (*storage.Credentials, error) {
 	creds, err := r.refresher.Refresh(ctx, r.creds.RefreshToken)
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -201,7 +201,7 @@ func (r *RotatedAccessTokenProvider) refresh(ctx context.Context) (*state.Creden
 	return creds, nil
 }
 
-func (r *RotatedAccessTokenProvider) shouldRefresh(creds *state.Credentials) bool {
+func (r *RotatedAccessTokenProvider) shouldRefresh(creds *storage.Credentials) bool {
 	now := r.clock.Now()
 	refreshAt := creds.ExpiresAt.Add(-r.tokenBufferInterval)
 	return now.After(refreshAt) || now.Equal(refreshAt)

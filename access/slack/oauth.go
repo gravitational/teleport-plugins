@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-resty/resty/v2"
 	"github.com/gravitational/teleport-plugins/access/common/auth/oauth"
-	"github.com/gravitational/teleport-plugins/access/common/auth/state"
+	"github.com/gravitational/teleport-plugins/access/common/auth/storage"
 	"github.com/gravitational/trace"
 )
 
@@ -36,7 +36,7 @@ func NewAuthorizer(clientID string, clientSecret string) *Authorizer {
 }
 
 // Exchange implements oauth.Exchanger
-func (a *Authorizer) Exchange(ctx context.Context, authorizationCode string, redirectURI string) (*state.Credentials, error) {
+func (a *Authorizer) Exchange(ctx context.Context, authorizationCode string, redirectURI string) (*storage.Credentials, error) {
 	var result AccessResponse
 
 	_, err := a.client.R().
@@ -55,7 +55,7 @@ func (a *Authorizer) Exchange(ctx context.Context, authorizationCode string, red
 		return nil, trace.Errorf("%s", result.Error)
 	}
 
-	return &state.Credentials{
+	return &storage.Credentials{
 		AccessToken:  result.AccessToken,
 		RefreshToken: result.RefreshToken,
 		ExpiresAt:    time.Now().UTC().Add(time.Duration(result.ExpiresInSeconds) * time.Second),
@@ -63,7 +63,7 @@ func (a *Authorizer) Exchange(ctx context.Context, authorizationCode string, red
 }
 
 // Refresh implements oauth.Refresher
-func (a *Authorizer) Refresh(ctx context.Context, refreshToken string) (*state.Credentials, error) {
+func (a *Authorizer) Refresh(ctx context.Context, refreshToken string) (*storage.Credentials, error) {
 	var result AccessResponse
 	_, err := a.client.R().
 		SetQueryParam("client_id", a.clientID).
@@ -81,7 +81,7 @@ func (a *Authorizer) Refresh(ctx context.Context, refreshToken string) (*state.C
 		return nil, trace.Errorf("%s", result.Error)
 	}
 
-	return &state.Credentials{
+	return &storage.Credentials{
 		AccessToken:  result.AccessToken,
 		RefreshToken: result.RefreshToken,
 		ExpiresAt:    time.Now().UTC().Add(time.Duration(result.ExpiresInSeconds) * time.Second),
