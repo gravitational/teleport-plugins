@@ -118,7 +118,7 @@ func (s *TerraformSuite) TestConfigureIdentityFileBase64() {
 
 	identity, err := os.ReadFile(s.teleportConfig.Identity)
 	require.NoError(s.T(), err)
-	identityAsB64 := base64.RawStdEncoding.EncodeToString(identity)
+	identityAsB64 := base64.StdEncoding.EncodeToString(identity)
 
 	providerConfigUsingAuthFiles := `
 provider "teleport" {
@@ -142,7 +142,7 @@ provider "teleport" {
 }
 
 func (s *TerraformSuite) TestConfigureIdentityFileBase64_InvalidBase64() {
-	identityAsB64 := base64.RawStdEncoding.EncodeToString([]byte("invalid"))
+	identityAsB64 := base64.StdEncoding.EncodeToString([]byte("invalid"))
 
 	providerConfigUsingAuthFiles := `
 provider "teleport" {

@@ -288,7 +288,7 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 
 	if identityFileBase64 != "" {
 		log.Debug("Using auth from base64 encoded identity file provided with environment variable TF_TELEPORT_IDENTITY_FILE_BASE64")
-		decoded, err := base64.RawStdEncoding.DecodeString(identityFileBase64)
+		decoded, err := base64.StdEncoding.DecodeString(identityFileBase64)
 		if err != nil {
 			resp.Diagnostics.AddError(
 				"Failed to decode Identity file using base 64",
