@@ -73,13 +73,15 @@ func (s *testOAuthServer) close() {
 }
 
 func TestOAuth(t *testing.T) {
-	const clientID = "my-client-id"
-	const clientSecret = "my-client-secret"
-	const authorizationCode = "12345678"
-	const redirectURI = "https://foobar.com/callback"
-	const refreshToken = "my-refresh-token1"
-
-	const expiresInSeconds = 43200
+	const (
+		clientID = "my-client-id"
+		clientSecret = "my-client-secret"
+		authorizationCode = "12345678"
+		redirectURI = "https://foobar.com/callback"
+		refreshToken = "my-refresh-token1"
+		expiresInSeconds = 43200
+	)
+	
 
 	newServer := func(t *testing.T) *testOAuthServer {
 		s := &testOAuthServer{
