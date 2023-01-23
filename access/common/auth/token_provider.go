@@ -154,7 +154,9 @@ func (r *RotatedAccessTokenProvider) RefreshLoop(ctx context.Context) {
 			creds, _ := r.state.GetCredentials(ctx)
 
 			// Skip if the credentials are sufficiently fresh
-			// (in a HA setup another instance might have refreshed the credentials).
+			// (in an HA setup another instance might have refreshed the credentials).
+			// This is just an optimistic check to potentially reduce API calls.
+			// There is no synchronization between several instances of the plugin.
 			if creds != nil && !r.shouldRefresh(creds) {
 				r.lock.Lock()
 				r.creds = creds
