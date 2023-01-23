@@ -41,7 +41,7 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 	log := logrus.New()
 	log.Level = logrus.DebugLevel
 
-	newProvider := func(ctx context.Context, state state.State, refresher oauth.Refresher, clock clockwork.Clock, initialCreds *state.Credentials) *RotatedAccessTokenProvider {
+	newProvider := func(ctx context.Context, state state.Storage, refresher oauth.Refresher, clock clockwork.Clock, initialCreds *state.Credentials) *RotatedAccessTokenProvider {
 		return &RotatedAccessTokenProvider{
 			state:     state,
 			refresher: refresher,

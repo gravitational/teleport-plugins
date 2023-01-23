@@ -11,7 +11,7 @@ type Credentials struct {
 	ExpiresAt    time.Time
 }
 
-type State interface {
+type Storage interface {
 	GetCredentials(context.Context) (*Credentials, error)
 	PutCredentials(context.Context, *Credentials) error
 }

@@ -42,7 +42,7 @@ type RotatedAccessTokenProviderConfig struct {
 	RetryInterval       time.Duration
 	TokenBufferInterval time.Duration
 
-	State     state.State
+	State     state.Storage
 	Refresher oauth.Refresher
 	Clock     clockwork.Clock
 
@@ -81,7 +81,7 @@ func (c *RotatedAccessTokenProviderConfig) CheckAndSetDefaults() error {
 type RotatedAccessTokenProvider struct {
 	retryInterval       time.Duration
 	tokenBufferInterval time.Duration
-	state               state.State
+	state               state.Storage
 	refresher           oauth.Refresher
 	clock               clockwork.Clock
 
