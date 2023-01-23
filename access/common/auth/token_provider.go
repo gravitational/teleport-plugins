@@ -108,22 +108,13 @@ func NewRotatedTokenProvider(ctx context.Context, cfg RotatedAccessTokenProvider
 		log:                 cfg.Log,
 	}
 
-	err := provider.init(ctx)
+	var err error
+	provider.creds, err = provider.state.GetCredentials(ctx)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
 	return provider, nil
-}
-
-func (r *RotatedAccessTokenProvider) init(ctx context.Context) error {
-	var err error
-
-	r.creds, err = r.state.GetCredentials(ctx)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-	return nil
 }
 
 // GetAccessToken implements AccessTokenProvider()
