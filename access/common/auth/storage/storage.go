@@ -17,8 +17,8 @@ type Credentials struct {
 	ExpiresAt time.Time
 }
 
-// Storage defines the interface for persisting the short-lived OAuth2 credentials.
-type Storage interface {
+// Store defines the interface for persisting the short-lived OAuth2 credentials.
+type Store interface {
 	GetCredentials(context.Context) (*Credentials, error)
 	PutCredentials(context.Context, *Credentials) error
 }

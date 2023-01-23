@@ -22,18 +22,18 @@ func (r *mockRefresher) Refresh(ctx context.Context, refreshToken string) (*stor
 	return r.refresh(refreshToken)
 }
 
-type mockState struct {
+type mockStore struct {
 	getCredentials func() (*storage.Credentials, error)
 	putCredentials func(*storage.Credentials) error
 }
 
-// GetCredentials implements storage.Storage
-func (s *mockState) GetCredentials(ctx context.Context) (*storage.Credentials, error) {
+// GetCredentials implements storage.Store
+func (s *mockStore) GetCredentials(ctx context.Context) (*storage.Credentials, error) {
 	return s.getCredentials()
 }
 
-// PutCredentials implements storage.Storage
-func (s *mockState) PutCredentials(ctx context.Context, creds *storage.Credentials) error {
+// PutCredentials implements storage.Store
+func (s *mockStore) PutCredentials(ctx context.Context, creds *storage.Credentials) error {
 	return s.putCredentials(creds)
 }
 
@@ -41,9 +41,9 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 	log := logrus.New()
 	log.Level = logrus.DebugLevel
 
-	newProvider := func(ctx context.Context, state storage.Storage, refresher oauth.Refresher, clock clockwork.Clock, initialCreds *storage.Credentials) *RotatedAccessTokenProvider {
+	newProvider := func(ctx context.Context, store storage.Store, refresher oauth.Refresher, clock clockwork.Clock, initialCreds *storage.Credentials) *RotatedAccessTokenProvider {
 		return &RotatedAccessTokenProvider{
-			state:     state,
+			store:     store,
 			refresher: refresher,
 			clock:     clock,
 
@@ -64,14 +64,14 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 		}
 
 		refresher := &mockRefresher{}
-		mockState := &mockState{
+		mockStore := &mockStore{
 			getCredentials: func() (*storage.Credentials, error) {
 				return initialCreds, nil
 			},
 		}
 
 		provider, err := NewRotatedTokenProvider(context.Background(), RotatedAccessTokenProviderConfig{
-			State:     mockState,
+			Store:     mockStore,
 			Refresher: refresher,
 			Clock:     clock,
 		})
@@ -84,14 +84,14 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 	t.Run("InitFail", func(t *testing.T) {
 		clock := clockwork.NewFakeClock()
 		refresher := &mockRefresher{}
-		mockState := &mockState{
+		mockStore := &mockStore{
 			getCredentials: func() (*storage.Credentials, error) {
 				return nil, trace.NotFound("not found")
 			},
 		}
 
 		provider, err := NewRotatedTokenProvider(context.Background(), RotatedAccessTokenProviderConfig{
-			State:     mockState,
+			Store:     mockStore,
 			Refresher: refresher,
 			Clock:     clock,
 		})
@@ -128,7 +128,7 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 				return newCreds, nil
 			},
 		}
-		mockState := &mockState{
+		mockStore := &mockStore{
 			getCredentials: func() (*storage.Credentials, error) {
 				return initialCreds, nil
 			},
@@ -141,7 +141,7 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		provider := newProvider(ctx, mockState, refresher, clock, initialCreds)
+		provider := newProvider(ctx, mockStore, refresher, clock, initialCreds)
 
 		go provider.RefreshLoop(ctx)
 
@@ -160,7 +160,7 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 	t.Run("Cancel", func(t *testing.T) {
 		clock := clockwork.NewFakeClock()
 		refresher := &mockRefresher{}
-		mockState := &mockState{}
+		mockStore := &mockStore{}
 
 		initialCreds := &storage.Credentials{
 			AccessToken:  "my-access-token",
@@ -171,7 +171,7 @@ func TestRotatedAccessTokenProvider(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
 
-		provider := newProvider(ctx, mockState, refresher, clock, initialCreds)
+		provider := newProvider(ctx, mockStore, refresher, clock, initialCreds)
 		finished := make(chan struct{}, 1)
 
 		go func() {

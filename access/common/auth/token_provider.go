@@ -42,7 +42,7 @@ type RotatedAccessTokenProviderConfig struct {
 	RetryInterval       time.Duration
 	TokenBufferInterval time.Duration
 
-	State     storage.Storage
+	Store     storage.Store
 	Refresher oauth.Refresher
 	Clock     clockwork.Clock
 
@@ -58,8 +58,8 @@ func (c *RotatedAccessTokenProviderConfig) CheckAndSetDefaults() error {
 		c.TokenBufferInterval = defaultTokenBufferInterval
 	}
 
-	if c.State == nil {
-		return trace.BadParameter("State must be set")
+	if c.Store == nil {
+		return trace.BadParameter("Store must be set")
 	}
 	if c.Refresher == nil {
 		return trace.BadParameter("Refresher must be set")
@@ -81,7 +81,7 @@ func (c *RotatedAccessTokenProviderConfig) CheckAndSetDefaults() error {
 type RotatedAccessTokenProvider struct {
 	retryInterval       time.Duration
 	tokenBufferInterval time.Duration
-	state               storage.Storage
+	store               storage.Store
 	refresher           oauth.Refresher
 	clock               clockwork.Clock
 
@@ -92,7 +92,7 @@ type RotatedAccessTokenProvider struct {
 }
 
 // NewRotatedTokenProvider creates a new RotatedAccessTokenProvider from the given config.
-// NewRotatedTokenProvider will return an error if the state does not have existing credentials,
+// NewRotatedTokenProvider will return an error if the store does not have existing credentials,
 // meaning they need to be acquired first (e.g. via OAuth2 authorization code flow).
 func NewRotatedTokenProvider(ctx context.Context, cfg RotatedAccessTokenProviderConfig) (*RotatedAccessTokenProvider, error) {
 	if err := cfg.CheckAndSetDefaults(); err != nil {
@@ -102,14 +102,14 @@ func NewRotatedTokenProvider(ctx context.Context, cfg RotatedAccessTokenProvider
 	provider := &RotatedAccessTokenProvider{
 		retryInterval:       cfg.RetryInterval,
 		tokenBufferInterval: cfg.TokenBufferInterval,
-		state:               cfg.State,
+		store:               cfg.Store,
 		refresher:           cfg.Refresher,
 		clock:               cfg.Clock,
 		log:                 cfg.Log,
 	}
 
 	var err error
-	provider.creds, err = provider.state.GetCredentials(ctx)
+	provider.creds, err = provider.store.GetCredentials(ctx)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -142,7 +142,7 @@ func (r *RotatedAccessTokenProvider) RefreshLoop(ctx context.Context) {
 			r.log.Info("Shutting down")
 			return
 		case <-timer.Chan():
-			creds, _ := r.state.GetCredentials(ctx)
+			creds, _ := r.store.GetCredentials(ctx)
 
 			// Skip if the credentials are sufficiently fresh
 			// (in an HA setup another instance might have refreshed the credentials).
@@ -164,7 +164,7 @@ func (r *RotatedAccessTokenProvider) RefreshLoop(ctx context.Context) {
 				r.log.Errorf("Error while refreshing: %s. Will retry after: %s", err, r.retryInterval)
 				timer.Reset(r.retryInterval)
 			} else {
-				err := r.state.PutCredentials(ctx, creds)
+				err := r.store.PutCredentials(ctx, creds)
 				if err != nil {
 					r.log.Errorf("Error while storing the refreshed credentials: %s", err)
 					timer.Reset(r.retryInterval)
