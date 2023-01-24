@@ -46,12 +46,8 @@ func (c BaseConfig) GetRecipients() RawRecipientsMap {
 	return c.Recipients
 }
 
-func (c BaseConfig) GetTeleportConfig() lib.TeleportConfig {
-	return c.Teleport
-}
-
 func (c BaseConfig) GetTeleportClient(ctx context.Context) (teleport.Client, error) {
-	if validCred, err := credentials.CheckIfExpired(c.GetTeleportConfig().Credentials()); err != nil {
+	if validCred, err := credentials.CheckIfExpired(c.Teleport.Credentials()); err != nil {
 		log.Warn(err)
 		if !validCred {
 			return nil, trace.BadParameter(
@@ -65,8 +61,8 @@ func (c BaseConfig) GetTeleportClient(ctx context.Context) (teleport.Client, err
 	bk.MaxDelay = grpcBackoffMaxDelay
 
 	clt, err := client.New(ctx, client.Config{
-		Addrs:       c.GetTeleportConfig().GetAddrs(),
-		Credentials: c.GetTeleportConfig().Credentials(),
+		Addrs:       c.Teleport.GetAddrs(),
+		Credentials: c.Teleport.Credentials(),
 		DialOpts: []grpc.DialOption{
 			grpc.WithConnectParams(grpc.ConnectParams{Backoff: bk, MinConnectTimeout: initTimeout}),
 			grpc.WithReturnConnectionError(),
