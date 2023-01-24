@@ -288,15 +288,43 @@ update-goversion:
 	$(SED) 's/GO_VERSION: go.*/GO_VERSION: go$(GOVERSION)/g' .drone.yml
 	@echo Please sign .drone.yml before staging and committing the changes
 
+# Lint the project
+# Currently lints the go files and license headers in most files.
+.PHONY: lint
+lint: lint-go lint-license
+
 #
 # Lint the Go code.
 # By default lint scans the entire repo. Pass GO_LINT_FLAGS='--new' to only scan local
 # changes (or last commit).
 #
-.PHONY: lint
-lint: GO_LINT_FLAGS ?=
-lint:
+.PHONY: lint-go
+lint-go: GO_LINT_FLAGS ?=
+lint-go:
 	golangci-lint run -c .golangci.yml $(GO_LINT_FLAGS)
+
+GOPATH ?= $(shell go env GOPATH)
+ADDLICENSE := $(GOPATH)/bin/addlicense
+ADDLICENSE_ARGS := -c 'Gravitational, Inc' -l apache \
+		-ignore '**/Dockerfile' \
+		-ignore '**/*.xml' \
+		-ignore '**/*.tf' \
+		-ignore '**/*.js' \
+		-ignore '**/*.sh' \
+		-ignore '**/*.java' \
+		-ignore '**/*.yaml' \
+		-ignore '**/*.yml'
+
+.PHONY: lint-license
+lint-license: $(ADDLICENSE)
+	$(ADDLICENSE) $(ADDLICENSE_ARGS) -check * 2>/dev/null
+
+.PHONY: fix-license
+fix-license: $(ADDLICENSE)
+	$(ADDLICENSE) $(ADDLICENSE_ARGS) * 2>/dev/null
+
+$(ADDLICENSE):
+	cd && go install github.com/google/addlicense@v1.0.0
 
 .PHONY: test-helm-%
 test-helm-%:
