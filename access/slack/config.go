@@ -17,7 +17,6 @@ limitations under the License.
 package slack
 
 import (
-	"net/http"
 	"net/url"
 	"strings"
 
@@ -26,6 +25,7 @@ import (
 	"github.com/pelletier/go-toml"
 
 	"github.com/gravitational/teleport-plugins/access/common"
+	"github.com/gravitational/teleport-plugins/access/common/auth"
 
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport/api/types"
@@ -34,7 +34,8 @@ import (
 // Config stores the full configuration for the teleport-slack plugin to run.
 type Config struct {
 	common.BaseConfig
-	Slack common.GenericAPIConfig
+	Slack               common.GenericAPIConfig
+	AccessTokenProvider auth.AccessTokenProvider
 }
 
 // LoadSlackConfig reads the config file, initializes a new SlackConfig struct object, and returns it.
@@ -70,9 +71,18 @@ func (c *Config) CheckAndSetDefaults() error {
 	if err := c.Teleport.CheckAndSetDefaults(); err != nil {
 		return trace.Wrap(err)
 	}
-	if c.Slack.Token == "" {
-		return trace.BadParameter("missing required value slack.token")
+
+	if c.AccessTokenProvider == nil {
+		if c.Slack.Token == "" {
+			return trace.BadParameter("missing required value slack.token")
+		}
+		c.AccessTokenProvider = auth.NewStaticAccessTokenProvider(c.Slack.Token)
+	} else {
+		if c.Slack.Token != "" {
+			return trace.BadParameter("exactly one of slack.token and AccessTokenProvider must be set")
+		}
 	}
+
 	if c.Log.Output == "" {
 		c.Log.Output = "stderr"
 	}
@@ -102,27 +112,21 @@ func (c *Config) NewBot(clusterName, webProxyAddr string) (common.MessagingBot, 
 		}
 	}
 
-	token := "Bearer " + c.Slack.Token
-
-	client := resty.
-		NewWithClient(&http.Client{
-			Timeout: slackHTTPTimeout,
-			Transport: &http.Transport{
-				MaxConnsPerHost:     slackMaxConns,
-				MaxIdleConnsPerHost: slackMaxConns,
-			},
-		}).
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Accept", "application/json").
-		SetHeader("Authorization", token)
-
-	// APIURL parameter is set only in tests
+	var apiURL = slackAPIURL
 	if endpoint := c.Slack.APIURL; endpoint != "" {
-		client.SetHostURL(endpoint)
-	} else {
-		client.SetHostURL("https://slack.com/api/")
-		client.OnAfterResponse(onAfterResponseSlack)
+		apiURL = endpoint
 	}
+
+	client := makeSlackClient(apiURL).
+		OnBeforeRequest(func(_ *resty.Client, r *resty.Request) error {
+			token, err := c.AccessTokenProvider.GetAccessToken()
+			if err != nil {
+				return trace.Wrap(err)
+			}
+			r.SetHeader("Authorization", "Bearer "+token)
+			return nil
+		}).
+		OnAfterResponse(onAfterResponseSlack)
 
 	return Bot{
 		client:      client,
