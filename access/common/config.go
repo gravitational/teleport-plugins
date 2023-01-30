@@ -17,12 +17,21 @@ limitations under the License.
 package common
 
 import (
+	"context"
+
+	"github.com/gravitational/teleport-plugins/access/common/teleport"
 	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/credentials"
 	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/api/client"
+	"github.com/gravitational/trace"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+	grpcbackoff "google.golang.org/grpc/backoff"
 )
 
 type PluginConfiguration interface {
-	GetTeleportConfig() lib.TeleportConfig
+	GetTeleportClient(ctx context.Context) (teleport.Client, error)
 	GetRecipients() RawRecipientsMap
 	NewBot(clusterName string, webProxyAddr string) (MessagingBot, error)
 }
@@ -37,8 +46,34 @@ func (c BaseConfig) GetRecipients() RawRecipientsMap {
 	return c.Recipients
 }
 
-func (c BaseConfig) GetTeleportConfig() lib.TeleportConfig {
-	return c.Teleport
+func (c BaseConfig) GetTeleportClient(ctx context.Context) (teleport.Client, error) {
+	if validCred, err := credentials.CheckIfExpired(c.Teleport.Credentials()); err != nil {
+		log.Warn(err)
+		if !validCred {
+			return nil, trace.BadParameter(
+				"No valid credentials found, this likely means credentials are expired. In this case, please sign new credentials and increase their TTL if needed.",
+			)
+		}
+		log.Info("At least one non-expired credential has been found, continuing startup")
+	}
+
+	bk := grpcbackoff.DefaultConfig
+	bk.MaxDelay = grpcBackoffMaxDelay
+
+	clt, err := client.New(ctx, client.Config{
+		Addrs:       c.Teleport.GetAddrs(),
+		Credentials: c.Teleport.Credentials(),
+		DialOpts: []grpc.DialOption{
+			grpc.WithConnectParams(grpc.ConnectParams{Backoff: bk, MinConnectTimeout: initTimeout}),
+			grpc.WithReturnConnectionError(),
+		},
+	})
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	clt = clt.WithCallOptions(grpc.WaitForReady(true))
+
+	return clt, nil
 }
 
 // GenericAPIConfig holds common configuration use by a messaging service.
