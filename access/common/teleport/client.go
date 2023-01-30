@@ -22,6 +22,9 @@ import (
 	"github.com/gravitational/teleport/api/types"
 )
 
+// Client aggregates the parts of Teleport API client interface
+// (as implemented by github.com/gravitational/teleport/api/client.Client)
+// that are used by the access plugins.
 type Client interface {
 	plugindata.Client
 	types.Events
