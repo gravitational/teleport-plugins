@@ -1,0 +1,35 @@
+name: Plugins Docker Build
+run-name: Plugins Docker Build
+on:
+  push:
+    paths:
+      - '**.go'
+      - '**/Dockerfile'
+    branches:
+      - master
+      - branch/**
+  pull_request:
+
+env:
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  docker-build:
+    name: Plugins Docker Build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Teleport
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build plugins
+        run: make docker-build-access-plugins
+
+      - name: Build event handler
+        run: make docker-build-event-handler
