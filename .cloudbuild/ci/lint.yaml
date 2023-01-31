@@ -1,4 +1,0 @@
-steps:
-  - name: golangci/golangci-lint:v1.50.1
-    id: lint
-    args: ["make", "lint"]
