@@ -275,8 +275,8 @@ github.com/gravitational/kingpin v2.1.11-0.20190130013101-742f2714c145+incompati
 github.com/gravitational/kingpin v2.1.11-0.20190130013101-742f2714c145+incompatible/go.mod h1:LWxG30M3FcrjhOn3T4zz7JmBoQJ45MWZmOXgy9Ganoc=
 github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf h1:MQ4e8XcxvZTeuOmRl7yE519vcWc2h/lyvYzsvt41cdY=
 github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXPKa29o=
-github.com/gravitational/teleport/api v0.0.0-20230127230210-ccd6a1b02ad7 h1:VsNjhtOnHLueBlYUlNWaeaDMFZDsgJiqKx747KZyIIY=
-github.com/gravitational/teleport/api v0.0.0-20230127230210-ccd6a1b02ad7/go.mod h1:X3wuTv9cYPfMlrF/1ddOfxo0NC5TFb62Rc/Oey6Tk/M=
+github.com/gravitational/teleport/api v0.0.0-20230201230114-d14904a2c328 h1:ooyl/whpkQ+eCnEztLMCoAoEnnE+qQGri99vP98niDk=
+github.com/gravitational/teleport/api v0.0.0-20230201230114-d14904a2c328/go.mod h1:X3wuTv9cYPfMlrF/1ddOfxo0NC5TFb62Rc/Oey6Tk/M=
 github.com/gravitational/trace v1.2.0 h1:ODrkITHAmumFOTgCLb2zScMRCT2VQVXyIzDpN2CyN6s=
 github.com/gravitational/trace v1.2.0/go.mod h1:n0ijrq6psJY0sOI/NzLp+xdd8xl79jjwzVOFHDY6+kQ=
 github.com/grpc-ecosystem/go-grpc-middleware v1.0.0/go.mod h1:FiyG127CGDf3tlThmgyCl78X/SZQqEOJBCDaAfeWzPs=
