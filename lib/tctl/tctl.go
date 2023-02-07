@@ -59,7 +59,7 @@ func (tctl Tctl) Sign(ctx context.Context, username, format, outPath string) err
 	log.Debugf("Running %s", cmd)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		log.WithError(err).Debug("tctl auth sign failed:", string(output))
+		log.WithError(err).WithField("args", args).Debug("tctl auth sign failed:", string(output))
 		return trace.Wrap(err, "tctl auth sign failed")
 	}
 	return nil
