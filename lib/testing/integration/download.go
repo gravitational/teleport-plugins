@@ -47,17 +47,28 @@ type downloadVersion struct {
 	sha256 lib.SHA256Sum
 }
 
+/*
+curl https://get.gravitational.com/teleport-ent-v12.0.1-darwin-amd64-bin.tar.gz.sha256
+curl https://get.gravitational.com/teleport-ent-v12.0.1-linux-amd64-bin.tar.gz.sha256
+curl https://get.gravitational.com/teleport-ent-v12.0.1-linux-arm64-bin.tar.gz.sha256
+curl https://get.gravitational.com/teleport-ent-v12.0.1-linux-arm-bin.tar.gz.sha256
+
+curl https://get.gravitational.com/teleport-v12.0.1-darwin-amd64-bin.tar.gz.sha256
+curl https://get.gravitational.com/teleport-v12.0.1-linux-amd64-bin.tar.gz.sha256
+curl https://get.gravitational.com/teleport-v12.0.1-linux-arm64-bin.tar.gz.sha256
+curl https://get.gravitational.com/teleport-v12.0.1-linux-arm-bin.tar.gz.sha256
+*/
 var downloadVersions = map[downloadVersionKey]downloadVersion{
-	// Teleport v12.0.0-alpha.1 Enterprise binaries
-	{"v12.0.0-alpha.1", "darwin", "amd64", true}: {sha256: lib.MustHexSHA256("d72653ff3aae7843dd39b4827f871b70104ac22c749bbb651a65beffba1f0f34")},
-	{"v12.0.0-alpha.1", "linux", "amd64", true}:  {sha256: lib.MustHexSHA256("2207ac812a6d5c03e99f2639a7ac4da431d7f5f311e154adf2ea95777f25a072")},
-	{"v12.0.0-alpha.1", "linux", "arm64", true}:  {sha256: lib.MustHexSHA256("19f7a0b762ae0679815653422c47751c77f2e83334d7fe86ec37d20e9f0827b2")},
-	{"v12.0.0-alpha.1", "linux", "arm", true}:    {sha256: lib.MustHexSHA256("ddbf1e4a878c76e091e45f413f74c2719ebea8a4e4a5f4ede68aaaaff456817d")},
-	// Teleport v12.0.0-alpha.1 OSS binaries
-	{"v12.0.0-alpha.1", "darwin", "amd64", false}: {sha256: lib.MustHexSHA256("faa911b64c4d4349f1e7b881c12889acf81c0ae14fff3fcc0097f132c3e78229")},
-	{"v12.0.0-alpha.1", "linux", "amd64", false}:  {sha256: lib.MustHexSHA256("6f2ee4f613de34cb27a9c3b8d7e633a46e11f999c2617ee18bbe3952e376c175")},
-	{"v12.0.0-alpha.1", "linux", "arm64", false}:  {sha256: lib.MustHexSHA256("5e42ace11a7e1f47ca07e21eb59cdabcd834fb5ac1eafa6f35cf800218d0f738")},
-	{"v12.0.0-alpha.1", "linux", "arm", false}:    {sha256: lib.MustHexSHA256("dfbde17bad448c52e392fd3cb4b8a2cb49cf1ec6b0c7c1fdb025c6d739613809")},
+	// Teleport v12.0.1 Enterprise binaries
+	{"v12.0.1", "darwin", "amd64", true}: {sha256: lib.MustHexSHA256("6e921e6a38295b353d9980d6a51356e540afb92f6ad0101eb917bbca61da80a0")},
+	{"v12.0.1", "linux", "amd64", true}:  {sha256: lib.MustHexSHA256("e697de2ddd56fafa4e18761521e6988d37f089f1b2bbbb384c0044f06b444ea1")},
+	{"v12.0.1", "linux", "arm64", true}:  {sha256: lib.MustHexSHA256("dfc12bd37e029e838c27e98813fc9350e39dd72583334a5fac195f678079db0a")},
+	{"v12.0.1", "linux", "arm", true}:    {sha256: lib.MustHexSHA256("5ba10476b29d3ac79e5b57b1d05bbc3d249c1f4fe37575bbf4dbdb6e5ea39d56")},
+	// Teleport v12.0.1 OSS binaries
+	{"v12.0.1", "darwin", "amd64", false}: {sha256: lib.MustHexSHA256("51c69eb90339eeada89c0f5af144d3e0e8e45b2aeef70655ec510f84845394a1")},
+	{"v12.0.1", "linux", "amd64", false}:  {sha256: lib.MustHexSHA256("aca53d9e24619567caa6de2bf22d19debb77d95f136e48cbfd69b4e5df36ae78")},
+	{"v12.0.1", "linux", "arm64", false}:  {sha256: lib.MustHexSHA256("206f2651dd2c8e6adbb6e642bb7f0288c5b898d596c4058c50c4b8734b5ac9c9")},
+	{"v12.0.1", "linux", "arm", false}:    {sha256: lib.MustHexSHA256("07767d129c45c299af5668b5794e7306255d1abf49131c03600ec4191ca55f65")},
 }
 
 // GetEnterprise downloads a Teleport Enterprise distribution.
