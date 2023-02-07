@@ -1096,6 +1096,15 @@ func GenSchemaAuthPreferenceV2(ctx context.Context) (github_com_hashicorp_terraf
 					Optional:    true,
 				},
 				"disconnect_expired_cert": GenSchemaBoolOption(ctx),
+				"idp": {
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"saml": {
+						Attributes:  github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"enabled": GenSchemaBoolOption(ctx)}),
+						Description: "SAML are options related to the Teleport SAML IdP.",
+						Optional:    true,
+					}}),
+					Description: "IDP is a set of options related to accessing IdPs within Teleport. Requires Teleport Enterprise.",
+					Optional:    true,
+				},
 				"locking_mode": {
 					Computed:      true,
 					Description:   "LockingMode is the cluster-wide locking mode default.",
@@ -1930,6 +1939,15 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Description: "ForwardAgent is SSH agent forwarding.",
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.BoolType,
+						},
+						"idp": {
+							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"saml": {
+								Attributes:  github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"enabled": GenSchemaBoolOption(ctx)}),
+								Description: "SAML are options related to the Teleport SAML IdP.",
+								Optional:    true,
+							}}),
+							Description: "IDP is a set of options related to accessing IdPs within Teleport. Requires Teleport Enterprise.",
+							Optional:    true,
 						},
 						"lock": {
 							Description: "Lock specifies the locking mode (strict|best_effort) to be applied with the role.",
@@ -11014,6 +11032,49 @@ func CopyAuthPreferenceV2FromTerraform(_ context.Context, tf github_com_hashicor
 							}
 						}
 					}
+					{
+						a, ok := tf.Attrs["idp"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"AuthPreferenceV2.Spec.IDP"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"AuthPreferenceV2.Spec.IDP", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+							} else {
+								obj.IDP = nil
+								if !v.Null && !v.Unknown {
+									tf := v
+									obj.IDP = &github_com_gravitational_teleport_api_types.IdPOptions{}
+									obj := obj.IDP
+									{
+										a, ok := tf.Attrs["saml"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"AuthPreferenceV2.Spec.IDP.SAML"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"AuthPreferenceV2.Spec.IDP.SAML", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+											} else {
+												obj.SAML = nil
+												if !v.Null && !v.Unknown {
+													tf := v
+													obj.SAML = &github_com_gravitational_teleport_api_types.IdPSAMLOptions{}
+													obj := obj.SAML
+													{
+														a, ok := tf.Attrs["enabled"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"AuthPreferenceV2.Spec.IDP.SAML.Enabled"})
+														}
+														CopyFromBoolOption(diags, a, &obj.Enabled)
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -11825,6 +11886,79 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 							}
 						}
 					}
+					{
+						a, ok := tf.AttrTypes["idp"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"AuthPreferenceV2.Spec.IDP"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.IDP", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+							} else {
+								v, ok := tf.Attrs["idp"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+								if !ok {
+									v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+										AttrTypes: o.AttrTypes,
+										Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+									}
+								} else {
+									if v.Attrs == nil {
+										v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+									}
+								}
+								if obj.IDP == nil {
+									v.Null = true
+								} else {
+									obj := obj.IDP
+									tf := &v
+									{
+										a, ok := tf.AttrTypes["saml"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"AuthPreferenceV2.Spec.IDP.SAML"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.IDP.SAML", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+											} else {
+												v, ok := tf.Attrs["saml"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+												if !ok {
+													v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+														AttrTypes: o.AttrTypes,
+														Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+													}
+												} else {
+													if v.Attrs == nil {
+														v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+													}
+												}
+												if obj.SAML == nil {
+													v.Null = true
+												} else {
+													obj := obj.SAML
+													tf := &v
+													{
+														t, ok := tf.AttrTypes["enabled"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"AuthPreferenceV2.Spec.IDP.SAML.Enabled"})
+														} else {
+															v := CopyToBoolOption(diags, obj.Enabled, t, tf.Attrs["enabled"])
+															tf.Attrs["enabled"] = v
+														}
+													}
+												}
+												v.Unknown = false
+												tf.Attrs["saml"] = v
+											}
+										}
+									}
+								}
+								v.Unknown = false
+								tf.Attrs["idp"] = v
+							}
+						}
+					}
 				}
 				v.Unknown = false
 				tf.Attrs["spec"] = v
@@ -12514,6 +12648,49 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 													t = string(v.Value)
 												}
 												obj.DeviceTrustMode = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["idp"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Options.IDP"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Options.IDP", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+											} else {
+												obj.IDP = nil
+												if !v.Null && !v.Unknown {
+													tf := v
+													obj.IDP = &github_com_gravitational_teleport_api_types.IdPOptions{}
+													obj := obj.IDP
+													{
+														a, ok := tf.Attrs["saml"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"RoleV6.Spec.Options.IDP.SAML"})
+														} else {
+															v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Options.IDP.SAML", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+															} else {
+																obj.SAML = nil
+																if !v.Null && !v.Unknown {
+																	tf := v
+																	obj.SAML = &github_com_gravitational_teleport_api_types.IdPSAMLOptions{}
+																	obj := obj.SAML
+																	{
+																		a, ok := tf.Attrs["enabled"]
+																		if !ok {
+																			diags.Append(attrReadMissingDiag{"RoleV6.Spec.Options.IDP.SAML.Enabled"})
+																		}
+																		CopyFromBoolOption(diags, a, &obj.Enabled)
+																	}
+																}
+															}
+														}
+													}
+												}
 											}
 										}
 									}
@@ -16296,6 +16473,79 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 											v.Value = string(obj.DeviceTrustMode)
 											v.Unknown = false
 											tf.Attrs["device_trust_mode"] = v
+										}
+									}
+									{
+										a, ok := tf.AttrTypes["idp"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Options.IDP"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Options.IDP", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+											} else {
+												v, ok := tf.Attrs["idp"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+												if !ok {
+													v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+														AttrTypes: o.AttrTypes,
+														Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+													}
+												} else {
+													if v.Attrs == nil {
+														v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+													}
+												}
+												if obj.IDP == nil {
+													v.Null = true
+												} else {
+													obj := obj.IDP
+													tf := &v
+													{
+														a, ok := tf.AttrTypes["saml"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Options.IDP.SAML"})
+														} else {
+															o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+															if !ok {
+																diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Options.IDP.SAML", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+															} else {
+																v, ok := tf.Attrs["saml"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+																if !ok {
+																	v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+																		AttrTypes: o.AttrTypes,
+																		Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+																	}
+																} else {
+																	if v.Attrs == nil {
+																		v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+																	}
+																}
+																if obj.SAML == nil {
+																	v.Null = true
+																} else {
+																	obj := obj.SAML
+																	tf := &v
+																	{
+																		t, ok := tf.AttrTypes["enabled"]
+																		if !ok {
+																			diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Options.IDP.SAML.Enabled"})
+																		} else {
+																			v := CopyToBoolOption(diags, obj.Enabled, t, tf.Attrs["enabled"])
+																			tf.Attrs["enabled"] = v
+																		}
+																	}
+																}
+																v.Unknown = false
+																tf.Attrs["saml"] = v
+															}
+														}
+													}
+												}
+												v.Unknown = false
+												tf.Attrs["idp"] = v
+											}
 										}
 									}
 								}
