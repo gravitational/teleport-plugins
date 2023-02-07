@@ -9,7 +9,7 @@ resource "teleport_role" "myrole" {
     }
   }
 
-  version = "v4"
+  version = "v6"
 }
 
 

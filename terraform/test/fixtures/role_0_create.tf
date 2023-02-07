@@ -9,5 +9,5 @@ resource "teleport_role" "test" {
     }
   }
 
-  version = "v4"
+  version = "v6"
 }

@@ -8,7 +8,7 @@ on:
   pull_request:
 
 env:
-  TELEPORT_GET_VERSION: v10.2.0
+  TELEPORT_GET_VERSION: v12.0.0-alpha.1
   TELEPORT_ENTERPRISE_LICENSE: ${{ secrets.TELEPORT_ENTERPRISE_LICENSE }}
 
 jobs:

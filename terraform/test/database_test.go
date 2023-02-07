@@ -48,7 +48,7 @@ func (s *TerraformSuite) TestDatabase() {
 					resource.TestCheckResourceAttr(name, "kind", "db"),
 					resource.TestCheckResourceAttr(name, "metadata.expires", "2032-10-12T07:20:50Z"),
 					resource.TestCheckResourceAttr(name, "spec.protocol", "postgres"),
-					resource.TestCheckResourceAttr(name, "spec.uri", "localhost"),
+					resource.TestCheckResourceAttr(name, "spec.uri", "localhost:5432"),
 				),
 			},
 			{
@@ -61,7 +61,7 @@ func (s *TerraformSuite) TestDatabase() {
 					resource.TestCheckResourceAttr(name, "kind", "db"),
 					resource.TestCheckResourceAttr(name, "metadata.expires", "2032-10-12T07:20:50Z"),
 					resource.TestCheckResourceAttr(name, "spec.protocol", "postgres"),
-					resource.TestCheckResourceAttr(name, "spec.uri", "example.com"),
+					resource.TestCheckResourceAttr(name, "spec.uri", "example.com:5432"),
 				),
 			},
 			{
@@ -74,7 +74,7 @@ func (s *TerraformSuite) TestDatabase() {
 
 func (s *TerraformSuite) TestImportDatabase() {
 	r := "teleport_database"
-	id := "test_import"
+	id := "test-import"
 	name := r + "." + id
 
 	database := &types.DatabaseV3{

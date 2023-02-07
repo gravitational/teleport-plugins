@@ -45,7 +45,7 @@ func (s *TerraformSuite) TestRole() {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "role"),
 					resource.TestCheckNoResourceAttr(name, "spec.options"),
-					resource.TestCheckResourceAttr(name, "version", "v4"),
+					resource.TestCheckResourceAttr(name, "version", "v6"),
 					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "anonymous"),
 				),
 			},
@@ -68,7 +68,7 @@ func (s *TerraformSuite) TestRole() {
 					resource.TestCheckResourceAttr(name, "spec.allow.node_labels.example.0", "yes"),
 					resource.TestCheckResourceAttr(name, "spec.allow.node_labels.example.1", "no"),
 
-					resource.TestCheckResourceAttr(name, "version", "v4"),
+					resource.TestCheckResourceAttr(name, "version", "v6"),
 				),
 			},
 			{
@@ -147,11 +147,11 @@ func (s *TerraformSuite) TestImportRole() {
 	id := "test_import"
 	name := r + "." + id
 
-	role := &types.RoleV5{
+	role := &types.RoleV6{
 		Metadata: types.Metadata{
 			Name: id,
 		},
-		Spec: types.RoleSpecV5{},
+		Spec: types.RoleSpecV6{},
 	}
 	err := role.CheckAndSetDefaults()
 	require.NoError(s.T(), err)
@@ -198,7 +198,7 @@ func (s *TerraformSuite) TestRoleLoginsSplitBrain() {
 				Config: s.getFixture("role_drift_0.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "role"),
-					resource.TestCheckResourceAttr(name, "version", "v5"),
+					resource.TestCheckResourceAttr(name, "version", "v6"),
 					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "one"),
 				),
 			},
@@ -221,9 +221,115 @@ func (s *TerraformSuite) TestRoleLoginsSplitBrain() {
 				Config: s.getFixture("role_drift_0.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "role"),
-					resource.TestCheckResourceAttr(name, "version", "v5"),
+					resource.TestCheckResourceAttr(name, "version", "v6"),
 					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "one"),
 				),
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestRoleVersionUpgrade() {
+	checkDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetRole(s.Context(), "upgrade")
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := "teleport_role.upgrade"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("role_upgrade_v4.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "role"),
+					resource.TestCheckResourceAttr(name, "version", "v4"),
+					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "onev4"),
+				),
+			},
+			{
+				Config:   s.getFixture("role_upgrade_v4.tf"),
+				PlanOnly: true,
+			},
+			{
+				Config: s.getFixture("role_upgrade_v5.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "role"),
+					resource.TestCheckResourceAttr(name, "version", "v5"),
+					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "onev5"),
+				),
+			},
+			{
+				Config:   s.getFixture("role_upgrade_v5.tf"),
+				PlanOnly: true,
+			},
+			{
+				Config: s.getFixture("role_upgrade_v6.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "role"),
+					resource.TestCheckResourceAttr(name, "version", "v6"),
+					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "onev6"),
+				),
+			},
+			{
+				Config:   s.getFixture("role_upgrade_v6.tf"),
+				PlanOnly: true,
+			},
+			{
+				Config: s.getFixture("role_with_kube_resources.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "role"),
+					resource.TestCheckResourceAttr(name, "version", "v6"),
+					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "onev6"),
+					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.kind", "pod"),
+					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.name", "*"),
+					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.namespace", "myns"),
+				),
+			},
+			{
+				Config:   s.getFixture("role_with_kube_resources.tf"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestRoleWithKubernetesResources() {
+	checkDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetRole(s.Context(), "upgrade")
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := "teleport_role.upgrade"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("role_with_kube_resources.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "role"),
+					resource.TestCheckResourceAttr(name, "version", "v6"),
+					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "onev6"),
+					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.kind", "pod"),
+					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.name", "*"),
+					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.namespace", "myns"),
+				),
+			},
+			{
+				Config:   s.getFixture("role_with_kube_resources.tf"),
+				PlanOnly: true,
 			},
 		},
 	})

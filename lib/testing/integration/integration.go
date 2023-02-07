@@ -39,6 +39,7 @@ import (
 	"github.com/gravitational/teleport-plugins/lib/tsh"
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/teleport/api/utils"
 	"github.com/gravitational/trace"
 )
 
@@ -413,10 +414,11 @@ func (integration *Integration) NewSignedClient(ctx context.Context, auth Auth, 
 
 func (integration *Integration) MakeAdmin(ctx context.Context, auth *AuthService, userName string) (*Client, error) {
 	var bootstrap Bootstrap
-	if _, err := bootstrap.AddRole(IntegrationAdminRole, types.RoleSpecV5{
+	if _, err := bootstrap.AddRole(IntegrationAdminRole, types.RoleSpecV6{
 		Allow: types.RoleConditions{
+			NodeLabels: types.Labels{types.Wildcard: utils.Strings{types.Wildcard}},
 			Rules: []types.Rule{
-				types.Rule{
+				{
 					Resources: []string{"*"},
 					Verbs:     []string{"*"},
 				},

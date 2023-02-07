@@ -30,7 +30,7 @@ import (
 var (
 	dumps = map[string]func(context.Context) (tfsdk.Schema, diag.Diagnostics){
 		"user":               tfschema.GenSchemaUserV2,
-		"role":               tfschema.GenSchemaRoleV5,
+		"role":               tfschema.GenSchemaRoleV6,
 		"provision_token":    tfschema.GenSchemaProvisionTokenV2,
 		"github_connector":   tfschema.GenSchemaGithubConnectorV3,
 		"saml_connector":     tfschema.GenSchemaSAMLConnectorV2,

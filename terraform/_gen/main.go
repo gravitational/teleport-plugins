@@ -178,17 +178,16 @@ var (
 	}
 
 	role = payload{
-		Name:           "Role",
-		TypeName:       "RoleV5",
-		VarName:        "role",
-		GetMethod:      "GetRole",
-		CreateMethod:   "UpsertRole",
-		UpdateMethod:   "UpsertRole",
-		DeleteMethod:   "DeleteRole",
-		ID:             "role.Metadata.Name",
-		Kind:           "role",
-		DefaultVersion: "v4", // TODO (Joerger)
-		HasStaticID:    false,
+		Name:         "Role",
+		TypeName:     "RoleV6",
+		VarName:      "role",
+		GetMethod:    "GetRole",
+		CreateMethod: "UpsertRole",
+		UpdateMethod: "UpsertRole",
+		DeleteMethod: "DeleteRole",
+		ID:           "role.Metadata.Name",
+		Kind:         "role",
+		HasStaticID:  false,
 	}
 
 	sessionRecording = payload{

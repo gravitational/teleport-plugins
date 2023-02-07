@@ -9,5 +9,5 @@ resource "teleport_role" "splitbrain" {
     }
   }
 
-  version = "v5"
+  version = "v6"
 }

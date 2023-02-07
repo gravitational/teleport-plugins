@@ -39,7 +39,7 @@ func (s *IntegrationAuthSuite) TestBootstrap() {
 	t := s.T()
 
 	var bootstrap Bootstrap
-	role, err := bootstrap.AddRole("foo", types.RoleSpecV5{})
+	role, err := bootstrap.AddRole("foo", types.RoleSpecV6{})
 	require.NoError(t, err)
 	_, err = bootstrap.AddUserWithRoles("vladimir", role.GetName())
 	require.NoError(t, err)

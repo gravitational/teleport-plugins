@@ -28,7 +28,7 @@ steps:
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v10.2.0
+      TELEPORT_GET_VERSION: v12.0.0-alpha.1
       TERRAFORM_VERSION: 1.3.3
     commands:
       - echo Testing plugins against Teleport $TELEPORT_GET_VERSION
@@ -85,7 +85,7 @@ steps:
     environment:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TELEPORT_GET_VERSION: v10.2.0
+      TELEPORT_GET_VERSION: v12.0.0-alpha.1
       GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
       GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
@@ -1386,6 +1386,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 909bea18ce5c8360392714a4ce7cb9eee4e6eff9676c935c77e8e519092cad96
+hmac: c2ce37cf6697d23370631deffad3078f9f5890c92f140233ff23879921959620
 
 ...

@@ -11,7 +11,7 @@ First, you'll need to create a Teleport user and role for the plugin. The follow
 ```yaml
 ---
 kind: role
-version: v5
+version: v6
 metadata:
   name: teleport-plugin-event-handler
 spec:
