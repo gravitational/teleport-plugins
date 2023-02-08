@@ -69,10 +69,10 @@ func (s *IntegrationSSHSuite) TestSSH() {
 	err = cmd.Start()
 	require.NoError(t, err)
 
-	_, err = stdinPipe.Write([]byte("whoami\n\r"))
+	_, err = stdinPipe.Write([]byte("echo MYUSER=$USER\r\n"))
 	require.NoError(t, err)
 
-	_, err = stdinPipe.Write([]byte("exit\n\r"))
+	_, err = stdinPipe.Write([]byte("exit\r\n"))
 	require.NoError(t, err)
 
 	err = cmd.Wait()
@@ -83,8 +83,5 @@ func (s *IntegrationSSHSuite) TestSSH() {
 	err = stdinPipe.Close()
 	require.NoError(t, err)
 
-	// Output has a lot of info: includes PS1 and a lot of escape colors depending on how fancy the prompt is.
-	// We can assert that there's at least one empty line with the result of `whoami`.
-	// Hopefully that's reliable enough.
-	require.Contains(t, cmdStdout.String(), fmt.Sprintf("\r%s\r\n", user.GetName()))
+	require.Contains(t, cmdStdout.String(), fmt.Sprintf("MYUSER=%s", user.GetName()))
 }
