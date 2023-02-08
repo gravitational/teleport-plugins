@@ -38,14 +38,35 @@ func measure(ctx context.Context, clock clockwork.FakeClock, fn func() error) (t
 	}()
 	clock.BlockUntil(1)
 	for {
-		clock.Advance(5 * time.Millisecond)
-		runtime.Gosched() // Nothing works without it :(
+		/*
+			What does runtime.Gosched() do?
+			> Gosched yields the processor, allowing other goroutines to run. It does not
+			> suspend the current goroutine, so execution resumes automatically.
+
+			Why do we need it?
+			There are two concurrent goroutines at this point:
+			- this one
+			- the one that executes `fn()`
+			When this one is scheduled to run it advances the clock a bit more.
+			It might happen that this one keeps running over and over, while the other one is not scheduled.
+			When that happens, the other 'select' (the one in decorr.Do) gets called and returns nil,
+			the goroutine sets the `dur` value.
+			However, it's too late because the observed time (`dur`) is already larger than expected.
+
+			If both goroutines ran sequentially, this would work.
+			Calling runtime.Gosched here, tries to give priority to the other goroutine.
+			So, when the other goroutine's select is ready (the clock.After returns), it immediately returns and
+			`dur` has the expected value.
+		*/
+		runtime.Gosched()
 		select {
 		case <-done:
 			return dur, trace.Wrap(err)
 		case <-ctx.Done():
 			return time.Duration(0), trace.Wrap(ctx.Err())
 		default:
+			clock.Advance(5 * time.Millisecond)
+			runtime.Gosched()
 		}
 	}
 }

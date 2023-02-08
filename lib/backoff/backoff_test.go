@@ -30,7 +30,7 @@ func TestDecorr(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	t.Cleanup(cancel)
 
-	clock := clockwork.NewFakeClock()
+	clock := clockwork.NewFakeClockAt(time.Unix(0, 0))
 	base := 20 * time.Millisecond
 	cap := 2 * time.Second
 	backoff := NewDecorr(base, cap, clock)
@@ -40,7 +40,7 @@ func TestDecorr(t *testing.T) {
 		dur, err := measure(ctx, clock, func() error { return backoff.Do(ctx) })
 		require.NoError(t, err)
 		require.Greater(t, dur, base)
-		require.Less(t, dur, max)
+		require.LessOrEqual(t, dur, max)
 	}
 
 	// Check that exponential growth threshold.
@@ -48,6 +48,6 @@ func TestDecorr(t *testing.T) {
 		dur, err := measure(ctx, clock, func() error { return backoff.Do(ctx) })
 		require.NoError(t, err)
 		require.Greater(t, dur, base)
-		require.Less(t, dur, cap)
+		require.LessOrEqual(t, dur, cap)
 	}
 }
