@@ -80,8 +80,5 @@ func (s *IntegrationSSHSuite) TestSSH() {
 	t.Log("STDERR", cmdStderr.String())
 	require.NoError(t, err)
 
-	err = stdinPipe.Close()
-	require.NoError(t, err)
-
 	require.Contains(t, cmdStdout.String(), fmt.Sprintf("MYUSER=%s", user.GetName()))
 }
