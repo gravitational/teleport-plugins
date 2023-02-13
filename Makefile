@@ -277,7 +277,6 @@ update-goversion:
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/email/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/Makefile
 	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
-	$(SED) 's/- name: golang:.*/- name: golang:$(GOVERSION)/' .cloudbuild/ci/unit-tests-linux.yaml
 	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/unit-tests.yaml
 	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/terraform-tests.yaml
 	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/lint.yaml
