@@ -112,7 +112,7 @@ const (
 	confFileName = "teleport-event-handler.toml"
 
 	// guideURL is getting started guide URL
-	guideURL = "https://goteleport.com/docs/setup/guides/fluentd"
+	guideURL = "https://goteleport.com/docs/management/export-audit-events/fluentd/"
 )
 
 // RunConfigureCmd initializes and runs configure command
