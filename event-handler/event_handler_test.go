@@ -279,9 +279,6 @@ func (s *EventHandlerSuite) TestEvents() {
 	t.Log("STDERR", cmdStderr.String())
 	require.NoError(t, err)
 
-	err = stdinPipe.Close()
-	require.NoError(t, err)
-
 	// Our test session is very simple. There would be to copies of the same messages: one copy is supposed to be received
 	// via audit log, other one - via session log.
 	counters := make(map[string]int)
