@@ -325,6 +325,14 @@ fix-license: $(ADDLICENSE)
 $(ADDLICENSE):
 	cd && go install github.com/google/addlicense@v1.0.0
 
+GCI := $(GOPATH)/bin/gci
+$(GCI):
+	cd && go install github.com/daixiang0/gci@latest
+
+.PHONY: fix-imports
+fix-imports: $(GCI)
+	$(GCI) write -s 'standard,default,prefix(github.com/gravitational/teleport-plugins)' --skip-generated .
+
 .PHONY: test-helm-%
 test-helm-%:
 	helm unittest ./charts/$(subst access-,access/,$*)

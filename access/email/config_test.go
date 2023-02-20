@@ -21,11 +21,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gravitational/teleport-plugins/access/common"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/mail.v2"
+
+	"github.com/gravitational/teleport-plugins/access/common"
 )
 
 func TestRecipients(t *testing.T) {

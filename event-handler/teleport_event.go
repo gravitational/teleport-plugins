@@ -21,9 +21,10 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/event-handler/lib"
 	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
+
+	"github.com/gravitational/teleport-plugins/event-handler/lib"
 )
 
 const (

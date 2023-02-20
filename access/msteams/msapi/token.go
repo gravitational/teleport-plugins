@@ -25,9 +25,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
+
+	"github.com/gravitational/teleport-plugins/lib/backoff"
 )
 
 const (

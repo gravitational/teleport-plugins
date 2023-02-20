@@ -21,10 +21,11 @@ import (
 
 	cards "github.com/DanielTitkov/go-adaptive-cards"
 	"github.com/google/uuid"
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/plugindata"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
+
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/plugindata"
 )
 
 // validate installs the application for a user if required and sends the Hello, world! message

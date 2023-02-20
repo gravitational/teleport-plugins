@@ -19,7 +19,7 @@ workspace:
 
 steps:
   - name: Run linter
-    image: golangci/golangci-lint:v1.51.1
+    image: golangci/golangci-lint:v1.51.2
     commands:
       - make lint
 
@@ -1386,6 +1386,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 08b0666a59ea5fbfd6f1b54c42dc1428a1e6c7d0ce5c146b48919f3ad6cc4f87
+hmac: 39bddb167178a83286fcc3e9db4b3d6562ea6ff1c61b57e06d13e8205ea66e8a
 
 ...

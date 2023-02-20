@@ -20,14 +20,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/lib/credentials"
-	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
+
+	"github.com/gravitational/teleport-plugins/lib/credentials"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 )
 
 const (
@@ -301,7 +302,7 @@ func (t *TeleportEventsWatcher) UpsertLock(ctx context.Context, user string, log
 
 	if period > 0 {
 		t := time.Now()
-		t.Add(period)
+		t = t.Add(period)
 		expires = &t
 	}
 

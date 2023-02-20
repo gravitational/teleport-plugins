@@ -28,11 +28,11 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gravitational/teleport-plugins/access/msteams/msapi"
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
-
 	log "github.com/sirupsen/logrus"
+
+	"github.com/gravitational/teleport-plugins/access/msteams/msapi"
 )
 
 type response struct {
