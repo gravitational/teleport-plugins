@@ -17,13 +17,14 @@ package main
 import (
 	"strings"
 
+	"github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
+	"github.com/pelletier/go-toml"
+
 	"github.com/gravitational/teleport-plugins/access/common"
 	"github.com/gravitational/teleport-plugins/access/msteams/msapi"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	"github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/trace"
-	"github.com/pelletier/go-toml"
 )
 
 // Config represents plugin configuration

@@ -37,11 +37,11 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/coreos/go-semver/semver"
+	"github.com/gravitational/trace"
+	log "github.com/sirupsen/logrus"
+
 	"github.com/gravitational/teleport-plugins/tooling/internal/staging"
 	"github.com/gravitational/teleport-plugins/tooling/internal/terraform/registry"
-	"github.com/gravitational/trace"
-
-	log "github.com/sirupsen/logrus"
 )
 
 const (

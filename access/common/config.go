@@ -19,15 +19,16 @@ package common
 import (
 	"context"
 
-	"github.com/gravitational/teleport-plugins/access/common/teleport"
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/credentials"
-	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	grpcbackoff "google.golang.org/grpc/backoff"
+
+	"github.com/gravitational/teleport-plugins/access/common/teleport"
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/credentials"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 )
 
 type PluginConfiguration interface {

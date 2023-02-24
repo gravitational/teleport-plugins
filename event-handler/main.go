@@ -24,9 +24,10 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
+	"github.com/gravitational/trace"
+
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	"github.com/gravitational/trace"
 )
 
 // cli is CLI configuration

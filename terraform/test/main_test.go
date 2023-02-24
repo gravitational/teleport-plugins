@@ -23,9 +23,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/testing/integration"
-	"github.com/gravitational/teleport-plugins/terraform/provider"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/utils"
@@ -34,6 +31,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tfprotov6"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/testing/integration"
+	"github.com/gravitational/teleport-plugins/terraform/provider"
 )
 
 //go:embed fixtures/*

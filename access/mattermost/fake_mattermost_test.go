@@ -25,10 +25,9 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/gravitational/trace"
 )
 
 type FakeMattermost struct {

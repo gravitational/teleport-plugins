@@ -28,8 +28,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
+
+	"github.com/gravitational/teleport-plugins/lib/logger"
 )
 
 type FakeFluentd struct {
@@ -104,7 +105,7 @@ func (f *FakeFluentd) writeCerts() error {
 	return nil
 }
 
-// createServer initialises new server instance
+// createServer initializes new server instance
 func (f *FakeFluentd) createServer() error {
 	caCert, err := os.ReadFile(f.caCertPath)
 	if err != nil {

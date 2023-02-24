@@ -17,8 +17,9 @@ package main
 import (
 	"testing"
 
-	"github.com/gravitational/teleport-plugins/lib/plugindata"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/gravitational/teleport-plugins/lib/plugindata"
 )
 
 var samplePluginData = PluginData{

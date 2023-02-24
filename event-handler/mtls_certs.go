@@ -213,7 +213,7 @@ func (c *keyPair) EncodeToMemory(pwd string) ([]byte, []byte, error) {
 
 	// Encrypt with passphrase
 	if pwd != "" {
-		//nolint // deprecated, but we still need it to be encrypted because of fluentd requirements
+		//nolint:staticcheck // deprecated, but we still need it to be encrypted because of fluentd requirements
 		pkBlock, err = x509.EncryptPEMBlock(rand.Reader, pkBlock.Type, pkBlock.Bytes, []byte(pwd), x509.PEMCipherAES256)
 		if err != nil {
 			return nil, nil, trace.Wrap(err)

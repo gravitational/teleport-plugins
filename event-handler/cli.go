@@ -21,12 +21,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/alecthomas/kong"
+	"github.com/gravitational/trace"
+
 	"github.com/gravitational/teleport-plugins/event-handler/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/stringset"
-
-	"github.com/alecthomas/kong"
-	"github.com/gravitational/trace"
 )
 
 // FluentdConfig represents fluentd instance configuration

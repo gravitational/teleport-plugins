@@ -29,8 +29,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
+
+	"github.com/gravitational/teleport-plugins/lib/logger"
 )
 
 var regexpWebProxyStarting = regexp.MustCompile(`Web proxy service [^ ]+ is starting on [^ ]+:(\d+)`)
@@ -126,7 +127,7 @@ func (proxy *ProxyService) Run(ctx context.Context) error {
 			if err := cmd.Process.Signal(syscall.SIGQUIT); err != nil {
 				log.Warn(err)
 			}
-			// If we're not done in 5 minutes, just kill the process by cancelling its context.
+			// If we're not done in 5 minutes, just kill the process by canceling its context.
 			go func() {
 				select {
 				case <-proxy.doneCh:

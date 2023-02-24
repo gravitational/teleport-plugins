@@ -18,11 +18,10 @@ import (
 	"context"
 	"io"
 
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	"github.com/gravitational/trace"
 	"github.com/gravitational/trace/trail"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // TODO: remove this when trail.FromGRPC will understand additional error codes

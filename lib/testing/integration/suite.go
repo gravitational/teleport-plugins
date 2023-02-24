@@ -23,11 +23,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/lib/logger"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/gravitational/teleport-plugins/lib/logger"
 )
 
 // Suite is a basic testing suite enhanced with context management.
@@ -63,7 +63,7 @@ type contexts struct {
 	appCtx context.Context
 
 	// testCtx inherits from baseCtx. Its purpose is to limit the lifetime of the test method.
-	// This context is guaranteed to be cancelled earlier than appCtx for better error reporting (see explanation above).
+	// This context is guaranteed to be canceled earlier than appCtx for better error reporting (see explanation above).
 	testCtx context.Context
 }
 

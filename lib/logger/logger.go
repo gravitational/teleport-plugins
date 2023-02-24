@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/gravitational/trace"
-
 	log "github.com/sirupsen/logrus"
 )
 

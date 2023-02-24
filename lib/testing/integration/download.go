@@ -28,12 +28,13 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/gravitational/trace"
+	"github.com/jonboulle/clockwork"
+
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/teleport-plugins/lib/tar"
-	"github.com/gravitational/trace"
-	"github.com/jonboulle/clockwork"
 )
 
 type downloadVersionKey struct {
