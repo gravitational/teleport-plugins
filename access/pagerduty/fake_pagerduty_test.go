@@ -28,11 +28,11 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/gravitational/teleport-plugins/lib/stringset"
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
-
 	log "github.com/sirupsen/logrus"
+
+	"github.com/gravitational/teleport-plugins/lib/stringset"
 )
 
 type FakePagerduty struct {

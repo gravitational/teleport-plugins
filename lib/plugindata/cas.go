@@ -18,10 +18,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/lib/backoff"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
+
+	"github.com/gravitational/teleport-plugins/lib/backoff"
 )
 
 const (

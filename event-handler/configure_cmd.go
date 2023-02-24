@@ -34,7 +34,7 @@ import (
 	"github.com/gravitational/teleport-plugins/event-handler/lib"
 )
 
-// ConfigureCmd represents configure command behaviour.
+// ConfigureCmd represents configure command behavior.
 //
 // teleport-event-handler configure .
 //

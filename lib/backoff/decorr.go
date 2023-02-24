@@ -21,9 +21,8 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/jonboulle/clockwork"
-
 	"github.com/gravitational/trace"
+	"github.com/jonboulle/clockwork"
 )
 
 // Decorr is a "decorrelated jitter" inspired by https://aws.amazon.com/blogs/architecture/exponential-backoff-and-jitter/.

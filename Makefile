@@ -277,7 +277,6 @@ update-goversion:
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/email/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/Makefile
 	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
-	$(SED) 's/- name: golang:.*/- name: golang:$(GOVERSION)/' .cloudbuild/ci/unit-tests-linux.yaml
 	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/unit-tests.yaml
 	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/terraform-tests.yaml
 	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/lint.yaml
@@ -325,6 +324,14 @@ fix-license: $(ADDLICENSE)
 
 $(ADDLICENSE):
 	cd && go install github.com/google/addlicense@v1.0.0
+
+GCI := $(GOPATH)/bin/gci
+$(GCI):
+	cd && go install github.com/daixiang0/gci@latest
+
+.PHONY: fix-imports
+fix-imports: $(GCI)
+	$(GCI) write -s 'standard,default,prefix(github.com/gravitational/teleport-plugins)' --skip-generated .
 
 .PHONY: test-helm-%
 test-helm-%:

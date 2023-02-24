@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -123,7 +123,8 @@ type Download struct {
 
 // Save serializes a Download record to JSON and writes it to the appropriate
 // Provider Registry Protocol-defined location in a registry directory tree, i.e.
-//   indexDir/:namespace/:name/:version/download/:os/:arch
+//
+//	indexDir/:namespace/:name/:version/download/:os/:arch
 func (dl *Download) Save(indexDir, namespace, name string, version semver.Version) (string, error) {
 	filename := filepath.Join(indexDir, namespace, name, version.String(), "download", dl.OS, dl.Arch)
 

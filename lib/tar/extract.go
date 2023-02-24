@@ -25,8 +25,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/gravitational/teleport-plugins/lib/stringset"
 	"github.com/gravitational/trace"
+
+	"github.com/gravitational/teleport-plugins/lib/stringset"
 )
 
 // Compression is a compression flag.

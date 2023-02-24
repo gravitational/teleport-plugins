@@ -23,12 +23,12 @@ import (
 	"os"
 	"time"
 
+	"github.com/gravitational/kingpin"
+	"github.com/gravitational/trace"
+
 	"github.com/gravitational/teleport-plugins/access/slack"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
-
-	"github.com/gravitational/kingpin"
-	"github.com/gravitational/trace"
 )
 
 //go:embed example_config.toml

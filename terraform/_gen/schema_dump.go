@@ -21,10 +21,11 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+
+	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 )
 
 var (

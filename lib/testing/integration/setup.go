@@ -21,9 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/lib/logger"
-
 	"github.com/stretchr/testify/require"
+
+	"github.com/gravitational/teleport-plugins/lib/logger"
 )
 
 type BaseSetup struct {

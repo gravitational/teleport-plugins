@@ -19,9 +19,9 @@ import (
 	"context"
 	"log"
 
-	"github.com/gravitational/teleport-plugins/terraform/provider"
-
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+
+	"github.com/gravitational/teleport-plugins/terraform/provider"
 )
 
 func main() {

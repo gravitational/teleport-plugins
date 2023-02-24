@@ -17,9 +17,10 @@ package teleport
 import (
 	"context"
 
-	"github.com/gravitational/teleport-plugins/lib/plugindata"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
+
+	"github.com/gravitational/teleport-plugins/lib/plugindata"
 )
 
 // Client aggregates the parts of Teleport API client interface

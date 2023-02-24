@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -24,9 +24,10 @@ import (
 	"path/filepath"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
-	"github.com/gravitational/teleport-plugins/tooling/internal/filename"
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/gravitational/teleport-plugins/tooling/internal/filename"
 )
 
 // FileNames describes the location of a registry-compatible zipfile and its
@@ -77,7 +78,8 @@ func (r *RepackResult) Sha256String() string {
 //
 // For more information on the output files, see the Terraform Provider Registry
 // Protocol documentation:
-//    https://www.terraform.io/internals/provider-registry-protocol
+//
+//	https://www.terraform.io/internals/provider-registry-protocol
 func RepackProvider(dstDir string, srcFileName string, signingEntity *openpgp.Entity) (*RepackResult, error) {
 	info, err := filename.Parse(srcFileName)
 	if err != nil {

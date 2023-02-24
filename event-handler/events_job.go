@@ -17,11 +17,12 @@ package main
 import (
 	"context"
 
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
 	limiter "github.com/sethvargo/go-limiter"
 	"github.com/sethvargo/go-limiter/memorystore"
+
+	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport-plugins/lib/logger"
 )
 
 // EventsJob incapsulates audit log event consumption logic
@@ -70,7 +71,7 @@ func (j *EventsJob) run(ctx context.Context) error {
 		case trace.IsEOF(err):
 			log.WithError(err).Error("Watcher stream closed. Reconnecting...")
 		case lib.IsCanceled(err):
-			log.Debug("Watcher context is cancelled")
+			log.Debug("Watcher context is canceled")
 			j.app.Terminate()
 			return nil
 		default:
