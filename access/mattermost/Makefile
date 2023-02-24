@@ -1,5 +1,5 @@
 VERSION=12.0.2
-GO_VERSION=1.19.5
+GO_VERSION=1.20.1
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-mattermost

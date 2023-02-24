@@ -17,9 +17,10 @@ limitations under the License.
 package common
 
 import (
-	pd "github.com/gravitational/teleport-plugins/lib/plugindata"
 	"github.com/gravitational/teleport/api/types"
 	"golang.org/x/net/context"
+
+	pd "github.com/gravitational/teleport-plugins/lib/plugindata"
 )
 
 // MessagingBot is a generic interface with all methods required to send notifications through a messaging service.

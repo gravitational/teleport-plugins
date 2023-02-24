@@ -19,8 +19,9 @@ package common
 import (
 	"fmt"
 
-	"github.com/gravitational/teleport-plugins/lib/stringset"
 	"github.com/gravitational/teleport/api/types"
+
+	"github.com/gravitational/teleport-plugins/lib/stringset"
 )
 
 // RawRecipientsMap is a mapping of roles to recipient(s).

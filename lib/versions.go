@@ -17,7 +17,6 @@ package lib
 import (
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/trace"
-
 	"github.com/hashicorp/go-version"
 )
 

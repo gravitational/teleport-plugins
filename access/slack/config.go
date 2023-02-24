@@ -21,14 +21,13 @@ import (
 	"strings"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/pelletier/go-toml"
 
 	"github.com/gravitational/teleport-plugins/access/common"
 	"github.com/gravitational/teleport-plugins/access/common/auth"
-
 	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport/api/types"
 )
 
 // Config stores the full configuration for the teleport-slack plugin to run.

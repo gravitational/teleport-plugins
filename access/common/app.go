@@ -20,15 +20,15 @@ import (
 	"context"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/access/common/teleport"
-	pd "github.com/gravitational/teleport-plugins/lib/plugindata"
-	"github.com/gravitational/teleport-plugins/lib/watcherjob"
+	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 
+	"github.com/gravitational/teleport-plugins/access/common/teleport"
 	"github.com/gravitational/teleport-plugins/lib"
 	"github.com/gravitational/teleport-plugins/lib/logger"
-	"github.com/gravitational/teleport/api/client/proto"
-	"github.com/gravitational/trace"
+	pd "github.com/gravitational/teleport-plugins/lib/plugindata"
+	"github.com/gravitational/teleport-plugins/lib/watcherjob"
 )
 
 const (

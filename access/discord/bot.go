@@ -23,13 +23,13 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/access/common"
-	"github.com/gravitational/teleport-plugins/lib"
-	pd "github.com/gravitational/teleport-plugins/lib/plugindata"
+	"github.com/go-resty/resty/v2"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 
-	"github.com/go-resty/resty/v2"
+	"github.com/gravitational/teleport-plugins/access/common"
+	"github.com/gravitational/teleport-plugins/lib"
+	pd "github.com/gravitational/teleport-plugins/lib/plugindata"
 )
 
 const discordMaxConns = 100

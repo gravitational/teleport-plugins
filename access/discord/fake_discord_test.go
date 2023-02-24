@@ -28,7 +28,6 @@ import (
 
 	"github.com/gravitational/trace"
 	"github.com/julienschmidt/httprouter"
-
 	log "github.com/sirupsen/logrus"
 )
 

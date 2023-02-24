@@ -63,7 +63,7 @@ type HTTPBasicAuthConfig struct {
 // HTTP is a tiny wrapper around standard net/http.
 // It starts either insecure server or secure one with TLS, depending on the settings.
 // It also adds a context to its handlers and the server itself has context to.
-// So you are guaranteed that server will be closed when the context is cancelled.
+// So you are guaranteed that server will be closed when the context is canceled.
 type HTTP struct {
 	HTTPConfig
 	mu      sync.Mutex

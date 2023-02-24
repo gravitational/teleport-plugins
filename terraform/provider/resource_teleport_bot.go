@@ -20,7 +20,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types/wrappers"
 	"github.com/gravitational/trace"
@@ -28,6 +27,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 )
 
 func GenSchemaBot(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {

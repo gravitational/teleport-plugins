@@ -20,8 +20,9 @@ import (
 	"context"
 	"os/exec"
 
-	"github.com/gravitational/teleport-plugins/lib/logger"
 	"github.com/gravitational/trace"
+
+	"github.com/gravitational/teleport-plugins/lib/logger"
 )
 
 // Tsh is a runner of tsh command.
