@@ -53,8 +53,16 @@ endif
 		--terraform_out=config=protoc-gen-terraform-teleport.yaml:./tfschema \
 		teleport/legacy/types/types.proto
 
+	@protoc \
+		-I$(API_MOD_PATH)/proto \
+		-I$(PROTOBUF_MOD_PATH) \
+		--plugin=$(GENTERRAFORMPATH)/protoc-gen-terraform \
+		--terraform_out=config=protoc-gen-terraform-loginrule.yaml:./tfschema \
+		teleport/loginrule/v1/loginrule.proto
+
 	@go run ./_gen/main.go
 	mv ./tfschema/github.com/gravitational/teleport/api/types/types_terraform.go ./tfschema/
+	mv ./tfschema/github.com/gravitational/teleport/api/gen/proto/go/teleport/loginrule/v1/loginrule_terraform.go ./tfschema/loginrule/v1/
 	rm -r ./tfschema/github.com/
 
 .PHONY: release

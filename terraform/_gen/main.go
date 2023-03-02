@@ -58,6 +58,37 @@ type payload struct {
 	// This is relevant to cache enabled clusters: we use Metadata.ID to check if the resource was updated
 	// Currently, the resources that don't have a dynamic Metadata.ID are strong consistent: oidc, github and saml connectors
 	HasStaticID bool
+	// ProtoPackagePath is the path of the package where the protobuf type of
+	// the resource is defined.
+	ProtoPackagePath string
+	// ProtoPackagePath is the name of the package where the protobuf type of
+	// the resource is defined.
+	ProtoPackage string
+	// SchemaPackagePath is the path of the package where the resource schema
+	// definitions are defined.
+	SchemaPackagePath string
+	// SchemaPackagePath is the name of the package where the resource schema
+	// definitions are defined.
+	SchemaPackage string
+	// IsPlainStruct states whether the resource type used by the API methods
+	// for this resource is a plain struct, rather than an interface.
+	IsPlainStruct bool
+}
+
+func (p *payload) CheckAndSetDefaults() error {
+	if p.ProtoPackage == "" {
+		p.ProtoPackage = "apitypes"
+	}
+	if p.ProtoPackagePath == "" {
+		p.ProtoPackagePath = "github.com/gravitational/teleport/api/types"
+	}
+	if p.SchemaPackage == "" {
+		p.SchemaPackage = "tfschema"
+	}
+	if p.SchemaPackagePath == "" {
+		p.SchemaPackagePath = "github.com/gravitational/teleport-plugins/terraform/tfschema"
+	}
+	return nil
 }
 
 const (
@@ -231,6 +262,25 @@ var (
 		Kind:              "user",
 		HasStaticID:       false,
 	}
+
+	loginRule = payload{
+		Name:              "LoginRule",
+		TypeName:          "LoginRule",
+		VarName:           "loginRule",
+		GetMethod:         "GetLoginRule",
+		CreateMethod:      "UpsertLoginRule",
+		UpsertMethodArity: 2,
+		UpdateMethod:      "UpsertLoginRule",
+		DeleteMethod:      "DeleteLoginRule",
+		ID:                "loginRule.Metadata.Name",
+		Kind:              "login_rule",
+		HasStaticID:       false,
+		ProtoPackage:      "loginrulev1",
+		ProtoPackagePath:  "github.com/gravitational/teleport/api/gen/proto/go/teleport/loginrule/v1",
+		SchemaPackage:     "schemav1",
+		SchemaPackagePath: "github.com/gravitational/teleport-plugins/terraform/tfschema/loginrule/v1",
+		IsPlainStruct:     true,
+	}
 )
 
 func main() {
@@ -259,9 +309,15 @@ func main() {
 	generate(sessionRecording, singularDataSource, "provider/data_source_teleport_session_recording_config.go")
 	generate(user, pluralResource, "provider/resource_teleport_user.go")
 	generate(user, pluralDataSource, "provider/data_source_teleport_user.go")
+	generate(loginRule, pluralResource, "provider/resource_teleport_login_rule.go")
+	generate(loginRule, pluralDataSource, "provider/data_source_teleport_login_rule.go")
 }
 
 func generate(p payload, tpl, outFile string) {
+	if err := p.CheckAndSetDefaults(); err != nil {
+		log.Fatal(err)
+	}
+
 	t, err := template.ParseFiles(path.Join("_gen", tpl))
 	if err != nil {
 		log.Fatal(err)
