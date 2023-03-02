@@ -126,6 +126,7 @@ func (s *TerraformBaseSuite) SetupSuite() {
 				types.NewRule("github", unrestricted),
 				types.NewRule("oidc", unrestricted),
 				types.NewRule("saml", unrestricted),
+				types.NewRule("login_rule", unrestricted),
 			},
 			Logins: []string{me.Username},
 		},
