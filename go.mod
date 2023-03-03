@@ -11,7 +11,7 @@ require (
 	github.com/google/go-querystring v1.1.0
 	github.com/google/uuid v1.3.0
 	github.com/gravitational/kingpin v2.1.11-0.20190130013101-742f2714c145+incompatible
-	github.com/gravitational/teleport/api v0.0.0-20230227172822-cf72ee5d591b // tag v12.0.4
+	github.com/gravitational/teleport/api v0.0.0-20230303185821-818318c7af23 // tag v12.0.4
 	github.com/gravitational/trace v1.2.1
 	github.com/hashicorp/go-version v1.6.0
 	github.com/hashicorp/terraform-plugin-framework v0.10.0
@@ -50,12 +50,15 @@ require (
 	github.com/beevik/etree v1.1.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/chzyer/readline v0.0.0-20180603132655-2972be24d48e // indirect
+	github.com/crewjam/httperr v0.2.0 // indirect
+	github.com/crewjam/saml v0.4.12 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
 	github.com/go-logr/logr v1.2.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-piv/piv-go v1.10.0 // indirect
+	github.com/golang-jwt/jwt/v4 v4.4.3 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/btree v1.0.1 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
