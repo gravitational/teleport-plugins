@@ -1277,6 +1277,7 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
+						"db_service_labels": GenSchemaLabels(ctx),
 						"db_users": {
 							Description: "DatabaseUsers is a list of databaes users this role is allowed to connect as.",
 							Optional:    true,
@@ -1587,6 +1588,7 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
+						"db_service_labels": GenSchemaLabels(ctx),
 						"db_users": {
 							Description: "DatabaseUsers is a list of databaes users this role is allowed to connect as.",
 							Optional:    true,
@@ -14091,6 +14093,13 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 											}
 										}
 									}
+									{
+										a, ok := tf.Attrs["db_service_labels"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.DatabaseServiceLabels"})
+										}
+										CopyFromLabels(diags, a, &obj.DatabaseServiceLabels)
+									}
 								}
 							}
 						}
@@ -15487,6 +15496,13 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 												}
 											}
 										}
+									}
+									{
+										a, ok := tf.Attrs["db_service_labels"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Deny.DatabaseServiceLabels"})
+										}
+										CopyFromLabels(diags, a, &obj.DatabaseServiceLabels)
 									}
 								}
 							}
@@ -19035,6 +19051,15 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 											}
 										}
 									}
+									{
+										t, ok := tf.AttrTypes["db_service_labels"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Allow.DatabaseServiceLabels"})
+										} else {
+											v := CopyToLabels(diags, obj.DatabaseServiceLabels, t, tf.Attrs["db_service_labels"])
+											tf.Attrs["db_service_labels"] = v
+										}
+									}
 								}
 								v.Unknown = false
 								tf.Attrs["allow"] = v
@@ -21520,6 +21545,15 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												c.Unknown = false
 												tf.Attrs["gcp_service_accounts"] = c
 											}
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["db_service_labels"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Deny.DatabaseServiceLabels"})
+										} else {
+											v := CopyToLabels(diags, obj.DatabaseServiceLabels, t, tf.Attrs["db_service_labels"])
+											tf.Attrs["db_service_labels"] = v
 										}
 									}
 								}
