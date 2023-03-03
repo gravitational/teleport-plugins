@@ -10,6 +10,7 @@
         "podAnnotations",
         "podSecurityContext",
         "securityContext",
+        "serviceType",
         "nodeSelector",
         "tolerations",
         "affinity",
@@ -131,6 +132,11 @@
                 }
             },
             "additionalProperties": true
+        },
+        "serviceType": {
+            "$id": "#/properties/serviceType",
+            "type": "string",
+            "default": "LoadBalancer"
         },
         "resources": {
             "$id": "#/properties/resources",

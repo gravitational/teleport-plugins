@@ -335,7 +335,7 @@ fix-imports: $(GCI)
 
 .PHONY: test-helm-%
 test-helm-%:
-	helm unittest ./charts/$(subst access-,access/,$*)
+	helm unittest -3 ./charts/$(subst access-,access/,$*)
 
 .PHONY: test-helm
 test-helm:
