@@ -18,6 +18,7 @@ package integration
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"net/url"
@@ -48,28 +49,34 @@ type downloadVersion struct {
 	sha256 lib.SHA256Sum
 }
 
-/*
-curl https://get.gravitational.com/teleport-ent-v12.0.4-darwin-amd64-bin.tar.gz.sha256
-curl https://get.gravitational.com/teleport-ent-v12.0.4-linux-amd64-bin.tar.gz.sha256
-curl https://get.gravitational.com/teleport-ent-v12.0.4-linux-arm64-bin.tar.gz.sha256
-curl https://get.gravitational.com/teleport-ent-v12.0.4-linux-arm-bin.tar.gz.sha256
+//go:embed download_sha.dsv
+var downloadVersionsDSV string
 
-curl https://get.gravitational.com/teleport-v12.0.4-darwin-amd64-bin.tar.gz.sha256
-curl https://get.gravitational.com/teleport-v12.0.4-linux-amd64-bin.tar.gz.sha256
-curl https://get.gravitational.com/teleport-v12.0.4-linux-arm64-bin.tar.gz.sha256
-curl https://get.gravitational.com/teleport-v12.0.4-linux-arm-bin.tar.gz.sha256
-*/
-var downloadVersions = map[downloadVersionKey]downloadVersion{
-	// Teleport v12.0.4 Enterprise binaries
-	{"v12.0.4", "darwin", "amd64", true}: {sha256: lib.MustHexSHA256("54d13112aad1a16a73aab3725d313b2a36c8938ef76ab44c8ffbfee416bc91c2")},
-	{"v12.0.4", "linux", "amd64", true}:  {sha256: lib.MustHexSHA256("b27c3e16ce264e33feabda7e22eaa7917f585c28bf2eb31f60944f9e961aa7a8")},
-	{"v12.0.4", "linux", "arm64", true}:  {sha256: lib.MustHexSHA256("b205b832c1d41f6624fd45a49f323eb037de68c540f76929dbeb2fc646ff2071")},
-	{"v12.0.4", "linux", "arm", true}:    {sha256: lib.MustHexSHA256("ab739dba7e6f920baab981fc3ff1e05fff1c38de3d7ffff0f8627b8f712822af")},
-	// Teleport v12.0.4 OSS binaries
-	{"v12.0.4", "darwin", "amd64", false}: {sha256: lib.MustHexSHA256("11382b897028f1a231de258ec74590dd25002ccf5ee47e7679999e5ea1d5717c")},
-	{"v12.0.4", "linux", "amd64", false}:  {sha256: lib.MustHexSHA256("84ce1cd7297499e6b52acf63b1334890abc39c926c7fc2d0fe676103d200752a")},
-	{"v12.0.4", "linux", "arm64", false}:  {sha256: lib.MustHexSHA256("148f8a99d96c50fa34b5c72c32ff40387e55f8df3e8461fb0ca9a61f2542069a")},
-	{"v12.0.4", "linux", "arm", false}:    {sha256: lib.MustHexSHA256("b5a0694d4fa32a2a54fde94edd59932df3e717efd15322c846a2e4ed81dbaca4")},
+func downloadVersionsHash(ctx context.Context, downloadVersionDSV string, key downloadVersionKey) (downloadVersion, bool) {
+	flavor := ""
+	if key.enterprise {
+		flavor = "ent-"
+	}
+
+	fileNameFromKey := fmt.Sprintf("teleport-%s-%s%s-%s-bin.tar.gz", key.ver, flavor, key.os, key.arch)
+	for _, line := range strings.Split(downloadVersionsDSV, "\n") {
+		if len(line) == 0 {
+			continue
+		}
+
+		lineVals := strings.Split(line, "  ")
+		if len(lineVals) != 2 {
+			logger.Get(ctx).Debugf("Invalid line in download_sha.dsv: %q", line)
+			continue
+		}
+		fileHash := lineVals[0]
+		fileName := lineVals[1]
+		if fileName == fileNameFromKey {
+			return downloadVersion{sha256: lib.MustHexSHA256(fileHash)}, true
+		}
+	}
+
+	return downloadVersion{}, false
 }
 
 // GetEnterprise downloads a Teleport Enterprise distribution.
@@ -81,7 +88,7 @@ func GetEnterprise(ctx context.Context, ver, outDir string) (BinPaths, error) {
 		arch:       runtime.GOARCH,
 		enterprise: true,
 	}
-	version, ok := downloadVersions[key]
+	version, ok := downloadVersionsHash(ctx, downloadVersionsDSV, key)
 	if !ok {
 		return BinPaths{}, trace.NotFound("teleport enterprise version %s-%s-%s is unknown", key.ver, key.os, key.arch)
 	}
@@ -97,7 +104,7 @@ func GetOSS(ctx context.Context, ver, outDir string) (BinPaths, error) {
 		os:   runtime.GOOS,
 		arch: runtime.GOARCH,
 	}
-	version, ok := downloadVersions[key]
+	version, ok := downloadVersionsHash(ctx, downloadVersionsDSV, key)
 	if !ok {
 		return BinPaths{}, trace.NotFound("teleport oss version %s-%s-%s is unknown", key.ver, key.os, key.arch)
 	}
