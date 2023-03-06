@@ -22,7 +22,7 @@ jobs:
 
       - name: Setup helm-unittest
         run: |
-            helm plugin install --version=v1.0.16 https://github.com/vbehar/helm3-unittest
+            helm plugin install --version=v0.2.11 https://github.com/quintush/helm-unittest
             helm plugin list
 
       - name: Run tests
