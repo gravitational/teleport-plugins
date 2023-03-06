@@ -58,11 +58,12 @@ func downloadVersionsHash(ctx context.Context, downloadVersionDSV string, key do
 		flavor = "ent-"
 	}
 
-	fileNameFromKey := fmt.Sprintf("teleport-%s-%s%s-%s-bin.tar.gz", key.ver, flavor, key.os, key.arch)
+	fileNameFromKey := fmt.Sprintf("teleport-%s%s-%s-%s-bin.tar.gz", flavor, key.ver, key.os, key.arch)
 	for _, line := range strings.Split(downloadVersionsDSV, "\n") {
 		if len(line) == 0 {
 			continue
 		}
+		fmt.Println("key", fileNameFromKey, "line", line)
 
 		lineVals := strings.Split(line, "  ")
 		if len(lineVals) != 2 {

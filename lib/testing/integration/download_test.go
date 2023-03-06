@@ -38,4 +38,13 @@ func TestDownloadVersionsHash(t *testing.T) {
 	})
 	require.True(t, ok, "expected to find hash for key, but didn't")
 	require.Equal(t, dv.sha256, lib.MustHexSHA256("84ce1cd7297499e6b52acf63b1334890abc39c926c7fc2d0fe676103d200752a"))
+
+	dv, ok = downloadVersionsHash(context.TODO(), downloadVersionsDSV1204, downloadVersionKey{
+		ver:        "v12.0.4",
+		os:         "linux",
+		arch:       "amd64",
+		enterprise: true,
+	})
+	require.True(t, ok, "expected to find hash for key, but didn't")
+	require.Equal(t, dv.sha256, lib.MustHexSHA256("b27c3e16ce264e33feabda7e22eaa7917f585c28bf2eb31f60944f9e961aa7a8"))
 }
