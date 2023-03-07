@@ -240,6 +240,16 @@ update-tag:
 	git push origin terraform-provider-teleport-v$(VERSION)
 	git push origin v$(VERSION)
 
+TELEPORT_GET_VERSION ?= v12.0.4
+.PHONY: update-test-version
+update-test-version:
+	curl https://get.gravitational.com/teleport-{ent-,}${TELEPORT_GET_VERSION}-{darwin-amd64,linux-{amd64,arm64,arm}}-bin.tar.gz.sha256 > \
+	lib/testing/integration/download_sha.dsv
+	$(SED) 's/TELEPORT_GET_VERSION: .*/TELEPORT_GET_VERSION: $(TELEPORT_GET_VERSION)/g' .drone.yml
+	$(SED) 's/TELEPORT_GET_VERSION: .*/TELEPORT_GET_VERSION: $(TELEPORT_GET_VERSION)/g' .github/workflows/terraform-tests.yaml
+	$(SED) 's/TELEPORT_GET_VERSION: .*/TELEPORT_GET_VERSION: $(TELEPORT_GET_VERSION)/g' .github/workflows/unit-tests.yaml
+	@echo Please sign .drone.yml before staging and committing the changes
+
 # promote-tag executes Drone promotion pipeline for the plugins.
 #
 # It has to be run after tag builds triggered by the "update-tag" target have
