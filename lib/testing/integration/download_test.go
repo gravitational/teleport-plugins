@@ -30,7 +30,8 @@ import (
 var downloadVersionsDSV1204 string
 
 func TestDownloadVersionsHash(t *testing.T) {
-	dv, ok := downloadVersionsHash(context.TODO(), downloadVersionsDSV1204, downloadVersionKey{
+	ctx := context.Background()
+	dv, ok := downloadVersionsHash(ctx, downloadVersionsDSV1204, downloadVersionKey{
 		ver:        "v12.0.4",
 		os:         "linux",
 		arch:       "amd64",
@@ -39,7 +40,7 @@ func TestDownloadVersionsHash(t *testing.T) {
 	require.True(t, ok, "expected to find hash for key, but didn't")
 	require.Equal(t, dv.sha256, lib.MustHexSHA256("84ce1cd7297499e6b52acf63b1334890abc39c926c7fc2d0fe676103d200752a"))
 
-	dv, ok = downloadVersionsHash(context.TODO(), downloadVersionsDSV1204, downloadVersionKey{
+	dv, ok = downloadVersionsHash(ctx, downloadVersionsDSV1204, downloadVersionKey{
 		ver:        "v12.0.4",
 		os:         "linux",
 		arch:       "amd64",
