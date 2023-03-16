@@ -130,9 +130,27 @@ func (t *TeleportEventsWatcher) flipPage() bool {
 // fetch fetches the page and sets the position to the event after latest known
 func (t *TeleportEventsWatcher) fetch(ctx context.Context) error {
 	log := logger.Get(ctx)
-
 	b, nextCursor, err := t.getEvents(ctx)
-	if err != nil {
+	// When a trace.BadParameter error is returned, it means that the teleport-plugins
+	// protobuf version is incompatible with the Teleport Auth protobuf version.
+	// This is a fatal error and the plugin should exit because it won't be able to parse the
+	// event that is supported by the newer version of Teleport Auth but not by the
+	// older version of teleport-plugins.
+	// teleport-plugins compatibility is strictly tied to the Teleport Auth version
+	// and the plugin should be updated to the latest version when the Teleport Auth
+	// version is updated. plugins breaks our compatibility promise of supporting
+	// clients 1 major version behind Auth. We don't support older versions of teleport-plugins
+	// with newer versions of Teleport Auth even if they are in the same major version
+	// because we can not guarantee that the plugin will be able to parse the events
+	// introduced between minor or patch versions of Teleport Auth.
+	// This is a temporary solution until we have a better way to handle this.
+	if trace.IsBadParameter(err) {
+		return trace.BadParameter(
+			"teleport-plugins version is incompatible with the Teleport Auth version. " +
+				"Please update teleport-plugins to the same version as the Teleport Auth server." +
+				"Please upgrade the plugins exporter to resume exporting events.",
+		)
+	} else if err != nil {
 		return trace.Wrap(err)
 	}
 
