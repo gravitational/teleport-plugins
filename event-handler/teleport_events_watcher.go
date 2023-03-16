@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport/api/client"
+	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
@@ -41,6 +42,7 @@ type TeleportSearchEventsClient interface {
 	SearchEvents(ctx context.Context, fromUTC, toUTC time.Time, namespace string, eventTypes []string, limit int, order types.EventOrder, startKey string) ([]events.AuditEvent, string, error)
 	StreamSessionEvents(ctx context.Context, sessionID string, startIndex int64) (chan events.AuditEvent, chan error)
 	UpsertLock(ctx context.Context, lock types.Lock) error
+	Ping(ctx context.Context) (proto.PingResponse, error)
 	Close() error
 }
 
@@ -147,8 +149,8 @@ func (t *TeleportEventsWatcher) fetch(ctx context.Context) error {
 	if trace.IsBadParameter(err) {
 		return trace.BadParameter(
 			"teleport-plugins version is incompatible with the Teleport Auth version. " +
-				"Please update teleport-plugins to the same version as the Teleport Auth server." +
-				"Please upgrade the plugins exporter to resume exporting events.",
+				"Please update teleport-plugins to the same version as the Teleport Auth server to resume operations. \n" +
+				authServerVersionMessage(ctx, t.client),
 		)
 	} else if err != nil {
 		return trace.Wrap(err)
@@ -339,4 +341,16 @@ func (t *TeleportEventsWatcher) UpsertLock(ctx context.Context, user string, log
 	}
 
 	return t.client.UpsertLock(ctx, lock)
+}
+
+// authServerVersionMessage returns a message to be printed with the auth server
+// and plugin versions if the auth server version is incompatible with the plugin.
+// It returns an empty string if the auth version cannot be determined.
+func authServerVersionMessage(ctx context.Context, client TeleportSearchEventsClient) string {
+	rsp, err := client.Ping(ctx)
+	if err != nil {
+		log.WithError(err).Warn("unable to get auth server version")
+		return ""
+	}
+	return fmt.Sprintf("Auth server version %v; teleport-plugins version %v", rsp.ServerVersion, Version)
 }
