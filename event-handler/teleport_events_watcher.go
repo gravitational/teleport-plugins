@@ -133,23 +133,23 @@ func (t *TeleportEventsWatcher) flipPage() bool {
 func (t *TeleportEventsWatcher) fetch(ctx context.Context) error {
 	log := logger.Get(ctx)
 	b, nextCursor, err := t.getEvents(ctx)
-	// When a trace.BadParameter error is returned, it means that the teleport-plugins
+	// When a trace.BadParameter error is returned, it means that the Teleport event handler
 	// protobuf version is incompatible with the Teleport Auth protobuf version.
-	// This is a fatal error and the plugin should exit because it won't be able to parse the
+	// This is a fatal error and the event handler should exit because it won't be able to parse the
 	// event that is supported by the newer version of Teleport Auth but not by the
-	// older version of teleport-plugins.
-	// teleport-plugins compatibility is strictly tied to the Teleport Auth version
-	// and the plugin should be updated to the latest version when the Teleport Auth
-	// version is updated. plugins breaks our compatibility promise of supporting
-	// clients 1 major version behind Auth. We don't support older versions of teleport-plugins
+	// older version of Teleport event handler.
+	// Teleport event handler compatibility is strictly tied to the Teleport Auth version
+	// and it should be updated to the latest version when the Teleport Auth
+	// version is updated. Event handler breaks our compatibility promise of supporting
+	// clients 1 major version behind Auth. We don't support older versions of event handler
 	// with newer versions of Teleport Auth even if they are in the same major version
-	// because we can not guarantee that the plugin will be able to parse the events
+	// because we can not guarantee that the handler will be able to parse the events
 	// introduced between minor or patch versions of Teleport Auth.
 	// This is a temporary solution until we have a better way to handle this.
 	if trace.IsBadParameter(err) {
 		return trace.BadParameter(
-			"teleport-plugins version is incompatible with the Teleport Auth version. " +
-				"Please update teleport-plugins to the same version as the Teleport Auth server to resume operations. \n" +
+			"Teleport event handler version is incompatible with the Teleport Auth version. " +
+				"Please update Teleport event handler to the same version as the Teleport Auth server to resume operations. \n" +
 				authServerVersionMessage(ctx, t.client),
 		)
 	} else if err != nil {
@@ -352,5 +352,5 @@ func authServerVersionMessage(ctx context.Context, client TeleportSearchEventsCl
 		log.WithError(err).Warn("unable to get auth server version")
 		return ""
 	}
-	return fmt.Sprintf("Auth server version %v; teleport-plugins version %v", rsp.ServerVersion, Version)
+	return fmt.Sprintf("Auth server version %v; Teleport event handler version %v", rsp.ServerVersion, Version)
 }
