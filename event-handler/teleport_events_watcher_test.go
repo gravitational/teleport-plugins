@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
@@ -48,6 +49,12 @@ func (c *mockTeleportEventWatcher) StreamSessionEvents(ctx context.Context, sess
 // UsertLock is mock UpsertLock method
 func (c *mockTeleportEventWatcher) UpsertLock(ctx context.Context, lock types.Lock) error {
 	return nil
+}
+
+func (c *mockTeleportEventWatcher) Ping(ctx context.Context) (proto.PingResponse, error) {
+	return proto.PingResponse{
+		ServerVersion: Version,
+	}, nil
 }
 
 // Close is mock close method
@@ -115,65 +122,66 @@ func TestValidateConfig(t *testing.T) {
 		name      string
 		cfg       StartCmdConfig
 		wantError bool
-	}{{
-		name: "Identity file configured",
-		cfg: StartCmdConfig{
-			FluentdConfig{},
-			TeleportConfig{
-				TeleportIdentityFile: "not_empty_string",
+	}{
+		{
+			name: "Identity file configured",
+			cfg: StartCmdConfig{
+				FluentdConfig{},
+				TeleportConfig{
+					TeleportIdentityFile: "not_empty_string",
+				},
+				IngestConfig{},
+				LockConfig{},
 			},
-			IngestConfig{},
-			LockConfig{},
-		},
-		wantError: false,
-	}, {
-		name: "Cert, key, ca files configured",
-		cfg: StartCmdConfig{
-			FluentdConfig{},
-			TeleportConfig{
-				TeleportCA:   "not_empty_string",
-				TeleportCert: "not_empty_string",
-				TeleportKey:  "not_empty_string",
+			wantError: false,
+		}, {
+			name: "Cert, key, ca files configured",
+			cfg: StartCmdConfig{
+				FluentdConfig{},
+				TeleportConfig{
+					TeleportCA:   "not_empty_string",
+					TeleportCert: "not_empty_string",
+					TeleportKey:  "not_empty_string",
+				},
+				IngestConfig{},
+				LockConfig{},
 			},
-			IngestConfig{},
-			LockConfig{},
-		},
-		wantError: false,
-	}, {
-		name: "Identity and teleport cert/ca/key files configured",
-		cfg: StartCmdConfig{
-			FluentdConfig{},
-			TeleportConfig{
-				TeleportIdentityFile: "not_empty_string",
-				TeleportCA:           "not_empty_string",
-				TeleportCert:         "not_empty_string",
-				TeleportKey:          "not_empty_string",
+			wantError: false,
+		}, {
+			name: "Identity and teleport cert/ca/key files configured",
+			cfg: StartCmdConfig{
+				FluentdConfig{},
+				TeleportConfig{
+					TeleportIdentityFile: "not_empty_string",
+					TeleportCA:           "not_empty_string",
+					TeleportCert:         "not_empty_string",
+					TeleportKey:          "not_empty_string",
+				},
+				IngestConfig{},
+				LockConfig{},
 			},
-			IngestConfig{},
-			LockConfig{},
-		},
-		wantError: true,
-	}, {
-		name: "None set",
-		cfg: StartCmdConfig{
-			FluentdConfig{},
-			TeleportConfig{},
-			IngestConfig{},
-			LockConfig{},
-		},
-		wantError: true,
-	}, {
-		name: "Some of teleport cert/key/ca unset",
-		cfg: StartCmdConfig{
-			FluentdConfig{},
-			TeleportConfig{
-				TeleportCA: "not_empty_string",
+			wantError: true,
+		}, {
+			name: "None set",
+			cfg: StartCmdConfig{
+				FluentdConfig{},
+				TeleportConfig{},
+				IngestConfig{},
+				LockConfig{},
 			},
-			IngestConfig{},
-			LockConfig{},
+			wantError: true,
+		}, {
+			name: "Some of teleport cert/key/ca unset",
+			cfg: StartCmdConfig{
+				FluentdConfig{},
+				TeleportConfig{
+					TeleportCA: "not_empty_string",
+				},
+				IngestConfig{},
+				LockConfig{},
+			},
+			wantError: true,
 		},
-		wantError: true,
-	},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			err := tc.cfg.Validate()

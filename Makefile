@@ -341,7 +341,7 @@ $(GCI):
 
 .PHONY: fix-imports
 fix-imports: $(GCI)
-	$(GCI) write -s 'standard,default,prefix(github.com/gravitational/teleport-plugins)' --skip-generated .
+	$(GCI) write -s standard -s default -s 'prefix(github.com/gravitational/teleport-plugins)' --skip-generated .
 
 .PHONY: test-helm-%
 test-helm-%:
