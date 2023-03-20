@@ -211,7 +211,7 @@ update-helm-version-%:
 	$(SED) 's/appVersion: .*/appVersion: "$(VERSION)"/' charts/$(subst access-,access/,$*)/Chart.yaml
 	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/$(subst access-,access/,$*)/Chart.yaml
 	# Update snapshots
-	@helm unittest -u charts/$(subst access-,access/,$*) || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
+	@helm unittest -u -3 charts/$(subst access-,access/,$*) || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
 
 .PHONY: update-tag
 update-tag:
@@ -341,7 +341,7 @@ $(GCI):
 
 .PHONY: fix-imports
 fix-imports: $(GCI)
-	$(GCI) write -s 'standard,default,prefix(github.com/gravitational/teleport-plugins)' --skip-generated .
+	$(GCI) write -s standard -s default -s 'prefix(github.com/gravitational/teleport-plugins)' --skip-generated .
 
 .PHONY: test-helm-%
 test-helm-%:
