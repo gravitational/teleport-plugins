@@ -8,3 +8,6 @@ jobs:
     uses: gravitational/shared-workflows/.github/workflows/dependency-review.yaml@main
     permissions:
       contents: read
+    with:
+      # gravitational/teleport misdetected as "v0"
+      allow-ghsas: GHSA-6xf3-5hp7-xqqg
