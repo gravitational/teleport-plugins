@@ -10,7 +10,7 @@ require (
 	github.com/google/go-querystring v1.1.0
 	github.com/google/uuid v1.3.0
 	github.com/gravitational/kingpin v2.1.11-0.20220901134012-2a1956e29525+incompatible
-	github.com/gravitational/teleport v1.3.3-0.20230323122326-68aaa58860d1 // This points to teleport#23475. TODO: point to a branch/v12 or a tag.
+	github.com/gravitational/teleport v0.0.0-20230323122326-68aaa58860d1 // This points to teleport#23475. TODO: point to a branch/v12 or a tag.
 	github.com/gravitational/teleport/api v0.0.0 // replaced
 	github.com/gravitational/trace v1.2.1
 	github.com/hashicorp/terraform-plugin-framework v0.10.0
