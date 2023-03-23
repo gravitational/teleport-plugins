@@ -25,9 +25,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
+	{{.ProtoPackage}} "{{.ProtoPackagePath}}"
+	{{.SchemaPackage}} "{{.SchemaPackagePath}}"
 	"github.com/gravitational/teleport-plugins/lib/backoff"
-	"github.com/gravitational/teleport-plugins/terraform/tfschema"
-	apitypes "github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
 )
@@ -42,7 +42,7 @@ type resourceTeleport{{.Name}} struct {
 
 // GetSchema returns the resource schema
 func (r resourceTeleport{{.Name}}Type) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfschema.GenSchema{{.TypeName}}(ctx)
+	return {{.SchemaPackage}}.GenSchema{{.TypeName}}(ctx)
 }
 
 // NewResource creates the empty resource
@@ -65,8 +65,8 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 		return
 	}
 
-	{{.VarName}} := &apitypes.{{.TypeName}}{}
-	diags = tfschema.Copy{{.TypeName}}FromTerraform(ctx, plan, {{.VarName}})
+	{{.VarName}} := &{{.ProtoPackage}}.{{.TypeName}}{}
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}FromTerraform(ctx, plan, {{.VarName}})
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -96,7 +96,12 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 		return
 	}
 
-	var {{.VarName}}I apitypes.{{ if ne .IfaceName ""}}{{.IfaceName}}{{else}}{{.Name}}{{end}}
+	{{if .IsPlainStruct -}}
+	// Not really an inferface, just using the same name for easier templating.
+	var {{.VarName}}I *{{.ProtoPackage}}.{{.Name}}
+	{{else -}}
+	var {{.VarName}}I {{.ProtoPackage}}.{{ if ne .IfaceName ""}}{{.IfaceName}}{{else}}{{.Name}}{{end}}
+	{{- end}}
 
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
@@ -125,15 +130,19 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 		return
 	}
 
-	{{.VarName}}, ok := {{.VarName}}I.(*apitypes.{{.TypeName}})
+	{{if .IsPlainStruct -}}
+	{{.VarName}} = {{.VarName}}I
+	{{else -}}
+	{{.VarName}}, ok := {{.VarName}}I.(*{{.ProtoPackage}}.{{.TypeName}})
 	if !ok {
 		resp.Diagnostics.Append(
 			diagFromWrappedErr("Error reading {{.Name}}", trace.Errorf("Can not convert %T to {{.TypeName}}", {{.VarName}}I), "{{.Kind}}"),
 		)
 		return
 	}
+	{{- end}}
 
-	diags = tfschema.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &plan)
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -163,8 +172,8 @@ func (r resourceTeleport{{.Name}}) Read(ctx context.Context, req tfsdk.ReadResou
 		return
 	}
 
-	{{.VarName}} := {{.VarName}}I.(*apitypes.{{.TypeName}})
-	diags = tfschema.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &state)
+	{{.VarName}} := {{.VarName}}I.(*{{.ProtoPackage}}.{{.TypeName}})
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -191,8 +200,8 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 		return
 	}
 
-	{{.VarName}} := &apitypes.{{.TypeName}}{}
-	diags = tfschema.Copy{{.TypeName}}FromTerraform(ctx, plan, {{.VarName}})
+	{{.VarName}} := &{{.ProtoPackage}}.{{.TypeName}}{}
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}FromTerraform(ctx, plan, {{.VarName}})
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -216,7 +225,7 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 		return
 	}
 
-	var {{.VarName}}I apitypes.{{ if ne .IfaceName ""}}{{.IfaceName}}{{else}}{{.Name}}{{end}}
+	var {{.VarName}}I {{.ProtoPackage}}.{{ if ne .IfaceName ""}}{{.IfaceName}}{{else}}{{.Name}}{{end}}
 
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
@@ -245,8 +254,8 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 		return
 	}
 
-	{{.VarName}} = {{.VarName}}I.(*apitypes.{{.TypeName}})
-	diags = tfschema.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &plan)
+	{{.VarName}} = {{.VarName}}I.(*{{.ProtoPackage}}.{{.TypeName}})
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -278,7 +287,7 @@ func (r resourceTeleport{{.Name}}) ImportState(ctx context.Context, req tfsdk.Im
 		return
 	}
 
-	{{.VarName}} := {{.VarName}}I.(*apitypes.{{.TypeName}})
+	{{.VarName}} := {{.VarName}}I.(*{{.ProtoPackage}}.{{.TypeName}})
 
 	var state types.Object
 
@@ -288,7 +297,7 @@ func (r resourceTeleport{{.Name}}) ImportState(ctx context.Context, req tfsdk.Im
 		return
 	}
 
-	diags = tfschema.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &state)
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

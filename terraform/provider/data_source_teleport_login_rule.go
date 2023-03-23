@@ -25,33 +25,32 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 
-	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema"
-	apitypes "github.com/gravitational/teleport/api/types"
+	schemav1 "github.com/gravitational/teleport-plugins/terraform/tfschema/loginrule/v1"
 	"github.com/gravitational/trace"
 )
 
-// dataSourceTeleportAppType is the data source metadata type
-type dataSourceTeleportAppType struct{}
+// dataSourceTeleportLoginRuleType is the data source metadata type
+type dataSourceTeleportLoginRuleType struct{}
 
-// dataSourceTeleportApp is the resource
-type dataSourceTeleportApp struct {
+// dataSourceTeleportLoginRule is the resource
+type dataSourceTeleportLoginRule struct {
 	p Provider
 }
 
 // GetSchema returns the data source schema
-func (r dataSourceTeleportAppType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfschema.GenSchemaAppV3(ctx)
+func (r dataSourceTeleportLoginRuleType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+	return schemav1.GenSchemaLoginRule(ctx)
 }
 
 // NewDataSource creates the empty data source
-func (r dataSourceTeleportAppType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
-	return dataSourceTeleportApp{
+func (r dataSourceTeleportLoginRuleType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
+	return dataSourceTeleportLoginRule{
 		p: *(p.(*Provider)),
 	}, nil
 }
 
-// Read reads teleport App
-func (r dataSourceTeleportApp) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
+// Read reads teleport LoginRule
+func (r dataSourceTeleportLoginRule) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
 	var id types.String
 	diags := req.Config.GetAttribute(ctx, path.Root("metadata").AtName("name"), &id)
 	resp.Diagnostics.Append(diags...)
@@ -59,15 +58,15 @@ func (r dataSourceTeleportApp) Read(ctx context.Context, req tfsdk.ReadDataSourc
 		return
 	}
 
-	appI, err := r.p.Client.GetApp(ctx, id.Value)
+	loginRuleI, err := r.p.Client.GetLoginRule(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(err), "app"))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading LoginRule", trace.Wrap(err), "login_rule"))
 		return
 	}
 
     var state types.Object
-	app := appI.(*apitypes.AppV3)
-	diags = tfschema.CopyAppV3ToTerraform(ctx, *app, &state)
+	loginRule := loginRuleI
+	diags = schemav1.CopyLoginRuleToTerraform(ctx, *loginRule, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

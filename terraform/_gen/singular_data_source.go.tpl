@@ -24,8 +24,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	"github.com/gravitational/teleport-plugins/terraform/tfschema"
-	apitypes "github.com/gravitational/teleport/api/types"
+	{{.SchemaPackage}} "{{.SchemaPackagePath}}"
+	{{if not .IsPlainStruct -}}
+	{{.ProtoPackage}} "{{.ProtoPackagePath}}"
+	{{end -}}
 	"github.com/gravitational/trace"
 )
 
@@ -39,7 +41,7 @@ type dataSourceTeleport{{.Name}} struct {
 
 // GetSchema returns the data source schema
 func (r dataSourceTeleport{{.Name}}Type) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfschema.GenSchema{{.TypeName}}(ctx)
+	return {{.SchemaPackage}}.GenSchema{{.TypeName}}(ctx)
 }
 
 // NewDataSource creates the empty data source
@@ -58,8 +60,12 @@ func (r dataSourceTeleport{{.Name}}) Read(ctx context.Context, req tfsdk.ReadDat
 	}
 
     var state types.Object
-	{{.VarName}} := {{.VarName}}I.(*apitypes.{{.TypeName}})
-	diags := tfschema.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &state)
+	{{if .IsPlainStruct -}}
+	{{.VarName}} := {{.VarName}}I
+	{{else -}}
+	{{.VarName}} := {{.VarName}}I.(*{{.ProtoPackage}}.{{.TypeName}})
+	{{end -}}
+	diags := {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

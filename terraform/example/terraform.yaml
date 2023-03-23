@@ -24,6 +24,7 @@ spec:
         - session_recording_config
         - app
         - db
+        - login_rule
         verbs: ['list','create','read','update','delete']
 version: v6
 ---
