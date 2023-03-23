@@ -201,8 +201,8 @@ update-version:
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
 	$(SED) '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
-	$(MAKE) update-helm-version
-	$(MAKE) terraform-gen-tfschema
+	#$(MAKE) update-helm-version
+	#$(MAKE) terraform-gen-tfschema
 
 # Update all charts to VERSION
 .PHONY: update-helm-version

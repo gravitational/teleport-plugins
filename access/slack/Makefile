@@ -1,4 +1,4 @@
-VERSION=12.1.1
+VERSION=12.1.2-dev.justinas.1
 GO_VERSION=1.20.2
 
 BUILDDIR ?= build
