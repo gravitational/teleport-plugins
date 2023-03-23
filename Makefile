@@ -130,8 +130,19 @@ test-tooling:
 	(cd tooling; go test -v -race ./...)
 
 .PHONY: test-unit
-test-unit:
+test-unit: test-tooling test-lib test-access test-event-handler
+
+.PHONY: test-lib
+test-lib:
 	(cd lib; go test -v -race ./...)
+
+.PHONY: test-access
+test-access:
+	(cd access; go test -v -race ./...)
+
+.PHONY: test-event-handler
+test-event-handler:
+	(cd event-handler; go test -v -race ./...)
 
 # Individual releases
 .PHONY: release/access-slack
