@@ -16,8 +16,6 @@ RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
 # Copy the go source
 COPY access/${ACCESS_PLUGIN} access/${ACCESS_PLUGIN}
-COPY access/common access/common
-COPY lib lib
 
 # Build
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build make -C access/${ACCESS_PLUGIN} GITREF=${GITREF}
