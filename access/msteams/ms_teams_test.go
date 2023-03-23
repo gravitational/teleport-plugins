@@ -34,11 +34,11 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/tidwall/gjson"
 
-	"github.com/gravitational/teleport-plugins/access/common"
+	"github.com/gravitational/teleport/integrations/access/common"
 	"github.com/gravitational/teleport-plugins/access/msteams/msapi"
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/logger"
-	"github.com/gravitational/teleport-plugins/lib/testing/integration"
+	"github.com/gravitational/teleport/integrations/lib"
+	"github.com/gravitational/teleport/integrations/lib/logger"
+	"github.com/gravitational/teleport/integrations/lib/testing/integration"
 )
 
 type TeamsSuite struct {

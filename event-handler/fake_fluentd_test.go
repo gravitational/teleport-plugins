@@ -30,7 +30,7 @@ import (
 
 	"github.com/gravitational/trace"
 
-	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/integrations/lib/logger"
 )
 
 type FakeFluentd struct {

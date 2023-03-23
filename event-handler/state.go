@@ -28,7 +28,7 @@ import (
 	"github.com/peterbourgon/diskv/v3"
 
 	"github.com/gravitational/teleport-plugins/event-handler/lib"
-	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/integrations/lib/logger"
 )
 
 const (

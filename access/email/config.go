@@ -25,9 +25,9 @@ import (
 	"github.com/pelletier/go-toml"
 	"gopkg.in/mail.v2"
 
-	"github.com/gravitational/teleport-plugins/access/common"
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/integrations/access/common"
+	"github.com/gravitational/teleport/integrations/lib"
+	"github.com/gravitational/teleport/integrations/lib/logger"
 )
 
 // DeliveryConfig represents email recipients config

@@ -38,7 +38,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
 
-	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport/integrations/lib"
 )
 
 const (

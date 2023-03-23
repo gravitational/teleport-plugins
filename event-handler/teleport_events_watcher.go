@@ -28,8 +28,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 
-	"github.com/gravitational/teleport-plugins/lib/credentials"
-	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/integrations/lib/credentials"
+	"github.com/gravitational/teleport/integrations/lib/logger"
 )
 
 const (

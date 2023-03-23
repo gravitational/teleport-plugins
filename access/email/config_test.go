@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/mail.v2"
 
-	"github.com/gravitational/teleport-plugins/access/common"
+	"github.com/gravitational/teleport/integrations/access/common"
 )
 
 func TestRecipients(t *testing.T) {

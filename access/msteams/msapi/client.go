@@ -26,7 +26,7 @@ import (
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
 
-	"github.com/gravitational/teleport-plugins/lib/backoff"
+	"github.com/gravitational/teleport/integrations/lib/backoff"
 )
 
 // Client represents generic MS API client

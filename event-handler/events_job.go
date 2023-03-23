@@ -21,8 +21,8 @@ import (
 	limiter "github.com/sethvargo/go-limiter"
 	"github.com/sethvargo/go-limiter/memorystore"
 
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/integrations/lib"
+	"github.com/gravitational/teleport/integrations/lib/logger"
 )
 
 // EventsJob incapsulates audit log event consumption logic

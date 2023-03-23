@@ -31,11 +31,11 @@ import (
 	"google.golang.org/grpc"
 	grpcbackoff "google.golang.org/grpc/backoff"
 
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/backoff"
-	"github.com/gravitational/teleport-plugins/lib/credentials"
-	"github.com/gravitational/teleport-plugins/lib/logger"
-	"github.com/gravitational/teleport-plugins/lib/watcherjob"
+	"github.com/gravitational/teleport/integrations/lib"
+	"github.com/gravitational/teleport/integrations/lib/backoff"
+	"github.com/gravitational/teleport/integrations/lib/credentials"
+	"github.com/gravitational/teleport/integrations/lib/logger"
+	"github.com/gravitational/teleport/integrations/lib/watcherjob"
 )
 
 const (

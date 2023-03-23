@@ -27,7 +27,7 @@ import (
 	"github.com/gravitational/trace"
 	"github.com/mailgun/holster/v3/collections"
 
-	"github.com/gravitational/teleport-plugins/lib"
+	"github.com/gravitational/teleport/integrations/lib"
 )
 
 const (

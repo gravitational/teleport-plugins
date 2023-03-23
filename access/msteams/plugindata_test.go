@@ -19,7 +19,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/gravitational/teleport-plugins/lib/plugindata"
+	"github.com/gravitational/teleport/integrations/lib/plugindata"
 )
 
 var samplePluginData = PluginData{

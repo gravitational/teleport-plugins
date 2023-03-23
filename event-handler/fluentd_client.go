@@ -29,7 +29,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/gravitational/teleport-plugins/event-handler/lib"
-	tlib "github.com/gravitational/teleport-plugins/lib"
+	tlib "github.com/gravitational/teleport/integrations/lib"
 )
 
 const (

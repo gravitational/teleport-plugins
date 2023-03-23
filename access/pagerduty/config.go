@@ -22,8 +22,8 @@ import (
 	"github.com/gravitational/trace"
 	"github.com/pelletier/go-toml"
 
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/logger"
+	"github.com/gravitational/teleport/integrations/lib"
+	"github.com/gravitational/teleport/integrations/lib/logger"
 )
 
 type Config struct {

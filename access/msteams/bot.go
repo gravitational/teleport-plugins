@@ -27,8 +27,8 @@ import (
 	"github.com/gravitational/trace"
 
 	"github.com/gravitational/teleport-plugins/access/msteams/msapi"
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/plugindata"
+	"github.com/gravitational/teleport/integrations/lib"
+	"github.com/gravitational/teleport/integrations/lib/plugindata"
 )
 
 const (
