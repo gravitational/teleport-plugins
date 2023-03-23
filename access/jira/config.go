@@ -23,11 +23,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gravitational/trace"
-	"github.com/pelletier/go-toml"
-
 	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/teleport/integrations/lib/logger"
+	"github.com/gravitational/trace"
+	"github.com/pelletier/go-toml"
 )
 
 type Config struct {

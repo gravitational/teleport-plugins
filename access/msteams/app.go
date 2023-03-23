@@ -21,16 +21,15 @@ import (
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/trace"
-	"google.golang.org/grpc"
-	grpcbackoff "google.golang.org/grpc/backoff"
-
 	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/teleport/integrations/lib/credentials"
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	pd "github.com/gravitational/teleport/integrations/lib/plugindata"
 	"github.com/gravitational/teleport/integrations/lib/stringset"
 	"github.com/gravitational/teleport/integrations/lib/watcherjob"
+	"github.com/gravitational/trace"
+	"google.golang.org/grpc"
+	grpcbackoff "google.golang.org/grpc/backoff"
 )
 
 const (

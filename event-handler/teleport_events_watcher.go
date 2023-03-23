@@ -24,12 +24,11 @@ import (
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/events"
+	"github.com/gravitational/teleport/integrations/lib/credentials"
+	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
-
-	"github.com/gravitational/teleport/integrations/lib/credentials"
-	"github.com/gravitational/teleport/integrations/lib/logger"
 )
 
 const (

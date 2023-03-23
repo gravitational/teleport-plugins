@@ -21,13 +21,12 @@ import (
 	"fmt"
 
 	"github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/trace"
-	"github.com/pelletier/go-toml"
-	"gopkg.in/mail.v2"
-
 	"github.com/gravitational/teleport/integrations/access/common"
 	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/teleport/integrations/lib/logger"
+	"github.com/gravitational/trace"
+	"github.com/pelletier/go-toml"
+	"gopkg.in/mail.v2"
 )
 
 // DeliveryConfig represents email recipients config

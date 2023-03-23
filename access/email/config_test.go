@@ -22,11 +22,10 @@ import (
 	"testing"
 
 	"github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/teleport/integrations/access/common"
 	"github.com/gravitational/trace"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/mail.v2"
-
-	"github.com/gravitational/teleport/integrations/access/common"
 )
 
 func TestRecipients(t *testing.T) {
