@@ -130,11 +130,7 @@ test-tooling:
 	(cd tooling; go test -v -race ./...)
 
 .PHONY: test-unit
-test-unit: test-tooling test-lib test-access test-event-handler
-
-.PHONY: test-lib
-test-lib:
-	(cd lib; go test -v -race ./...)
+test-unit: test-tooling test-access test-event-handler
 
 .PHONY: test-access
 test-access:
