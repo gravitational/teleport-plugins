@@ -220,6 +220,11 @@ update-helm-version-%:
 	# Update snapshots
 	@helm unittest -u -3 charts/$(subst access-,access/,$*) || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
 
+TELEPORT_DEP_VERSION ?= v12.1.1
+.PHONY: update-teleport-dep-version
+update-teleport-dep-version:
+	./update_teleport_dep_version.sh $(TELEPORT_DEP_VERSION)
+
 .PHONY: update-tag
 update-tag:
 	# Make sure VERSION is set on the command line "make update-tag VERSION=x.y.z".
