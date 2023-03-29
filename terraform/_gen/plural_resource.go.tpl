@@ -30,9 +30,9 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 
-	"github.com/gravitational/teleport-plugins/lib/backoff"
-	"github.com/gravitational/teleport-plugins/terraform/tfschema"
-	apitypes "github.com/gravitational/teleport/api/types"
+	{{.ProtoPackage}} "{{.ProtoPackagePath}}"
+	{{.SchemaPackage}} "{{.SchemaPackagePath}}"
+	"github.com/gravitational/teleport/integrations/lib/backoff"
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
 )
@@ -47,7 +47,7 @@ type resourceTeleport{{.Name}} struct {
 
 // GetSchema returns the resource schema
 func (r resourceTeleport{{.Name}}Type) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfschema.GenSchema{{.TypeName}}(ctx)
+	return {{.SchemaPackage}}.GenSchema{{.TypeName}}(ctx)
 }
 
 // NewResource creates the empty resource
@@ -57,7 +57,7 @@ func (r resourceTeleport{{.Name}}Type) NewResource(_ context.Context, p tfsdk.Pr
 	}, nil
 }
 
-// Create creates the provision token
+// Create creates the {{.Name}}
 func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
@@ -70,8 +70,8 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 		return
 	}
 
-	{{.VarName}} := &apitypes.{{.TypeName}}{}
-	diags = tfschema.Copy{{.TypeName}}FromTerraform(ctx, plan, {{.VarName}})
+	{{.VarName}} := &{{.ProtoPackage}}.{{.TypeName}}{}
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}FromTerraform(ctx, plan, {{.VarName}})
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -109,11 +109,13 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 		return
 	}
 
+	{{if not .IsPlainStruct -}}
 	err = {{.VarName}}.CheckAndSetDefaults()
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error setting {{.Name}} defaults", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
+	{{- end}}
 
 	{{if eq .UpsertMethodArity 2}}_, {{end}}err = r.p.Client.{{.CreateMethod}}(ctx, {{.VarName}})
 	if err != nil {
@@ -122,7 +124,12 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 	}
 
 	id := {{.VarName}}.Metadata.Name
-	var {{.VarName}}I apitypes.{{ if ne .IfaceName ""}}{{.IfaceName}}{{else}}{{.Name}}{{end}}
+	{{if .IsPlainStruct -}}
+	// Not really an inferface, just using the same name for easier templating.
+	var {{.VarName}}I *{{.ProtoPackage}}.{{.Name}}
+	{{else -}}
+	var {{.VarName}}I {{.ProtoPackage}}.{{ if ne .IfaceName ""}}{{.IfaceName}}{{else}}{{.Name}}{{end}}
+	{{- end}}
 
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
@@ -149,13 +156,17 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 		return
 	}
 
-	{{.VarName}}, ok := {{.VarName}}I.(*apitypes.{{.TypeName}})
+	{{if .IsPlainStruct -}}
+	{{.VarName}} = {{.VarName}}I
+	{{else -}}
+	{{.VarName}}, ok := {{.VarName}}I.(*{{.ProtoPackage}}.{{.TypeName}})
 	if !ok {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Errorf("Can not convert %T to {{.TypeName}}", {{.VarName}}I), "{{.Kind}}"))
 		return
 	}
+	{{- end}}
 
-	diags = tfschema.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &plan)
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -197,8 +208,12 @@ func (r resourceTeleport{{.Name}}) Read(ctx context.Context, req tfsdk.ReadResou
 		return
 	}
 
-	{{.VarName}} := {{.VarName}}I.(*apitypes.{{.TypeName}})
-	diags = tfschema.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &state)
+	{{if .IsPlainStruct -}}
+	{{.VarName}} := {{.VarName}}I
+	{{else -}}
+	{{.VarName}} := {{.VarName}}I.(*{{.ProtoPackage}}.{{.TypeName}})
+	{{end -}}
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -225,8 +240,8 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 		return
 	}
 
-	{{.VarName}} := &apitypes.{{.TypeName}}{}
-	diags = tfschema.Copy{{.TypeName}}FromTerraform(ctx, plan, {{.VarName}})
+	{{.VarName}} := &{{.ProtoPackage}}.{{.TypeName}}{}
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}FromTerraform(ctx, plan, {{.VarName}})
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -234,11 +249,13 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 
 	name := {{.VarName}}.Metadata.Name
 
+	{{if not .IsPlainStruct -}}
 	err := {{.VarName}}.CheckAndSetDefaults()
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating {{.Name}}", err, "{{.Kind}}"))
 		return
 	}
+	{{- end}}
 
 	{{.VarName}}Before, err := r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}name{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
 	if err != nil {
@@ -252,20 +269,32 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 		return
 	}
 
-	var {{.VarName}}I apitypes.{{ if ne .IfaceName ""}}{{.IfaceName}}{{else}}{{.Name}}{{end}}
+	{{if not .IsPlainStruct -}}
+	var {{.VarName}}I {{.ProtoPackage}}.{{ if ne .IfaceName ""}}{{.IfaceName}}{{else}}{{.Name}}{{end}}
+	{{- end}}
 
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
 		tries = tries + 1
+		{{if .IsPlainStruct -}}
+		{{.VarName}}, err = r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}name{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
+		{{else -}}
 		{{.VarName}}I, err = r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}name{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
+		{{end -}}
 		if err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", err, "{{.Kind}}"))
 			return
 		}
+		{{if .IsPlainStruct -}}
+		if {{.VarName}}Before.GetMetadata().ID != {{.VarName}}.GetMetadata().ID || {{.HasStaticID}} {
+			break
+		}
+		{{else -}}
 		if {{.VarName}}Before.GetMetadata().ID != {{.VarName}}I.GetMetadata().ID || {{.HasStaticID}} {
 			break
 		}
+		{{- end}}
 
 		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
@@ -278,8 +307,10 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 		}
 	}
 
-	{{.VarName}} = {{.VarName}}I.(*apitypes.{{.TypeName}})
-	diags = tfschema.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &plan)
+	{{if not .IsPlainStruct -}}
+	{{.VarName}} = {{.VarName}}I.(*{{.ProtoPackage}}.{{.TypeName}})
+	{{end -}}
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -312,13 +343,15 @@ func (r resourceTeleport{{.Name}}) Delete(ctx context.Context, req tfsdk.DeleteR
 
 // ImportState imports {{.Name}} state
 func (r resourceTeleport{{.Name}}) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	{{.VarName}}I, err := r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}req.ID{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
+	{{.VarName}}{{if not .IsPlainStruct}}I{{end}}, err := r.p.Client.{{.GetMethod}}({{if not .GetWithoutContext}}ctx, {{end}}req.ID{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
 
-	{{.VarName}} := {{.VarName}}I.(*apitypes.{{.TypeName}})
+	{{if not .IsPlainStruct -}}
+	{{.VarName}} := {{.VarName}}I.(*{{.ProtoPackage}}.{{.TypeName}})
+	{{- end}}
 
 	var state types.Object
 
@@ -328,7 +361,7 @@ func (r resourceTeleport{{.Name}}) ImportState(ctx context.Context, req tfsdk.Im
 		return
 	}
 
-	diags = tfschema.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &state)
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
