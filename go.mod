@@ -10,7 +10,7 @@ require (
 	github.com/google/go-querystring v1.1.0
 	github.com/google/uuid v1.3.0
 	github.com/gravitational/kingpin v2.1.11-0.20220901134012-2a1956e29525+incompatible
-	github.com/gravitational/teleport v0.0.0-20230323122326-68aaa58860d1 // This points to teleport#23475. TODO: point to a branch/v12 or a tag.
+	github.com/gravitational/teleport v0.0.0-20230329091501-300bc0bb5ba8 // ref: heads/branch/v12, TODO: set to v12.1.2 when it's out
 	github.com/gravitational/teleport/api v0.0.0 // replaced
 	github.com/gravitational/trace v1.2.1
 	github.com/hashicorp/terraform-plugin-framework v0.10.0
@@ -22,7 +22,7 @@ require (
 	github.com/mailgun/holster/v3 v3.15.2
 	github.com/mailgun/mailgun-go/v4 v4.5.3
 	github.com/manifoldco/promptui v0.8.0
-	github.com/pelletier/go-toml v1.8.1
+	github.com/pelletier/go-toml v1.9.5
 	github.com/peterbourgon/diskv/v3 v3.0.1
 	github.com/sethvargo/go-limiter v0.7.2
 	github.com/sirupsen/logrus v1.9.0
@@ -114,7 +114,6 @@ require (
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
 	golang.org/x/crypto v0.6.0 // indirect
 	golang.org/x/exp v0.0.0-20230213192124-5e25df0256eb // indirect
-	golang.org/x/oauth2 v0.5.0 // indirect
 	golang.org/x/sys v0.6.0 // indirect
 	golang.org/x/term v0.6.0 // indirect
 	golang.org/x/text v0.8.0 // indirect
@@ -130,6 +129,6 @@ require (
 
 replace (
 	github.com/gogo/protobuf => github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf
-	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20230323122326-68aaa58860d1
+	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20230329091501-300bc0bb5ba8 // ref: heads/branch/v12, TODO: set to v12.1.2 when it's out
 	github.com/julienschmidt/httprouter => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 )

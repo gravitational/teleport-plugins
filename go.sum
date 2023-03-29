@@ -266,10 +266,10 @@ github.com/gravitational/kingpin v2.1.11-0.20220901134012-2a1956e29525+incompati
 github.com/gravitational/kingpin v2.1.11-0.20220901134012-2a1956e29525+incompatible/go.mod h1:LWxG30M3FcrjhOn3T4zz7JmBoQJ45MWZmOXgy9Ganoc=
 github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf h1:MQ4e8XcxvZTeuOmRl7yE519vcWc2h/lyvYzsvt41cdY=
 github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXPKa29o=
-github.com/gravitational/teleport v0.0.0-20230323122326-68aaa58860d1 h1:pNyb/ksZsdNGXhxll7s2zEImifbhPUDxMMU57AajuQc=
-github.com/gravitational/teleport v0.0.0-20230323122326-68aaa58860d1/go.mod h1:5cc0GsCQhGy8TZViTpDtDDBKxjMu66L8VKuihofhSeg=
-github.com/gravitational/teleport/api v0.0.0-20230323122326-68aaa58860d1 h1:7HQYbn7Lvm2qqFm9DLHr0tIIBrqb+Qn72am7Bj7St7s=
-github.com/gravitational/teleport/api v0.0.0-20230323122326-68aaa58860d1/go.mod h1:/KADd5kLWuyy1Bt3yBRJPZGLCPdDaKtE/H588A1Vgtg=
+github.com/gravitational/teleport v0.0.0-20230329091501-300bc0bb5ba8 h1:LtbI1PY+XSVVTpIJ4WIE+g6HH9blohzFRUb+vcgrMJY=
+github.com/gravitational/teleport v0.0.0-20230329091501-300bc0bb5ba8/go.mod h1:yZjUeFt5j7ZG3JoUpKuCFnOY6WPcsq+t2hlEuVgaxLA=
+github.com/gravitational/teleport/api v0.0.0-20230329091501-300bc0bb5ba8 h1:7MgFrtdVy2c7lN1013C6+wrbZDg/YBpKGiJB1z6PZBk=
+github.com/gravitational/teleport/api v0.0.0-20230329091501-300bc0bb5ba8/go.mod h1:T/zz2cKNBC22GvChCGtTJk7BbYdjK8CRlfwLaZrHOT0=
 github.com/gravitational/trace v1.2.1 h1:Iaf43aqbKV5H8bdiRs1qByjEHgAfADJ0lt0JwRyu+q8=
 github.com/gravitational/trace v1.2.1/go.mod h1:n0ijrq6psJY0sOI/NzLp+xdd8xl79jjwzVOFHDY6+kQ=
 github.com/grpc-ecosystem/go-grpc-middleware v1.0.0/go.mod h1:FiyG127CGDf3tlThmgyCl78X/SZQqEOJBCDaAfeWzPs=
@@ -477,8 +477,8 @@ github.com/nsf/jsondiff v0.0.0-20200515183724-f29ed568f4ce/go.mod h1:uFMI8w+ref4
 github.com/oklog/run v1.0.0 h1:Ru7dDtJNOyC66gQ5dQmaCa0qIsAUFY3sFpK1Xk8igrw=
 github.com/oklog/run v1.0.0/go.mod h1:dlhp/R75TPv97u0XWUtDeV/lRKWPKSdTuV0TZvrmrQA=
 github.com/pascaldekloe/goe v0.0.0-20180627143212-57f6aae5913c/go.mod h1:lzWF7FIEvWOWxwDKqyGYQf6ZUaNfKdP144TG7ZOy1lc=
-github.com/pelletier/go-toml v1.8.1 h1:1Nf83orprkJyknT6h7zbuEGUEjcyVlCxSUGTENmNCRM=
-github.com/pelletier/go-toml v1.8.1/go.mod h1:T2/BmBdy8dvIRq1a/8aqjN41wvWlN4lrapLU/GW4pbc=
+github.com/pelletier/go-toml v1.9.5 h1:4yBQzkHv+7BHq2PQUZF3Mx0IYxG7LsP222s7Agd3ve8=
+github.com/pelletier/go-toml v1.9.5/go.mod h1:u1nR/EPcESfeI/szUZKdtJ0xRNbUoANCkoOuaOx1Y+c=
 github.com/peterbourgon/diskv/v3 v3.0.1 h1:x06SQA46+PKIUftmEujdwSEpIx8kR+M9eLYsUxeYveU=
 github.com/peterbourgon/diskv/v3 v3.0.1/go.mod h1:kJ5Ny7vLdARGU3WUuy6uzO6T0nb/2gWcT1JiBvRmb5o=
 github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=
@@ -710,7 +710,6 @@ golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6/go.mod h1:gOpvHmFTYa4Iltr
 golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
 golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8/go.mod h1:KelEdhl1UZF7XfJ4dDtk6s++YSgaE7mD/BuKKDLBl4A=
 golang.org/x/oauth2 v0.5.0 h1:HuArIo48skDwlrvM3sEdHXElYslAMsf3KwRkkW4MC4s=
-golang.org/x/oauth2 v0.5.0/go.mod h1:9/XBHVqLaWO3/BRHs5jbpYCnOZVjj5V0ndyaAM7KB4I=
 golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20181108010431-42b317875d0f/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
 golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4/go.mod h1:RxMgew5VJxzue5/jJTE5uejpjVlOe/izrB70Jof72aM=
