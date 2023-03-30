@@ -169,15 +169,31 @@ The plugin will send events to the fluentd instance using keys generated on the 
       time_type string
       time_format %Y-%m-%dT%H:%M:%S
     </parse>
+
+    # If the number of events is high, fluentd will start failing the ingestion
+    # with the following error message: buffer space has too many data errors.
+    # The following configuration prevents data loss in case of a restart and
+    # overcomes the limitations of the default fluentd buffer configuration.
+    # This configuration is optional.
+    # See https://docs.fluentd.org/configuration/buffer-section for more details.
+    <buffer>
+      @type file
+      flush_thread_count 8
+      flush_interval 1s
+      chunk_limit_size 10M
+      queue_limit_length 16
+      retry_max_interval 30
+      retry_forever true
+    </buffer>
 </source>
 
 # Events sent to test.log will be dumped to STDOUT.
-<match test.log> 
+<match test.log>
   @type stdout
 </match>
 
 # Events sent to session.*.log will be dumped to STDOUT.
-<match session.*.log> 
+<match session.*.log>
   @type stdout
 </match>
 ```
@@ -185,7 +201,7 @@ The plugin will send events to the fluentd instance using keys generated on the 
 Start fluentd instance:
 
 ```sh
-docker run -p 8888:8888 -v $(pwd):/keys -v $(pwd)/fluent.conf:/fluentd/etc/fluent.conf fluent/fluentd:edge 
+docker run -p 8888:8888 -v $(pwd):/keys -v $(pwd)/fluent.conf:/fluentd/etc/fluent.conf fluent/fluentd:edge
 ```
 
 ## Configure the plugin
@@ -200,7 +216,7 @@ namespace = "default"
 
 [fluentd]
 cert = "client.crt"
-key = "client.key" 
+key = "client.key"
 ca = "ca.crt"
 url = "https://localhost:8888/test.log"
 session-url = "https://localhost:8888/session" # .<session id>.log will be appended to this URL
