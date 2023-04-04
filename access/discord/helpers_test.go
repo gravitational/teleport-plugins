@@ -14,7 +14,7 @@
 
 package main
 
-import "github.com/gravitational/teleport-plugins/access/common"
+import "github.com/gravitational/teleport/integrations/access/common"
 
 type MessageSlice []DiscordMsg
 type MessageSet map[common.MessageData]struct{}

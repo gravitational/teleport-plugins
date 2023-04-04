@@ -17,7 +17,7 @@ limitations under the License.
 package main
 
 import (
-	"github.com/gravitational/teleport-plugins/access/common"
+	"github.com/gravitational/teleport/integrations/access/common"
 )
 
 const (

@@ -28,9 +28,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/trace"
-
-	"github.com/gravitational/teleport-plugins/lib/logger"
 )
 
 type FakeFluentd struct {

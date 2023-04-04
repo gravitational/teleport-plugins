@@ -15,7 +15,6 @@ RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
 # Copy the go source
 COPY event-handler event-handler
-COPY lib lib
 
 # Build
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build make -C event-handler GITREF=${GITREF}

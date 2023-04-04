@@ -30,6 +30,7 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport/api/client"
+	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -37,8 +38,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/grpclog"
-
-	"github.com/gravitational/teleport-plugins/lib"
 )
 
 const (

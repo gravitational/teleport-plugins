@@ -130,11 +130,7 @@ test-tooling:
 	(cd tooling; go test -v -race ./...)
 
 .PHONY: test-unit
-test-unit: test-tooling test-lib test-access test-event-handler
-
-.PHONY: test-lib
-test-lib:
-	(cd lib; go test -v -race ./...)
+test-unit: test-tooling test-access test-event-handler
 
 .PHONY: test-access
 test-access:
@@ -223,6 +219,11 @@ update-helm-version-%:
 	$(SED) 's/version: .*/version: "$(VERSION)"/' charts/$(subst access-,access/,$*)/Chart.yaml
 	# Update snapshots
 	@helm unittest -u -3 charts/$(subst access-,access/,$*) || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
+
+TELEPORT_DEP_VERSION ?= v12.1.1
+.PHONY: update-teleport-dep-version
+update-teleport-dep-version:
+	./update_teleport_dep_version.sh $(TELEPORT_DEP_VERSION)
 
 .PHONY: update-tag
 update-tag:

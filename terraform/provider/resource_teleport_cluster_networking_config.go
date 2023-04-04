@@ -27,7 +27,7 @@ import (
 
 	apitypes "github.com/gravitational/teleport/api/types"
 	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema"
-	"github.com/gravitational/teleport-plugins/lib/backoff"
+	"github.com/gravitational/teleport/integrations/lib/backoff"
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
 )

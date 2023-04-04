@@ -28,7 +28,7 @@ import (
 
 	loginrulev1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/loginrule/v1"
 	schemav1 "github.com/gravitational/teleport-plugins/terraform/tfschema/loginrule/v1"
-	"github.com/gravitational/teleport-plugins/lib/backoff"
+	"github.com/gravitational/teleport/integrations/lib/backoff"
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
 )

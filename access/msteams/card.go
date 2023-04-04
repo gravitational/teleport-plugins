@@ -22,9 +22,8 @@ import (
 
 	cards "github.com/DanielTitkov/go-adaptive-cards"
 	"github.com/gravitational/teleport/api/types"
-
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/plugindata"
+	"github.com/gravitational/teleport/integrations/lib"
+	"github.com/gravitational/teleport/integrations/lib/plugindata"
 )
 
 // BuildCard builds the MS Teams message from a request data

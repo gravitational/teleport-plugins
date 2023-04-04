@@ -25,10 +25,9 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/teleport/integrations/lib"
+	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/trace"
-
-	"github.com/gravitational/teleport-plugins/lib"
-	"github.com/gravitational/teleport-plugins/lib/logger"
 )
 
 var reviewReplyTemplate = template.Must(template.New("review reply").Parse(

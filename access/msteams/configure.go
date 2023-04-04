@@ -24,9 +24,8 @@ import (
 	"path"
 
 	"github.com/google/uuid"
+	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/trace"
-
-	"github.com/gravitational/teleport-plugins/lib"
 )
 
 const (
