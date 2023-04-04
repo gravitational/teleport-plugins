@@ -26,6 +26,7 @@ steps:
   - name: Run tests
     image: golang:1.20.2
     environment:
+      RUNNER_TEMP: /tmp
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
       TELEPORT_GET_VERSION: v12.1.0
@@ -83,6 +84,7 @@ steps:
 
   - name: Run tests
     environment:
+      RUNNER_TEMP: /tmp
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
       TELEPORT_GET_VERSION: v12.1.0
@@ -1386,6 +1388,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: a977505de6716028f0f1f8569a9f93fdc46eaecd6c86549441f98a4a5d779cdd
+hmac: 7f2f502f7e2232b67189a6db58f998377a32ca83a91deff4744985970adf969b
 
 ...
