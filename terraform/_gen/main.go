@@ -73,6 +73,7 @@ type payload struct {
 	// IsPlainStruct states whether the resource type used by the API methods
 	// for this resource is a plain struct, rather than an interface.
 	IsPlainStruct bool
+	ReadOutput    bool
 }
 
 func (p *payload) CheckAndSetDefaults() error {
@@ -281,6 +282,24 @@ var (
 		SchemaPackagePath: "github.com/gravitational/teleport-plugins/terraform/tfschema/loginrule/v1",
 		IsPlainStruct:     true,
 	}
+
+	deviceTrust = payload{
+		Name:              "DeviceV1",
+		VarName:           "trustedDevice",
+		TypeName:          "DeviceV1",
+		GetMethod:         "GetDeviceResource",
+		CreateMethod:      "UpsertDeviceResource",
+		UpsertMethodArity: 2,
+
+		UpdateMethod:      "UpsertDeviceResource",
+		DeleteMethod:      "DeleteDeviceResource",
+		Kind:              "device",
+		ID:                "trustedDevice.Metadata.Name",
+		HasStaticID:       true,
+		SchemaPackagePath: "github.com/gravitational/teleport-plugins/terraform/tfschema/devicetrust/v1",
+		IsPlainStruct:     true,
+		ReadOutput:        true,
+	}
 )
 
 func main() {
@@ -311,6 +330,8 @@ func main() {
 	generate(user, pluralDataSource, "provider/data_source_teleport_user.go")
 	generate(loginRule, pluralResource, "provider/resource_teleport_login_rule.go")
 	generate(loginRule, pluralDataSource, "provider/data_source_teleport_login_rule.go")
+	generate(deviceTrust, "dt_resource.go.tpl", "provider/resource_teleport_device_trust.go")
+	generate(deviceTrust, pluralDataSource, "provider/data_source_teleport_device_trust.go")
 }
 
 func generate(p payload, tpl, outFile string) {
