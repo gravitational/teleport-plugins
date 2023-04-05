@@ -174,6 +174,7 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 
 	plan.Attrs["id"] = types.String{Value: {{.ID}}}
     {{if .ReadOutput -}} plan.Attrs["Metadata.name"] = types.String{Value: {{.ID}}}{{end}}
+   
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -192,7 +193,7 @@ func (r resourceTeleport{{.Name}}) Read(ctx context.Context, req tfsdk.ReadResou
 	}
 
 	var id types.String
-    p :=  {{if .ReadOutput -}}path.Root("id"){{else -}}path.Root("metadata").AtName("name"){{end}}
+    p :=  {{if .ReadOutput -}}path.Root("id"){{else -}}path.Root("metadata").AtName("name"){{end}} 
 	diags = req.State.GetAttribute(ctx, p, &id)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -350,8 +351,9 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 // Delete deletes Teleport {{.Name}}
 func (r resourceTeleport{{.Name}}) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
 	var id types.String
+   
 
-    p :=  {{if .ReadOutput -}}path.Root("id"){{else -}}path.Root("metadata").AtName("name"){{end}}
+    p :=  {{if .ReadOutput -}}path.Root("id"){{else -}}path.Root("metadata").AtName("name"){{end}} 
 	diags := req.State.GetAttribute(ctx, p , &id)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

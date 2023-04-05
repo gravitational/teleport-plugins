@@ -43,8 +43,8 @@ computed_fields:
 required_fields:
     - "DeviceV1.spec.os_type"
 
-# exclude_fields:
-#     - "DeviceV1.Header"
+exclude_fields:
+    - "DeviceV1.Header"
 
 
 plan_modifiers:

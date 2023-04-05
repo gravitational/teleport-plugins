@@ -139,6 +139,7 @@ func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateRe
 
 	plan.Attrs["id"] = types.String{Value: trustedDevice.Metadata.Name}
     plan.Attrs["Metadata.name"] = types.String{Value: trustedDevice.Metadata.Name}
+   
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -157,7 +158,7 @@ func (r resourceTeleportDeviceV1) Read(ctx context.Context, req tfsdk.ReadResour
 	}
 
 	var id types.String
-    p :=  path.Root("id")
+    p :=  path.Root("id") 
 	diags = req.State.GetAttribute(ctx, p, &id)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -282,8 +283,9 @@ func (r resourceTeleportDeviceV1) Update(ctx context.Context, req tfsdk.UpdateRe
 // Delete deletes Teleport DeviceV1
 func (r resourceTeleportDeviceV1) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
 	var id types.String
+   
 
-    p :=  path.Root("id")
+    p :=  path.Root("id") 
 	diags := req.State.GetAttribute(ctx, p , &id)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

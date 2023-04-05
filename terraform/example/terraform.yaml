@@ -25,6 +25,7 @@ spec:
         - app
         - db
         - login_rule
+        - device
         verbs: ['list','create','read','update','delete']
 version: v6
 ---
