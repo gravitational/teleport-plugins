@@ -199,6 +199,7 @@ update-version:
 	$(SED) '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
 	$(MAKE) update-helm-version
 	$(MAKE) terraform-gen-tfschema
+	$(MAKE) update-teleport-dep-version
 
 # Update all charts to VERSION
 .PHONY: update-helm-version
@@ -220,10 +221,9 @@ update-helm-version-%:
 	# Update snapshots
 	@helm unittest -u -3 charts/$(subst access-,access/,$*) || { echo "Please install unittest as described in .cloudbuild/helm-unittest.yaml" ; exit 1; }
 
-TELEPORT_DEP_VERSION ?= v12.1.1
 .PHONY: update-teleport-dep-version
 update-teleport-dep-version:
-	./update_teleport_dep_version.sh $(TELEPORT_DEP_VERSION)
+	./update_teleport_dep_version.sh v$(VERSION)
 
 .PHONY: update-tag
 update-tag:
