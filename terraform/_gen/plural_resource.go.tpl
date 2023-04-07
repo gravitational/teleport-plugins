@@ -117,13 +117,13 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 	}
 	{{- end}}
 
-	{{if eq .UpsertMethodArity 2}}_, {{end}}err = r.p.Client.{{.CreateMethod}}(ctx, {{.VarName}})
+	{{if .ReadReturnValue -}}dev, err := {{else -}}{{if eq .UpsertMethodArity 2 -}}_, err ={{else -}}err = {{- end}}{{- end}} r.p.Client.{{.CreateMethod}}(ctx, {{.VarName}})
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
 
-	id := {{.VarName}}.Metadata.Name
+	id := {{if .ReadReturnValue -}}dev.Metadata.Name{{else -}}{{.VarName}}.Metadata.Name{{end}}
 	{{if .IsPlainStruct -}}
 	// Not really an inferface, just using the same name for easier templating.
 	var {{.VarName}}I *{{.ProtoPackage}}.{{.Name}}
@@ -191,7 +191,7 @@ func (r resourceTeleport{{.Name}}) Read(ctx context.Context, req tfsdk.ReadResou
 	}
 
 	var id types.String
-	diags = req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &id)
+	diags = req.State.GetAttribute(ctx, {{if .ReadReturnValue -}}path.Root("id"){{else -}}path.Root("metadata").AtName("name"){{end}}, &id)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -247,7 +247,18 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 		return
 	}
 
+	{{if .ReadReturnValue -}}
+	var id types.String
+	diags = req.State.GetAttribute(ctx, path.Root("id"), &id)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	{{.VarName}}.Metadata.Name = id.Value
+	name := id.Value
+	{{else -}}
 	name := {{.VarName}}.Metadata.Name
+	{{- end}}
 
 	{{if not .IsPlainStruct -}}
 	err := {{.VarName}}.CheckAndSetDefaults()
@@ -286,7 +297,12 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", err, "{{.Kind}}"))
 			return
 		}
-		{{if .IsPlainStruct -}}
+		{{if .ReadReturnValue -}}
+		if {{.VarName}}Before.Metadata.Name != {{.VarName}}.Metadata.Name || {{.HasStaticID}} {
+			break
+		}
+        {{else -}}
+        {{if .IsPlainStruct -}}
 		if {{.VarName}}Before.GetMetadata().ID != {{.VarName}}.GetMetadata().ID || {{.HasStaticID}} {
 			break
 		}
@@ -295,6 +311,7 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 			break
 		}
 		{{- end}}
+        {{- end}}
 
 		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
@@ -326,7 +343,7 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 // Delete deletes Teleport {{.Name}}
 func (r resourceTeleport{{.Name}}) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
 	var id types.String
-	diags := req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &id)
+	diags := req.State.GetAttribute(ctx, {{if .ReadReturnValue -}}path.Root("id"){{else -}}path.Root("metadata").AtName("name"){{end}}, &id)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
