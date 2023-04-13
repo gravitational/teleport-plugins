@@ -24,7 +24,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
-func (s *TerraformSuite) TestTrustedDevice() {
+func (s *TerraformSuite) TestDeviceTrust() {
 	device1 := "teleport_trusted_device.TESTDEVICE1"
 	device2 := "teleport_trusted_device.TESTDEVICE2"
 

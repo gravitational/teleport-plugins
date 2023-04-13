@@ -92,13 +92,13 @@ func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateRe
 
 	
 
-	dev, err :=  r.p.Client.UpsertDeviceResource(ctx, trustedDevice)
+	resource, err :=  r.p.Client.UpsertDeviceResource(ctx, trustedDevice)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating DeviceV1", trace.Wrap(err), "device"))
 		return
 	}
 
-	id := dev.Metadata.Name
+	id := resource.Metadata.Name
 	// Not really an inferface, just using the same name for easier templating.
 	var trustedDeviceI *apitypes.DeviceV1
 	

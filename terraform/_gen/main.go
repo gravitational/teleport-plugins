@@ -73,9 +73,13 @@ type payload struct {
 	// IsPlainStruct states whether the resource type used by the API methods
 	// for this resource is a plain struct, rather than an interface.
 	IsPlainStruct bool
-	// ReadReturnValue indicates to read return value from Create/Update method.
-	// Reading return value is required in situations where data managed in Teleport needs to sync with Terraform.
+	// ReadReturnValue indicates to read return value from Teleport Create/Update method.
+	// Reading return value is required in situations where data returned by Teleport is required
+	// to further proceed with Create/Update method in the provider.
 	ReadReturnValue bool
+	// MetadataNameAsID indicates to assign Metadata Value to an injected id field and vice versa.
+	// Currently used by device trust provider to assign Metadata.Name to injected id field.
+	MetadataNameAsID bool
 }
 
 func (p *payload) CheckAndSetDefaults() error {
@@ -300,6 +304,7 @@ var (
 		SchemaPackagePath: "github.com/gravitational/teleport-plugins/terraform/tfschema/devicetrust/v1",
 		IsPlainStruct:     true,
 		ReadReturnValue:   true,
+		MetadataNameAsID:  true,
 	}
 )
 
