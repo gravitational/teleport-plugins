@@ -113,14 +113,23 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 		return
 	}
 
-	id := provisionToken.Metadata.Name
+    //Generate Id
+    b_id := make([]byte, 32)
+    _, b_err := rand.Read(b_id)
+    if b_err != nil {
+        resp.Diagnostics.AddError("Failed to generate id", b_err.Error())
+        return
+    }
+	id := hex.EncodeToString(b_id)
+
+	name := provisionToken.Metadata.Name
 	var provisionTokenI apitypes.ProvisionToken
 
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
 		tries = tries + 1
-		provisionTokenI, err = r.p.Client.GetToken(ctx, id)
+		provisionTokenI, err = r.p.Client.GetToken(ctx, name)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
 				resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))
@@ -153,7 +162,8 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 		return
 	}
 
-	plan.Attrs["id"] = types.String{Value: provisionToken.Metadata.Name}
+	//plan.Attrs["id"] = types.String{Value: provisionToken.Metadata.Name}
+	plan.Attrs["id"] = types.String{Value: id}
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -171,14 +181,15 @@ func (r resourceTeleportProvisionToken) Read(ctx context.Context, req tfsdk.Read
 		return
 	}
 
-	var id types.String
-	diags = req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &id)
+	//var id types.String
+	var name types.String
+	diags = req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	provisionTokenI, err := r.p.Client.GetToken(ctx, id.Value)
+	provisionTokenI, err := r.p.Client.GetToken(ctx, name.Value)
 	if trace.IsNotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -286,14 +297,15 @@ func (r resourceTeleportProvisionToken) Update(ctx context.Context, req tfsdk.Up
 
 // Delete deletes Teleport ProvisionToken
 func (r resourceTeleportProvisionToken) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
-	var id types.String
-	diags := req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &id)
+	//var id types.String
+	var name types.String
+	diags := req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	err := r.p.Client.DeleteToken(ctx, id.Value)
+	err := r.p.Client.DeleteToken(ctx, name.Value)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting ProvisionTokenV2", trace.Wrap(err), "token"))
 		return
@@ -326,11 +338,20 @@ func (r resourceTeleportProvisionToken) ImportState(ctx context.Context, req tfs
 		return
 	}
 
-	state.Attrs["id"] = types.String{Value: provisionToken.Metadata.Name}
+    //Generate Id
+    b_id := make([]byte, 32)
+    _, b_err := rand.Read(b_id)
+    if b_err != nil {
+        resp.Diagnostics.AddError("Failed to generate id", b_err.Error())
+        return
+    }
+	id := hex.EncodeToString(b_id)
 
+	state.Attrs["id"] = types.String{Value: id}
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 }
+

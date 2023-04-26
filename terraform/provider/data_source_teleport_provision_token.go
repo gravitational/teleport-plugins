@@ -52,14 +52,14 @@ func (r dataSourceTeleportProvisionTokenType) NewDataSource(_ context.Context, p
 
 // Read reads teleport ProvisionToken
 func (r dataSourceTeleportProvisionToken) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
-	var id types.String
-	diags := req.Config.GetAttribute(ctx, path.Root("metadata").AtName("name"), &id)
+	var name types.String
+	diags := req.Config.GetAttribute(ctx, path.Root("metadata").AtName("name"), &name)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	provisionTokenI, err := r.p.Client.GetToken(ctx, id.Value)
+	provisionTokenI, err := r.p.Client.GetToken(ctx, name.Value)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))
 		return
@@ -79,3 +79,4 @@ func (r dataSourceTeleportProvisionToken) Read(ctx context.Context, req tfsdk.Re
 		return
 	}
 }
+
