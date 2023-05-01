@@ -5,7 +5,7 @@ ARG UID
 ARG GID
 ARG ARCH
 
-RUN set -ex && apt-get -q -y update --fix-missing && apt-get -q -y install unzip dumb-init libc6
+RUN set -ex && apt-get -q -y update --fix-missing && apt-get -q -y --no-install-recommends install unzip dumb-init libc6
 
 RUN set -ex && \
     getent group  $GID || groupadd builder --gid=$GID -o; \
