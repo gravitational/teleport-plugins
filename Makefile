@@ -22,27 +22,27 @@ endif
 
 .PHONY: access-slack
 access-slack:
-	make -C access/slack
+	$(MAKE) -C access/slack
 
 .PHONY: access-discord
 access-discord:
-	make -C access/discord
+	$(MAKE) -C access/discord
 
 .PHONY: access-jira
 access-jira:
-	make -C access/jira
+	$(MAKE) -C access/jira
 
 .PHONY: access-mattermost
 access-mattermost:
-	make -C access/mattermost
+	$(MAKE) -C access/mattermost
 
 .PHONY: access-msteams
 access-msteams:
-	make -C access/msteams
+	$(MAKE) -C access/msteams
 
 .PHONY: access-pagerduty
 access-pagerduty:
-	make -C access/pagerduty
+	$(MAKE) -C access/pagerduty
 
 .PHONY: access-example
 access-example:
@@ -105,19 +105,19 @@ helm-package-charts:
 
 .PHONY: terraform
 terraform:
-	make -C terraform
+	$(MAKE) -C terraform
 
 .PHONY: terraform-gen-tfschema
 terraform-gen-tfschema:
-	make -C terraform gen-tfschema
+	$(MAKE) -C terraform gen-tfschema
 
 .PHONY: test-terraform
 test-terraform:
-	make -C terraform test
+	$(MAKE) -C terraform test
 
 .PHONY: event-handler
 event-handler:
-	make -C event-handler
+	$(MAKE) -C event-handler
 
 # Run all tests
 .PHONY: test
@@ -143,39 +143,39 @@ test-event-handler:
 # Individual releases
 .PHONY: release/access-slack
 release/access-slack:
-	make -C access/slack clean release
+	$(MAKE) -C access/slack clean release
 
 .PHONY: release/access-discord
 release/access-discord:
-	make -C access/discord clean release
+	$(MAKE) -C access/discord clean release
 
 .PHONY: release/access-jira
 release/access-jira:
-	make -C access/jira clean release
+	$(MAKE) -C access/jira clean release
 
 .PHONY: release/access-mattermost
 release/access-mattermost:
-	make -C access/mattermost clean release
+	$(MAKE) -C access/mattermost clean release
 
 .PHONY: release/access-msteams
 release/access-msteams:
-	make -C access/msteams clean release
+	$(MAKE) -C access/msteams clean release
 
 .PHONY: release/access-pagerduty
 release/access-pagerduty:
-	make -C access/pagerduty clean release
+	$(MAKE) -C access/pagerduty clean release
 
 .PHONY: release/access-email
 release/access-email:
-	make -C access/email clean release
+	$(MAKE) -C access/email clean release
 
 .PHONY: release/terraform
 release/terraform:
-	make -C terraform clean release
+	$(MAKE) -C terraform clean release
 
 .PHONY: release/event-handler
 release/event-handler:
-	make -C event-handler clean release
+	$(MAKE) -C event-handler clean release
 
 # Run all releases
 .PHONY: releases
