@@ -128,8 +128,8 @@ github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f/go.mod h1:E3G3o1h8I7cfc
 github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ33E=
 github.com/crewjam/httperr v0.2.0 h1:b2BfXR8U3AlIHwNeFFvZ+BV1LFvKLlzMjzaTnZMybNo=
 github.com/crewjam/httperr v0.2.0/go.mod h1:Jlz+Sg/XqBQhyMjdDiC+GNNRzZTD7x39Gu3pglZ5oH4=
-github.com/crewjam/saml v0.4.13 h1:TYHggH/hwP7eArqiXSJUvtOPNzQDyQ7vwmwEqlFWhMc=
-github.com/crewjam/saml v0.4.13/go.mod h1:igEejV+fihTIlHXYP8zOec3V5A8y3lws5bQBFsTm4gA=
+github.com/crewjam/saml v0.4.14-0.20230420111643-34930b26d33b h1:qRt8TqIfZKAHJ3rZWzJeAIm7uQPEqA2OWmR/QMPozRs=
+github.com/crewjam/saml v0.4.14-0.20230420111643-34930b26d33b/go.mod h1:xEnRcdf/8o5XVm9+PQ9wUsP/6SbsFzHlLb9FBSHPIfI=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -266,10 +266,10 @@ github.com/gravitational/kingpin v2.1.11-0.20220901134012-2a1956e29525+incompati
 github.com/gravitational/kingpin v2.1.11-0.20220901134012-2a1956e29525+incompatible/go.mod h1:LWxG30M3FcrjhOn3T4zz7JmBoQJ45MWZmOXgy9Ganoc=
 github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf h1:MQ4e8XcxvZTeuOmRl7yE519vcWc2h/lyvYzsvt41cdY=
 github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXPKa29o=
-github.com/gravitational/teleport v0.0.0-20230419225651-0f5a2d86b6a2 h1:vAfPdNaRCxn3S87ZqqS2K7Vr0gYNnWZfvlLTjZEV67Y=
-github.com/gravitational/teleport v0.0.0-20230419225651-0f5a2d86b6a2/go.mod h1:fy0kHIFV0nNhmWcP/YogVj87dWIOjXQXgoHlp55pAIU=
-github.com/gravitational/teleport/api v0.0.0-20230419225651-0f5a2d86b6a2 h1:Zz/TaPZ2Ex3oJImqUeU9/orkNKEgjDEcBwqylesOVPI=
-github.com/gravitational/teleport/api v0.0.0-20230419225651-0f5a2d86b6a2/go.mod h1:hfGa4Bfz/bpB4ERk2d7XoQW/b326GCX04ZYXKC6vwN0=
+github.com/gravitational/teleport v0.0.0-20230502231850-a5d6659d17d5 h1:ZOtPmIc5mIgUDkSM850qnXkRv4KSzf7XnpSE29VViQc=
+github.com/gravitational/teleport v0.0.0-20230502231850-a5d6659d17d5/go.mod h1:gAOfDzaqMqVSMnAaQWNY3QhAmkM0+pz+Cb8/eX8Yww0=
+github.com/gravitational/teleport/api v0.0.0-20230502231850-a5d6659d17d5 h1:Ms0T4pSkjQ5eIYEE1nx2ggGCHDNTT+J013Sv/Odp8u8=
+github.com/gravitational/teleport/api v0.0.0-20230502231850-a5d6659d17d5/go.mod h1:hfGa4Bfz/bpB4ERk2d7XoQW/b326GCX04ZYXKC6vwN0=
 github.com/gravitational/trace v1.2.1 h1:Iaf43aqbKV5H8bdiRs1qByjEHgAfADJ0lt0JwRyu+q8=
 github.com/gravitational/trace v1.2.1/go.mod h1:n0ijrq6psJY0sOI/NzLp+xdd8xl79jjwzVOFHDY6+kQ=
 github.com/grpc-ecosystem/go-grpc-middleware v1.0.0/go.mod h1:FiyG127CGDf3tlThmgyCl78X/SZQqEOJBCDaAfeWzPs=
@@ -510,7 +510,6 @@ github.com/rogpeppe/go-internal v1.9.0 h1:73kH8U+JUqXU8lRuOHeVHaa/SZPifC7BkcraZV
 github.com/rogpeppe/go-internal v1.9.0/go.mod h1:WtVeX8xhTBvf0smdhujwtBcq4Qrzq/fJaraNFVN+nFs=
 github.com/russellhaering/gosaml2 v0.9.1 h1:H/whrl8NuSoxyW46Ww5lKPskm+5K+qYLw9afqJ/Zef0=
 github.com/russellhaering/gosaml2 v0.9.1/go.mod h1:ja+qgbayxm+0mxBRLMSUuX3COqy+sb0RRhIGun/W2kc=
-github.com/russellhaering/goxmldsig v1.2.0/go.mod h1:gM4MDENBQf7M+V824SGfyIUVFWydB7n0KkEubVJl+Tw=
 github.com/russellhaering/goxmldsig v1.3.0 h1:DllIWUgMy0cRUMfGiASiYEa35nsieyD3cigIwLonTPM=
 github.com/russellhaering/goxmldsig v1.3.0/go.mod h1:gM4MDENBQf7M+V824SGfyIUVFWydB7n0KkEubVJl+Tw=
 github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124 h1:HiiqjwsUvob18HsTIQgf4YH7Emph9aH37IwmaCykShQ=
