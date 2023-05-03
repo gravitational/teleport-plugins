@@ -16,11 +16,27 @@ package main
 
 import (
 	"bytes"
+	"context"
+	_ "embed"
 	"fmt"
+	"html"
+	"io"
 	"log"
 	"os"
 	"path"
+	"sort"
+	"strings"
 	"text/template"
+
+	"github.com/hashicorp/terraform-plugin-framework/attr"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/olekukonko/tablewriter"
+	"golang.org/x/exp/slices"
+
+	"github.com/gravitational/teleport-plugins/terraform/provider"
+	"github.com/gravitational/teleport-plugins/terraform/tfschema"
+	loginruleSchema "github.com/gravitational/teleport-plugins/terraform/tfschema/loginrule/v1"
 )
 
 // payload represents template payload
@@ -211,18 +227,18 @@ var (
 	}
 
 	provisionToken = payload{
-		Name:                   "ProvisionToken",
-		TypeName:               "ProvisionTokenV2",
-		VarName:                "provisionToken",
-		GetMethod:              "GetToken",
-		CreateMethod:           "UpsertToken",
-		UpdateMethod:           "UpsertToken",
-		DeleteMethod:           "DeleteToken",
-		ID:                     "strconv.FormatInt(provisionToken.Metadata.ID, 10)", // must be a string
-		RandomMetadataName:     true,
-		Kind:                   "token",
-		HasStaticID:            false,
-		ExtraImports:           []string{"strconv"},
+		Name:                  "ProvisionToken",
+		TypeName:              "ProvisionTokenV2",
+		VarName:               "provisionToken",
+		GetMethod:             "GetToken",
+		CreateMethod:          "UpsertToken",
+		UpdateMethod:          "UpsertToken",
+		DeleteMethod:          "DeleteToken",
+		ID:                    "strconv.FormatInt(provisionToken.Metadata.ID, 10)", // must be a string
+		RandomMetadataName:    true,
+		Kind:                  "token",
+		HasStaticID:           false,
+		ExtraImports:          []string{"strconv"},
 		TerraformResourceType: "teleport_provision_token",
 	}
 
@@ -307,6 +323,14 @@ var (
 )
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "docs" {
+		dumpReferenceDocs(os.Stdout)
+	} else {
+		genTFSchema()
+	}
+}
+
+func genTFSchema() {
 	generateResource(app, pluralResource)
 	generateDataSource(app, pluralDataSource)
 	generateResource(authPreference, singularResource)
@@ -349,7 +373,7 @@ func generate(p payload, tpl, outFile string) {
 		log.Fatal(err)
 	}
 
-	t, err := template.ParseFiles(path.Join("_gen", tpl))
+	t, err := template.ParseFiles(path.Join("gen", tpl))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -364,4 +388,156 @@ func generate(p payload, tpl, outFile string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+}
+
+// Create Docs Markdown
+var (
+	dumps = map[string]func(context.Context) (tfsdk.Schema, diag.Diagnostics){
+		"app":                       tfschema.GenSchemaAppV3,
+		"auth_preference":           tfschema.GenSchemaAuthPreferenceV2,
+		"bot":                       provider.GenSchemaBot,
+		"cluster_networking_config": tfschema.GenSchemaClusterNetworkingConfigV2,
+		"database":                  tfschema.GenSchemaDatabaseV3,
+		"github_connector":          tfschema.GenSchemaGithubConnectorV3,
+		"login_rule":                loginruleSchema.GenSchemaLoginRule,
+		"oidc_connector":            tfschema.GenSchemaOIDCConnectorV3,
+		"provision_token":           tfschema.GenSchemaProvisionTokenV2,
+		"role":                      tfschema.GenSchemaRoleV6,
+		"saml_connector":            tfschema.GenSchemaSAMLConnectorV2,
+		"session_recording_config":  tfschema.GenSchemaSessionRecordingConfigV2,
+		"trusted_cluster":           tfschema.GenSchemaTrustedClusterV2,
+		"user":                      tfschema.GenSchemaUserV2,
+	}
+
+	// hiddenFields are fields that are not outputted to the reference doc.
+	// It supports non-top level fields by adding its prefix. Eg: metadata.namespace
+	hiddenFields = []string{
+		"id",   // read only field
+		"kind", // each resource already defines its kind so this is redundant
+	}
+)
+
+var (
+	referenceDocsTitle = `---
+title: Terraform provider resources
+description: Terraform provider resources reference
+---`
+
+	//go:embed providerconfig.md
+	referenceDocsProviderConfiguration string
+)
+
+func dumpReferenceDocs(fp io.Writer) {
+	sortedNames := make([]string, 0, len(dumps))
+	for k := range dumps {
+		sortedNames = append(sortedNames, k)
+	}
+	sort.Strings(sortedNames)
+
+	fmt.Fprintln(fp, referenceDocsTitle)
+	fmt.Fprintln(fp)
+	fmt.Fprintln(fp, "Supported resources:")
+
+	fmt.Fprintln(fp)
+	for _, name := range sortedNames {
+		fmt.Fprintf(fp, "- [teleport_%s](#teleport_%s)\n", name, name)
+	}
+	fmt.Fprintln(fp)
+	fmt.Fprintln(fp, referenceDocsProviderConfiguration)
+	fmt.Fprintln(fp)
+
+	for _, name := range sortedNames {
+		fn := dumps[name]
+		schema, diags := fn(context.Background())
+		if diags.HasError() {
+			log.Fatalf("%v", diags)
+		}
+		resourceName := "teleport_" + name
+		fmt.Fprintf(fp, "## %s\n\n", resourceName)
+		dumpAttributes(fp, 0, resourceName, "", schema.Attributes)
+
+		fmt.Fprintln(fp, "Example:")
+		fmt.Fprintln(fp)
+		exampleFileName := fmt.Sprintf("example/%s.tf.example", name)
+		bs, err := os.ReadFile(exampleFileName)
+		if err != nil {
+			log.Fatalf("error loading %q file: %v", exampleFileName, err)
+		}
+		fmt.Fprintln(fp, "```")
+		fmt.Fprintln(fp, string(bs))
+		fmt.Fprintln(fp, "```")
+		fmt.Fprintln(fp)
+	}
+}
+
+func dumpAttributes(fp io.Writer, level int, resourceName string, prefix string, attrs map[string]tfsdk.Attribute) {
+	sortedAttrKeys := make([]string, 0, len(attrs))
+	for k := range attrs {
+		sortedAttrKeys = append(sortedAttrKeys, k)
+	}
+	sort.Strings(sortedAttrKeys)
+
+	table := tablewriter.NewWriter(fp)
+	table.SetHeader([]string{"Name", "Type", "Required", "Description"})
+	table.SetAutoWrapText(false)
+	table.SetBorders(tablewriter.Border{Left: true, Top: false, Right: true, Bottom: false})
+	table.SetCenterSeparator("|")
+	table.SetAutoFormatHeaders(false)
+
+	for _, name := range sortedAttrKeys {
+		attr := attrs[name]
+
+		if slices.Contains(hiddenFields, prefix+name) {
+			continue
+		}
+		table.Append([]string{name, typ(attr.Type), requiredString(attr.Required), html.EscapeString(attr.Description)})
+	}
+	table.Render()
+	fmt.Fprintln(fp)
+
+	for _, name := range sortedAttrKeys {
+		attr := attrs[name]
+		if attr.Attributes != nil {
+			fmt.Printf("%s %s\n", strings.Repeat("#", 3+level), prefix+name)
+			fmt.Fprintln(fp)
+			fmt.Fprintln(fp, attr.Description)
+			fmt.Fprintln(fp)
+
+			dumpAttributes(fp, level+1, resourceName, prefix+name+".", attr.Attributes.GetAttributes())
+		}
+	}
+}
+
+func typ(typ attr.Type) string {
+	if typ == nil {
+		return "object"
+	}
+
+	switch typ.String() {
+	case "types.StringType":
+		return "string"
+	case "TimeType(2006-01-02T15:04:05Z07:00)":
+		return "RFC3339 time"
+	case "DurationType":
+		return "duration"
+	case "types.BoolType":
+		return "bool"
+	case "types.MapType[types.StringType]":
+		return "map of strings"
+	case "types.ListType[types.StringType]":
+		return "array of strings"
+	case "types.MapType[types.ListType[types.StringType]]":
+		return "map of string arrays"
+	case "types.Int64Type":
+		return "number"
+	default:
+		return typ.String()
+	}
+}
+
+func requiredString(r bool) string {
+	if r {
+		return "*"
+	}
+	return " "
 }
