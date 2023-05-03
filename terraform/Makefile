@@ -69,7 +69,7 @@ endif
 release: build
 	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
 
-TERRAFORM_EXISTS := $(shell terraform -version | grep 'Terraform v1.3')
+TERRAFORM_EXISTS := $(shell terraform -version 2>/dev/null | grep 'Terraform v1.3')
 CURRENT_ULIMIT := $(shell ulimit -n)
 
 .PHONY: test
