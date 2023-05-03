@@ -531,7 +531,9 @@ steps:
       - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
       - mkdir -p build/
       - go version
-      - make release/terraform
+      - make ARCH=amd64 release/terraform
+        make ARCH=arm64 release/terraform
+        make ARCH=universal release/terraform
       - find terraform/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
       - for FILE in *.tar.gz; do shasum -a 256 $FILE > $FILE.sha256; done
