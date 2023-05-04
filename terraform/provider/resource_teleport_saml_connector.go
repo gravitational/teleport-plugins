@@ -80,7 +80,7 @@ func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.Cre
 		if err == nil {
 			n := samlConnector.Metadata.Name
 			existErr := fmt.Sprintf("SAMLConnector exists in Teleport. Either remove it (tctl rm saml/%v)"+
-				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_saml_connector.%v %v)", n, n, n)
 
 			resp.Diagnostics.Append(diagFromErr("SAMLConnector exists in Teleport", trace.Errorf(existErr)))
 			return

@@ -80,7 +80,7 @@ func (r resourceTeleportOIDCConnector) Create(ctx context.Context, req tfsdk.Cre
 		if err == nil {
 			n := oidcConnector.Metadata.Name
 			existErr := fmt.Sprintf("OIDCConnector exists in Teleport. Either remove it (tctl rm oidc/%v)"+
-				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_oidc_connector.%v %v)", n, n, n)
 
 			resp.Diagnostics.Append(diagFromErr("OIDCConnector exists in Teleport", trace.Errorf(existErr)))
 			return
