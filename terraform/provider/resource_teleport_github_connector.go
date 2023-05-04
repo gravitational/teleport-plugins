@@ -80,7 +80,7 @@ func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.C
 		if err == nil {
 			n := githubConnector.Metadata.Name
 			existErr := fmt.Sprintf("GithubConnector exists in Teleport. Either remove it (tctl rm github/%v)"+
-				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_github_connector.%v %v)", n, n, n)
 
 			resp.Diagnostics.Append(diagFromErr("GithubConnector exists in Teleport", trace.Errorf(existErr)))
 			return

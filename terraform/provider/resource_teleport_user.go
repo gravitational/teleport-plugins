@@ -80,7 +80,7 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 		if err == nil {
 			n := user.Metadata.Name
 			existErr := fmt.Sprintf("User exists in Teleport. Either remove it (tctl rm user/%v)"+
-				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_user.%v %v)", n, n, n)
 
 			resp.Diagnostics.Append(diagFromErr("User exists in Teleport", trace.Errorf(existErr)))
 			return

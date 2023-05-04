@@ -80,7 +80,7 @@ func (r resourceTeleportDatabase) Create(ctx context.Context, req tfsdk.CreateRe
 		if err == nil {
 			n := database.Metadata.Name
 			existErr := fmt.Sprintf("Database exists in Teleport. Either remove it (tctl rm db/%v)"+
-				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_database.%v %v)", n, n, n)
 
 			resp.Diagnostics.Append(diagFromErr("Database exists in Teleport", trace.Errorf(existErr)))
 			return

@@ -80,7 +80,7 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 		if err == nil {
 			n := role.Metadata.Name
 			existErr := fmt.Sprintf("Role exists in Teleport. Either remove it (tctl rm role/%v)"+
-				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_role.%v %v)", n, n, n)
 
 			resp.Diagnostics.Append(diagFromErr("Role exists in Teleport", trace.Errorf(existErr)))
 			return

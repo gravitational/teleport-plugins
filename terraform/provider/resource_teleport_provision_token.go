@@ -92,7 +92,7 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 		if err == nil {
 			n := provisionToken.Metadata.Name
 			existErr := fmt.Sprintf("ProvisionToken exists in Teleport. Either remove it (tctl rm token/%v)"+
-				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_provision_token.%v %v)", n, n, n)
 
 			resp.Diagnostics.Append(diagFromErr("ProvisionToken exists in Teleport", trace.Errorf(existErr)))
 			return

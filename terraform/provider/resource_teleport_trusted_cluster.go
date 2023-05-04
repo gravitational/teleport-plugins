@@ -80,7 +80,7 @@ func (r resourceTeleportTrustedCluster) Create(ctx context.Context, req tfsdk.Cr
 		if err == nil {
 			n := trustedCluster.Metadata.Name
 			existErr := fmt.Sprintf("TrustedCluster exists in Teleport. Either remove it (tctl rm trusted_cluster/%v)"+
-				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_trusted_cluster.%v %v)", n, n, n)
 
 			resp.Diagnostics.Append(diagFromErr("TrustedCluster exists in Teleport", trace.Errorf(existErr)))
 			return

@@ -80,7 +80,7 @@ func (r resourceTeleportLoginRule) Create(ctx context.Context, req tfsdk.CreateR
 		if err == nil {
 			n := loginRule.Metadata.Name
 			existErr := fmt.Sprintf("LoginRule exists in Teleport. Either remove it (tctl rm login_rule/%v)"+
-				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_login_rule.%v %v)", n, n, n)
 
 			resp.Diagnostics.Append(diagFromErr("LoginRule exists in Teleport", trace.Errorf(existErr)))
 			return
