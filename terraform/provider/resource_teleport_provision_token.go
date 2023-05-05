@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"crypto/rand"
 	"encoding/hex"
+	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -153,7 +154,7 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 		return
 	}
 
-	plan.Attrs["id"] = types.String{Value: provisionToken.Metadata.Name}
+	plan.Attrs["id"] = types.String{Value: strconv.FormatInt(provisionToken.Metadata.ID, 10)}
 
 	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)

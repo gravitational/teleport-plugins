@@ -24,6 +24,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 {{- end}}
+{{- range $i, $a := .ExtraImports}}
+	"{{$a}}"
+{{- end}}
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"

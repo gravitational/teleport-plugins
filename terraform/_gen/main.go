@@ -73,6 +73,8 @@ type payload struct {
 	// IsPlainStruct states whether the resource type used by the API methods
 	// for this resource is a plain struct, rather than an interface.
 	IsPlainStruct bool
+	// ExtraImports contains a list of imports that are being used.
+	ExtraImports []string
 }
 
 func (p *payload) CheckAndSetDefaults() error {
@@ -202,10 +204,11 @@ var (
 		CreateMethod:       "UpsertToken",
 		UpdateMethod:       "UpsertToken",
 		DeleteMethod:       "DeleteToken",
-		ID:                 "provisionToken.Metadata.Name",
+		ID:                 "strconv.FormatInt(provisionToken.Metadata.ID, 10)", // must be a string
 		RandomMetadataName: true,
 		Kind:               "token",
 		HasStaticID:        false,
+		ExtraImports:       []string{"strconv"},
 	}
 
 	role = payload{
@@ -298,7 +301,6 @@ func main() {
 	generate(oidcConnector, pluralDataSource, "provider/data_source_teleport_oidc_connector.go")
 	generate(samlConnector, pluralResource, "provider/resource_teleport_saml_connector.go")
 	generate(samlConnector, pluralDataSource, "provider/data_source_teleport_saml_connector.go")
-	// Provision Token code is an exception because it requires custom id generation TODO: generalize
 	generate(provisionToken, pluralResource, "provider/resource_teleport_provision_token.go")
 	generate(provisionToken, pluralDataSource, "provider/data_source_teleport_provision_token.go")
 	generate(role, pluralResource, "provider/resource_teleport_role.go")
