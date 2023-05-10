@@ -87,9 +87,9 @@ func NewPagerdutyClient(conf PagerdutyConfig, clusterName, webProxyAddr string) 
 	})
 	// APIEndpoint parameter is set only in tests
 	if conf.APIEndpoint != "" {
-		client.SetHostURL(conf.APIEndpoint)
+		client.SetBaseURL(conf.APIEndpoint)
 	} else {
-		client.SetHostURL("https://api.pagerduty.com")
+		client.SetBaseURL("https://api.pagerduty.com")
 	}
 	client.SetHeader("Accept", "application/vnd.pagerduty+json;version=2")
 	client.SetHeader("Content-Type", "application/json")

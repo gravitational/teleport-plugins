@@ -141,6 +141,11 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
+						"assume_role_arn": {
+							Description: "AssumeRoleARN is an optional AWS role ARN to assume when accessing a database. Set this field and ExternalID to enable access across AWS accounts.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"elasticache": {
 							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 								"endpoint_type": {
@@ -1160,11 +1165,18 @@ func GenSchemaAuthPreferenceV2(ctx context.Context) (github_com_hashicorp_terraf
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
 				"device_trust": {
-					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"mode": {
-						Description: "Mode of verification for trusted devices.  The following modes are supported:  - \"off\": disables both device authentication and authorization. - \"optional\": allows both device authentication and authorization, but doesn't enforce the presence of device extensions for sensitive endpoints. - \"required\": enforces the presence of device extensions for sensitive endpoints.  Mode is always \"off\" for OSS. Defaults to \"optional\" for Enterprise.",
-						Optional:    true,
-						Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-					}}),
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+						"auto_enroll": {
+							Description: "Enable device auto-enroll. Auto-enroll lets any user issue a device enrollment token for a known device that is not already enrolled. `tsh` takes advantage of auto-enroll to automatically enroll devices on user login, when appropriate. The effective cluster Mode still applies: AutoEnroll=true is meaningless if Mode=\"off\".",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.BoolType,
+						},
+						"mode": {
+							Description: "Mode of verification for trusted devices.  The following modes are supported:  - \"off\": disables both device authentication and authorization. - \"optional\": allows both device authentication and authorization, but doesn't enforce the presence of device extensions for sensitive endpoints. - \"required\": enforces the presence of device extensions for sensitive endpoints.  Mode is always \"off\" for OSS. Defaults to \"optional\" for Enterprise.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
+					}),
 					Description: "DeviceTrust holds settings related to trusted device verification. Requires Teleport Enterprise.",
 					Optional:    true,
 				},
@@ -1190,15 +1202,10 @@ func GenSchemaAuthPreferenceV2(ctx context.Context) (github_com_hashicorp_terraf
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
-				"require_mfa_type": {
+				"require_session_mfa": {
 					Description: "RequireMFAType is the type of MFA requirement enforced for this cluster.",
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
-				},
-				"require_session_mfa": {
-					Description: "RequireSessionMFA causes all sessions in this cluster to require MFA checks.  DELETE IN 13.0.0 in favor of RequireMFAType",
-					Optional:    true,
-					Type:        github_com_hashicorp_terraform_plugin_framework_types.BoolType,
 				},
 				"second_factor": {
 					Computed:      true,
@@ -2102,15 +2109,10 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
-						"require_mfa_type": {
+						"require_session_mfa": {
 							Description: "RequireMFAType is the type of MFA requirement enforced for this user.",
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
-						},
-						"require_session_mfa": {
-							Description: "RequireSessionMFA specifies whether a user is required to do an MFA check for every session.  DELETE IN 13.0.0 in favor of RequireMFAType",
-							Optional:    true,
-							Type:        github_com_hashicorp_terraform_plugin_framework_types.BoolType,
 						},
 						"ssh_file_copy": GenSchemaBoolOption(ctx),
 					}),
@@ -3772,6 +3774,23 @@ func CopyDatabaseV3FromTerraform(_ context.Context, tf github_com_hashicorp_terr
 													t = string(v.Value)
 												}
 												obj.ExternalID = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["assume_role_arn"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.AWS.AssumeRoleARN"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.AWS.AssumeRoleARN", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.AssumeRoleARN = t
 											}
 										}
 									}
@@ -5438,6 +5457,28 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 											v.Value = string(obj.ExternalID)
 											v.Unknown = false
 											tf.Attrs["external_id"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["assume_role_arn"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.AWS.AssumeRoleARN"})
+										} else {
+											v, ok := tf.Attrs["assume_role_arn"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"DatabaseV3.Spec.AWS.AssumeRoleARN", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.AssumeRoleARN", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.AssumeRoleARN) == ""
+											}
+											v.Value = string(obj.AssumeRoleARN)
+											v.Unknown = false
+											tf.Attrs["assume_role_arn"] = v
 										}
 									}
 								}
@@ -11618,23 +11659,6 @@ func CopyAuthPreferenceV2FromTerraform(_ context.Context, tf github_com_hashicor
 						}
 					}
 					{
-						a, ok := tf.Attrs["require_session_mfa"]
-						if !ok {
-							diags.Append(attrReadMissingDiag{"AuthPreferenceV2.Spec.RequireSessionMFA"})
-						} else {
-							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Bool)
-							if !ok {
-								diags.Append(attrReadConversionFailureDiag{"AuthPreferenceV2.Spec.RequireSessionMFA", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
-							} else {
-								var t bool
-								if !v.Null && !v.Unknown {
-									t = bool(v.Value)
-								}
-								obj.RequireSessionMFA = t
-							}
-						}
-					}
-					{
 						a, ok := tf.Attrs["disconnect_expired_cert"]
 						if !ok {
 							diags.Append(attrReadMissingDiag{"AuthPreferenceV2.Spec.DisconnectExpiredCert"})
@@ -11779,7 +11803,7 @@ func CopyAuthPreferenceV2FromTerraform(_ context.Context, tf github_com_hashicor
 						CopyFromBoolOption(diags, a, &obj.AllowPasswordless)
 					}
 					{
-						a, ok := tf.Attrs["require_mfa_type"]
+						a, ok := tf.Attrs["require_session_mfa"]
 						if !ok {
 							diags.Append(attrReadMissingDiag{"AuthPreferenceV2.Spec.RequireMFAType"})
 						} else {
@@ -11823,6 +11847,23 @@ func CopyAuthPreferenceV2FromTerraform(_ context.Context, tf github_com_hashicor
 													t = string(v.Value)
 												}
 												obj.Mode = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["auto_enroll"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"AuthPreferenceV2.Spec.DeviceTrust.AutoEnroll"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Bool)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"AuthPreferenceV2.Spec.DeviceTrust.AutoEnroll", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
+											} else {
+												var t bool
+												if !v.Null && !v.Unknown {
+													t = bool(v.Value)
+												}
+												obj.AutoEnroll = t
 											}
 										}
 									}
@@ -12363,28 +12404,6 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 						}
 					}
 					{
-						t, ok := tf.AttrTypes["require_session_mfa"]
-						if !ok {
-							diags.Append(attrWriteMissingDiag{"AuthPreferenceV2.Spec.RequireSessionMFA"})
-						} else {
-							v, ok := tf.Attrs["require_session_mfa"].(github_com_hashicorp_terraform_plugin_framework_types.Bool)
-							if !ok {
-								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
-								if err != nil {
-									diags.Append(attrWriteGeneralError{"AuthPreferenceV2.Spec.RequireSessionMFA", err})
-								}
-								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.Bool)
-								if !ok {
-									diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.RequireSessionMFA", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
-								}
-								v.Null = bool(obj.RequireSessionMFA) == false
-							}
-							v.Value = bool(obj.RequireSessionMFA)
-							v.Unknown = false
-							tf.Attrs["require_session_mfa"] = v
-						}
-					}
-					{
 						t, ok := tf.AttrTypes["disconnect_expired_cert"]
 						if !ok {
 							diags.Append(attrWriteMissingDiag{"AuthPreferenceV2.Spec.DisconnectExpiredCert"})
@@ -12616,11 +12635,11 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 						}
 					}
 					{
-						t, ok := tf.AttrTypes["require_mfa_type"]
+						t, ok := tf.AttrTypes["require_session_mfa"]
 						if !ok {
 							diags.Append(attrWriteMissingDiag{"AuthPreferenceV2.Spec.RequireMFAType"})
 						} else {
-							v, ok := tf.Attrs["require_mfa_type"].(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+							v, ok := tf.Attrs["require_session_mfa"].(github_com_hashicorp_terraform_plugin_framework_types.Int64)
 							if !ok {
 								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
 								if err != nil {
@@ -12634,7 +12653,7 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 							}
 							v.Value = int64(obj.RequireMFAType)
 							v.Unknown = false
-							tf.Attrs["require_mfa_type"] = v
+							tf.Attrs["require_session_mfa"] = v
 						}
 					}
 					{
@@ -12683,6 +12702,28 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 											v.Value = string(obj.Mode)
 											v.Unknown = false
 											tf.Attrs["mode"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["auto_enroll"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"AuthPreferenceV2.Spec.DeviceTrust.AutoEnroll"})
+										} else {
+											v, ok := tf.Attrs["auto_enroll"].(github_com_hashicorp_terraform_plugin_framework_types.Bool)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"AuthPreferenceV2.Spec.DeviceTrust.AutoEnroll", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.Bool)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.DeviceTrust.AutoEnroll", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
+												}
+												v.Null = bool(obj.AutoEnroll) == false
+											}
+											v.Value = bool(obj.AutoEnroll)
+											v.Unknown = false
+											tf.Attrs["auto_enroll"] = v
 										}
 									}
 								}
@@ -13180,23 +13221,6 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 										}
 									}
 									{
-										a, ok := tf.Attrs["require_session_mfa"]
-										if !ok {
-											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Options.RequireSessionMFA"})
-										} else {
-											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Bool)
-											if !ok {
-												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Options.RequireSessionMFA", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
-											} else {
-												var t bool
-												if !v.Null && !v.Unknown {
-													t = bool(v.Value)
-												}
-												obj.RequireSessionMFA = t
-											}
-										}
-									}
-									{
 										a, ok := tf.Attrs["lock"]
 										if !ok {
 											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Options.Lock"})
@@ -13432,7 +13456,7 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 										CopyFromBoolOption(diags, a, &obj.SSHFileCopy)
 									}
 									{
-										a, ok := tf.Attrs["require_mfa_type"]
+										a, ok := tf.Attrs["require_session_mfa"]
 										if !ok {
 											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Options.RequireMFAType"})
 										} else {
@@ -16980,28 +17004,6 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 										}
 									}
 									{
-										t, ok := tf.AttrTypes["require_session_mfa"]
-										if !ok {
-											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Options.RequireSessionMFA"})
-										} else {
-											v, ok := tf.Attrs["require_session_mfa"].(github_com_hashicorp_terraform_plugin_framework_types.Bool)
-											if !ok {
-												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
-												if err != nil {
-													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Options.RequireSessionMFA", err})
-												}
-												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.Bool)
-												if !ok {
-													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Options.RequireSessionMFA", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
-												}
-												v.Null = bool(obj.RequireSessionMFA) == false
-											}
-											v.Value = bool(obj.RequireSessionMFA)
-											v.Unknown = false
-											tf.Attrs["require_session_mfa"] = v
-										}
-									}
-									{
 										t, ok := tf.AttrTypes["lock"]
 										if !ok {
 											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Options.Lock"})
@@ -17335,11 +17337,11 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 										}
 									}
 									{
-										t, ok := tf.AttrTypes["require_mfa_type"]
+										t, ok := tf.AttrTypes["require_session_mfa"]
 										if !ok {
 											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Options.RequireMFAType"})
 										} else {
-											v, ok := tf.Attrs["require_mfa_type"].(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+											v, ok := tf.Attrs["require_session_mfa"].(github_com_hashicorp_terraform_plugin_framework_types.Int64)
 											if !ok {
 												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
 												if err != nil {
@@ -17353,7 +17355,7 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 											}
 											v.Value = int64(obj.RequireMFAType)
 											v.Unknown = false
-											tf.Attrs["require_mfa_type"] = v
+											tf.Attrs["require_session_mfa"] = v
 										}
 									}
 									{
