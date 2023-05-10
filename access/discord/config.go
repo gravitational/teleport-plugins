@@ -116,9 +116,9 @@ func (c *DiscordConfig) NewBot(clusterName, webProxyAddr string) (common.Messagi
 
 	// APIURL parameter is set only in tests
 	if endpoint := c.Discord.APIURL; endpoint != "" {
-		client.SetHostURL(endpoint)
+		client.SetBaseURL(endpoint)
 	} else {
-		client.SetHostURL(discordAPIUrl)
+		client.SetBaseURL(discordAPIUrl)
 		client.OnAfterResponse(onAfterResponseDiscord)
 	}
 
