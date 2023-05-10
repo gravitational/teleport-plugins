@@ -191,23 +191,23 @@ Metadata is resource metadata
 
 Spec is an AuthPreference specification
 
-|          Name           |  Type  | Required |                                                            Description                                                             |
-|-------------------------|--------|----------|------------------------------------------------------------------------------------------------------------------------------------|
-| allow_headless          | bool   |          |                                                                                                                                    |
-| allow_local_auth        | bool   |          |                                                                                                                                    |
-| allow_passwordless      | bool   |          |                                                                                                                                    |
-| connector_name          | string |          | ConnectorName is the name of the OIDC or SAML connector. If this value is not set the first connector in the backend will be used. |
-| device_trust            | object |          | DeviceTrust holds settings related to trusted device verification. Requires Teleport Enterprise.                                   |
-| disconnect_expired_cert | bool   |          |                                                                                                                                    |
-| idp                     | object |          | IDP is a set of options related to accessing IdPs within Teleport. Requires Teleport Enterprise.                                   |
-| locking_mode            | string |          | LockingMode is the cluster-wide locking mode default.                                                                              |
-| message_of_the_day      | string |          |                                                                                                                                    |
-| require_mfa_type        | number |          | RequireMFAType is the type of MFA requirement enforced for this cluster.                                                           |
-| require_session_mfa     | bool   |          | RequireSessionMFA causes all sessions in this cluster to require MFA checks.  DELETE IN 13.0.0 in favor of RequireMFAType          |
-| second_factor           | string |          | SecondFactor is the type of second factor.                                                                                         |
-| type                    | string |          | Type is the type of authentication.                                                                                                |
-| u2f                     | object |          | U2F are the settings for the U2F device.                                                                                           |
-| webauthn                | object |          | Webauthn are the settings for server-side Web Authentication support.                                                              |
+|          Name           |  Type  | Required |                                                              Description                                                               |
+|-------------------------|--------|----------|----------------------------------------------------------------------------------------------------------------------------------------|
+| allow_headless          | bool   |          |                                                                                                                                        |
+| allow_local_auth        | bool   |          |                                                                                                                                        |
+| allow_passwordless      | bool   |          |                                                                                                                                        |
+| connector_name          | string |          | ConnectorName is the name of the OIDC or SAML connector. If this value is not set the first connector in the backend will be used.     |
+| device_trust            | object |          | DeviceTrust holds settings related to trusted device verification. Requires Teleport Enterprise.                                       |
+| disconnect_expired_cert | bool   |          |                                                                                                                                        |
+| idp                     | object |          | IDP is a set of options related to accessing IdPs within Teleport. Requires Teleport Enterprise.                                       |
+| locking_mode            | string |          | LockingMode is the cluster-wide locking mode default.                                                                                  |
+| message_of_the_day      | string |          |                                                                                                                                        |
+| require_mfa_type        | number |          | RequireMFAType is the type of MFA requirement enforced for this cluster.                                                               |
+| require_session_mfa     | bool   |          | RequireMFAType is the type of MFA requirement enforced for this cluster: 0:Off, 1:Session, 2:SessionAndHardwareKey, 3:HardwareKeyTouch |
+| second_factor           | string |          | SecondFactor is the type of second factor.                                                                                             |
+| type                    | string |          | Type is the type of authentication.                                                                                                    |
+| u2f                     | object |          | U2F are the settings for the U2F device.                                                                                               |
+| webauthn                | object |          | Webauthn are the settings for server-side Web Authentication support.                                                                  |
 
 #### spec.device_trust
 
@@ -1385,7 +1385,7 @@ Options is for OpenSSH options like agent forwarding.
 | request_access             | string           |          | RequestAccess defines the access request strategy (optional|note|always) where optional is the default.                                                                    |
 | request_prompt             | string           |          | RequestPrompt is an optional message which tells users what they aught to                                                                                                  |
 | require_mfa_type           | number           |          | RequireMFAType is the type of MFA requirement enforced for this user.                                                                                                      |
-| require_session_mfa        | bool             |          | RequireSessionMFA specifies whether a user is required to do an MFA check for every session.  DELETE IN 13.0.0 in favor of RequireMFAType                                  |
+| require_session_mfa        | bool             |          | RequireMFAType is the type of MFA requirement enforced for this role: 0:Off, 1:Session, 2:SessionAndHardwareKey, 3:HardwareKeyTouch                                        |
 | ssh_file_copy              | bool             |          |                                                                                                                                                                            |
 
 ##### spec.options.cert_extensions

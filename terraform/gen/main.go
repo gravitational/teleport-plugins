@@ -415,6 +415,13 @@ var (
 		"id",   // read only field
 		"kind", // each resource already defines its kind so this is redundant
 	}
+
+	// fieldComments is used to define specific descriptions for the given fields.
+	// Typical usage is for enums which we don't have comments yet.
+	fieldComments = map[string]string{
+		"teleport_auth_preference.spec.require_session_mfa": "RequireMFAType is the type of MFA requirement enforced for this cluster: 0:Off, 1:Session, 2:SessionAndHardwareKey, 3:HardwareKeyTouch",
+		"teleport_role.spec.options.require_session_mfa":    "RequireMFAType is the type of MFA requirement enforced for this role: 0:Off, 1:Session, 2:SessionAndHardwareKey, 3:HardwareKeyTouch",
+	}
 )
 
 var (
@@ -485,12 +492,18 @@ func dumpAttributes(fp io.Writer, level int, resourceName string, prefix string,
 	table.SetAutoFormatHeaders(false)
 
 	for _, name := range sortedAttrKeys {
+		fullFieldPath := resourceName + "." + prefix + name
 		attr := attrs[name]
 
 		if slices.Contains(hiddenFields, prefix+name) {
 			continue
 		}
-		table.Append([]string{name, typ(attr.Type), requiredString(attr.Required), html.EscapeString(attr.Description)})
+
+		description := attr.Description
+		if d, found := fieldComments[fullFieldPath]; found {
+			description = d
+		}
+		table.Append([]string{name, typ(attr.Type), requiredString(attr.Required), html.EscapeString(description)})
 	}
 	table.Render()
 	fmt.Fprintln(fp)
