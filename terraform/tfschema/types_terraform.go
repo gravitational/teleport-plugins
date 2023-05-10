@@ -1356,11 +1356,17 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
+						"desktop_groups": {
+							Description: "DesktopGroups is a list of groups for created desktop users to be added to",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+						},
 						"gcp_service_accounts": {
 							Description: "GCPServiceAccounts is a list of GCP service accounts this role is allowed to assume.",
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
+						"group_labels": GenSchemaLabels(ctx),
 						"host_groups": {
 							Description: "HostGroups is a list of groups for created users to be added to",
 							Optional:    true,
@@ -1667,11 +1673,17 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
+						"desktop_groups": {
+							Description: "DesktopGroups is a list of groups for created desktop users to be added to",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+						},
 						"gcp_service_accounts": {
 							Description: "GCPServiceAccounts is a list of GCP service accounts this role is allowed to assume.",
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
+						"group_labels": GenSchemaLabels(ctx),
 						"host_groups": {
 							Description: "HostGroups is a list of groups for created users to be added to",
 							Optional:    true,
@@ -1990,6 +2002,7 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        DurationType{},
 						},
+						"create_desktop_user":       GenSchemaBoolOption(ctx),
 						"create_host_user":          GenSchemaBoolOption(ctx),
 						"desktop_clipboard":         GenSchemaBoolOption(ctx),
 						"desktop_directory_sharing": GenSchemaBoolOption(ctx),
@@ -13495,6 +13508,13 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 											}
 										}
 									}
+									{
+										a, ok := tf.Attrs["create_desktop_user"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Options.CreateDesktopUser"})
+										}
+										CopyFromBoolOption(diags, a, &obj.CreateDesktopUser)
+									}
 								}
 							}
 						}
@@ -14898,6 +14918,40 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.DatabaseServiceLabels"})
 										}
 										CopyFromLabels(diags, a, &obj.DatabaseServiceLabels)
+									}
+									{
+										a, ok := tf.Attrs["group_labels"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.GroupLabels"})
+										}
+										CopyFromLabels(diags, a, &obj.GroupLabels)
+									}
+									{
+										a, ok := tf.Attrs["desktop_groups"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.DesktopGroups"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.DesktopGroups", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+											} else {
+												obj.DesktopGroups = make([]string, len(v.Elems))
+												if !v.Null && !v.Unknown {
+													for k, a := range v.Elems {
+														v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.DesktopGroups", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+														} else {
+															var t string
+															if !v.Null && !v.Unknown {
+																t = string(v.Value)
+															}
+															obj.DesktopGroups[k] = t
+														}
+													}
+												}
+											}
+										}
 									}
 								}
 							}
@@ -16303,6 +16357,40 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 										}
 										CopyFromLabels(diags, a, &obj.DatabaseServiceLabels)
 									}
+									{
+										a, ok := tf.Attrs["group_labels"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Deny.GroupLabels"})
+										}
+										CopyFromLabels(diags, a, &obj.GroupLabels)
+									}
+									{
+										a, ok := tf.Attrs["desktop_groups"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Deny.DesktopGroups"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.DesktopGroups", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+											} else {
+												obj.DesktopGroups = make([]string, len(v.Elems))
+												if !v.Null && !v.Unknown {
+													for k, a := range v.Elems {
+														v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.DesktopGroups", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+														} else {
+															var t string
+															if !v.Null && !v.Unknown {
+																t = string(v.Value)
+															}
+															obj.DesktopGroups[k] = t
+														}
+													}
+												}
+											}
+										}
+									}
 								}
 							}
 						}
@@ -17361,6 +17449,15 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												v.Unknown = false
 												tf.Attrs["idp"] = v
 											}
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["create_desktop_user"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Options.CreateDesktopUser"})
+										} else {
+											v := CopyToBoolOption(diags, obj.CreateDesktopUser, t, tf.Attrs["create_desktop_user"])
+											tf.Attrs["create_desktop_user"] = v
 										}
 									}
 								}
@@ -19859,6 +19956,68 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 											tf.Attrs["db_service_labels"] = v
 										}
 									}
+									{
+										t, ok := tf.AttrTypes["group_labels"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Allow.GroupLabels"})
+										} else {
+											v := CopyToLabels(diags, obj.GroupLabels, t, tf.Attrs["group_labels"])
+											tf.Attrs["group_labels"] = v
+										}
+									}
+									{
+										a, ok := tf.AttrTypes["desktop_groups"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Allow.DesktopGroups"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.DesktopGroups", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+											} else {
+												c, ok := tf.Attrs["desktop_groups"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+												if !ok {
+													c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+														ElemType: o.ElemType,
+														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DesktopGroups)),
+														Null:     true,
+													}
+												} else {
+													if c.Elems == nil {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DesktopGroups))
+													}
+												}
+												if obj.DesktopGroups != nil {
+													t := o.ElemType
+													if len(obj.DesktopGroups) != len(c.Elems) {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DesktopGroups))
+													}
+													for k, a := range obj.DesktopGroups {
+														v, ok := tf.Attrs["desktop_groups"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+															if err != nil {
+																diags.Append(attrWriteGeneralError{"RoleV6.Spec.Allow.DesktopGroups", err})
+															}
+															v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.DesktopGroups", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															}
+															v.Null = string(a) == ""
+														}
+														v.Value = string(a)
+														v.Unknown = false
+														c.Elems[k] = v
+													}
+													if len(obj.DesktopGroups) > 0 {
+														c.Null = false
+													}
+												}
+												c.Unknown = false
+												tf.Attrs["desktop_groups"] = c
+											}
+										}
+									}
 								}
 								v.Unknown = false
 								tf.Attrs["allow"] = v
@@ -22353,6 +22512,68 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 										} else {
 											v := CopyToLabels(diags, obj.DatabaseServiceLabels, t, tf.Attrs["db_service_labels"])
 											tf.Attrs["db_service_labels"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["group_labels"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Deny.GroupLabels"})
+										} else {
+											v := CopyToLabels(diags, obj.GroupLabels, t, tf.Attrs["group_labels"])
+											tf.Attrs["group_labels"] = v
+										}
+									}
+									{
+										a, ok := tf.AttrTypes["desktop_groups"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Deny.DesktopGroups"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.DesktopGroups", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+											} else {
+												c, ok := tf.Attrs["desktop_groups"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+												if !ok {
+													c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+														ElemType: o.ElemType,
+														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DesktopGroups)),
+														Null:     true,
+													}
+												} else {
+													if c.Elems == nil {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DesktopGroups))
+													}
+												}
+												if obj.DesktopGroups != nil {
+													t := o.ElemType
+													if len(obj.DesktopGroups) != len(c.Elems) {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DesktopGroups))
+													}
+													for k, a := range obj.DesktopGroups {
+														v, ok := tf.Attrs["desktop_groups"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+															if err != nil {
+																diags.Append(attrWriteGeneralError{"RoleV6.Spec.Deny.DesktopGroups", err})
+															}
+															v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.DesktopGroups", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															}
+															v.Null = string(a) == ""
+														}
+														v.Value = string(a)
+														v.Unknown = false
+														c.Elems[k] = v
+													}
+													if len(obj.DesktopGroups) > 0 {
+														c.Null = false
+													}
+												}
+												c.Unknown = false
+												tf.Attrs["desktop_groups"] = c
+											}
 										}
 									}
 								}
