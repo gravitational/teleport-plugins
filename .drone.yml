@@ -532,8 +532,8 @@ steps:
       - mkdir -p build/
       - go version
       - make ARCH=amd64 release/terraform
-        make ARCH=arm64 release/terraform
-        make ARCH=universal release/terraform
+      - make ARCH=arm64 release/terraform
+      - make ARCH=universal release/terraform
       - find terraform/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
       - for FILE in *.tar.gz; do shasum -a 256 $FILE > $FILE.sha256; done
@@ -1390,6 +1390,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: f83018ef820b39ac0153e4bf7926e1aa9da9edf43c4cfc8ee8d1d6d83d4fe1a6
+hmac: 0d27d8e1d0ddebaface59e18a4462ce82179f695f71403e62f6787058d68a53f
 
 ...
