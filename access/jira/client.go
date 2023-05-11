@@ -94,7 +94,7 @@ func NewJiraClient(conf JiraConfig, clusterName, webProxyAddr string) (Jira, err
 			MaxIdleConnsPerHost: jiraMaxConns,
 		},
 	})
-	client.SetHostURL(conf.URL)
+	client.SetBaseURL(conf.URL)
 	client.SetBasicAuth(conf.Username, conf.APIToken)
 	client.SetHeader("Content-Type", "application/json")
 	client.OnBeforeRequest(func(_ *resty.Client, req *resty.Request) error {
