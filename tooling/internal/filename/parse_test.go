@@ -33,6 +33,26 @@ func TestParseFilename(t *testing.T) {
 		require.Equal(t, "amd64", info.Arch)
 	})
 
+	t.Run("WithDarwinAmd64", func(t *testing.T) {
+		info, err := Parse("terraform-provider-teleport-v13.0.0-darwin-amd64-bin.tar.gz")
+		require.NoError(t, err)
+
+		require.Equal(t, "terraform-provider", info.Type)
+		require.Equal(t, *semver.New("13.0.0"), info.Version)
+		require.Equal(t, "darwin", info.OS)
+		require.Equal(t, "amd64", info.Arch)
+	})
+
+	t.Run("WithDarwinArm64", func(t *testing.T) {
+		info, err := Parse("terraform-provider-teleport-v13.0.0-darwin-arm64-bin.tar.gz")
+		require.NoError(t, err)
+
+		require.Equal(t, "terraform-provider", info.Type)
+		require.Equal(t, *semver.New("13.0.0"), info.Version)
+		require.Equal(t, "darwin", info.OS)
+		require.Equal(t, "arm64", info.Arch)
+	})
+
 	t.Run("WithoutLeadingPath", func(t *testing.T) {
 		info, err := Parse("terraform-provider-teleport-v1.2.3-linux-arm-bin.tar.gz")
 		require.NoError(t, err)
