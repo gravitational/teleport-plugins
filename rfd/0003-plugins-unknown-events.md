@@ -28,7 +28,7 @@ upgraded at the same time.
 
 When the event handler is not up to date with the Auth server, it will not be
 able to handle new events that are not known to the event handler. This can
-cause the event handler to crash (previous behavior) or ignores the unknown events.
+cause the event handler to crash (previous behavior) or ignore the unknown events.
 
 This is problematic because the event handler is a critical component that
 should be able to handle all types of events. If the event handler is not able
