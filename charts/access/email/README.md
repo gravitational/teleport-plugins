@@ -68,7 +68,7 @@ kubectl create secret generic teleport-plugin-email-identity --from-file=auth_id
 ### Installing the plugin
 
 ```
-helm repo add teleport https://charts.teleport.sh/
+helm repo add teleport https://charts.releases.teleport.dev/
 ```
 
 ```shell
