@@ -1,5 +1,7 @@
 ## Provider configuration
 
+Ensure your Terraform version is v(=terraform.version=) or higher.
+
 Add the following configuration section to your `terraform` configuration block:
 
 ```

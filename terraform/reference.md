@@ -22,6 +22,8 @@ Supported resources:
 
 ## Provider configuration
 
+Ensure your Terraform version is v(=terraform.version=) or higher.
+
 Add the following configuration section to your `terraform` configuration block:
 
 ```
@@ -202,8 +204,7 @@ Spec is an AuthPreference specification
 | idp                     | object |          | IDP is a set of options related to accessing IdPs within Teleport. Requires Teleport Enterprise.                                       |
 | locking_mode            | string |          | LockingMode is the cluster-wide locking mode default.                                                                                  |
 | message_of_the_day      | string |          |                                                                                                                                        |
-| require_mfa_type        | number |          | RequireMFAType is the type of MFA requirement enforced for this cluster.                                                               |
-| require_session_mfa     | bool   |          | RequireMFAType is the type of MFA requirement enforced for this cluster: 0:Off, 1:Session, 2:SessionAndHardwareKey, 3:HardwareKeyTouch |
+| require_session_mfa     | number |          | RequireMFAType is the type of MFA requirement enforced for this cluster: 0:Off, 1:Session, 2:SessionAndHardwareKey, 3:HardwareKeyTouch |
 | second_factor           | string |          | SecondFactor is the type of second factor.                                                                                             |
 | type                    | string |          | Type is the type of authentication.                                                                                                    |
 | u2f                     | object |          | U2F are the settings for the U2F device.                                                                                               |
@@ -213,9 +214,10 @@ Spec is an AuthPreference specification
 
 DeviceTrust holds settings related to trusted device verification. Requires Teleport Enterprise.
 
-| Name |  Type  | Required |                                                                                                                                                                                                                                             Description                                                                                                                                                                                                                                              |
-|------|--------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| mode | string |          | Mode of verification for trusted devices.  The following modes are supported:  - &#34;off&#34;: disables both device authentication and authorization. - &#34;optional&#34;: allows both device authentication and authorization, but doesn&#39;t enforce the presence of device extensions for sensitive endpoints. - &#34;required&#34;: enforces the presence of device extensions for sensitive endpoints.  Mode is always &#34;off&#34; for OSS. Defaults to &#34;optional&#34; for Enterprise. |
+|    Name     |  Type  | Required |                                                                                                                                                                                                                                             Description                                                                                                                                                                                                                                              |
+|-------------|--------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| auto_enroll | bool   |          | Enable device auto-enroll. Auto-enroll lets any user issue a device enrollment token for a known device that is not already enrolled. `tsh` takes advantage of auto-enroll to automatically enroll devices on user login, when appropriate. The effective cluster Mode still applies: AutoEnroll=true is meaningless if Mode=&#34;off&#34;.                                                                                                                                                          |
+| mode        | string |          | Mode of verification for trusted devices.  The following modes are supported:  - &#34;off&#34;: disables both device authentication and authorization. - &#34;optional&#34;: allows both device authentication and authorization, but doesn&#39;t enforce the presence of device extensions for sensitive endpoints. - &#34;required&#34;: enforces the presence of device extensions for sensitive endpoints.  Mode is always &#34;off&#34; for OSS. Defaults to &#34;optional&#34; for Enterprise. |
 
 #### spec.idp
 
@@ -464,18 +466,19 @@ AD is the Active Directory configuration for the database.
 
 AWS contains AWS specific settings for RDS/Aurora/Redshift databases.
 
-|        Name         |  Type  | Required |                                          Description                                           |
-|---------------------|--------|----------|------------------------------------------------------------------------------------------------|
-| account_id          | string |          | AccountID is the AWS account ID this database belongs to.                                      |
-| elasticache         | object |          | ElastiCache contains AWS ElastiCache Redis specific metadata.                                  |
-| external_id         | string |          | ExternalID is an optional AWS external ID used to enable assuming an AWS role across accounts. |
-| memorydb            | object |          | MemoryDB contains AWS MemoryDB specific metadata.                                              |
-| rds                 | object |          | RDS contains RDS specific metadata.                                                            |
-| rdsproxy            | object |          | RDSProxy contains AWS Proxy specific metadata.                                                 |
-| redshift            | object |          | Redshift contains Redshift specific metadata.                                                  |
-| redshift_serverless | object |          | RedshiftServerless contains AWS Redshift Serverless specific metadata.                         |
-| region              | string |          | Region is a AWS cloud region.                                                                  |
-| secret_store        | object |          | SecretStore contains secret store configurations.                                              |
+|        Name         |  Type  | Required |                                                                    Description                                                                     |
+|---------------------|--------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------|
+| account_id          | string |          | AccountID is the AWS account ID this database belongs to.                                                                                          |
+| assume_role_arn     | string |          | AssumeRoleARN is an optional AWS role ARN to assume when accessing a database. Set this field and ExternalID to enable access across AWS accounts. |
+| elasticache         | object |          | ElastiCache contains AWS ElastiCache Redis specific metadata.                                                                                      |
+| external_id         | string |          | ExternalID is an optional AWS external ID used to enable assuming an AWS role across accounts.                                                     |
+| memorydb            | object |          | MemoryDB contains AWS MemoryDB specific metadata.                                                                                                  |
+| rds                 | object |          | RDS contains RDS specific metadata.                                                                                                                |
+| rdsproxy            | object |          | RDSProxy contains AWS Proxy specific metadata.                                                                                                     |
+| redshift            | object |          | Redshift contains Redshift specific metadata.                                                                                                      |
+| redshift_serverless | object |          | RedshiftServerless contains AWS Redshift Serverless specific metadata.                                                                             |
+| region              | string |          | Region is a AWS cloud region.                                                                                                                      |
+| secret_store        | object |          | SecretStore contains secret store configurations.                                                                                                  |
 
 ##### spec.aws.elasticache
 
@@ -1384,8 +1387,7 @@ Options is for OpenSSH options like agent forwarding.
 | record_session             | object           |          | RecordDesktopSession indicates whether desktop access sessions should be recorded. It defaults to true unless explicitly set to false.                                     |
 | request_access             | string           |          | RequestAccess defines the access request strategy (optional|note|always) where optional is the default.                                                                    |
 | request_prompt             | string           |          | RequestPrompt is an optional message which tells users what they aught to                                                                                                  |
-| require_mfa_type           | number           |          | RequireMFAType is the type of MFA requirement enforced for this user.                                                                                                      |
-| require_session_mfa        | bool             |          | RequireMFAType is the type of MFA requirement enforced for this role: 0:Off, 1:Session, 2:SessionAndHardwareKey, 3:HardwareKeyTouch                                        |
+| require_session_mfa        | number           |          | RequireMFAType is the type of MFA requirement enforced for this role: 0:Off, 1:Session, 2:SessionAndHardwareKey, 3:HardwareKeyTouch                                        |
 | ssh_file_copy              | bool             |          |                                                                                                                                                                            |
 
 ##### spec.options.cert_extensions
