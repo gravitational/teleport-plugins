@@ -87,8 +87,8 @@ mailgun:
   domain: sandboxbd81caddef744a69be0e5b544ab0c3bd.mailgun.org
   privateKey: supersecretprivatekey
 
-role_to_recipients:
-  '*': access-requests@example.com
+roleToRecipients:
+  '*': ["access-requests@example.com"]
 ```
 
 Alternatively, you can pass arguments from the command line (useful for one-liners or scripts):
