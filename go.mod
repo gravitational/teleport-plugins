@@ -29,14 +29,13 @@ require (
 	github.com/sirupsen/logrus v1.9.0
 	github.com/stretchr/testify v1.8.2
 	github.com/tidwall/gjson v1.14.4
+	golang.org/x/exp v0.0.0-20230213192124-5e25df0256eb
 	golang.org/x/net v0.9.0
 	golang.org/x/sync v0.1.0
 	google.golang.org/grpc v1.54.0
 	google.golang.org/protobuf v1.30.0
 	gopkg.in/mail.v2 v2.3.1
 )
-
-require golang.org/x/exp v0.0.0-20230213192124-5e25df0256eb
 
 require (
 	github.com/agext/levenshtein v1.2.3 // indirect

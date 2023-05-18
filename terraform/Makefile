@@ -76,7 +76,7 @@ endif
 	mv ./tfschema/github.com/gravitational/teleport/api/types/types_terraform.go ./tfschema/
 	mv ./tfschema/github.com/gravitational/teleport/api/gen/proto/go/teleport/loginrule/v1/loginrule_terraform.go ./tfschema/loginrule/v1/
 	rm -r ./tfschema/github.com/
-	@go run ./gen/main.go docs > reference.md
+	@go run ./gen/main.go docs
 
 .PHONY: release
 ifeq ($(OS)-$(ARCH),darwin-universal)

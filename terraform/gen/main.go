@@ -121,6 +121,8 @@ const (
 	singularDataSource      = "singular_data_source.go.tpl"
 	outFileResourceFormat   = "provider/resource_%s.go"
 	outFileDataSourceFormat = "provider/data_source_%s.go"
+
+	referenceDocsTemplate = "referencedocs.go.tpl"
 )
 
 var (
@@ -324,7 +326,7 @@ var (
 
 func main() {
 	if len(os.Args) == 2 && os.Args[1] == "docs" {
-		dumpReferenceDocs(os.Stdout)
+		genReferenceDocs()
 	} else {
 		genTFSchema()
 	}
@@ -392,7 +394,7 @@ func generate(p payload, tpl, outFile string) {
 
 // Create Docs Markdown
 var (
-	dumps = map[string]func(context.Context) (tfsdk.Schema, diag.Diagnostics){
+	mapResourceSchema = map[string]func(context.Context) (tfsdk.Schema, diag.Diagnostics){
 		"app":                       tfschema.GenSchemaAppV3,
 		"auth_preference":           tfschema.GenSchemaAuthPreferenceV2,
 		"bot":                       provider.GenSchemaBot,
@@ -424,57 +426,63 @@ var (
 	}
 )
 
-var (
-	referenceDocsTitle = `---
-title: Terraform provider resources
-description: Terraform provider resources reference
----`
-
-	//go:embed providerconfig.md
-	referenceDocsProviderConfiguration string
-)
-
-func dumpReferenceDocs(fp io.Writer) {
-	sortedNames := make([]string, 0, len(dumps))
-	for k := range dumps {
+func genReferenceDocs() {
+	sortedNames := make([]string, 0, len(mapResourceSchema))
+	for k := range mapResourceSchema {
 		sortedNames = append(sortedNames, k)
 	}
 	sort.Strings(sortedNames)
 
-	fmt.Fprintln(fp, referenceDocsTitle)
-	fmt.Fprintln(fp)
-	fmt.Fprintln(fp, "Supported resources:")
-
-	fmt.Fprintln(fp)
-	for _, name := range sortedNames {
-		fmt.Fprintf(fp, "- [teleport_%s](#teleport_%s)\n", name, name)
+	t, err := template.ParseFiles(path.Join("gen", referenceDocsTemplate))
+	if err != nil {
+		log.Fatal(err)
 	}
-	fmt.Fprintln(fp)
-	fmt.Fprintln(fp, referenceDocsProviderConfiguration)
-	fmt.Fprintln(fp)
 
+	referenceDocsResource := make([]referenceDocResource, 0, len(mapResourceSchema))
 	for _, name := range sortedNames {
-		fn := dumps[name]
-		schema, diags := fn(context.Background())
+		resourceName := "teleport_" + name
+
+		schemaFn := mapResourceSchema[name]
+		schema, diags := schemaFn(context.Background())
 		if diags.HasError() {
 			log.Fatalf("%v", diags)
 		}
-		resourceName := "teleport_" + name
-		fmt.Fprintf(fp, "## %s\n\n", resourceName)
-		dumpAttributes(fp, 0, resourceName, "", schema.Attributes)
 
-		fmt.Fprintln(fp, "Example:")
-		fmt.Fprintln(fp)
+		fieldDescBuilder := strings.Builder{}
+		dumpAttributes(&fieldDescBuilder, 0, resourceName, "", schema.Attributes)
+
 		exampleFileName := fmt.Sprintf("example/%s.tf.example", name)
-		bs, err := os.ReadFile(exampleFileName)
+		exampleBytes, err := os.ReadFile(exampleFileName)
 		if err != nil {
 			log.Fatalf("error loading %q file: %v", exampleFileName, err)
 		}
-		fmt.Fprintln(fp, "```")
-		fmt.Fprintln(fp, string(bs))
-		fmt.Fprintln(fp, "```")
-		fmt.Fprintln(fp)
+
+		referenceDocsResource = append(referenceDocsResource, referenceDocResource{
+			Name:       resourceName,
+			FieldsDesc: fieldDescBuilder.String(),
+			Example:    string(exampleBytes),
+		})
 	}
+
+	var b bytes.Buffer
+	err = t.ExecuteTemplate(&b, referenceDocsTemplate, map[string]any{
+		"resourceList": sortedNames,
+		"resourcesDoc": referenceDocsResource,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	err = os.WriteFile("reference.mdx", b.Bytes(), 0777)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+type referenceDocResource struct {
+	Name       string
+	FieldsDesc string
+	Example    string
 }
 
 func dumpAttributes(fp io.Writer, level int, resourceName string, prefix string, attrs map[string]tfsdk.Attribute) {
@@ -511,7 +519,7 @@ func dumpAttributes(fp io.Writer, level int, resourceName string, prefix string,
 	for _, name := range sortedAttrKeys {
 		attr := attrs[name]
 		if attr.Attributes != nil {
-			fmt.Printf("%s %s\n", strings.Repeat("#", 3+level), prefix+name)
+			fmt.Fprintf(fp, "%s %s\n", strings.Repeat("#", 3+level), prefix+name)
 			fmt.Fprintln(fp)
 			fmt.Fprintln(fp, attr.Description)
 			fmt.Fprintln(fp)
