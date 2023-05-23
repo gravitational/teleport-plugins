@@ -70,11 +70,6 @@ func GenSchemaDeviceV1(ctx context.Context) (github_com_hashicorp_terraform_plug
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
-				"namespace": {
-					Description: "Namespace is object namespace. The field should be called \"namespace\" when it returns in Teleport 2.4.",
-					Optional:    true,
-					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-				},
 			}),
 			Computed:      true,
 			Description:   "Metadata is resource metadata",
@@ -179,23 +174,6 @@ func CopyDeviceV1FromTerraform(_ context.Context, tf github_com_hashicorp_terraf
 									t = string(v.Value)
 								}
 								obj.Name = t
-							}
-						}
-					}
-					{
-						a, ok := tf.Attrs["namespace"]
-						if !ok {
-							diags.Append(attrReadMissingDiag{"DeviceV1.Metadata.Namespace"})
-						} else {
-							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
-							if !ok {
-								diags.Append(attrReadConversionFailureDiag{"DeviceV1.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
-							} else {
-								var t string
-								if !v.Null && !v.Unknown {
-									t = string(v.Value)
-								}
-								obj.Namespace = t
 							}
 						}
 					}
@@ -398,28 +376,6 @@ func CopyDeviceV1ToTerraform(ctx context.Context, obj github_com_gravitational_t
 							v.Value = string(obj.Name)
 							v.Unknown = false
 							tf.Attrs["name"] = v
-						}
-					}
-					{
-						t, ok := tf.AttrTypes["namespace"]
-						if !ok {
-							diags.Append(attrWriteMissingDiag{"DeviceV1.Metadata.Namespace"})
-						} else {
-							v, ok := tf.Attrs["namespace"].(github_com_hashicorp_terraform_plugin_framework_types.String)
-							if !ok {
-								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
-								if err != nil {
-									diags.Append(attrWriteGeneralError{"DeviceV1.Metadata.Namespace", err})
-								}
-								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
-								if !ok {
-									diags.Append(attrWriteConversionFailureDiag{"DeviceV1.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
-								}
-								v.Null = string(obj.Namespace) == ""
-							}
-							v.Value = string(obj.Namespace)
-							v.Unknown = false
-							tf.Attrs["namespace"] = v
 						}
 					}
 					{

@@ -68,7 +68,8 @@ type payload struct {
 	ID string
 	// RandomMetadataName indicates that Metadata.Name must be generated (supported by plural resources only)
 	RandomMetadataName bool
-	// UUIDMetadataName functions simliar to RandomMetadataName but generates UUID instead of random
+	// UUIDMetadataName functions simliar to RandomMetadataName but generates UUID instead of
+	// generating 32 bit crypto random value
 	UUIDMetadataName bool
 	// Kind Teleport kind for a resource
 	Kind string

@@ -47,6 +47,7 @@ exclude_fields:
     # Below fields are either managed or not used on Teleport side
     - "DeviceV1.SubKind"
     - "DeviceV1.Metadata.ID"
+    - "DeviceV1.Metadata.Namespace"
     - "DeviceV1.Metadata.Description"
     - "DeviceV1.Metadata.Expires"
     - "DeviceV1.spec.create_time"
