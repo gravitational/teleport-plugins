@@ -43,13 +43,13 @@ $(BUILDDIR)/terraform-provider-teleport_%: terraform-provider-teleport-v$(VERSIO
 	mv $(BUILDDIR)/terraform-provider-teleport $@
 
 CUSTOM_IMPORTS_TMP_DIR ?= /tmp/protoc-gen-terraform/custom-imports
-PROTOC_GEN_TERRAFORM_VERSION ?= v1.4.1
+PROTOC_GEN_TERRAFORM_VERSION ?= v1.4.2
 PROTOC_GEN_TERRAFORM_EXISTS := $(shell protoc-gen-terraform version 2>&1 >/dev/null | grep 'protoc-gen-terraform $(PROTOC_GEN_TERRAFORM_VERSION)')
 
 .PHONY: gen-tfschema
 gen-tfschema:
 ifndef PROTOC_GEN_TERRAFORM_EXISTS
-	@echo "protoc-gen-terraform v1.4.1 is not installed. Please, refer to README.md for installation instructions."
+	@echo "protoc-gen-terraform v1.4.2 is not installed. Please, refer to README.md for installation instructions."
 	@exit -1
 endif
 
@@ -79,7 +79,6 @@ endif
 		--terraform_out=config=protoc-gen-terraform-devicetrust.yaml:./tfschema \
 		teleport/legacy/types/device.proto
 
-	@go run ./_gen/main.go
 	@go run ./gen/main.go
 	mv ./tfschema/github.com/gravitational/teleport/api/types/types_terraform.go ./tfschema/
 	mv ./tfschema/github.com/gravitational/teleport/api/gen/proto/go/teleport/loginrule/v1/loginrule_terraform.go ./tfschema/loginrule/v1/

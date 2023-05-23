@@ -20,6 +20,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"github.com/google/uuid"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -73,6 +74,9 @@ func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateRe
 		return
 	}
 
+	if trustedDevice.Metadata.Name == "" {
+		trustedDevice.Metadata.Name = uuid.NewString()
+	}
 	
 
 	_, err := r.p.Client.GetDeviceResource(ctx, trustedDevice.Metadata.Name)
@@ -80,7 +84,7 @@ func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateRe
 		if err == nil {
 			n := trustedDevice.Metadata.Name
 			existErr := fmt.Sprintf("DeviceV1 exists in Teleport. Either remove it (tctl rm device/%v)"+
-				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_device_trust.%v %v)", n, n, n)
 
 			resp.Diagnostics.Append(diagFromErr("DeviceV1 exists in Teleport", trace.Errorf(existErr)))
 			return
@@ -92,13 +96,13 @@ func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateRe
 
 	
 
-	resource, err :=  r.p.Client.UpsertDeviceResource(ctx, trustedDevice)
+	_, err = r.p.Client.UpsertDeviceResource(ctx, trustedDevice)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating DeviceV1", trace.Wrap(err), "device"))
 		return
 	}
 
-	id := resource.Metadata.Name
+	id := trustedDevice.Metadata.Name
 	// Not really an inferface, just using the same name for easier templating.
 	var trustedDeviceI *apitypes.DeviceV1
 	
@@ -156,7 +160,7 @@ func (r resourceTeleportDeviceV1) Read(ctx context.Context, req tfsdk.ReadResour
 	}
 
 	var id types.String
-	diags = req.State.GetAttribute(ctx, path.Root("id"), &id)
+	diags = req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &id)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -208,15 +212,7 @@ func (r resourceTeleportDeviceV1) Update(ctx context.Context, req tfsdk.UpdateRe
 		return
 	}
 
-	var id types.String
-	diags = req.State.GetAttribute(ctx, path.Root("id"), &id)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	trustedDevice.Metadata.Name = id.Value
-	name := id.Value
-	
+	name := trustedDevice.Metadata.Name
 
 	
 
@@ -243,10 +239,10 @@ func (r resourceTeleportDeviceV1) Update(ctx context.Context, req tfsdk.UpdateRe
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading DeviceV1", err, "device"))
 			return
 		}
-		if trustedDeviceBefore.Metadata.Name != trustedDevice.Metadata.Name || true {
+		if trustedDeviceBefore.GetMetadata().ID != trustedDevice.GetMetadata().ID || true {
 			break
 		}
-        
+		
 
 		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading DeviceV1", trace.Wrap(err), "device"))
@@ -275,7 +271,7 @@ func (r resourceTeleportDeviceV1) Update(ctx context.Context, req tfsdk.UpdateRe
 // Delete deletes Teleport DeviceV1
 func (r resourceTeleportDeviceV1) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
 	var id types.String
-	diags := req.State.GetAttribute(ctx, path.Root("id"), &id)
+	diags := req.State.GetAttribute(ctx, path.Root("metadata").AtName("name"), &id)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

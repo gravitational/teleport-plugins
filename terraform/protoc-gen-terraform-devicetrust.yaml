@@ -30,7 +30,9 @@ injected_fields:
 # These fields will be marked as Computed: true
 computed_fields:
     # Metadata
-    - "Metadata.Name"
+    - "DeviceV1.Metadata"
+    - "DeviceV1.Kind"
+    - "DeviceV1.Version"
     # DeviceV1
     - "DeviceV1.spec.enroll_status"
 
@@ -42,10 +44,11 @@ required_fields:
 
 
 exclude_fields:
-    # TODO(sshah): Remove Header field once the embedded proto fields are supported
-    # https://github.com/gravitational/protoc-gen-terraform/issues/30
-    - "DeviceV1.Header"
-    # Below fields are managed on Teleport side
+    # Below fields are either managed or not used on Teleport side
+    - "DeviceV1.SubKind"
+    - "DeviceV1.Metadata.ID"
+    - "DeviceV1.Metadata.Description"
+    - "DeviceV1.Metadata.Expires"
     - "DeviceV1.spec.create_time"
     - "DeviceV1.spec.update_time"
     - "DeviceV1.spec.credential"

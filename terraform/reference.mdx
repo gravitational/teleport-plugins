@@ -20,6 +20,7 @@ Supported resources:
 - [teleport_saml_connector](#teleport_saml_connector)
 - [teleport_session_recording_config](#teleport_session_recording_config)
 - [teleport_trusted_cluster](#teleport_trusted_cluster)
+- [teleport_trusted_device](#teleport_trusted_device)
 - [teleport_user](#teleport_user)
 
 ## Provider configuration
@@ -1736,6 +1737,48 @@ resource "teleport_trusted_cluster" "cluster" {
     }]
     proxy_addr = "localhost:3080"
     token = "salami"
+  }
+}
+
+```
+
+## teleport_trusted_device
+
+|   Name   |  Type  | Required |          Description          |
+|----------|--------|----------|-------------------------------|
+| metadata | object |          | Metadata is resource metadata |
+| spec     | object |          | Specification of the device.  |
+| version  | string |          | Version is version            |
+
+### metadata
+
+Metadata is resource metadata
+
+|   Name    |      Type      | Required |                                                  Description                                                   |
+|-----------|----------------|----------|----------------------------------------------------------------------------------------------------------------|
+| labels    | map of strings |          | Labels is a set of labels                                                                                      |
+| name      | string         |          | Name is an object name                                                                                         |
+| namespace | string         |          | Namespace is object namespace. The field should be called &#34;namespace&#34; when it returns in Teleport 2.4. |
+
+### spec
+
+Specification of the device.
+
+|     Name      |  Type  | Required | Description |
+|---------------|--------|----------|-------------|
+| asset_tag     | string | *        |             |
+| enroll_status | string |          |             |
+| os_type       | string | *        |             |
+
+Example:
+
+```
+# Trusted device resource
+
+resource "teleport_trusted_device" "TESTDEVICE1" {
+  spec = {
+    asset_tag     = "TESTDEVICE1"
+    os_type       = "macos"
   }
 }
 
