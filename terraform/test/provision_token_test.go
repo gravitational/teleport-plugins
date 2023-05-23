@@ -17,6 +17,8 @@ limitations under the License.
 package test
 
 import (
+	"fmt"
+
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -170,6 +172,52 @@ func (s *TerraformSuite) TestImportProvisionToken() {
 
 					return nil
 				},
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestProvisionTokenDoesNotLeakSensitiveData() {
+	checkRoleDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetToken(s.Context(), "test")
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := "teleport_provision_token.test"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkRoleDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("provision_token_secret_0_create.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "token"),
+					resource.TestCheckResourceAttr(name, "metadata.name", "thisisasecretandmustnotbelogged"),
+					resource.TestCheckResourceAttr(name, "metadata.expires", "2038-01-01T00:00:00Z"),
+					resource.TestCheckResourceAttr(name, "metadata.labels.example", "yes"),
+					resource.TestCheckResourceAttr(name, "spec.roles.0", "Node"),
+					resource.TestCheckResourceAttr(name, "spec.roles.1", "Auth"),
+					resource.TestCheckResourceAttr(name, "version", "v2"),
+					func(s *terraform.State) error {
+						tokenResource := s.RootModule().Resources[name]
+						tokenID := tokenResource.Primary.Attributes["id"]
+						tokenName := tokenResource.Primary.Attributes["metadata.name"]
+						if tokenID == tokenName {
+							return fmt.Errorf("token id must not include the name because the name is the actual token secret")
+						}
+
+						return nil
+					},
+				),
+			},
+			{
+				Config:   s.getFixture("provision_token_secret_0_create.tf"),
+				PlanOnly: true,
 			},
 		},
 	})

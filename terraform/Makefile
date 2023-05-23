@@ -30,6 +30,18 @@ clean: tfclean
 build: clean
 	GOOS=$(OS) GOARCH=$(ARCH) $(CGOFLAG) go build -o $(BUILDDIR)/terraform-provider-teleport $(BUILDFLAGS)
 
+build-darwin-universal: $(addprefix $(BUILDDIR)/terraform-provider-teleport_,arm64 amd64)
+	lipo -create -output $(BUILDDIR)/terraform-provider-teleport $^
+	rm $^
+
+# Architecture-specific binaries for the universal binary are extracted from
+# the release tarball. make will not automatically build this; you will need
+# to run "make ARCH=amd64 release" and "make ARCH=arm64 release" first as is
+# done in ../.drone.yml
+$(BUILDDIR)/terraform-provider-teleport_%: terraform-provider-teleport-v$(VERSION)-$(OS)-%-bin.tar.gz
+	tar -xzf $< -C $(BUILDDIR)
+	mv $(BUILDDIR)/terraform-provider-teleport $@
+
 CUSTOM_IMPORTS_TMP_DIR ?= /tmp/protoc-gen-terraform/custom-imports
 PROTOC_GEN_TERRAFORM_VERSION ?= v1.4.1
 PROTOC_GEN_TERRAFORM_EXISTS := $(shell protoc-gen-terraform version 2>&1 >/dev/null | grep 'protoc-gen-terraform $(PROTOC_GEN_TERRAFORM_VERSION)')
@@ -68,16 +80,22 @@ endif
 		teleport/legacy/types/device.proto
 
 	@go run ./_gen/main.go
+	@go run ./gen/main.go
 	mv ./tfschema/github.com/gravitational/teleport/api/types/types_terraform.go ./tfschema/
 	mv ./tfschema/github.com/gravitational/teleport/api/gen/proto/go/teleport/loginrule/v1/loginrule_terraform.go ./tfschema/loginrule/v1/
 	mv ./tfschema/github.com/gravitational/teleport/api/types/device_terraform.go ./tfschema/devicetrust/v1/
 	rm -r ./tfschema/github.com/
+	@go run ./gen/main.go docs
 
 .PHONY: release
+ifeq ($(OS)-$(ARCH),darwin-universal)
+release: build-darwin-universal
+else
 release: build
+endif
 	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
 
-TERRAFORM_EXISTS := $(shell terraform -version | grep 'Terraform v1.3')
+TERRAFORM_EXISTS := $(shell terraform -version 2>/dev/null | grep 'Terraform v1.3')
 CURRENT_ULIMIT := $(shell ulimit -n)
 
 .PHONY: test

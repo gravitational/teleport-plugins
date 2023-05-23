@@ -106,7 +106,7 @@ func NewBot(conf MattermostConfig, clusterName, webProxyAddr string) (Bot, error
 				MaxIdleConnsPerHost: mmMaxConns,
 			},
 		}).
-		SetHostURL(conf.URL).
+		SetBaseURL(conf.URL).
 		SetHeader("Content-Type", "application/json").
 		SetHeader("Accept", "application/json").
 		SetHeader("Authorization", "BEARER "+conf.Token)
