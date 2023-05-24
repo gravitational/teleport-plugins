@@ -12,6 +12,7 @@ types:
     - "DatabaseV3"
     - "GithubConnectorV3"
     - "OIDCConnectorV3"
+    - "OktaImportRuleV1"
     - "ProvisionTokenV2"
     - "RoleV6"
     - "SAMLConnectorV2"
@@ -58,6 +59,13 @@ injected_fields:
       plan_modifiers:
         - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   OIDCConnectorV3:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  OktaImportRuleV1:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
@@ -113,10 +121,10 @@ exclude_fields:
     - "Metadata.ID"
 
     # AuthPreference
-    - "AuthPreferenceV2.Metadata.Name" # It's a signleton resource
+    - "AuthPreferenceV2.Metadata.Name" # It's a singleton resource
 
     # NetworkingConfig
-    - "ClusterNetworkingConfigV2.Metadata.Name" # It's a signleton resource
+    - "ClusterNetworkingConfigV2.Metadata.Name" # It's a singleton resource
 
     # Status
     - "DatabaseV3.Status"
@@ -126,15 +134,13 @@ exclude_fields:
     - "RoleV6.Spec.Deny.Namespaces"
 
     # SessionRecordingConfig
-    - "SessionRecordingConfigV2.Metadata.Name" # It's a signleton resource
+    - "SessionRecordingConfigV2.Metadata.Name" # It's a singleton resource
 
     # User
     - "UserSpecV2.LocalAuth" # We do not need to set user auth data
     - "UserSpecV2.Expires"   # Those fields are Teleport side meta, we do not need to change them via Terraform
     - "UserSpecV2.CreatedBy"
     - "UserSpecV2.Status"
-
-name_overrides:
 
 # These fields will be marked as Computed: true
 computed_fields:
@@ -178,6 +184,10 @@ computed_fields:
     # OIDC connector
     - "OIDCConnectorV3.Kind"
     - "OIDCConnectorV3.Version"
+
+    # Okta import rule
+    - "OktaImportRuleV1.Kind"
+    - "OktaImportRuleV1.Version"
 
     # Role
     - "RoleV6.Spec.Options.MaxSessionTTL"
@@ -260,6 +270,10 @@ required_fields:
     - "OIDCConnectorV3.Spec"
     - "OIDCConnectorV3.Metadata.Name"
 
+    # Okta import rule
+    - "OktaImportRuleV1.Spec"
+    - "OktaImportRuleV1.Metadata.Name"
+
     # Provision token
     - "ProvisionTokenV2.Spec"
     - "ProvisionTokenV2.Spec.Options"
@@ -332,6 +346,8 @@ validators:
     - UseVersionBetween(3,3)
   OIDCConnectorV3.Version:
     - UseVersionBetween(3,3)
+  OktaImportRuleV1.Version:
+    - UseVersionBetween(1,1)
   ProvisionTokenV2.Version:
     - UseVersionBetween(2,2)
   RoleV6.Version:

@@ -125,6 +125,7 @@ func (s *TerraformBaseSuite) SetupSuite() {
 				types.NewRule("app", unrestricted),
 				types.NewRule("github", unrestricted),
 				types.NewRule("oidc", unrestricted),
+				types.NewRule("okta_import_rule", unrestricted),
 				types.NewRule("saml", unrestricted),
 				types.NewRule("login_rule", unrestricted),
 			},

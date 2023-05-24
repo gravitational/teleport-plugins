@@ -322,6 +322,22 @@ var (
 		IsPlainStruct:         true,
 		TerraformResourceType: "teleport_login_rule",
 	}
+
+	oktaImportRule = payload{
+		Name:                  "OktaImportRule",
+		TypeName:              "OktaImportRuleV1",
+		VarName:               "oktaImportRule",
+		IfaceName:             "OktaImportRule",
+		GetMethod:             "OktaClient().GetOktaImportRule",
+		CreateMethod:          "OktaClient().CreateOktaImportRule",
+		UpdateMethod:          "OktaClient().UpdateOktaImportRule",
+		DeleteMethod:          "OktaClient().DeleteOktaImportRule",
+		UpsertMethodArity:     2,
+		ID:                    "oktaImportRule.Metadata.Name",
+		Kind:                  "okta_import_rule",
+		HasStaticID:           false,
+		TerraformResourceType: "teleport_okta_import_rule",
+	}
 )
 
 func main() {
@@ -359,6 +375,8 @@ func genTFSchema() {
 	generateDataSource(user, pluralDataSource)
 	generateResource(loginRule, pluralResource)
 	generateDataSource(loginRule, pluralDataSource)
+	generateResource(oktaImportRule, pluralResource)
+	generateDataSource(oktaImportRule, pluralDataSource)
 }
 
 func generateResource(p payload, tpl string) {
@@ -402,6 +420,7 @@ var (
 		"database":                  tfschema.GenSchemaDatabaseV3,
 		"github_connector":          tfschema.GenSchemaGithubConnectorV3,
 		"login_rule":                loginruleSchema.GenSchemaLoginRule,
+		"okta_import_rule":          tfschema.GenSchemaOktaImportRuleV1,
 		"oidc_connector":            tfschema.GenSchemaOIDCConnectorV3,
 		"provision_token":           tfschema.GenSchemaProvisionTokenV2,
 		"role":                      tfschema.GenSchemaRoleV6,
