@@ -29,7 +29,7 @@ cause the event handler to crash (previous behavior) or ignore the unknown event
 
 This is problematic because the event handler is a critical component that
 should be able to handle all types of events. If the event handler is not able
-to handle new events, it can  miss important events and drift from the Auth server truth.
+to handle new events, it can miss important events and drift from the Auth server truth.
 
 The Teleport event handler receives events from the Auth server, serializes them
 using JSON and sends them to the upstream service (e.g. Splunk, FluentD, etc).
@@ -45,7 +45,250 @@ Currently, the event handler ignores unknown events.
 
 ## Proposal
 
-The proposal consists of having Auth server serving a WASM module that can perform
+The proposal consists of having Auth server serve the events as JSON when the
+client requests the JSON endpoints. This will allow the event handler to receive
+the events as JSON and send them to the upstream service without having to
+deserialize the Protobuf and serialize it again to JSON.
+
+To achieve this, we will add two new endpoints to the Auth server that will return
+the events as JSON. The event handler will use these endpoints to retrieve the events
+and session events as JSON.
+
+The new endpoints will be:
+
+```protobuf
+service AuthService {
+    ...
+    // StreamSessionEventsJSON streams audit events from a given session recording in JSON format.
+    // This endpoint is used by the event handler to retrieve the session events as JSON.
+    rpc StreamSessionEventsJSON(StreamSessionEventsRequest) returns (stream EventJSON);
+    // GetEventsJSON gets events from the audit log in JSON format.
+    // This endpoint is used by the event handler to retrieve the events as JSON.
+    rpc GetEventsJSON(GetEventsRequest) returns (EventsJSON);
+}
+
+// EventsJSON represents a list of events.AuditEvent in JSON format.
+message EventsJSON {
+    // Items is a list of typed gRPC formatted audit events.
+    repeated EventJSON Items = 1;
+    // the key of the last event if the returned set did not contain all events found i.e limit <
+    // actual amount. this is the key clients can supply in another API request to continue fetching
+    // events from the previous last position
+    string LastKey = 2;
+}
+
+// EventJSON represents a siggle events.AuditEvent in JSON format.
+message EventJSON {
+    // Type is the type of the event.
+    string Type = 1;
+    // ID is the unique ID of the event.
+    // If the underlying event defines an ID, it will be used, otherwise
+    // ID is a SHA256 hash of the event payload.
+    string ID = 2;
+    // Time is the time when the event was generated.
+    google.protobuf.Timestamp Time = 3 [
+        (gogoproto.stdtime) = true,
+        (gogoproto.nullable) = false
+    ];
+    // Index is the index of the event.
+    int64 Index = 4;
+    // Payload is the JSON event payload.
+    bytes Payload = 5;
+}
+```
+
+Auth server serializes the events to JSON and returns them using `EventJSON` struct.
+The serialization is done using the default event JSON representation for each event type
+besides the `print` event type. The `print` event type is serialized using a custom
+JSON representation because the default JSON representation does not include the
+`data` field which is required by the event handler.
+
+```go
+
+func protoOneOfEventToJson(oneOfEvt *apievents.OneOf) (*proto.EventJSON, error) {
+	evt, err := apievents.FromOneOf(*oneOfEvt)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	evtJSON, err := protoEventToJson(evt)
+	return evtJSON, trace.Wrap(err)
+}
+
+// printEvent represents an artificial print event struct which adds json-serialisable data field
+type printEvent struct {
+	EI          int64     `json:"ei"`
+	Event       string    `json:"event"`
+	Data        []byte    `json:"data"`
+	Time        time.Time `json:"time"`
+	ClusterName string    `json:"cluster_name"`
+	CI          int64     `json:"ci"`
+	Bytes       int64     `json:"bytes"`
+	MS          int64     `json:"ms"`
+	Offset      int64     `json:"offset"`
+	UID         string    `json:"uid"`
+}
+
+func protoEventToJson(evt apievents.AuditEvent) (*proto.EventJSON, error) {
+	id, err := computeID(evt)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+	var obj any = evt
+	if evt.GetType() == events.SessionPrintEvent {
+		p := apievents.MustToOneOf(evt).GetSessionPrint()
+		// convert print event to json-serialisable struct
+		obj = &printEvent{
+			EI:          p.GetIndex(),
+			Event:       evt.GetType(),
+			Data:        p.Data,
+			Time:        p.Time,
+			ClusterName: p.ClusterName,
+			CI:          p.ChunkIndex,
+			Bytes:       p.Bytes,
+			MS:          p.DelayMilliseconds,
+			Offset:      p.Offset,
+			UID:         evt.GetID(),
+		}
+
+	}
+	payload, err := json.Marshal(obj)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return &proto.EventJSON{
+		Type:    evt.GetType(),
+		Index:   evt.GetIndex(),
+		Time:    evt.GetTime(),
+		ID:      id,
+		Payload: payload,
+	}, nil
+}
+
+func computeID(evt apievents.AuditEvent) (string, error) {
+	id := evt.GetID()
+	if id != "" {
+		return id, nil
+	}
+	payload, err := json.Marshal(evt)
+	if err != nil {
+		return "", trace.Wrap(err)
+	}
+	hash := sha256.Sum256(payload)
+	return hex.EncodeToString(hash[:]), nil
+}
+```
+
+The event handler will receive the events as JSON and send them to the upstream service
+without having to manipulate the events besides the special events described below.
+
+### Special events
+
+Some known events require special handling: `session.upload`,
+and `user.login`. These events are known to the event handler and are
+handled differently than the other events.
+
+The `session.upload` event triggers the streaming of the session events to the
+session id it belongs to. The event handler picks the session ID and performs an extra
+call to `StreamSessionEvents*` to retrieve all the events associated. For this event,
+the event handler will have to deserialize the JSON to the specific event type and extract
+the session ID.
+
+The `user.login` event can trigger a user lock if the user has too many failed
+login attempts. The event handler will deserialize the event and pick the user
+data, cluster and if the login attempt failed.
+
+For these events, the event handler will have to deserialize the JSON to the
+specific event type and extract the data it needs as shown in the example below.
+
+```go
+// NewTeleportEvent creates TeleportEvent using AuditEvent as a source
+func NewTeleportEvent(e *proto.EventJSON, cursor string) (*TeleportEvent, error) {
+	evt := &TeleportEvent{
+		Cursor: cursor,
+		Type:   e.GetType(),
+		Time:   e.GetTime(),
+		Index:  e.GetIndex(),
+		ID:     e.ID,
+		// event payload can be replaced later if event type is print
+		Event: e.Payload,
+	}
+	var err error
+	switch e.GetType() {
+	case sessionEndType:
+		err = evt.setSessionID(e)
+	case loginType:
+		err = evt.setLoginData(e)
+	}
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
+	return evt, nil
+}
+
+// setSessionID sets session id for session end event
+func (e *TeleportEvent) setSessionID(evt *proto.EventJSON) error {
+	sessionUploadEvt := &events.SessionUpload{}
+	if err := json.Unmarshal(evt.Payload, sessionUploadEvt); err != nil {
+		return trace.Wrap(err)
+	}
+
+	sid := sessionUploadEvt.SessionID
+
+	e.IsSessionEnd = true
+	e.SessionID = sid
+	return nil
+}
+
+// setLoginData sets values related to login event
+func (e *TeleportEvent) setLoginData(evt *proto.EventJSON) error {
+	loginEvent := &events.UserLogin{}
+	if err := json.Unmarshal(evt.Payload, loginEvent); err != nil {
+		return trace.Wrap(err)
+	}
+
+	if loginEvent.Success {
+		return nil
+	}
+
+	e.IsFailedLogin = true
+	e.FailedLoginData.Login = loginEvent.Login
+	e.FailedLoginData.User = loginEvent.User
+	e.FailedLoginData.ClusterName = loginEvent.ClusterName
+	return nil
+}
+```
+
+## Conclusion
+
+With this proposal, we move some of the event-handling logic to the auth server
+which will allow any event handler to be able to handle the events without
+having to know the event types. The auth server will be responsible for
+serializing the events to JSON and sending them to the event handler.
+
+The event handler will be able to support any event type auth server supports
+without having to be upgraded each time a new event type is added.
+
+
+## Backward compatibility
+
+This proposal is backward compatible with the current event handler because
+the auth server will still send the events to the event handler in proto format
+if the event handler version is less than 14.0.0.
+
+## Security
+
+This proposal does not introduce any new security risks as it only changes the
+component responsible for serializing the events to JSON.
+
+
+---
+
+## Aternatives
+
+
+The alternative proposal consists of having Auth server serving a WASM module that can perform
 the protobuf deserialization and JSON serialization given a raw protobuf event.
 Since the WASM module is served by the Auth server, it will always be up to date
 with the Auth server protobuf version and the event handler will be able to
@@ -72,10 +315,8 @@ The WASM module will be served by the Auth server and will be downloaded by the 
 each time the Auth server is upgraded/downgraded.
 
 ```mermaid
-
 stateDiagram-v2
     Auth_Server --> event_handler: grpc SearchEvents
-
     state event_handler {
         grpc_client --> handler
         handler-->WASM
@@ -86,7 +327,6 @@ stateDiagram-v2
             wasm-->json
         }
     }
-
     WASM-->FLUENTD
     WASM-->Auth_Server: pull new wasm modules when auth is upgraded
     state FLUENTD {
@@ -94,9 +334,9 @@ stateDiagram-v2
     }
 ```
 
-## Considerations
+### Considerations
 
-### WASM module
+#### WASM module
 
 Go 1.21 will have support for native WASI modules - `GOOS=wasip1 GOARCH=wasm`. This means that any Go program (sort of) can be
 compiled to WASI and run as a WASI module without having to define custom non-trivial external functions.
@@ -122,7 +362,7 @@ In the future, when Go 1.21 is released with exported functions, we can switch t
 Technically, we can run the event handler as a WASM module (gRPC clients...) but it will require that
 the WASM module has access to the network and a larger module size and because of that, it was not pursued.
 
-### Go Plugins
+#### Go Plugins
 
 Go plugins are not an option because they are not supported on all platforms (e.g. macOS) and they are
 not supported on all architectures (e.g. ARM). This means that we would need to compile the module for
@@ -132,7 +372,7 @@ not ideal because it will increase the maintenance burden and will increase the 
 Besides that, Go plugins cannot be unloaded once they are loaded. This means that we would need to restart
 the process each time the plugin is updated.
 
-## Security Implications
+### Security Implications
 
 Having the WASM module served by the Auth server means that the WASM module will be
 executed in the same process as the event handler. WASM modules are sandboxed and
@@ -142,5 +382,3 @@ need to ensure the WASM module is the correct one and it is not a malicious WASM
 
 The WASM module will be signed by Teleport and the event handler will verify the signature
 before executing the WASM module.
-
-
