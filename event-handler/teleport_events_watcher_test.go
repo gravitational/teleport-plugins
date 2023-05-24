@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/gravitational/teleport/api/client/proto"
+	auditlogpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/auditlog/v1"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
@@ -32,6 +33,7 @@ import (
 type mockTeleportEventWatcher struct {
 	// events is the mock list of events
 	events []events.AuditEvent
+	t      *testing.T
 }
 
 // SearchEvents is mock SearchEvents method which returns events
@@ -43,6 +45,23 @@ func (c *mockTeleportEventWatcher) SearchEvents(ctx context.Context, fromUTC, to
 
 // StreamSessionEvents returns session events stream
 func (c *mockTeleportEventWatcher) StreamSessionEvents(ctx context.Context, sessionID string, startIndex int64) (chan events.AuditEvent, chan error) {
+	return nil, nil
+}
+
+// SearchEvents is mock SearchEvents method which returns events
+func (c *mockTeleportEventWatcher) SearchUnstructuredEvents(ctx context.Context, fromUTC, toUTC time.Time, namespace string, eventTypes []string, limit int, order types.EventOrder, startKey string) ([]*auditlogpb.EventUnstructured, string, error) {
+	e := c.events
+	c.events = make([]events.AuditEvent, 0) // nullify events
+
+	events := make([]*auditlogpb.EventUnstructured, len(e))
+	for i, event := range e {
+		events[i] = eventToJSON(c.t, event)
+	}
+	return events, "test", nil
+}
+
+// StreamSessionEvents returns session events stream
+func (c *mockTeleportEventWatcher) StreamUnstructuredSessionEvents(ctx context.Context, sessionID string, startIndex int64) (chan *auditlogpb.EventUnstructured, chan error) {
 	return nil, nil
 }
 
@@ -62,8 +81,8 @@ func (c *mockTeleportEventWatcher) Close() error {
 	return nil
 }
 
-func newTeleportEventWatcher(e []events.AuditEvent) *TeleportEventsWatcher {
-	teleportEventWatcher := &mockTeleportEventWatcher{events: e}
+func newTeleportEventWatcher(t *testing.T, e []events.AuditEvent) *TeleportEventsWatcher {
+	teleportEventWatcher := &mockTeleportEventWatcher{events: e, t: t}
 
 	client := &TeleportEventsWatcher{
 		client: teleportEventWatcher,
@@ -93,7 +112,7 @@ func TestNext(t *testing.T) {
 		},
 	}
 
-	client := newTeleportEventWatcher(e)
+	client := newTeleportEventWatcher(t, e)
 	chEvt, chErr := client.Events(context.Background())
 
 	select {

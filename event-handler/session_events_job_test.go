@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	"github.com/gravitational/teleport/api/client"
-	"github.com/gravitational/teleport/api/types/events"
+	auditlogpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/auditlog/v1"
 	"github.com/peterbourgon/diskv/v3"
 	"github.com/stretchr/testify/require"
 )
@@ -51,8 +51,8 @@ type mockClient struct {
 
 // StreamSessionEvents overrides the client.Client method to return a closed channel
 // to ensure that the consumeSession method returns without error if no events are found.
-func (m *mockClient) StreamSessionEvents(ctx context.Context, sessionID string, startIndex int64) (chan events.AuditEvent, chan error) {
-	c := make(chan events.AuditEvent)
+func (m *mockClient) StreamUnstructuredSessionEvents(ctx context.Context, sessionID string, startIndex int64) (chan *auditlogpb.EventUnstructured, chan error) {
+	c := make(chan *auditlogpb.EventUnstructured)
 	e := make(chan error)
 	close(c)
 	return c, e

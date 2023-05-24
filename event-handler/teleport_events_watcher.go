@@ -22,6 +22,7 @@ import (
 
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
+	auditlogpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/auditlog/v1"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/teleport/integrations/lib/credentials"
@@ -38,8 +39,14 @@ const (
 
 // TeleportSearchEventsClient is an interface for client.Client, required for testing
 type TeleportSearchEventsClient interface {
+	// SearchEvents searches for events in the audit log and returns them using their protobuf representation.
 	SearchEvents(ctx context.Context, fromUTC, toUTC time.Time, namespace string, eventTypes []string, limit int, order types.EventOrder, startKey string) ([]events.AuditEvent, string, error)
+	// StreamSessionEvents returns session events stream for a given session ID using their protobuf representation.
 	StreamSessionEvents(ctx context.Context, sessionID string, startIndex int64) (chan events.AuditEvent, chan error)
+	// SearchUnstructuredEvents searches for events in the audit log and returns them using an unstructured representation (structpb.Struct).
+	SearchUnstructuredEvents(ctx context.Context, fromUTC, toUTC time.Time, namespace string, eventTypes []string, limit int, order types.EventOrder, startKey string) ([]*auditlogpb.EventUnstructured, string, error)
+	// StreamUnstructuredSessionEvents returns session events stream for a given session ID using an unstructured representation (structpb.Struct).
+	StreamUnstructuredSessionEvents(ctx context.Context, sessionID string, startIndex int64) (chan *auditlogpb.EventUnstructured, chan error)
 	UpsertLock(ctx context.Context, lock types.Lock) error
 	Ping(ctx context.Context) (proto.PingResponse, error)
 	Close() error
@@ -202,8 +209,8 @@ func (t *TeleportEventsWatcher) fetch(ctx context.Context) error {
 }
 
 // getEvents calls Teleport client and loads events
-func (t *TeleportEventsWatcher) getEvents(ctx context.Context) ([]events.AuditEvent, string, error) {
-	return t.client.SearchEvents(
+func (t *TeleportEventsWatcher) getEvents(ctx context.Context) ([]*auditlogpb.EventUnstructured, string, error) {
+	return t.client.SearchUnstructuredEvents(
 		ctx,
 		t.startTime,
 		time.Now().UTC(),
@@ -311,8 +318,8 @@ func (t *TeleportEventsWatcher) Events(ctx context.Context) (chan *TeleportEvent
 }
 
 // StreamSessionEvents returns session event stream, that's the simple delegate to an API function
-func (t *TeleportEventsWatcher) StreamSessionEvents(ctx context.Context, id string, index int64) (chan events.AuditEvent, chan error) {
-	return t.client.StreamSessionEvents(ctx, id, index)
+func (t *TeleportEventsWatcher) StreamUnstructuredSessionEvents(ctx context.Context, id string, index int64) (chan *auditlogpb.EventUnstructured, chan error) {
+	return t.client.StreamUnstructuredSessionEvents(ctx, id, index)
 }
 
 // UpsertLock upserts user lock

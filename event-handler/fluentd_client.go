@@ -28,8 +28,6 @@ import (
 	tlib "github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
-
-	"github.com/gravitational/teleport-plugins/event-handler/lib"
 )
 
 const (
@@ -85,12 +83,7 @@ func getCertPool(c *FluentdConfig) (*x509.CertPool, error) {
 }
 
 // Send sends event to fluentd
-func (f *FluentdClient) Send(ctx context.Context, url string, obj interface{}) error {
-	b, err := lib.FastMarshal(obj)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
+func (f *FluentdClient) Send(ctx context.Context, url string, b []byte) error {
 	log.WithField("json", string(b)).Debug("JSON to send")
 
 	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(b))

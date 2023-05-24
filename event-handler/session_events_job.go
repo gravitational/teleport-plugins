@@ -107,7 +107,7 @@ func (j *SessionEventsJob) run(ctx context.Context) error {
 
 						// If sessions needs to retry
 						if err != nil && retry {
-							log.WithField("err", err).WithField("n", backoffCount).Error("Session ingestion error, retrying")
+							log.WithError(err).WithField("n", backoffCount).Error("Session ingestion error, retrying")
 
 							// Sleep for required interval
 							err := backoff.Do(ctx)
@@ -187,7 +187,7 @@ func (j *SessionEventsJob) consumeSession(ctx context.Context, s session) (bool,
 	url := j.app.Config.FluentdSessionURL + "." + s.ID + ".log"
 
 	log.WithField("id", s.ID).WithField("index", s.Index).Info("Started session events ingest")
-	chEvt, chErr := j.app.EventWatcher.StreamSessionEvents(ctx, s.ID, s.Index)
+	chEvt, chErr := j.app.EventWatcher.StreamUnstructuredSessionEvents(ctx, s.ID, s.Index)
 
 Loop:
 	for {
@@ -195,8 +195,8 @@ Loop:
 		case err := <-chErr:
 			return true, trace.Wrap(err)
 
-		case evt := <-chEvt:
-			if evt == nil {
+		case evt, ok := <-chEvt:
+			if !ok {
 				log.WithField("id", s.ID).Info("Finished session events ingest")
 				break Loop // Break the main loop
 			}
@@ -206,7 +206,7 @@ Loop:
 				return false, trace.Wrap(err)
 			}
 
-			_, ok := j.app.Config.SkipSessionTypes[e.Type]
+			_, ok = j.app.Config.SkipSessionTypes[e.Type]
 			if !ok {
 				err := j.app.SendEvent(ctx, url, e)
 
