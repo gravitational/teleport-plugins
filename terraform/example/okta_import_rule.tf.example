@@ -1,5 +1,5 @@
 # Teleport Okta Import Rule resource
-  
+
 resource "teleport_okta_import_rule" "example" {
   metadata = {
     description = "Example Okta Import Rule"

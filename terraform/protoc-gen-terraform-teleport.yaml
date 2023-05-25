@@ -142,6 +142,8 @@ exclude_fields:
     - "UserSpecV2.CreatedBy"
     - "UserSpecV2.Status"
 
+name_overrides:
+
 # These fields will be marked as Computed: true
 computed_fields:
     # Metadata
