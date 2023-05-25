@@ -7,7 +7,7 @@ state: draft
 
 ## Required Approvers
 
-* Engineering: @r0mant && ( @rosstimothy || @edoardo )
+* Engineering: @r0mant && ( @rosstimothy || @espadolini )
 
 ## What
 
@@ -45,141 +45,110 @@ Currently, the event handler ignores unknown events.
 
 ## Proposal
 
-The proposal consists of having Auth server serve the events as JSON when the
-client requests the JSON endpoints. This will allow the event handler to receive
-the events as JSON and send them to the upstream service without having to
+The proposal consists of having Auth server serve unstructured events when the
+client requests those endpoints. This will allow the event handler to receive
+the events with a JSON-like structure and send them to the upstream service without having to
 deserialize the Protobuf and serialize it again to JSON.
 
-To achieve this, we will add two new endpoints to the Auth server that will return
-the events as JSON. The event handler will use these endpoints to retrieve the events
-and session events as JSON.
+To achieve this, we will add a new Protobuf service - `AuditLogService - to Auth server that will return
+the events in an unstructured format. The event handler will use these endpoints to retrieve the events
+and session events and convert them into plain JSON before pushing upstream.
 
-The new endpoints will be:
+The new service will be:
 
 ```protobuf
-service AuthService {
-    ...
-    // StreamSessionEventsJSON streams audit events from a given session recording in JSON format.
-    // This endpoint is used by the event handler to retrieve the session events as JSON.
-    rpc StreamSessionEventsJSON(StreamSessionEventsRequest) returns (stream EventJSON);
-    // GetEventsJSON gets events from the audit log in JSON format.
-    // This endpoint is used by the event handler to retrieve the events as JSON.
-    rpc GetEventsJSON(GetEventsRequest) returns (EventsJSON);
+
+syntax = "proto3";
+
+package teleport.auditlog.v1;
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/gravitational/teleport/api/gen/proto/go/teleport/auditlog/v1;auditlogv1";
+
+// AuditLogService provides methods to access audit log.
+service AuditLogService {
+  // StreamUnstructuredSessionEvents streams audit events from a given session recording in an unstructured format.
+  // This endpoint is used by the event handler to retrieve the session events as JSON.
+  rpc StreamUnstructuredSessionEvents(StreamUnstructuredSessionEventsRequest) returns (stream EventUnstructured);
+  // GetUnstructuredEvents gets events from the audit log in an unstructured format.
+  // This endpoint is used by the event handler to retrieve the events as JSON.
+  rpc GetUnstructuredEvents(GetUnstructuredEventsRequest) returns (EventsUnstructured);
 }
 
-// EventsJSON represents a list of events.AuditEvent in JSON format.
-message EventsJSON {
-    // Items is a list of typed gRPC formatted audit events.
-    repeated EventJSON Items = 1;
-    // the key of the last event if the returned set did not contain all events found i.e limit <
-    // actual amount. this is the key clients can supply in another API request to continue fetching
-    // events from the previous last position
-    string LastKey = 2;
+// StreamUnstructuredSessionEventsRequest is a request containing needed data to fetch a session recording.
+message StreamUnstructuredSessionEventsRequest {
+  // session_id is the ID for a given session in an UUIDv4 format.
+  string session_id = 1;
+  // StartIndex is the index of the event to resume the stream after.
+  // A start_index of 0 creates a new stream.
+  int32 start_index = 2;
 }
 
-// EventJSON represents a siggle events.AuditEvent in JSON format.
-message EventJSON {
-    // Type is the type of the event.
-    string Type = 1;
-    // ID is the unique ID of the event.
-    // If the underlying event defines an ID, it will be used, otherwise
-    // ID is a SHA256 hash of the event payload.
-    string ID = 2;
-    // Time is the time when the event was generated.
-    google.protobuf.Timestamp Time = 3 [
-        (gogoproto.stdtime) = true,
-        (gogoproto.nullable) = false
-    ];
-    // Index is the index of the event.
-    int64 Index = 4;
-    // Payload is the JSON event payload.
-    bytes Payload = 5;
+// Order specifies any ordering of some objects as returned in regards to some aspect
+// of said objects which may be trivially ordered such as a timestamp.
+enum Order {
+  ORDER_DESCENDING_UNSPECIFIED = 0;
+  ORDER_ASCENDING = 1;
 }
+
+// GetUnstructuredEventsRequest is a request with the needed data to fetch events.
+message GetUnstructuredEventsRequest {
+  // namespace, if not set, defaults to 'default'
+  string namespace = 1;
+  // start_date is the oldest date of returned events
+  google.protobuf.Timestamp start_date = 2;
+  // end_date is the newest date of returned events
+  google.protobuf.Timestamp end_date = 3;
+  // event_types is optional, if not set, returns all events
+  repeated string event_types = 4;
+  // limit is the maximum amount of events returned
+  int32 limit = 5;
+  // start_key is used to resume a query in order to enable pagination.
+  // If the previous response had LastKey set then this should be
+  // set to its value. Otherwise leave empty.
+  string start_key = 6;
+  // order specifies an ascending or descending order of events.
+  // A value of 0 means a descending order and a value of 1 means an ascending order.
+  Order order = 7;
+}
+
+// EventsUnstructured represents a list of events.AuditEvent in unstructured format.
+message EventsUnstructured {
+  // Items is a list of unstructured formatted audit events.
+  repeated EventUnstructured items = 1;
+  // the key of the last event if the returned set did not contain all events found i.e limit <
+  // actual amount. this is the key clients can supply in another API request to continue fetching
+  // events from the previous last position
+  string last_key = 2;
+}
+
+// EventUnstructured represents a siggle events.AuditEvent in an unstructured format.
+message EventUnstructured {
+  // type is the type of the event.
+  string type = 1;
+  // id is the unique ID of the event.
+  // If the underlying event defines an ID, it will be used, otherwise
+  // it is a SHA256 hash of the event payload.
+  string id = 2;
+  // time is the time when the event was generated.
+  google.protobuf.Timestamp time = 3;
+  // index is the index of the event.
+  int64 index = 4;
+  // unstructured is the unstructured representation of the event payload.
+  google.protobuf.Struct unstructured = 5;
+}
+
 ```
 
-Auth server serializes the events to JSON and returns them using `EventJSON` struct.
-The serialization is done using the default event JSON representation for each event type
-besides the `print` event type. The `print` event type is serialized using a custom
-JSON representation because the default JSON representation does not include the
+Auth server converts the events to `structpb.Struct` and returns them using `EventUnstructured` struct.
+The conversion is done using the default event JSON representation for each event type
+besides the `print` event type. For the `print` event type, an extra field
+`data` is appended to the `structpb.Struct` because the default JSON representation does not include the
 `data` field which is required by the event handler.
 
-```go
-
-func protoOneOfEventToJson(oneOfEvt *apievents.OneOf) (*proto.EventJSON, error) {
-	evt, err := apievents.FromOneOf(*oneOfEvt)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	evtJSON, err := protoEventToJson(evt)
-	return evtJSON, trace.Wrap(err)
-}
-
-// printEvent represents an artificial print event struct which adds json-serialisable data field
-type printEvent struct {
-	EI          int64     `json:"ei"`
-	Event       string    `json:"event"`
-	Data        []byte    `json:"data"`
-	Time        time.Time `json:"time"`
-	ClusterName string    `json:"cluster_name"`
-	CI          int64     `json:"ci"`
-	Bytes       int64     `json:"bytes"`
-	MS          int64     `json:"ms"`
-	Offset      int64     `json:"offset"`
-	UID         string    `json:"uid"`
-}
-
-func protoEventToJson(evt apievents.AuditEvent) (*proto.EventJSON, error) {
-	id, err := computeID(evt)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-	var obj any = evt
-	if evt.GetType() == events.SessionPrintEvent {
-		p := apievents.MustToOneOf(evt).GetSessionPrint()
-		// convert print event to json-serialisable struct
-		obj = &printEvent{
-			EI:          p.GetIndex(),
-			Event:       evt.GetType(),
-			Data:        p.Data,
-			Time:        p.Time,
-			ClusterName: p.ClusterName,
-			CI:          p.ChunkIndex,
-			Bytes:       p.Bytes,
-			MS:          p.DelayMilliseconds,
-			Offset:      p.Offset,
-			UID:         evt.GetID(),
-		}
-
-	}
-	payload, err := json.Marshal(obj)
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	return &proto.EventJSON{
-		Type:    evt.GetType(),
-		Index:   evt.GetIndex(),
-		Time:    evt.GetTime(),
-		ID:      id,
-		Payload: payload,
-	}, nil
-}
-
-func computeID(evt apievents.AuditEvent) (string, error) {
-	id := evt.GetID()
-	if id != "" {
-		return id, nil
-	}
-	payload, err := json.Marshal(evt)
-	if err != nil {
-		return "", trace.Wrap(err)
-	}
-	hash := sha256.Sum256(payload)
-	return hex.EncodeToString(hash[:]), nil
-}
-```
-
-The event handler will receive the events as JSON and send them to the upstream service
+The event handler will receive the events as unstructured, convert them to JSON and send them to the upstream service
 without having to manipulate the events besides the special events described below.
 
 ### Special events
@@ -190,7 +159,7 @@ handled differently than the other events.
 
 The `session.upload` event triggers the streaming of the session events to the
 session id it belongs to. The event handler picks the session ID and performs an extra
-call to `StreamSessionEvents*` to retrieve all the events associated. For this event,
+call to `StreamUnstructuredSessionEvents` to retrieve all the events associated. For this event,
 the event handler will have to deserialize the JSON to the specific event type and extract
 the session ID.
 
@@ -202,23 +171,22 @@ For these events, the event handler will have to deserialize the JSON to the
 specific event type and extract the data it needs as shown in the example below.
 
 ```go
-// NewTeleportEvent creates TeleportEvent using AuditEvent as a source
-func NewTeleportEvent(e *proto.EventJSON, cursor string) (*TeleportEvent, error) {
+// NewTeleportEvent creates TeleportEvent using proto.EventUnstructure as a source
+func NewTeleportEvent(e *proto.EventUnstructured, cursor string) (*TeleportEvent, error) {
 	evt := &TeleportEvent{
 		Cursor: cursor,
 		Type:   e.GetType(),
 		Time:   e.GetTime(),
 		Index:  e.GetIndex(),
 		ID:     e.ID,
-		// event payload can be replaced later if event type is print
-		Event: e.Payload,
+		Event: marshal(e.Payload),
 	}
 	var err error
 	switch e.GetType() {
 	case sessionEndType:
-		err = evt.setSessionID(e)
+		err = evt.setSessionID()
 	case loginType:
-		err = evt.setLoginData(e)
+		err = evt.setLoginData()
 	}
 	if err != nil {
 		return nil, trace.Wrap(err)
@@ -228,9 +196,9 @@ func NewTeleportEvent(e *proto.EventJSON, cursor string) (*TeleportEvent, error)
 }
 
 // setSessionID sets session id for session end event
-func (e *TeleportEvent) setSessionID(evt *proto.EventJSON) error {
+func (e *TeleportEvent) setSessionID() error {
 	sessionUploadEvt := &events.SessionUpload{}
-	if err := json.Unmarshal(evt.Payload, sessionUploadEvt); err != nil {
+	if err := json.Unmarshal(e.Event, sessionUploadEvt); err != nil {
 		return trace.Wrap(err)
 	}
 
@@ -242,9 +210,9 @@ func (e *TeleportEvent) setSessionID(evt *proto.EventJSON) error {
 }
 
 // setLoginData sets values related to login event
-func (e *TeleportEvent) setLoginData(evt *proto.EventJSON) error {
+func (e *TeleportEvent) setLoginData() error {
 	loginEvent := &events.UserLogin{}
-	if err := json.Unmarshal(evt.Payload, loginEvent); err != nil {
+	if err := json.Unmarshal(e.Event, loginEvent); err != nil {
 		return trace.Wrap(err)
 	}
 
@@ -264,8 +232,8 @@ func (e *TeleportEvent) setLoginData(evt *proto.EventJSON) error {
 
 With this proposal, we move some of the event-handling logic to the auth server
 which will allow any event handler to be able to handle the events without
-having to know the event types. The auth server will be responsible for
-serializing the events to JSON and sending them to the event handler.
+having to know their event structure. The auth server will be responsible for
+converting the events to the unstructured format and sending them to the event handler.
 
 The event handler will be able to support any event type auth server supports
 without having to be upgraded each time a new event type is added.
