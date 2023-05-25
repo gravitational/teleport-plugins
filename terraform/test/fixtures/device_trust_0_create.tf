@@ -1,4 +1,3 @@
-
 resource "teleport_trusted_device" "TESTDEVICE1" {
   spec = {
     asset_tag     = "TESTDEVICE1"

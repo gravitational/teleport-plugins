@@ -17,14 +17,17 @@ limitations under the License.
 package test
 
 import (
+	"context"
 	"fmt"
 
+	// devicepb "github.com/gravitational/teleport/api/gen/proto/go/teleport/devicetrust/v1"
+	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
 
-func (s *TerraformSuite) TestDeviceTrust() {
+func (s *TerraformSuite) TestTrustedDevices() {
 	device1 := "teleport_trusted_device.TESTDEVICE1"
 	device2 := "teleport_trusted_device.TESTDEVICE2"
 
@@ -73,6 +76,52 @@ func (s *TerraformSuite) TestDeviceTrust() {
 			{
 				Config:   s.getFixture("device_trust_1_update.tf"),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestImportTrustedDevices() {
+	ctx := context.Background()
+
+	r := "teleport_trusted_device"
+	id := "test_device"
+	deviceId := "1a6d1c46-cccf-4f58-8f67-85e6272ebef1"
+	name := r + "." + id
+
+	device := &types.DeviceV1{
+		ResourceHeader: types.ResourceHeader{
+			Kind: "device",
+			Metadata: types.Metadata{
+				Name: deviceId,
+			},
+		},
+		Spec: &types.DeviceSpec{
+			AssetTag:     "DEVICE1",
+			OsType:       "macos",
+			EnrollStatus: "not_enrolled",
+		},
+	}
+
+	_, err := s.client.CreateDeviceResource(ctx, device)
+	s.Require().NoError(err)
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
+				ResourceName:  name,
+				ImportState:   true,
+				ImportStateId: deviceId,
+				ImportStateCheck: func(state []*terraform.InstanceState) error {
+					s.Require().Equal(state[0].Attributes["metadata.name"], deviceId)
+					s.Require().Equal(state[0].Attributes["kind"], "device")
+					s.Require().Equal(state[0].Attributes["spec.asset_tag"], "DEVICE1")
+					s.Require().Equal(state[0].Attributes["spec.os_type"], "macos")
+					s.Require().Equal(state[0].Attributes["spec.enroll_status"], "not_enrolled")
+					return nil
+				},
 			},
 		},
 	})
