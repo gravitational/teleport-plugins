@@ -32,7 +32,7 @@ steps:
       TERRAFORM_VERSION: 1.4.6-1
       TELEPORT_VERSION: 13.0.3
     commands:
-      - echo Testing plugins against Teleport
+      - echo Testing plugins against Teleport $TELEPORT_VERSION
       - apt update && apt install -y software-properties-common
       - curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
       - apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
@@ -1405,6 +1405,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 45033ca2b625e0cc81638e06683d4522ec6adb8a743e104120c44b097bf7f25d
+hmac: dc348b642ed10ba3f1a4544a8c71fecca91e8f12424cd523534b2355ed018031
 
 ...
