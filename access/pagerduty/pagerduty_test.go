@@ -624,7 +624,7 @@ func (s *PagerdutySuite) assertReviewSubmitted() {
 	require.NoError(t, err)
 	defer watcher.Close()
 
-	_ = s.assertNewEvent(watcher, types.OpInit, "", "")
+	_ = s.assertNewEvent(watcher, types.OpInit, types.KindWatchStatus, "watch-status")
 
 	request := s.createAccessRequest()
 	reqID := request.GetName()
@@ -654,7 +654,7 @@ func (s *PagerdutySuite) assertNoReviewSubmitted() {
 	require.NoError(t, err)
 	defer watcher.Close()
 
-	_ = s.assertNewEvent(watcher, types.OpInit, "", "")
+	_ = s.assertNewEvent(watcher, types.OpInit, types.KindWatchStatus, "watch-status")
 
 	request := s.createAccessRequest()
 	reqID := request.GetName()

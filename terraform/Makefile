@@ -86,13 +86,13 @@ release: build
 endif
 	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
 
-TERRAFORM_EXISTS := $(shell terraform -version 2>/dev/null | grep 'Terraform v1.3')
+TERRAFORM_EXISTS := $(shell terraform -version 2>/dev/null | grep 'Terraform v1.4')
 CURRENT_ULIMIT := $(shell ulimit -n)
 
 .PHONY: test
 test: install
 ifndef TERRAFORM_EXISTS
-	@echo "Terraform v1.3+ is not installed (tfenv install 1.3.3 && tfenv use 1.3.3)."
+	@echo "Terraform v1.4+ is not installed (tfenv install 1.4.6 && tfenv use 1.4.6)."
 	terraform -version
 	@exit -1
 endif
