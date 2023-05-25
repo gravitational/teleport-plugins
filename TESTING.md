@@ -31,15 +31,10 @@ Tests run.
 
 ### Configuration variables
 
-* `TELEPORT_GET_VERSION` - requested Teleport version. If Teleport binaries are unavailable in `$PATH` or the available Teleport version mismatches the requested - the required Teleport binaries are downloaded and extracted into `<project_root>/.teleport` folder. Please, check [download.go](lib/testing/integration/download.go) for the list of predefined binaries.
 * `TELEPORT_BINARY` - path to teleport binary (default: `teleport`).
 * `TELEPORT_BINARY_TCTL` - path to tctl binary (default: `tctl`).
 * `TELEPORT_ENTERPRISE_LICENSE` - path to license file (default: `/var/lib/teleport/license.pem`).
 * `CI` - indicates that tests are run on the CI, the existence of the Enterprices license is assumed.
-
-Example:
-
-```TELEPORT_GET_VERSION=9.3.0 go test```
 
 ### Import
 
