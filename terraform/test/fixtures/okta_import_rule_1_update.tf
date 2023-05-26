@@ -13,7 +13,7 @@ resource "teleport_okta_import_rule" "test" {
     mappings = [
       {
         add_labels = {
-          "label1": "value1",
+          "label1" : "value1",
         }
         matches = [
           {
@@ -23,7 +23,7 @@ resource "teleport_okta_import_rule" "test" {
       },
       {
         add_labels = {
-          "label2": "value2",
+          "label2" : "value2",
         }
         matches = [
           {
@@ -33,7 +33,7 @@ resource "teleport_okta_import_rule" "test" {
       },
       {
         add_labels = {
-          "label3": "value3",
+          "label3" : "value3",
         }
         matches = [
           {
