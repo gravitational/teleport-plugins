@@ -43,13 +43,13 @@ $(BUILDDIR)/terraform-provider-teleport_%: terraform-provider-teleport-v$(VERSIO
 	mv $(BUILDDIR)/terraform-provider-teleport $@
 
 CUSTOM_IMPORTS_TMP_DIR ?= /tmp/protoc-gen-terraform/custom-imports
-PROTOC_GEN_TERRAFORM_VERSION ?= v1.4.1
+PROTOC_GEN_TERRAFORM_VERSION ?= v1.4.2
 PROTOC_GEN_TERRAFORM_EXISTS := $(shell protoc-gen-terraform version 2>&1 >/dev/null | grep 'protoc-gen-terraform $(PROTOC_GEN_TERRAFORM_VERSION)')
 
 .PHONY: gen-tfschema
 gen-tfschema:
 ifndef PROTOC_GEN_TERRAFORM_EXISTS
-	@echo "protoc-gen-terraform v1.4.1 is not installed. Please, refer to README.md for installation instructions."
+	@echo "protoc-gen-terraform $(PROTOC_GEN_TERRAFORM_VERSION) is not installed. Please, refer to README.md for installation instructions."
 	@exit -1
 endif
 
