@@ -225,6 +225,11 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 									Optional:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 								},
+								"subnets": {
+									Description: "Subnets is a list of subnets for the RDS instance.",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+								},
 							}),
 							Description: "RDS contains RDS specific metadata.",
 							Optional:    true,
@@ -3503,6 +3508,33 @@ func CopyDatabaseV3FromTerraform(_ context.Context, tf github_com_hashicorp_terr
 															}
 														}
 													}
+													{
+														a, ok := tf.Attrs["subnets"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.AWS.RDS.Subnets"})
+														} else {
+															v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.AWS.RDS.Subnets", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+															} else {
+																obj.Subnets = make([]string, len(v.Elems))
+																if !v.Null && !v.Unknown {
+																	for k, a := range v.Elems {
+																		v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																		if !ok {
+																			diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.AWS.RDS.Subnets", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+																		} else {
+																			var t string
+																			if !v.Null && !v.Unknown {
+																				t = string(v.Value)
+																			}
+																			obj.Subnets[k] = t
+																		}
+																	}
+																}
+															}
+														}
+													}
 												}
 											}
 										}
@@ -5005,6 +5037,59 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 															v.Value = bool(obj.IAMAuth)
 															v.Unknown = false
 															tf.Attrs["iam_auth"] = v
+														}
+													}
+													{
+														a, ok := tf.AttrTypes["subnets"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.AWS.RDS.Subnets"})
+														} else {
+															o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+															if !ok {
+																diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.RDS.Subnets", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+															} else {
+																c, ok := tf.Attrs["subnets"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+																if !ok {
+																	c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+																		ElemType: o.ElemType,
+																		Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Subnets)),
+																		Null:     true,
+																	}
+																} else {
+																	if c.Elems == nil {
+																		c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Subnets))
+																	}
+																}
+																if obj.Subnets != nil {
+																	t := o.ElemType
+																	if len(obj.Subnets) != len(c.Elems) {
+																		c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Subnets))
+																	}
+																	for k, a := range obj.Subnets {
+																		v, ok := tf.Attrs["subnets"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+																		if !ok {
+																			i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																			if err != nil {
+																				diags.Append(attrWriteGeneralError{"DatabaseV3.Spec.AWS.RDS.Subnets", err})
+																			}
+																			v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																			if !ok {
+																				diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.RDS.Subnets", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+																			}
+																			v.Null = string(a) == ""
+																		}
+																		v.Value = string(a)
+																		v.Unknown = false
+																		c.Elems[k] = v
+																	}
+																	if len(obj.Subnets) > 0 {
+																		c.Null = false
+																	}
+																}
+																c.Unknown = false
+																tf.Attrs["subnets"] = c
+															}
 														}
 													}
 												}
