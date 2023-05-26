@@ -26,6 +26,7 @@ spec:
         - db
         - login_rule
         - device
+        - okta_import_rule
         verbs: ['list','create','read','update','delete']
 version: v6
 ---

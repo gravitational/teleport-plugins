@@ -122,7 +122,7 @@ event-handler:
 # Run all tests
 .PHONY: test
 test: test-tooling test-unit test-terraform
-	@echo Testing plugins against Teleport $(TELEPORT_GET_VERSION)
+	@echo Testing plugins against Teleport $(shell teleport version)
 	go test -race -count 1 $(shell go list ./... | grep -v -e '/terraform/' -e '/tooling/' -e '/lib')
 
 .PHONY: test-tooling
@@ -251,16 +251,6 @@ update-tag:
 	git push origin teleport-email-v$(VERSION)
 	git push origin terraform-provider-teleport-v$(VERSION)
 	git push origin v$(VERSION)
-
-TELEPORT_GET_VERSION ?= v12.0.4
-.PHONY: update-test-version
-update-test-version:
-	curl https://get.gravitational.com/teleport-{ent-,}${TELEPORT_GET_VERSION}-{darwin-amd64,linux-{amd64,arm64,arm}}-bin.tar.gz.sha256 > \
-	lib/testing/integration/download_sha.dsv
-	$(SED) 's/TELEPORT_GET_VERSION: .*/TELEPORT_GET_VERSION: $(TELEPORT_GET_VERSION)/g' .drone.yml
-	$(SED) 's/TELEPORT_GET_VERSION: .*/TELEPORT_GET_VERSION: $(TELEPORT_GET_VERSION)/g' .github/workflows/terraform-tests.yaml
-	$(SED) 's/TELEPORT_GET_VERSION: .*/TELEPORT_GET_VERSION: $(TELEPORT_GET_VERSION)/g' .github/workflows/unit-tests.yaml
-	@echo Please sign .drone.yml before staging and committing the changes
 
 # promote-tag executes Drone promotion pipeline for the plugins.
 #
