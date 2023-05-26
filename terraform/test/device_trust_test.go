@@ -86,14 +86,14 @@ func (s *TerraformSuite) TestImportTrustedDevices() {
 
 	r := "teleport_trusted_device"
 	id := "test_device"
-	deviceId := "1a6d1c46-cccf-4f58-8f67-85e6272ebef1"
+	deviceID := "1a6d1c46-cccf-4f58-8f67-85e6272ebef1"
 	name := r + "." + id
 
 	device := &types.DeviceV1{
 		ResourceHeader: types.ResourceHeader{
 			Kind: "device",
 			Metadata: types.Metadata{
-				Name: deviceId,
+				Name: deviceID,
 			},
 		},
 		Spec: &types.DeviceSpec{
@@ -113,9 +113,9 @@ func (s *TerraformSuite) TestImportTrustedDevices() {
 				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
 				ResourceName:  name,
 				ImportState:   true,
-				ImportStateId: deviceId,
+				ImportStateId: deviceID,
 				ImportStateCheck: func(state []*terraform.InstanceState) error {
-					s.Require().Equal(state[0].Attributes["metadata.name"], deviceId)
+					s.Require().Equal(state[0].Attributes["metadata.name"], deviceID)
 					s.Require().Equal(state[0].Attributes["kind"], "device")
 					s.Require().Equal(state[0].Attributes["spec.asset_tag"], "DEVICE1")
 					s.Require().Equal(state[0].Attributes["spec.os_type"], "macos")
