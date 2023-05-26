@@ -3005,8 +3005,18 @@ func GenSchemaOktaImportRuleV1(ctx context.Context) (github_com_hashicorp_terraf
 									Optional:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 								},
+								"app_name_regexes": {
+									Description: "AppNameRegexes is a list of regexes to match against app names.",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+								},
 								"group_ids": {
 									Description: "GroupIDs is a list of group IDs to match against.",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+								},
+								"group_name_regexes": {
+									Description: "GroupNameRegexes is a list of regexes to match against group names.",
 									Optional:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 								},
@@ -29446,6 +29456,60 @@ func CopyOktaImportRuleV1FromTerraform(_ context.Context, tf github_com_hashicor
 																					}
 																				}
 																			}
+																			{
+																				a, ok := tf.Attrs["app_name_regexes"]
+																				if !ok {
+																					diags.Append(attrReadMissingDiag{"OktaImportRuleV1.Spec.Mappings.Match.AppNameRegexes"})
+																				} else {
+																					v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+																					if !ok {
+																						diags.Append(attrReadConversionFailureDiag{"OktaImportRuleV1.Spec.Mappings.Match.AppNameRegexes", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+																					} else {
+																						obj.AppNameRegexes = make([]string, len(v.Elems))
+																						if !v.Null && !v.Unknown {
+																							for k, a := range v.Elems {
+																								v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																								if !ok {
+																									diags.Append(attrReadConversionFailureDiag{"OktaImportRuleV1.Spec.Mappings.Match.AppNameRegexes", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+																								} else {
+																									var t string
+																									if !v.Null && !v.Unknown {
+																										t = string(v.Value)
+																									}
+																									obj.AppNameRegexes[k] = t
+																								}
+																							}
+																						}
+																					}
+																				}
+																			}
+																			{
+																				a, ok := tf.Attrs["group_name_regexes"]
+																				if !ok {
+																					diags.Append(attrReadMissingDiag{"OktaImportRuleV1.Spec.Mappings.Match.GroupNameRegexes"})
+																				} else {
+																					v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+																					if !ok {
+																						diags.Append(attrReadConversionFailureDiag{"OktaImportRuleV1.Spec.Mappings.Match.GroupNameRegexes", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+																					} else {
+																						obj.GroupNameRegexes = make([]string, len(v.Elems))
+																						if !v.Null && !v.Unknown {
+																							for k, a := range v.Elems {
+																								v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																								if !ok {
+																									diags.Append(attrReadConversionFailureDiag{"OktaImportRuleV1.Spec.Mappings.Match.GroupNameRegexes", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+																								} else {
+																									var t string
+																									if !v.Null && !v.Unknown {
+																										t = string(v.Value)
+																									}
+																									obj.GroupNameRegexes[k] = t
+																								}
+																							}
+																						}
+																					}
+																				}
+																			}
 																		}
 																		obj.Match[k] = t
 																	}
@@ -29982,6 +30046,112 @@ func CopyOktaImportRuleV1ToTerraform(ctx context.Context, obj github_com_gravita
 																				}
 																				c.Unknown = false
 																				tf.Attrs["group_ids"] = c
+																			}
+																		}
+																	}
+																	{
+																		a, ok := tf.AttrTypes["app_name_regexes"]
+																		if !ok {
+																			diags.Append(attrWriteMissingDiag{"OktaImportRuleV1.Spec.Mappings.Match.AppNameRegexes"})
+																		} else {
+																			o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+																			if !ok {
+																				diags.Append(attrWriteConversionFailureDiag{"OktaImportRuleV1.Spec.Mappings.Match.AppNameRegexes", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+																			} else {
+																				c, ok := tf.Attrs["app_name_regexes"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+																				if !ok {
+																					c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+																						ElemType: o.ElemType,
+																						Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.AppNameRegexes)),
+																						Null:     true,
+																					}
+																				} else {
+																					if c.Elems == nil {
+																						c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.AppNameRegexes))
+																					}
+																				}
+																				if obj.AppNameRegexes != nil {
+																					t := o.ElemType
+																					if len(obj.AppNameRegexes) != len(c.Elems) {
+																						c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.AppNameRegexes))
+																					}
+																					for k, a := range obj.AppNameRegexes {
+																						v, ok := tf.Attrs["app_name_regexes"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+																						if !ok {
+																							i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																							if err != nil {
+																								diags.Append(attrWriteGeneralError{"OktaImportRuleV1.Spec.Mappings.Match.AppNameRegexes", err})
+																							}
+																							v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																							if !ok {
+																								diags.Append(attrWriteConversionFailureDiag{"OktaImportRuleV1.Spec.Mappings.Match.AppNameRegexes", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+																							}
+																							v.Null = string(a) == ""
+																						}
+																						v.Value = string(a)
+																						v.Unknown = false
+																						c.Elems[k] = v
+																					}
+																					if len(obj.AppNameRegexes) > 0 {
+																						c.Null = false
+																					}
+																				}
+																				c.Unknown = false
+																				tf.Attrs["app_name_regexes"] = c
+																			}
+																		}
+																	}
+																	{
+																		a, ok := tf.AttrTypes["group_name_regexes"]
+																		if !ok {
+																			diags.Append(attrWriteMissingDiag{"OktaImportRuleV1.Spec.Mappings.Match.GroupNameRegexes"})
+																		} else {
+																			o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+																			if !ok {
+																				diags.Append(attrWriteConversionFailureDiag{"OktaImportRuleV1.Spec.Mappings.Match.GroupNameRegexes", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+																			} else {
+																				c, ok := tf.Attrs["group_name_regexes"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+																				if !ok {
+																					c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+																						ElemType: o.ElemType,
+																						Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.GroupNameRegexes)),
+																						Null:     true,
+																					}
+																				} else {
+																					if c.Elems == nil {
+																						c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.GroupNameRegexes))
+																					}
+																				}
+																				if obj.GroupNameRegexes != nil {
+																					t := o.ElemType
+																					if len(obj.GroupNameRegexes) != len(c.Elems) {
+																						c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.GroupNameRegexes))
+																					}
+																					for k, a := range obj.GroupNameRegexes {
+																						v, ok := tf.Attrs["group_name_regexes"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+																						if !ok {
+																							i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																							if err != nil {
+																								diags.Append(attrWriteGeneralError{"OktaImportRuleV1.Spec.Mappings.Match.GroupNameRegexes", err})
+																							}
+																							v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																							if !ok {
+																								diags.Append(attrWriteConversionFailureDiag{"OktaImportRuleV1.Spec.Mappings.Match.GroupNameRegexes", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+																							}
+																							v.Null = string(a) == ""
+																						}
+																						v.Value = string(a)
+																						v.Unknown = false
+																						c.Elems[k] = v
+																					}
+																					if len(obj.GroupNameRegexes) > 0 {
+																						c.Null = false
+																					}
+																				}
+																				c.Unknown = false
+																				tf.Attrs["group_name_regexes"] = c
 																			}
 																		}
 																	}

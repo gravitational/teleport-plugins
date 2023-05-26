@@ -885,13 +885,13 @@ resource "teleport_oidc_connector" "example" {
 
 Metadata is resource metadata
 
-|    Name     |      Type      | Required |                                                  Description                                                   |
-|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                              |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                               |
-| labels      | map of strings |          | Labels is a set of labels                                                                                      |
-| name        | string         | *        | Name is an object name                                                                                         |
-| namespace   | string         |          | Namespace is object namespace. The field should be called &#34;namespace&#34; when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                              Description                                               |
+|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                      |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
+| labels      | map of strings |          | Labels is a set of labels                                                                              |
+| name        | string         | *        | Name is an object name                                                                                 |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
 
 ### spec
 
@@ -915,10 +915,12 @@ Mappings is a list of matches that will map match conditions to labels.
 
 Match is a set of matching rules for this mapping. If any of these match, then the mapping will be applied.
 
-|   Name    |       Type       | Required |                    Description                    |
-|-----------|------------------|----------|---------------------------------------------------|
-| app_ids   | array of strings |          | AppIDs is a list of app IDs to match against.     |
-| group_ids | array of strings |          | GroupIDs is a list of group IDs to match against. |
+|        Name        |       Type       | Required |                             Description                             |
+|--------------------|------------------|----------|---------------------------------------------------------------------|
+| app_ids            | array of strings |          | AppIDs is a list of app IDs to match against.                       |
+| app_name_regexes   | array of strings |          | AppNameRegexes is a list of regexes to match against app names.     |
+| group_ids          | array of strings |          | GroupIDs is a list of group IDs to match against.                   |
+| group_name_regexes | array of strings |          | GroupNameRegexes is a list of regexes to match against group names. |
 
 Example:
 
@@ -1870,8 +1872,8 @@ Example:
 
 resource "teleport_trusted_device" "TESTDEVICE1" {
   spec = {
-    asset_tag     = "TESTDEVICE1"
-    os_type       = "macos"
+    asset_tag = "TESTDEVICE1"
+    os_type   = "macos"
   }
 }
 
