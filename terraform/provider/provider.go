@@ -572,6 +572,7 @@ func (p *Provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceTyp
 		"teleport_user":                      resourceTeleportUserType{},
 		"teleport_bot":                       resourceTeleportBotType{},
 		"teleport_login_rule":                resourceTeleportLoginRuleType{},
+		"teleport_trusted_device":            resourceTeleportDeviceV1Type{},
 		"teleport_okta_import_rule":          resourceTeleportOktaImportRuleType{},
 	}, nil
 }
@@ -592,6 +593,7 @@ func (p *Provider) GetDataSources(_ context.Context) (map[string]tfsdk.DataSourc
 		"teleport_trusted_cluster":           dataSourceTeleportTrustedClusterType{},
 		"teleport_user":                      dataSourceTeleportUserType{},
 		"teleport_login_rule":                dataSourceTeleportLoginRuleType{},
+		"teleport_trusted_device":            dataSourceTeleportDeviceV1Type{},
 		"teleport_okta_import_rule":          dataSourceTeleportOktaImportRuleType{},
 	}, nil
 }

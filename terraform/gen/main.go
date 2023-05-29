@@ -36,6 +36,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/provider"
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
+	devicetrustSchema "github.com/gravitational/teleport-plugins/terraform/tfschema/devicetrust/v1"
 	loginruleSchema "github.com/gravitational/teleport-plugins/terraform/tfschema/loginrule/v1"
 )
 
@@ -67,6 +68,9 @@ type payload struct {
 	ID string
 	// RandomMetadataName indicates that Metadata.Name must be generated (supported by plural resources only)
 	RandomMetadataName bool
+	// UUIDMetadataName functions similar to RandomMetadataName but generates UUID instead of
+	// generating 32 bit crypto random value
+	UUIDMetadataName bool
 	// Kind Teleport kind for a resource
 	Kind string
 	// DefaultVersion represents the default resource version on create
@@ -323,6 +327,24 @@ var (
 		TerraformResourceType: "teleport_login_rule",
 	}
 
+	deviceTrust = payload{
+		Name:                  "DeviceV1",
+		VarName:               "trustedDevice",
+		TypeName:              "DeviceV1",
+		GetMethod:             "GetDeviceResource",
+		CreateMethod:          "UpsertDeviceResource",
+		UpsertMethodArity:     2,
+		UpdateMethod:          "UpsertDeviceResource",
+		DeleteMethod:          "DeleteDeviceResource",
+		Kind:                  "device",
+		ID:                    "trustedDevice.Metadata.Name",
+		HasStaticID:           true,
+		SchemaPackagePath:     "github.com/gravitational/teleport-plugins/terraform/tfschema/devicetrust/v1",
+		IsPlainStruct:         true,
+		UUIDMetadataName:      true,
+		TerraformResourceType: "teleport_device_trust",
+	}
+
 	oktaImportRule = payload{
 		Name:                  "OktaImportRule",
 		TypeName:              "OktaImportRuleV1",
@@ -375,6 +397,8 @@ func genTFSchema() {
 	generateDataSource(user, pluralDataSource)
 	generateResource(loginRule, pluralResource)
 	generateDataSource(loginRule, pluralDataSource)
+	generateResource(deviceTrust, pluralResource)
+	generateDataSource(deviceTrust, pluralDataSource)
 	generateResource(oktaImportRule, pluralResource)
 	generateDataSource(oktaImportRule, pluralDataSource)
 }
@@ -418,6 +442,7 @@ var (
 		"bot":                       provider.GenSchemaBot,
 		"cluster_networking_config": tfschema.GenSchemaClusterNetworkingConfigV2,
 		"database":                  tfschema.GenSchemaDatabaseV3,
+		"trusted_device":            devicetrustSchema.GenSchemaDeviceV1,
 		"github_connector":          tfschema.GenSchemaGithubConnectorV3,
 		"login_rule":                loginruleSchema.GenSchemaLoginRule,
 		"okta_import_rule":          tfschema.GenSchemaOktaImportRuleV1,

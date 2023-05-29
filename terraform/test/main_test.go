@@ -128,6 +128,7 @@ func (s *TerraformBaseSuite) SetupSuite() {
 				types.NewRule("okta_import_rule", unrestricted),
 				types.NewRule("saml", unrestricted),
 				types.NewRule("login_rule", unrestricted),
+				types.NewRule("device", unrestricted),
 			},
 			Logins: []string{me.Username},
 		},
