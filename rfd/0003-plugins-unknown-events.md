@@ -253,7 +253,7 @@ component responsible for serializing the events to JSON.
 
 ---
 
-## Aternatives
+## Alternatives
 
 
 The alternative proposal consists of having Auth server serving a WASM module that can perform
