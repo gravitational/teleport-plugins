@@ -5,7 +5,9 @@ treat Teleport access and permission requests as Pagerduty incidents — and
 notify the appropriate team, and approve or deny the requests via Pagerduty
 special action.
 
-[See setup instructions on Teleport's website](https://goteleport.com/teleport/docs/enterprise/workflow/ssh-approval-pagerduty/)
+## Setup
+
+[See setup instructions on Teleport's docs website](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-pagerduty/)
 
 ## Prerequisites
 

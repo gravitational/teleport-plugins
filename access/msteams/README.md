@@ -2,6 +2,10 @@
 
 This plugin notifies MS Teams users on upcoming AccessRequests.
 
+## Setup
+
+[See setup instructions on Teleport's docs website](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-msteams/)
+
 ## Install the plugin
 
 There are several methods to installing and using the Teleport MS Teams Plugin:

@@ -2,6 +2,10 @@
 
 The plugin allows teams to receive email notifications about new access requests.
 
+## Setup
+
+[See setup instructions on Teleport's docs website](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-email/)
+
 ## Install the plugin
 
 There are several methods to installing and using the Teleport Email Plugin:

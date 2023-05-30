@@ -4,6 +4,10 @@ This package provides Teleport <-> Jira integration that allows teams to approve
 or deny Access Requests on a Jira Project Board. It works with both Jira Cloud
 and Jira Server 8.
 
+## Setup
+
+[See setup instructions on Teleport's docs website](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-jir/)
+
 ## Install the plugin
 
 There are several methods to installing and using the Teleport Jira Plugin:
