@@ -1,6 +1,6 @@
 resource "teleport_provision_token" "test" {
   metadata = {
-    name    = "test"
+    name = "test"
     labels = {
       example = "yes"
     }

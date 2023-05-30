@@ -258,3 +258,38 @@ func (s *TerraformSuite) TestProvisionTokenWithoutExpiration() {
 		},
 	})
 }
+
+func (s *TerraformSuite) TestProvisionTokenIAMToken() {
+	checkRoleDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetToken(s.Context(), "iam-token")
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := "teleport_provision_token.iam-token"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkRoleDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("provision_token_iam_create.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "token"),
+					resource.TestCheckResourceAttr(name, "metadata.name", "iam-token"),
+					resource.TestCheckNoResourceAttr(name, "metadata.expiry"),
+					resource.TestCheckResourceAttr(name, "spec.roles.0", "Bot"),
+					resource.TestCheckResourceAttr(name, "spec.join_method", "iam"),
+					resource.TestCheckResourceAttr(name, "version", "v2"),
+				),
+			},
+			{
+				Config:   s.getFixture("provision_token_iam_create.tf"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
