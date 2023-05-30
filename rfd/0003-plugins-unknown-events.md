@@ -32,7 +32,7 @@ should be able to handle all types of events. If the event handler is not able
 to handle new events, it can miss important events and drift from the Auth server truth.
 
 The Teleport event handler receives events from the Auth server, serializes them
-using JSON and sends them to the upstream service (e.g. Splunk, FluentD, etc).
+using JSON and sends them to the downstream service (e.g. Splunk, FluentD, etc).
 When the event handler is not up to date with the Auth server, the new events
 will not be known to the event handler and the protobuf raw cannot be deserialized.
 Without the deserialized event, the event handler cannot serialize the event
@@ -50,7 +50,7 @@ client requests those endpoints. This will allow the event handler to receive
 the events with a JSON-like structure and send them to the upstream service without having to
 deserialize the Protobuf and serialize it again to JSON.
 
-To achieve this, we will add a new Protobuf service - `AuditLogService - to Auth server that will return
+To achieve this, we will add a new Protobuf service - `AuditLogService` - to Auth server that will return
 the events in an unstructured format. The event handler will use these endpoints to retrieve the events
 and session events and convert them into plain JSON before pushing upstream.
 
@@ -167,7 +167,7 @@ The `user.login` event can trigger a user lock if the user has too many failed
 login attempts. The event handler will deserialize the event and pick the user
 data, cluster and if the login attempt failed.
 
-For these events, the event handler will have to deserialize the JSON to the
+For these events, the event handler will have to deserialize the unstructured event `struct` to the
 specific event type and extract the data it needs as shown in the example below.
 
 ```go
