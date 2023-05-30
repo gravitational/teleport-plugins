@@ -24,6 +24,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 {{- end}}
+{{- if .UUIDMetadataName}}
+	"github.com/google/uuid"
+{{- end}}
 {{- range $i, $a := .ExtraImports}}
 	"{{$a}}"
 {{- end}}
@@ -89,6 +92,11 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 			return
 		}
 		{{.VarName}}.Metadata.Name = hex.EncodeToString(b)
+	}
+	{{end -}}
+	{{if .UUIDMetadataName -}}
+	if {{.VarName}}.Metadata.Name == "" {
+		{{.VarName}}.Metadata.Name = uuid.NewString()
 	}
 	{{end -}}
 	{{if .DefaultVersion -}}

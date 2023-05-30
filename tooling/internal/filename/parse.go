@@ -25,7 +25,7 @@ import (
 )
 
 var (
-	filenamePattern *regexp.Regexp = regexp.MustCompile(`^(?P<plugin>.*)-teleport-v(?P<version>.*)-(?P<os>linux|darwin|windows)-(?P<arch>amd64|arm|aarch)-bin.tar.gz$`)
+	filenamePattern *regexp.Regexp = regexp.MustCompile(`^(?P<plugin>.*)-teleport-v(?P<version>.*)-(?P<os>linux|darwin|windows)-(?P<arch>amd64|arm|arm64)-bin.tar.gz$`)
 )
 
 // Info holds information about a plugin, deduced from from its Houston-compatible

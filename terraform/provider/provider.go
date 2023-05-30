@@ -317,6 +317,9 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		DialTimeout: dialTimeoutDuration,
 		DialOpts: []grpc.DialOption{
 			grpc.WithReturnConnectionError(),
+			grpc.WithDefaultCallOptions(
+				grpc.WaitForReady(true),
+			),
 		},
 	})
 
@@ -369,7 +372,7 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 // checkTeleportVersion ensures that Teleport version is at least minServerVersion
 func (p *Provider) checkTeleportVersion(ctx context.Context, client *client.Client, resp *tfsdk.ConfigureProviderResponse) bool {
 	log.Debug("Checking Teleport server version")
-	pong, err := client.WithCallOptions(grpc.WaitForReady(true)).Ping(ctx)
+	pong, err := client.Ping(ctx)
 	if err != nil {
 		if trace.IsNotImplemented(err) {
 			resp.Diagnostics.AddError(
@@ -569,6 +572,8 @@ func (p *Provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceTyp
 		"teleport_user":                      resourceTeleportUserType{},
 		"teleport_bot":                       resourceTeleportBotType{},
 		"teleport_login_rule":                resourceTeleportLoginRuleType{},
+		"teleport_trusted_device":            resourceTeleportDeviceV1Type{},
+		"teleport_okta_import_rule":          resourceTeleportOktaImportRuleType{},
 	}, nil
 }
 
@@ -588,5 +593,7 @@ func (p *Provider) GetDataSources(_ context.Context) (map[string]tfsdk.DataSourc
 		"teleport_trusted_cluster":           dataSourceTeleportTrustedClusterType{},
 		"teleport_user":                      dataSourceTeleportUserType{},
 		"teleport_login_rule":                dataSourceTeleportLoginRuleType{},
+		"teleport_trusted_device":            dataSourceTeleportDeviceV1Type{},
+		"teleport_okta_import_rule":          dataSourceTeleportOktaImportRuleType{},
 	}, nil
 }

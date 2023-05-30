@@ -43,13 +43,13 @@ $(BUILDDIR)/terraform-provider-teleport_%: terraform-provider-teleport-v$(VERSIO
 	mv $(BUILDDIR)/terraform-provider-teleport $@
 
 CUSTOM_IMPORTS_TMP_DIR ?= /tmp/protoc-gen-terraform/custom-imports
-PROTOC_GEN_TERRAFORM_VERSION ?= v1.4.1
+PROTOC_GEN_TERRAFORM_VERSION ?= v1.4.2
 PROTOC_GEN_TERRAFORM_EXISTS := $(shell protoc-gen-terraform version 2>&1 >/dev/null | grep 'protoc-gen-terraform $(PROTOC_GEN_TERRAFORM_VERSION)')
 
 .PHONY: gen-tfschema
 gen-tfschema:
 ifndef PROTOC_GEN_TERRAFORM_EXISTS
-	@echo "protoc-gen-terraform v1.4.1 is not installed. Please, refer to README.md for installation instructions."
+	@echo "protoc-gen-terraform $(PROTOC_GEN_TERRAFORM_VERSION) is not installed. Please, refer to README.md for installation instructions."
 	@exit -1
 endif
 
@@ -72,10 +72,19 @@ endif
 		--terraform_out=config=protoc-gen-terraform-loginrule.yaml:./tfschema \
 		teleport/loginrule/v1/loginrule.proto
 
-	@go run ./_gen/main.go
+	@protoc \
+		-I$(API_MOD_PATH)/proto \
+		-I$(PROTOBUF_MOD_PATH) \
+		--plugin=$(GENTERRAFORMPATH)/protoc-gen-terraform \
+		--terraform_out=config=protoc-gen-terraform-devicetrust.yaml:./tfschema \
+		teleport/legacy/types/device.proto
+
+	@go run ./gen/main.go
 	mv ./tfschema/github.com/gravitational/teleport/api/types/types_terraform.go ./tfschema/
 	mv ./tfschema/github.com/gravitational/teleport/api/gen/proto/go/teleport/loginrule/v1/loginrule_terraform.go ./tfschema/loginrule/v1/
+	mv ./tfschema/github.com/gravitational/teleport/api/types/device_terraform.go ./tfschema/devicetrust/v1/
 	rm -r ./tfschema/github.com/
+	@go run ./gen/main.go docs
 
 .PHONY: release
 ifeq ($(OS)-$(ARCH),darwin-universal)
@@ -85,13 +94,13 @@ release: build
 endif
 	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
 
-TERRAFORM_EXISTS := $(shell terraform -version 2>/dev/null | grep 'Terraform v1.3')
+TERRAFORM_EXISTS := $(shell terraform -version 2>/dev/null | grep 'Terraform v1.4')
 CURRENT_ULIMIT := $(shell ulimit -n)
 
 .PHONY: test
 test: install
 ifndef TERRAFORM_EXISTS
-	@echo "Terraform v1.3+ is not installed (tfenv install 1.3.3 && tfenv use 1.3.3)."
+	@echo "Terraform v1.4+ is not installed (tfenv install 1.4.6 && tfenv use 1.4.6)."
 	terraform -version
 	@exit -1
 endif

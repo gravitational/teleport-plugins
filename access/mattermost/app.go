@@ -150,6 +150,9 @@ func (a *App) init(ctx context.Context) error {
 		Credentials: a.conf.Teleport.Credentials(),
 		DialOpts: []grpc.DialOption{
 			grpc.WithConnectParams(grpc.ConnectParams{Backoff: bk, MinConnectTimeout: initTimeout}),
+			grpc.WithDefaultCallOptions(
+				grpc.WaitForReady(true),
+			),
 			grpc.WithReturnConnectionError(),
 		},
 	}); err != nil {
@@ -181,7 +184,7 @@ func (a *App) init(ctx context.Context) error {
 func (a *App) checkTeleportVersion(ctx context.Context) (proto.PingResponse, error) {
 	log := logger.Get(ctx)
 	log.Debug("Checking Teleport server version")
-	pong, err := a.apiClient.WithCallOptions(grpc.WaitForReady(true)).Ping(ctx)
+	pong, err := a.apiClient.Ping(ctx)
 	if err != nil {
 		if trace.IsNotImplemented(err) {
 			return pong, trace.Wrap(err, "server version must be at least %s", minServerVersion)

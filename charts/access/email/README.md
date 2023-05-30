@@ -68,7 +68,7 @@ kubectl create secret generic teleport-plugin-email-identity --from-file=auth_id
 ### Installing the plugin
 
 ```
-helm repo add teleport https://charts.teleport.sh/
+helm repo add teleport https://charts.releases.teleport.dev/
 ```
 
 ```shell
@@ -87,8 +87,8 @@ mailgun:
   domain: sandboxbd81caddef744a69be0e5b544ab0c3bd.mailgun.org
   privateKey: supersecretprivatekey
 
-role_to_recipients:
-  '*': access-requests@example.com
+roleToRecipients:
+  '*': ["access-requests@example.com"]
 ```
 
 Alternatively, you can pass arguments from the command line (useful for one-liners or scripts):
