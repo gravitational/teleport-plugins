@@ -19,7 +19,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"html"
 	"io"
 	"log"
 	"os"
@@ -555,7 +554,13 @@ func dumpAttributes(fp io.Writer, level int, resourceName string, prefix string,
 		if d, found := fieldComments[fullFieldPath]; found {
 			description = d
 		}
-		table.Append([]string{name, typ(attr.Type), requiredString(attr.Required), html.EscapeString(description)})
+		// Using html.EscapeString also escapes `'`` (into `&#39;`)
+		// This generates a lint error when running cspell because the word `doesn't` becomes `doesn&#39;t`
+		// and `doesn` isn't a valid word.
+		// This lint error happens when running the `Lint (docs)` CI step in the teleport repo.
+		// The mdx format supports `'"&` (the other chars that html.EscapeString escapes) without escaping.
+		descriptionMDXEscaped := strings.ReplaceAll(strings.ReplaceAll(description, "<", "&lt;"), ">", "&gt;")
+		table.Append([]string{name, typ(attr.Type), requiredString(attr.Required), descriptionMDXEscaped})
 	}
 	table.Render()
 	fmt.Fprintln(fp)
