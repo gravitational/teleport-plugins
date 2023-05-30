@@ -124,7 +124,7 @@ message EventsUnstructured {
   string last_key = 2;
 }
 
-// EventUnstructured represents a siggle events.AuditEvent in an unstructured format.
+// EventUnstructured represents a single events.AuditEvent in an unstructured format.
 message EventUnstructured {
   // type is the type of the event.
   string type = 1;
