@@ -14,7 +14,7 @@ DATADIR=/var/lib/teleport/plugins/msteams
 [ ! $(id -u) != "0" ] || { echo "ERROR: You must be root"; exit 1; }
 cd $(dirname $0)
 mkdir -p $BINDIR $DATADIR || exit 1
-cp -f teleport-msteams $BINDIR/ || exit 1
+cp -f build/teleport-msteams $BINDIR/ || exit 1
 
 echo "Teleport MsTeams binaries have been copied to $BINDIR"
 echo "Please follow: https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-msteams/"

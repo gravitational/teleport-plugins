@@ -13,7 +13,7 @@ DATADIR=/var/lib/teleport/plugins/pagerduty
 [ ! $(id -u) != "0" ] || { echo "ERROR: You must be root"; exit 1; }
 cd $(dirname $0)
 mkdir -p $BINDIR $DATADIR
-cp -f teleport-pagerduty $BINDIR/ || exit 1
+cp -f build/teleport-pagerduty $BINDIR/ || exit 1
 
 echo "Teleport PagerDuty Plugin binaries have been copied to $BINDIR"
 echo "You can run teleport-pagerduty configure > /etc/teleport-pagerduty.toml to bootstrap your config file."

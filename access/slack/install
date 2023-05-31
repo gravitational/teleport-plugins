@@ -14,7 +14,7 @@ DATADIR=/var/lib/teleport/plugins/slack
 [ ! $(id -u) != "0" ] || { echo "ERROR: You must be root"; exit 1; }
 cd $(dirname $0)
 mkdir -p $BINDIR $DATADIR || exit 1
-cp -f teleport-slack $BINDIR/ || exit 1
+cp -f build/teleport-slack $BINDIR/ || exit 1
 
 echo "Teleport Slack binaries have been copied to $BINDIR"
 echo "You can run teleport-slack configure > /etc/teleport-slack.toml to bootstrap your config file"
