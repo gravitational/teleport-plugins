@@ -280,7 +280,6 @@ required_fields:
     - "ProvisionTokenV2.Spec"
     - "ProvisionTokenV2.Spec.Options"
     - "ProvisionTokenV2.Spec.Roles"
-    - "ProvisionTokenV2.Metadata.Expires"
 
     # Role
     - "RoleV6.Metadata.Name"    

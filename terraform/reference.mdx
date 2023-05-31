@@ -982,7 +982,7 @@ Metadata is resource metadata
 |    Name     |      Type      | Required |                                              Description                                               |
 |-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
 | description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   | *        | Expires is a global expiry time header can be set on any resource in the system.                       |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
 | labels      | map of strings |          | Labels is a set of labels                                                                              |
 | name        | string         |          | Name is an object name                                                                                 |
 | namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
@@ -1152,6 +1152,20 @@ resource "teleport_provision_token" "example" {
 
   spec = {
     roles = ["Node", "Auth"]
+  }
+}
+
+resource "teleport_provision_token" "iam-token" {
+  metadata = {
+    name = "iam-token"
+  }
+  spec = {
+    roles       = ["Bot"]
+    bot_name    = "mybot"
+    join_method = "iam"
+    allow = [{
+      aws_account = "123456789012"
+    }]
   }
 }
 

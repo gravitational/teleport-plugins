@@ -621,7 +621,7 @@ func GenSchemaProvisionTokenV2(ctx context.Context) (github_com_hashicorp_terraf
 				},
 				"expires": {
 					Description: "Expires is a global expiry time header can be set on any resource in the system.",
-					Required:    true,
+					Optional:    true,
 					Type:        UseRFC3339Time(),
 					Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{MustTimeBeInFuture()},
 				},
