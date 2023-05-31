@@ -6,7 +6,7 @@ and Jira Server 8.
 
 ## Setup
 
-[See setup instructions on Teleport's docs website](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-jir/)
+[See setup instructions on Teleport's docs website](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-jira/)
 
 ## Install the plugin
 
