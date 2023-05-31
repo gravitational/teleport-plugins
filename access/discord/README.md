@@ -4,9 +4,7 @@ This package implements a simple Discord plugin using the Teleport Access API. A
 
 ## Setup
 
-[See setup instructions on Teleport's website](https://goteleport.com/teleport/docs/enterprise/workflow/ssh_approval_discord/)
-
-Detailed install steps are provided in our [docs](https://goteleport.com/docs/enterprise/workflow/ssh-approval-discord/).
+[See setup instructions on Teleport's docs website](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-discord/)
 
 ## Install the plugin
 
