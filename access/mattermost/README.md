@@ -3,7 +3,7 @@
 This package provides Teleport <-> Mattermost integration that allows teams to
 get notified about new access requests in Mattermost.
 
-[See setup instructions on Teleport's website](tps://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-mattermost/)
+[See setup instructions on Teleport's website](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-mattermost/)
 
 ## Prerequisites
 
