@@ -16,6 +16,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"github.com/gravitational/teleport/integrations/lib"
@@ -233,7 +234,8 @@ Loop:
 
 	// We have finished ingestion and do not need session state anymore
 	err := j.app.State.RemoveSession(s.ID)
-	if err != nil {
+	// If the session had no events, the file won't exist, so we ignore the error
+	if err != nil && !os.IsNotExist(err) {
 		return false, trace.Wrap(err)
 	}
 
