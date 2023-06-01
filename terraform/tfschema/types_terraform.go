@@ -1201,6 +1201,11 @@ func GenSchemaAuthPreferenceV2(ctx context.Context) (github_com_hashicorp_terraf
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.BoolType,
 						},
+						"ekcert_allowed_cas": {
+							Description: "Allow list of EKCert CAs in PEM format. If present, only TPM devices that present an EKCert that is signed by a CA specified here may be enrolled (existing enrollments are unchanged).  If not present, then the CA of TPM EKCerts will not be checked during enrollment, this allows any device to enroll.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+						},
 						"mode": {
 							Description: "Mode of verification for trusted devices.  The following modes are supported:  - \"off\": disables both device authentication and authorization. - \"optional\": allows both device authentication and authorization, but doesn't enforce the presence of device extensions for sensitive endpoints. - \"required\": enforces the presence of device extensions for sensitive endpoints.  Mode is always \"off\" for OSS. Defaults to \"optional\" for Enterprise.",
 							Optional:    true,
@@ -12470,6 +12475,33 @@ func CopyAuthPreferenceV2FromTerraform(_ context.Context, tf github_com_hashicor
 											}
 										}
 									}
+									{
+										a, ok := tf.Attrs["ekcert_allowed_cas"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"AuthPreferenceV2.Spec.DeviceTrust.EKCertAllowedCAs"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"AuthPreferenceV2.Spec.DeviceTrust.EKCertAllowedCAs", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+											} else {
+												obj.EKCertAllowedCAs = make([]string, len(v.Elems))
+												if !v.Null && !v.Unknown {
+													for k, a := range v.Elems {
+														v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															diags.Append(attrReadConversionFailureDiag{"AuthPreferenceV2.Spec.DeviceTrust.EKCertAllowedCAs", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+														} else {
+															var t string
+															if !v.Null && !v.Unknown {
+																t = string(v.Value)
+															}
+															obj.EKCertAllowedCAs[k] = t
+														}
+													}
+												}
+											}
+										}
+									}
 								}
 							}
 						}
@@ -13327,6 +13359,59 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravita
 											v.Value = bool(obj.AutoEnroll)
 											v.Unknown = false
 											tf.Attrs["auto_enroll"] = v
+										}
+									}
+									{
+										a, ok := tf.AttrTypes["ekcert_allowed_cas"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"AuthPreferenceV2.Spec.DeviceTrust.EKCertAllowedCAs"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.DeviceTrust.EKCertAllowedCAs", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+											} else {
+												c, ok := tf.Attrs["ekcert_allowed_cas"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+												if !ok {
+													c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+														ElemType: o.ElemType,
+														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.EKCertAllowedCAs)),
+														Null:     true,
+													}
+												} else {
+													if c.Elems == nil {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.EKCertAllowedCAs))
+													}
+												}
+												if obj.EKCertAllowedCAs != nil {
+													t := o.ElemType
+													if len(obj.EKCertAllowedCAs) != len(c.Elems) {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.EKCertAllowedCAs))
+													}
+													for k, a := range obj.EKCertAllowedCAs {
+														v, ok := tf.Attrs["ekcert_allowed_cas"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+															if err != nil {
+																diags.Append(attrWriteGeneralError{"AuthPreferenceV2.Spec.DeviceTrust.EKCertAllowedCAs", err})
+															}
+															v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.DeviceTrust.EKCertAllowedCAs", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															}
+															v.Null = string(a) == ""
+														}
+														v.Value = string(a)
+														v.Unknown = false
+														c.Elems[k] = v
+													}
+													if len(obj.EKCertAllowedCAs) > 0 {
+														c.Null = false
+													}
+												}
+												c.Unknown = false
+												tf.Attrs["ekcert_allowed_cas"] = c
+											}
 										}
 									}
 								}
