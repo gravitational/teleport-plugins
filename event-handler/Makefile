@@ -1,6 +1,9 @@
 VERSION=13.0.4
 GO_VERSION=1.20.4
 
+BINARY = $(BUILDDIR)/teleport-event-handler
+GITTAG=v$(VERSION)
+
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
 TERRAFORM_ARCH=$(OS)_$(ARCH)
@@ -28,7 +31,9 @@ DOCKER_IMAGE_ECR_PUBLIC = public.ecr.aws/gravitational/$(DOCKER_NAME):$(VERSION)
 DOCKER_IMAGE_QUAY = quay.io/gravitational/$(DOCKER_NAME):$(VERSION)
 DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg GITREF=$(GITREF)
 
-RELEASE = teleport-event-handler-v$(VERSION)-$(OS)-$(ARCH)-bin
+RELEASE_NAME = teleport-event-handler
+RELEASE = $(RELEASE_NAME)-v$(VERSION)-$(OS)-$(ARCH)-bin
+RELEASE_MESSAGE = "Building with GOOS=$(OS) GOARCH=$(ARCH)."
 
 .PHONY: build
 build: clean
@@ -36,7 +41,17 @@ build: clean
 
 .PHONY: release
 release: build
-	tar -C $(BUILDDIR) -czf $(RELEASE).tar.gz .
+	@echo "---> $(RELEASE_MESSAGE)"
+	mkdir $(RELEASE_NAME)
+	cp -rf $(BINARY) \
+          README.md \
+          install \
+          $(RELEASE_NAME)/
+	echo $(GITTAG) > $(RELEASE_NAME)/VERSION
+	tar -czf $(RELEASE).tar.gz $(RELEASE_NAME)
+	rm -rf $(RELEASE_NAME)/
+	@echo "---> Created $(RELEASE).tar.gz."
+  
 
 .PHONY: clean
 clean:
