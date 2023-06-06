@@ -1,7 +1,7 @@
 VERSION=13.1.0
 GO_VERSION=1.20.4
 
-BINARY = $(BUILDDIR)/teleport-event-handler
+
 GITTAG=v$(VERSION)
 
 OS ?= $(shell go env GOOS)
@@ -12,6 +12,7 @@ LOCALDIR := $(dir $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
 GENTERRAFORMPATH := $(shell go env GOPATH)/bin
 
 BUILDDIR ?= build
+BINARY = $(BUILDDIR)/teleport-event-handler
 
 GITREF ?= $(shell git describe --dirty --long --tags --match '*event-handler*')
 ADDFLAGS ?=
