@@ -1,7 +1,6 @@
 VERSION=13.1.0
 GO_VERSION=1.20.4
 
-
 GITTAG=v$(VERSION)
 
 OS ?= $(shell go env GOOS)
