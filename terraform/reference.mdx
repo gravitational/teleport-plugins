@@ -444,6 +444,7 @@ Spec is the database spec.
 |      Name      |  Type  | Required |                                                                 Description                                                                  |
 |----------------|--------|----------|----------------------------------------------------------------------------------------------------------------------------------------------|
 | ad             | object |          | AD is the Active Directory configuration for the database.                                                                                   |
+| admin_user     | object |          | AdminUser is the database admin user for automatic user provisioning.                                                                        |
 | aws            | object |          | AWS contains AWS specific settings for RDS/Aurora/Redshift databases.                                                                        |
 | azure          | object |          | Azure contains Azure specific database metadata.                                                                                             |
 | ca_cert        | string |          | CACert is the PEM-encoded database CA certificate.  DEPRECATED: Moved to TLS.CACert. DELETE IN 10.0.                                         |
@@ -466,6 +467,14 @@ AD is the Active Directory configuration for the database.
 | krb5_file     | string |          | Krb5File is the path to the Kerberos configuration file. Defaults to /etc/krb5.conf.    |
 | ldap_cert     | string |          | LDAPCert is a certificate from Windows LDAP/AD, optional; only for x509 Authentication. |
 | spn           | string |          | SPN is the service principal name for the database.                                     |
+
+#### spec.admin_user
+
+AdminUser is the database admin user for automatic user provisioning.
+
+| Name |  Type  | Required |                      Description                      |
+|------|--------|----------|-------------------------------------------------------|
+| name | string |          | Name is the username of the privileged database user. |
 
 #### spec.aws
 
@@ -1215,6 +1224,7 @@ Allow is the set of conditions evaluated to grant access.
 | cluster_labels         | map of string arrays |          |                                                                                                                                 |
 | db_labels              | map of string arrays |          |                                                                                                                                 |
 | db_names               | array of strings     |          | DatabaseNames is a list of database names this role is allowed to connect to.                                                   |
+| db_roles               | array of strings     |          | DatabaseRoles is a list of databases roles for automatic user creation.                                                         |
 | db_service_labels      | map of string arrays |          |                                                                                                                                 |
 | db_users               | array of strings     |          | DatabaseUsers is a list of databases users this role is allowed to connect as.                                                  |
 | desktop_groups         | array of strings     |          | DesktopGroups is a list of groups for created desktop users to be added to                                                      |
@@ -1359,6 +1369,7 @@ Deny is the set of conditions evaluated to deny access. Deny takes priority over
 | cluster_labels         | map of string arrays |          |                                                                                                                                 |
 | db_labels              | map of string arrays |          |                                                                                                                                 |
 | db_names               | array of strings     |          | DatabaseNames is a list of database names this role is allowed to connect to.                                                   |
+| db_roles               | array of strings     |          | DatabaseRoles is a list of databases roles for automatic user creation.                                                         |
 | db_service_labels      | map of string arrays |          |                                                                                                                                 |
 | db_users               | array of strings     |          | DatabaseUsers is a list of databases users this role is allowed to connect as.                                                  |
 | desktop_groups         | array of strings     |          | DesktopGroups is a list of groups for created desktop users to be added to                                                      |
@@ -1500,6 +1511,7 @@ Options is for OpenSSH options like agent forwarding.
 | cert_extensions            | object           |          | CertExtensions specifies the key/values                                                                                                                                    |
 | cert_format                | string           |          | CertificateFormat defines the format of the user certificate to allow compatibility with older versions of OpenSSH.                                                        |
 | client_idle_timeout        | duration         |          | ClientIdleTimeout sets disconnect clients on idle timeout behavior, if set to 0 means do not disconnect, otherwise is set to the idle duration.                            |
+| create_db_user             | bool             |          |                                                                                                                                                                            |
 | create_desktop_user        | bool             |          |                                                                                                                                                                            |
 | create_host_user           | bool             |          |                                                                                                                                                                            |
 | desktop_clipboard          | bool             |          |                                                                                                                                                                            |

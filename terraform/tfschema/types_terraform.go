@@ -134,6 +134,15 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 					Description: "AD is the Active Directory configuration for the database.",
 					Optional:    true,
 				},
+				"admin_user": {
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"name": {
+						Description: "Name is the username of the privileged database user.",
+						Optional:    true,
+						Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+					}}),
+					Description: "AdminUser is the database admin user for automatic user provisioning.",
+					Optional:    true,
+				},
 				"aws": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 						"account_id": {
@@ -1392,6 +1401,11 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
+						"db_roles": {
+							Description: "DatabaseRoles is a list of databases roles for automatic user creation.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+						},
 						"db_service_labels": GenSchemaLabels(ctx),
 						"db_users": {
 							Description: "DatabaseUsers is a list of databases users this role is allowed to connect as.",
@@ -1706,6 +1720,11 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 						"db_labels":      GenSchemaLabels(ctx),
 						"db_names": {
 							Description: "DatabaseNames is a list of database names this role is allowed to connect to.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+						},
+						"db_roles": {
+							Description: "DatabaseRoles is a list of databases roles for automatic user creation.",
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
@@ -2044,6 +2063,7 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        DurationType{},
 						},
+						"create_db_user":            GenSchemaBoolOption(ctx),
 						"create_desktop_user":       GenSchemaBoolOption(ctx),
 						"create_host_user":          GenSchemaBoolOption(ctx),
 						"desktop_clipboard":         GenSchemaBoolOption(ctx),
@@ -4350,6 +4370,41 @@ func CopyDatabaseV3FromTerraform(_ context.Context, tf github_com_hashicorp_terr
 							}
 						}
 					}
+					{
+						a, ok := tf.Attrs["admin_user"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.AdminUser"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.AdminUser", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+							} else {
+								obj.AdminUser = nil
+								if !v.Null && !v.Unknown {
+									tf := v
+									obj.AdminUser = &github_com_gravitational_teleport_api_types.DatabaseAdminUser{}
+									obj := obj.AdminUser
+									{
+										a, ok := tf.Attrs["name"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.AdminUser.Name"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.AdminUser.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.Name = t
+											}
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -6247,6 +6302,60 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 								}
 								v.Unknown = false
 								tf.Attrs["mysql"] = v
+							}
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["admin_user"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.AdminUser"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AdminUser", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+							} else {
+								v, ok := tf.Attrs["admin_user"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+								if !ok {
+									v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+										AttrTypes: o.AttrTypes,
+										Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+									}
+								} else {
+									if v.Attrs == nil {
+										v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+									}
+								}
+								if obj.AdminUser == nil {
+									v.Null = true
+								} else {
+									obj := obj.AdminUser
+									tf := &v
+									{
+										t, ok := tf.AttrTypes["name"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.AdminUser.Name"})
+										} else {
+											v, ok := tf.Attrs["name"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"DatabaseV3.Spec.AdminUser.Name", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AdminUser.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.Name) == ""
+											}
+											v.Value = string(obj.Name)
+											v.Unknown = false
+											tf.Attrs["name"] = v
+										}
+									}
+								}
+								v.Unknown = false
+								tf.Attrs["admin_user"] = v
 							}
 						}
 					}
@@ -14227,6 +14336,13 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 										}
 										CopyFromBoolOption(diags, a, &obj.CreateDesktopUser)
 									}
+									{
+										a, ok := tf.Attrs["create_db_user"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Options.CreateDatabaseUser"})
+										}
+										CopyFromBoolOption(diags, a, &obj.CreateDatabaseUser)
+									}
 								}
 							}
 						}
@@ -15659,6 +15775,33 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 																t = string(v.Value)
 															}
 															obj.DesktopGroups[k] = t
+														}
+													}
+												}
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["db_roles"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.DatabaseRoles"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.DatabaseRoles", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+											} else {
+												obj.DatabaseRoles = make([]string, len(v.Elems))
+												if !v.Null && !v.Unknown {
+													for k, a := range v.Elems {
+														v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.DatabaseRoles", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+														} else {
+															var t string
+															if !v.Null && !v.Unknown {
+																t = string(v.Value)
+															}
+															obj.DatabaseRoles[k] = t
 														}
 													}
 												}
@@ -17103,6 +17246,33 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 											}
 										}
 									}
+									{
+										a, ok := tf.Attrs["db_roles"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Deny.DatabaseRoles"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.DatabaseRoles", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+											} else {
+												obj.DatabaseRoles = make([]string, len(v.Elems))
+												if !v.Null && !v.Unknown {
+													for k, a := range v.Elems {
+														v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.DatabaseRoles", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+														} else {
+															var t string
+															if !v.Null && !v.Unknown {
+																t = string(v.Value)
+															}
+															obj.DatabaseRoles[k] = t
+														}
+													}
+												}
+											}
+										}
+									}
 								}
 							}
 						}
@@ -18148,6 +18318,15 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 										} else {
 											v := CopyToBoolOption(diags, obj.CreateDesktopUser, t, tf.Attrs["create_desktop_user"])
 											tf.Attrs["create_desktop_user"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["create_db_user"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Options.CreateDatabaseUser"})
+										} else {
+											v := CopyToBoolOption(diags, obj.CreateDatabaseUser, t, tf.Attrs["create_db_user"])
+											tf.Attrs["create_db_user"] = v
 										}
 									}
 								}
@@ -20708,6 +20887,59 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 											}
 										}
 									}
+									{
+										a, ok := tf.AttrTypes["db_roles"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Allow.DatabaseRoles"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.DatabaseRoles", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+											} else {
+												c, ok := tf.Attrs["db_roles"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+												if !ok {
+													c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+														ElemType: o.ElemType,
+														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseRoles)),
+														Null:     true,
+													}
+												} else {
+													if c.Elems == nil {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseRoles))
+													}
+												}
+												if obj.DatabaseRoles != nil {
+													t := o.ElemType
+													if len(obj.DatabaseRoles) != len(c.Elems) {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseRoles))
+													}
+													for k, a := range obj.DatabaseRoles {
+														v, ok := tf.Attrs["db_roles"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+															if err != nil {
+																diags.Append(attrWriteGeneralError{"RoleV6.Spec.Allow.DatabaseRoles", err})
+															}
+															v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.DatabaseRoles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															}
+															v.Null = string(a) == ""
+														}
+														v.Value = string(a)
+														v.Unknown = false
+														c.Elems[k] = v
+													}
+													if len(obj.DatabaseRoles) > 0 {
+														c.Null = false
+													}
+												}
+												c.Unknown = false
+												tf.Attrs["db_roles"] = c
+											}
+										}
+									}
 								}
 								v.Unknown = false
 								tf.Attrs["allow"] = v
@@ -23263,6 +23495,59 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												}
 												c.Unknown = false
 												tf.Attrs["desktop_groups"] = c
+											}
+										}
+									}
+									{
+										a, ok := tf.AttrTypes["db_roles"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Deny.DatabaseRoles"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.DatabaseRoles", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+											} else {
+												c, ok := tf.Attrs["db_roles"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+												if !ok {
+													c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+														ElemType: o.ElemType,
+														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseRoles)),
+														Null:     true,
+													}
+												} else {
+													if c.Elems == nil {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseRoles))
+													}
+												}
+												if obj.DatabaseRoles != nil {
+													t := o.ElemType
+													if len(obj.DatabaseRoles) != len(c.Elems) {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseRoles))
+													}
+													for k, a := range obj.DatabaseRoles {
+														v, ok := tf.Attrs["db_roles"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+															if err != nil {
+																diags.Append(attrWriteGeneralError{"RoleV6.Spec.Deny.DatabaseRoles", err})
+															}
+															v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.DatabaseRoles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															}
+															v.Null = string(a) == ""
+														}
+														v.Value = string(a)
+														v.Unknown = false
+														c.Elems[k] = v
+													}
+													if len(obj.DatabaseRoles) > 0 {
+														c.Null = false
+													}
+												}
+												c.Unknown = false
+												tf.Attrs["db_roles"] = c
 											}
 										}
 									}
