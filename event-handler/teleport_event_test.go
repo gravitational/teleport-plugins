@@ -17,11 +17,18 @@ limitations under the License.
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"testing"
 
+	auditlogpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/auditlog/v1"
 	"github.com/gravitational/teleport/api/types/events"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/gravitational/teleport-plugins/event-handler/lib"
 )
 
 func TestNew(t *testing.T) {
@@ -32,7 +39,7 @@ func TestNew(t *testing.T) {
 		},
 	}
 
-	event, err := NewTeleportEvent(events.AuditEvent(e), "cursor")
+	event, err := NewTeleportEvent(eventToJSON(t, events.AuditEvent(e)), "cursor")
 	require.NoError(t, err)
 	assert.Equal(t, "test", event.ID)
 	assert.Equal(t, "mock", event.Type)
@@ -42,7 +49,7 @@ func TestNew(t *testing.T) {
 func TestGenID(t *testing.T) {
 	e := &events.SessionPrint{}
 
-	event, err := NewTeleportEvent(events.AuditEvent(e), "cursor")
+	event, err := NewTeleportEvent(eventToJSON(t, events.AuditEvent(e)), "cursor")
 	require.NoError(t, err)
 	assert.NotEmpty(t, event.ID)
 }
@@ -57,7 +64,7 @@ func TestSessionEnd(t *testing.T) {
 		},
 	}
 
-	event, err := NewTeleportEvent(events.AuditEvent(e), "cursor")
+	event, err := NewTeleportEvent(eventToJSON(t, events.AuditEvent(e)), "cursor")
 	require.NoError(t, err)
 	assert.NotEmpty(t, event.ID)
 	assert.NotEmpty(t, event.SessionID)
@@ -74,7 +81,7 @@ func TestFailedLogin(t *testing.T) {
 		},
 	}
 
-	event, err := NewTeleportEvent(events.AuditEvent(e), "cursor")
+	event, err := NewTeleportEvent(eventToJSON(t, events.AuditEvent(e)), "cursor")
 	require.NoError(t, err)
 	assert.NotEmpty(t, event.ID)
 	assert.True(t, event.IsFailedLogin)
@@ -90,8 +97,28 @@ func TestSuccessLogin(t *testing.T) {
 		},
 	}
 
-	event, err := NewTeleportEvent(events.AuditEvent(e), "cursor")
+	event, err := NewTeleportEvent(eventToJSON(t, events.AuditEvent(e)), "cursor")
 	require.NoError(t, err)
 	assert.NotEmpty(t, event.ID)
 	assert.False(t, event.IsFailedLogin)
+}
+
+func eventToJSON(t *testing.T, e events.AuditEvent) *auditlogpb.EventUnstructured {
+	data, err := lib.FastMarshal(e)
+	require.NoError(t, err)
+	str := &structpb.Struct{}
+	err = str.UnmarshalJSON(data)
+	require.NoError(t, err)
+	id := e.GetID()
+	if id == "" {
+		hash := sha256.Sum256(data)
+		id = hex.EncodeToString(hash[:])
+	}
+	return &auditlogpb.EventUnstructured{
+		Type:         e.GetType(),
+		Unstructured: str,
+		Id:           id,
+		Index:        e.GetIndex(),
+		Time:         timestamppb.New(e.GetTime()),
+	}
 }
