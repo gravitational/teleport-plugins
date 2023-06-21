@@ -134,6 +134,15 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 					Description: "AD is the Active Directory configuration for the database.",
 					Optional:    true,
 				},
+				"admin_user": {
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"name": {
+						Description: "Name is the username of the privileged database user.",
+						Optional:    true,
+						Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+					}}),
+					Description: "AdminUser is the database admin user for automatic user provisioning.",
+					Optional:    true,
+				},
 				"aws": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 						"account_id": {
@@ -380,6 +389,15 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 						},
 					}),
 					Description: "GCP contains parameters specific to GCP Cloud SQL databases.",
+					Optional:    true,
+				},
+				"mongo_atlas": {
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"name": {
+						Description: "Name is the Atlas database instance name.",
+						Optional:    true,
+						Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+					}}),
+					Description: "MongoAtlas contains Atlas metadata about the database.",
 					Optional:    true,
 				},
 				"mysql": {
@@ -1375,6 +1393,11 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 				"allow": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 						"app_labels": GenSchemaLabels(ctx),
+						"app_labels_expression": {
+							Description: "AppLabelsExpression is a predicate expression used to allow/deny access to Apps.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"aws_role_arns": {
 							Description: "AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.",
 							Optional:    true,
@@ -1386,13 +1409,33 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
 						"cluster_labels": GenSchemaLabels(ctx),
-						"db_labels":      GenSchemaLabels(ctx),
+						"cluster_labels_expression": {
+							Description: "ClusterLabelsExpression is a predicate expression used to allow/deny access to remote Teleport clusters.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
+						"db_labels": GenSchemaLabels(ctx),
+						"db_labels_expression": {
+							Description: "DatabaseLabelsExpression is a predicate expression used to allow/deny access to Databases.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"db_names": {
 							Description: "DatabaseNames is a list of database names this role is allowed to connect to.",
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
+						"db_roles": {
+							Description: "DatabaseRoles is a list of databases roles for automatic user creation.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+						},
 						"db_service_labels": GenSchemaLabels(ctx),
+						"db_service_labels_expression": {
+							Description: "DatabaseServiceLabelsExpression is a predicate expression used to allow/deny access to Database Services.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"db_users": {
 							Description: "DatabaseUsers is a list of databases users this role is allowed to connect as.",
 							Optional:    true,
@@ -1409,6 +1452,11 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
 						"group_labels": GenSchemaLabels(ctx),
+						"group_labels_expression": {
+							Description: "GroupLabelsExpression is a predicate expression used to allow/deny access to user groups.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"host_groups": {
 							Description: "HostGroups is a list of groups for created users to be added to",
 							Optional:    true,
@@ -1472,6 +1520,11 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
 						"kubernetes_labels": GenSchemaLabels(ctx),
+						"kubernetes_labels_expression": {
+							Description: "KubernetesLabelsExpression is a predicate expression used to allow/deny access to kubernetes clusters.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"kubernetes_resources": {
 							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 								"kind": {
@@ -1506,6 +1559,11 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
 						"node_labels": GenSchemaLabels(ctx),
+						"node_labels_expression": {
+							Description: "NodeLabelsExpression is a predicate expression used to allow/deny access to SSH nodes.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"request": {
 							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 								"annotations": GenSchemaTraits(ctx),
@@ -1680,6 +1738,11 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 						},
 						"windows_desktop_labels": GenSchemaLabels(ctx),
+						"windows_desktop_labels_expression": {
+							Description: "WindowsDesktopLabelsExpression is a predicate expression used to allow/deny access to Windows desktops.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"windows_desktop_logins": {
 							Description: "WindowsDesktopLogins is a list of desktop login names allowed/denied for Windows desktops.",
 							Optional:    true,
@@ -1692,6 +1755,11 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 				"deny": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 						"app_labels": GenSchemaLabels(ctx),
+						"app_labels_expression": {
+							Description: "AppLabelsExpression is a predicate expression used to allow/deny access to Apps.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"aws_role_arns": {
 							Description: "AWSRoleARNs is a list of AWS role ARNs this role is allowed to assume.",
 							Optional:    true,
@@ -1703,13 +1771,33 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
 						"cluster_labels": GenSchemaLabels(ctx),
-						"db_labels":      GenSchemaLabels(ctx),
+						"cluster_labels_expression": {
+							Description: "ClusterLabelsExpression is a predicate expression used to allow/deny access to remote Teleport clusters.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
+						"db_labels": GenSchemaLabels(ctx),
+						"db_labels_expression": {
+							Description: "DatabaseLabelsExpression is a predicate expression used to allow/deny access to Databases.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"db_names": {
 							Description: "DatabaseNames is a list of database names this role is allowed to connect to.",
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
+						"db_roles": {
+							Description: "DatabaseRoles is a list of databases roles for automatic user creation.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+						},
 						"db_service_labels": GenSchemaLabels(ctx),
+						"db_service_labels_expression": {
+							Description: "DatabaseServiceLabelsExpression is a predicate expression used to allow/deny access to Database Services.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"db_users": {
 							Description: "DatabaseUsers is a list of databases users this role is allowed to connect as.",
 							Optional:    true,
@@ -1726,6 +1814,11 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
 						"group_labels": GenSchemaLabels(ctx),
+						"group_labels_expression": {
+							Description: "GroupLabelsExpression is a predicate expression used to allow/deny access to user groups.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"host_groups": {
 							Description: "HostGroups is a list of groups for created users to be added to",
 							Optional:    true,
@@ -1789,6 +1882,11 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
 						"kubernetes_labels": GenSchemaLabels(ctx),
+						"kubernetes_labels_expression": {
+							Description: "KubernetesLabelsExpression is a predicate expression used to allow/deny access to kubernetes clusters.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"kubernetes_resources": {
 							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 								"kind": {
@@ -1821,6 +1919,11 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 						},
 						"node_labels": GenSchemaLabels(ctx),
+						"node_labels_expression": {
+							Description: "NodeLabelsExpression is a predicate expression used to allow/deny access to SSH nodes.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"request": {
 							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 								"annotations": GenSchemaTraits(ctx),
@@ -1995,6 +2098,11 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 						},
 						"windows_desktop_labels": GenSchemaLabels(ctx),
+						"windows_desktop_labels_expression": {
+							Description: "WindowsDesktopLabelsExpression is a predicate expression used to allow/deny access to Windows desktops.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"windows_desktop_logins": {
 							Description: "WindowsDesktopLogins is a list of desktop login names allowed/denied for Windows desktops.",
 							Optional:    true,
@@ -2044,6 +2152,7 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        DurationType{},
 						},
+						"create_db_user":            GenSchemaBoolOption(ctx),
 						"create_desktop_user":       GenSchemaBoolOption(ctx),
 						"create_host_user":          GenSchemaBoolOption(ctx),
 						"desktop_clipboard":         GenSchemaBoolOption(ctx),
@@ -4350,6 +4459,75 @@ func CopyDatabaseV3FromTerraform(_ context.Context, tf github_com_hashicorp_terr
 							}
 						}
 					}
+					{
+						a, ok := tf.Attrs["admin_user"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.AdminUser"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.AdminUser", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+							} else {
+								obj.AdminUser = nil
+								if !v.Null && !v.Unknown {
+									tf := v
+									obj.AdminUser = &github_com_gravitational_teleport_api_types.DatabaseAdminUser{}
+									obj := obj.AdminUser
+									{
+										a, ok := tf.Attrs["name"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.AdminUser.Name"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.AdminUser.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.Name = t
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["mongo_atlas"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.MongoAtlas"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.MongoAtlas", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+							} else {
+								obj.MongoAtlas = github_com_gravitational_teleport_api_types.MongoAtlas{}
+								if !v.Null && !v.Unknown {
+									tf := v
+									obj := &obj.MongoAtlas
+									{
+										a, ok := tf.Attrs["name"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.MongoAtlas.Name"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.MongoAtlas.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.Name = t
+											}
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -6247,6 +6425,112 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 								}
 								v.Unknown = false
 								tf.Attrs["mysql"] = v
+							}
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["admin_user"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.AdminUser"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AdminUser", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+							} else {
+								v, ok := tf.Attrs["admin_user"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+								if !ok {
+									v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+										AttrTypes: o.AttrTypes,
+										Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+									}
+								} else {
+									if v.Attrs == nil {
+										v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+									}
+								}
+								if obj.AdminUser == nil {
+									v.Null = true
+								} else {
+									obj := obj.AdminUser
+									tf := &v
+									{
+										t, ok := tf.AttrTypes["name"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.AdminUser.Name"})
+										} else {
+											v, ok := tf.Attrs["name"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"DatabaseV3.Spec.AdminUser.Name", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AdminUser.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.Name) == ""
+											}
+											v.Value = string(obj.Name)
+											v.Unknown = false
+											tf.Attrs["name"] = v
+										}
+									}
+								}
+								v.Unknown = false
+								tf.Attrs["admin_user"] = v
+							}
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["mongo_atlas"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.MongoAtlas"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.MongoAtlas", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+							} else {
+								v, ok := tf.Attrs["mongo_atlas"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+								if !ok {
+									v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+										AttrTypes: o.AttrTypes,
+										Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+									}
+								} else {
+									if v.Attrs == nil {
+										v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+									}
+								}
+								{
+									obj := obj.MongoAtlas
+									tf := &v
+									{
+										t, ok := tf.AttrTypes["name"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.MongoAtlas.Name"})
+										} else {
+											v, ok := tf.Attrs["name"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"DatabaseV3.Spec.MongoAtlas.Name", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.MongoAtlas.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.Name) == ""
+											}
+											v.Value = string(obj.Name)
+											v.Unknown = false
+											tf.Attrs["name"] = v
+										}
+									}
+								}
+								v.Unknown = false
+								tf.Attrs["mongo_atlas"] = v
 							}
 						}
 					}
@@ -14227,6 +14511,13 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 										}
 										CopyFromBoolOption(diags, a, &obj.CreateDesktopUser)
 									}
+									{
+										a, ok := tf.Attrs["create_db_user"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Options.CreateDatabaseUser"})
+										}
+										CopyFromBoolOption(diags, a, &obj.CreateDatabaseUser)
+									}
 								}
 							}
 						}
@@ -15662,6 +15953,169 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 														}
 													}
 												}
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["db_roles"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.DatabaseRoles"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.DatabaseRoles", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+											} else {
+												obj.DatabaseRoles = make([]string, len(v.Elems))
+												if !v.Null && !v.Unknown {
+													for k, a := range v.Elems {
+														v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.DatabaseRoles", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+														} else {
+															var t string
+															if !v.Null && !v.Unknown {
+																t = string(v.Value)
+															}
+															obj.DatabaseRoles[k] = t
+														}
+													}
+												}
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["node_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.NodeLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.NodeLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.NodeLabelsExpression = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["app_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.AppLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.AppLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.AppLabelsExpression = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["cluster_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.ClusterLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.ClusterLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.ClusterLabelsExpression = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["kubernetes_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.KubernetesLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.KubernetesLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.KubernetesLabelsExpression = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["db_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.DatabaseLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.DatabaseLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.DatabaseLabelsExpression = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["db_service_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.DatabaseServiceLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.DatabaseServiceLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.DatabaseServiceLabelsExpression = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["windows_desktop_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.WindowsDesktopLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.WindowsDesktopLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.WindowsDesktopLabelsExpression = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["group_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.GroupLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.GroupLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.GroupLabelsExpression = t
 											}
 										}
 									}
@@ -17103,6 +17557,169 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 											}
 										}
 									}
+									{
+										a, ok := tf.Attrs["db_roles"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Deny.DatabaseRoles"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.DatabaseRoles", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+											} else {
+												obj.DatabaseRoles = make([]string, len(v.Elems))
+												if !v.Null && !v.Unknown {
+													for k, a := range v.Elems {
+														v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.DatabaseRoles", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+														} else {
+															var t string
+															if !v.Null && !v.Unknown {
+																t = string(v.Value)
+															}
+															obj.DatabaseRoles[k] = t
+														}
+													}
+												}
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["node_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Deny.NodeLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.NodeLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.NodeLabelsExpression = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["app_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Deny.AppLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.AppLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.AppLabelsExpression = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["cluster_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Deny.ClusterLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.ClusterLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.ClusterLabelsExpression = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["kubernetes_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Deny.KubernetesLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.KubernetesLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.KubernetesLabelsExpression = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["db_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Deny.DatabaseLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.DatabaseLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.DatabaseLabelsExpression = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["db_service_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Deny.DatabaseServiceLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.DatabaseServiceLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.DatabaseServiceLabelsExpression = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["windows_desktop_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Deny.WindowsDesktopLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.WindowsDesktopLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.WindowsDesktopLabelsExpression = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["group_labels_expression"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Deny.GroupLabelsExpression"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.GroupLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.GroupLabelsExpression = t
+											}
+										}
+									}
 								}
 							}
 						}
@@ -18148,6 +18765,15 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 										} else {
 											v := CopyToBoolOption(diags, obj.CreateDesktopUser, t, tf.Attrs["create_desktop_user"])
 											tf.Attrs["create_desktop_user"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["create_db_user"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Options.CreateDatabaseUser"})
+										} else {
+											v := CopyToBoolOption(diags, obj.CreateDatabaseUser, t, tf.Attrs["create_db_user"])
+											tf.Attrs["create_db_user"] = v
 										}
 									}
 								}
@@ -20708,6 +21334,235 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 											}
 										}
 									}
+									{
+										a, ok := tf.AttrTypes["db_roles"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Allow.DatabaseRoles"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.DatabaseRoles", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+											} else {
+												c, ok := tf.Attrs["db_roles"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+												if !ok {
+													c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+														ElemType: o.ElemType,
+														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseRoles)),
+														Null:     true,
+													}
+												} else {
+													if c.Elems == nil {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseRoles))
+													}
+												}
+												if obj.DatabaseRoles != nil {
+													t := o.ElemType
+													if len(obj.DatabaseRoles) != len(c.Elems) {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseRoles))
+													}
+													for k, a := range obj.DatabaseRoles {
+														v, ok := tf.Attrs["db_roles"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+															if err != nil {
+																diags.Append(attrWriteGeneralError{"RoleV6.Spec.Allow.DatabaseRoles", err})
+															}
+															v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.DatabaseRoles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															}
+															v.Null = string(a) == ""
+														}
+														v.Value = string(a)
+														v.Unknown = false
+														c.Elems[k] = v
+													}
+													if len(obj.DatabaseRoles) > 0 {
+														c.Null = false
+													}
+												}
+												c.Unknown = false
+												tf.Attrs["db_roles"] = c
+											}
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["node_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Allow.NodeLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["node_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Allow.NodeLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.NodeLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.NodeLabelsExpression) == ""
+											}
+											v.Value = string(obj.NodeLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["node_labels_expression"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["app_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Allow.AppLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["app_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Allow.AppLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.AppLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.AppLabelsExpression) == ""
+											}
+											v.Value = string(obj.AppLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["app_labels_expression"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["cluster_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Allow.ClusterLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["cluster_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Allow.ClusterLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.ClusterLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.ClusterLabelsExpression) == ""
+											}
+											v.Value = string(obj.ClusterLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["cluster_labels_expression"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["kubernetes_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Allow.KubernetesLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["kubernetes_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Allow.KubernetesLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.KubernetesLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.KubernetesLabelsExpression) == ""
+											}
+											v.Value = string(obj.KubernetesLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["kubernetes_labels_expression"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["db_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Allow.DatabaseLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["db_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Allow.DatabaseLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.DatabaseLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.DatabaseLabelsExpression) == ""
+											}
+											v.Value = string(obj.DatabaseLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["db_labels_expression"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["db_service_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Allow.DatabaseServiceLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["db_service_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Allow.DatabaseServiceLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.DatabaseServiceLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.DatabaseServiceLabelsExpression) == ""
+											}
+											v.Value = string(obj.DatabaseServiceLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["db_service_labels_expression"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["windows_desktop_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Allow.WindowsDesktopLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["windows_desktop_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Allow.WindowsDesktopLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.WindowsDesktopLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.WindowsDesktopLabelsExpression) == ""
+											}
+											v.Value = string(obj.WindowsDesktopLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["windows_desktop_labels_expression"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["group_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Allow.GroupLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["group_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Allow.GroupLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.GroupLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.GroupLabelsExpression) == ""
+											}
+											v.Value = string(obj.GroupLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["group_labels_expression"] = v
+										}
+									}
 								}
 								v.Unknown = false
 								tf.Attrs["allow"] = v
@@ -23264,6 +24119,235 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_tel
 												c.Unknown = false
 												tf.Attrs["desktop_groups"] = c
 											}
+										}
+									}
+									{
+										a, ok := tf.AttrTypes["db_roles"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Deny.DatabaseRoles"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.DatabaseRoles", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+											} else {
+												c, ok := tf.Attrs["db_roles"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+												if !ok {
+													c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+														ElemType: o.ElemType,
+														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseRoles)),
+														Null:     true,
+													}
+												} else {
+													if c.Elems == nil {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseRoles))
+													}
+												}
+												if obj.DatabaseRoles != nil {
+													t := o.ElemType
+													if len(obj.DatabaseRoles) != len(c.Elems) {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.DatabaseRoles))
+													}
+													for k, a := range obj.DatabaseRoles {
+														v, ok := tf.Attrs["db_roles"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+															if err != nil {
+																diags.Append(attrWriteGeneralError{"RoleV6.Spec.Deny.DatabaseRoles", err})
+															}
+															v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.DatabaseRoles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															}
+															v.Null = string(a) == ""
+														}
+														v.Value = string(a)
+														v.Unknown = false
+														c.Elems[k] = v
+													}
+													if len(obj.DatabaseRoles) > 0 {
+														c.Null = false
+													}
+												}
+												c.Unknown = false
+												tf.Attrs["db_roles"] = c
+											}
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["node_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Deny.NodeLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["node_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Deny.NodeLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.NodeLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.NodeLabelsExpression) == ""
+											}
+											v.Value = string(obj.NodeLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["node_labels_expression"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["app_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Deny.AppLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["app_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Deny.AppLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.AppLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.AppLabelsExpression) == ""
+											}
+											v.Value = string(obj.AppLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["app_labels_expression"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["cluster_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Deny.ClusterLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["cluster_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Deny.ClusterLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.ClusterLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.ClusterLabelsExpression) == ""
+											}
+											v.Value = string(obj.ClusterLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["cluster_labels_expression"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["kubernetes_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Deny.KubernetesLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["kubernetes_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Deny.KubernetesLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.KubernetesLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.KubernetesLabelsExpression) == ""
+											}
+											v.Value = string(obj.KubernetesLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["kubernetes_labels_expression"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["db_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Deny.DatabaseLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["db_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Deny.DatabaseLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.DatabaseLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.DatabaseLabelsExpression) == ""
+											}
+											v.Value = string(obj.DatabaseLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["db_labels_expression"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["db_service_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Deny.DatabaseServiceLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["db_service_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Deny.DatabaseServiceLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.DatabaseServiceLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.DatabaseServiceLabelsExpression) == ""
+											}
+											v.Value = string(obj.DatabaseServiceLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["db_service_labels_expression"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["windows_desktop_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Deny.WindowsDesktopLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["windows_desktop_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Deny.WindowsDesktopLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.WindowsDesktopLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.WindowsDesktopLabelsExpression) == ""
+											}
+											v.Value = string(obj.WindowsDesktopLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["windows_desktop_labels_expression"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["group_labels_expression"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Deny.GroupLabelsExpression"})
+										} else {
+											v, ok := tf.Attrs["group_labels_expression"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Deny.GroupLabelsExpression", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.GroupLabelsExpression", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.GroupLabelsExpression) == ""
+											}
+											v.Value = string(obj.GroupLabelsExpression)
+											v.Unknown = false
+											tf.Attrs["group_labels_expression"] = v
 										}
 									}
 								}

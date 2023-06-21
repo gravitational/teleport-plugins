@@ -17,21 +17,17 @@ limitations under the License.
 package main
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"encoding/json"
 	"time"
 
+	auditlogpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/auditlog/v1"
 	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
-
-	"github.com/gravitational/teleport-plugins/event-handler/lib"
 )
 
 const (
 	// sessionEndType represents type name for session end event
 	sessionEndType = "session.upload"
-	// printType represents type name for print event
-	printType = "print"
 	// loginType represents type name for user login event
 	loginType = "user.login"
 )
@@ -39,7 +35,7 @@ const (
 // TeleportEvent represents helper struct around main audit log event
 type TeleportEvent struct {
 	// event is the event
-	Event interface{}
+	Event []byte
 	// cursor is the event ID (real/generated when empty)
 	ID string
 	// cursor is the current cursor value
@@ -67,109 +63,62 @@ type TeleportEvent struct {
 	}
 }
 
-// printEvent represents an artificial print event struct which adds json-serialisable data field
-type printEvent struct {
-	EI          int64     `json:"ei"`
-	Event       string    `json:"event"`
-	Data        []byte    `json:"data"`
-	Time        time.Time `json:"time"`
-	ClusterName string    `json:"cluster_name"`
-	CI          int64     `json:"ci"`
-	Bytes       int64     `json:"bytes"`
-	MS          int64     `json:"ms"`
-	Offset      int64     `json:"offset"`
-	UID         string    `json:"uid"`
-}
-
 // NewTeleportEvent creates TeleportEvent using AuditEvent as a source
-func NewTeleportEvent(e events.AuditEvent, cursor string) (*TeleportEvent, error) {
+func NewTeleportEvent(e *auditlogpb.EventUnstructured, cursor string) (*TeleportEvent, error) {
+	payload, err := e.Unstructured.MarshalJSON()
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
 	evt := &TeleportEvent{
 		Cursor: cursor,
 		Type:   e.GetType(),
-		Time:   e.GetTime(),
+		Time:   e.Time.AsTime(),
 		Index:  e.GetIndex(),
+		ID:     e.Id,
+		Event:  payload,
 	}
 
-	err := evt.setID(e)
+	switch e.GetType() {
+	case sessionEndType:
+		err = evt.setSessionID(e)
+	case loginType:
+		err = evt.setLoginData(e)
+	}
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
-	evt.setSessionID(e)
-	evt.setEvent(e)
-	evt.setLoginData(e)
-
 	return evt, nil
 }
 
-// setID sets or generates TeleportEvent id
-func (e *TeleportEvent) setID(evt events.AuditEvent) error {
-	id := evt.GetID()
-
-	if id == "" {
-		data, err := lib.FastMarshal(evt)
-		if err != nil {
-			return trace.Wrap(err)
-		}
-
-		hash := sha256.Sum256(data)
-		id = hex.EncodeToString(hash[:])
-	}
-
-	e.ID = id
-
-	return nil
-}
-
-// setEvent sets TeleportEvent.Event
-func (e *TeleportEvent) setEvent(evt events.AuditEvent) {
-	if e.Type != printType {
-		e.Event = evt
-		return
-	}
-
-	p := events.MustToOneOf(evt).GetSessionPrint()
-
-	e.Event = &printEvent{
-		EI:          p.GetIndex(),
-		Event:       printType,
-		Data:        p.Data,
-		Time:        p.Time,
-		ClusterName: p.ClusterName,
-		CI:          p.ChunkIndex,
-		Bytes:       p.Bytes,
-		MS:          p.DelayMilliseconds,
-		Offset:      p.Offset,
-		UID:         e.ID,
-	}
-}
-
 // setSessionID sets session id for session end event
-func (e *TeleportEvent) setSessionID(evt events.AuditEvent) {
-	if e.Type != sessionEndType {
-		return
+func (e *TeleportEvent) setSessionID(evt *auditlogpb.EventUnstructured) error {
+	sessionUploadEvt := &events.SessionUpload{}
+	if err := json.Unmarshal(e.Event, sessionUploadEvt); err != nil {
+		return trace.Wrap(err)
 	}
 
-	sid := events.MustToOneOf(evt).GetSessionUpload().SessionID
+	sid := sessionUploadEvt.SessionID
 
 	e.IsSessionEnd = true
 	e.SessionID = sid
-
+	return nil
 }
 
 // setLoginValues sets values related to login event
-func (e *TeleportEvent) setLoginData(evt events.AuditEvent) {
-	if e.Type != loginType {
-		return
+func (e *TeleportEvent) setLoginData(evt *auditlogpb.EventUnstructured) error {
+	loginEvent := &events.UserLogin{}
+	if err := json.Unmarshal(e.Event, loginEvent); err != nil {
+		return trace.Wrap(err)
 	}
 
-	l := events.MustToOneOf(evt).GetUserLogin()
-	if l.Success {
-		return
+	if loginEvent.Success {
+		return nil
 	}
 
 	e.IsFailedLogin = true
-	e.FailedLoginData.Login = l.Login
-	e.FailedLoginData.User = l.User
-	e.FailedLoginData.ClusterName = l.ClusterName
+	e.FailedLoginData.Login = loginEvent.Login
+	e.FailedLoginData.User = loginEvent.User
+	e.FailedLoginData.ClusterName = loginEvent.ClusterName
+	return nil
 }
