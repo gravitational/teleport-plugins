@@ -38,6 +38,7 @@ require (
 )
 
 require (
+	cloud.google.com/go v0.110.2 // indirect
 	cloud.google.com/go/compute v1.20.0 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/alecthomas/assert v1.0.0 // indirect
@@ -120,6 +121,7 @@ require (
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
+	google.golang.org/api v0.125.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc // indirect
@@ -133,7 +135,7 @@ require (
 
 replace (
 	github.com/gogo/protobuf => github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf
-	github.com/gravitational/teleport => github.com/gravitational/teleport v1.3.3-0.20230606012509-70c5ce7e8c69
-	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20230531215144-c4f4a88cf60f // ref: tags/v13.0.4
+	github.com/gravitational/teleport => github.com/gravitational/teleport v1.3.3-0.20230621042011-2142eb7cf892 // ref: branch/v13 TODO: update to v13.1.1+
+	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20230621042011-2142eb7cf892 // ref: branch/v13 TODO: update to v13.1.1+
 	github.com/julienschmidt/httprouter => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 )
