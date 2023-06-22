@@ -10,7 +10,7 @@ require (
 	github.com/google/go-querystring v1.1.0
 	github.com/google/uuid v1.3.0
 	github.com/gravitational/kingpin v2.1.11-0.20220901134012-2a1956e29525+incompatible
-	github.com/gravitational/teleport v0.0.0-20230614170514-ef700dd83fd8 // ref: tags/v13.1.1
+	github.com/gravitational/teleport v0.0.0 // replaced
 	github.com/gravitational/teleport/api v0.0.0 // replaced
 	github.com/gravitational/trace v1.2.1
 	github.com/hashicorp/terraform-plugin-framework v0.10.0
@@ -26,10 +26,10 @@ require (
 	github.com/pelletier/go-toml v1.9.5
 	github.com/peterbourgon/diskv/v3 v3.0.1
 	github.com/sethvargo/go-limiter v0.7.2
-	github.com/sirupsen/logrus v1.9.2
-	github.com/stretchr/testify v1.8.3
+	github.com/sirupsen/logrus v1.9.3
+	github.com/stretchr/testify v1.8.4
 	github.com/tidwall/gjson v1.14.4
-	golang.org/x/exp v0.0.0-20230213192124-5e25df0256eb
+	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1
 	golang.org/x/net v0.10.0
 	golang.org/x/sync v0.2.0
 	google.golang.org/grpc v1.55.0
@@ -38,6 +38,8 @@ require (
 )
 
 require (
+	cloud.google.com/go v0.110.2 // indirect
+	cloud.google.com/go/compute v1.20.0 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/alecthomas/assert v1.0.0 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
@@ -59,7 +61,7 @@ require (
 	github.com/google/btree v1.1.2 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.11.3 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
 	github.com/hashicorp/go-checkpoint v0.5.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
@@ -78,7 +80,7 @@ require (
 	github.com/hashicorp/terraform-registry-address v0.0.0-20220623143253-7d51757b572c // indirect
 	github.com/hashicorp/terraform-svchost v0.0.1 // indirect
 	github.com/hashicorp/yamux v0.0.0-20181012175058-2f1d1f20f75d // indirect
-	github.com/jhump/protoreflect v1.6.1 // indirect
+	github.com/jhump/protoreflect v1.12.0 // indirect
 	github.com/juju/ansiterm v0.0.0-20180109212912-720a0952cc2a // indirect
 	github.com/lunixbochs/vtclean v0.0.0-20180621232353-2d01aacdc34a // indirect
 	github.com/mattermost/xml-roundtrip-validator v0.1.0 // indirect
@@ -98,6 +100,7 @@ require (
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/russellhaering/gosaml2 v0.9.1 // indirect
 	github.com/russellhaering/goxmldsig v1.4.0 // indirect
+	github.com/sergi/go-diff v1.3.1 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/vmihailenco/msgpack v4.0.4+incompatible // indirect
@@ -114,12 +117,14 @@ require (
 	go.opentelemetry.io/otel/sdk v1.16.0 // indirect
 	go.opentelemetry.io/otel/trace v1.16.0 // indirect
 	go.opentelemetry.io/proto/otlp v0.19.0 // indirect
-	golang.org/x/crypto v0.7.0 // indirect
+	golang.org/x/crypto v0.9.0 // indirect
 	golang.org/x/sys v0.8.0 // indirect
 	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/text v0.9.0 // indirect
+	google.golang.org/api v0.125.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
-	google.golang.org/genproto v0.0.0-20230410155749-daa745c078e1 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20230530153820-e85fd2cbaebc // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20230530153820-e85fd2cbaebc // indirect
 	gopkg.in/alexcesaro/quotedprintable.v3 v3.0.0-20150716171945-2caba252f4dc // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -130,6 +135,7 @@ require (
 
 replace (
 	github.com/gogo/protobuf => github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf
-	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20230614170514-ef700dd83fd8 // ref: tags/v13.1.1
+	github.com/gravitational/teleport => github.com/gravitational/teleport v1.3.3-0.20230621042011-2142eb7cf892 // ref: branch/v13 TODO: update to v13.1.1+
+	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20230621042011-2142eb7cf892 // ref: branch/v13 TODO: update to v13.1.1+
 	github.com/julienschmidt/httprouter => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 )
