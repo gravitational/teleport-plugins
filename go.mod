@@ -10,7 +10,7 @@ require (
 	github.com/google/go-querystring v1.1.0
 	github.com/google/uuid v1.3.0
 	github.com/gravitational/kingpin v2.1.11-0.20220901134012-2a1956e29525+incompatible
-	github.com/gravitational/teleport v0.0.0 // replaced
+	github.com/gravitational/teleport v0.0.0-20230627160719-77eae2d69bb5 // ref: tags/v13.1.5
 	github.com/gravitational/teleport/api v0.0.0 // replaced
 	github.com/gravitational/trace v1.2.1
 	github.com/hashicorp/terraform-plugin-framework v0.10.0
@@ -135,7 +135,7 @@ require (
 
 replace (
 	github.com/gogo/protobuf => github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf
-	github.com/gravitational/teleport => github.com/gravitational/teleport v1.3.3-0.20230621042011-2142eb7cf892 // ref: branch/v13 TODO: update to v13.1.1+
-	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20230621042011-2142eb7cf892 // ref: branch/v13 TODO: update to v13.1.1+
+	github.com/gravitational/teleport v0.0.0-20230627160719-77eae2d69bb5 // ref: tags/v13.1.5
+	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20230627160719-77eae2d69bb5 // ref: tags/v13.1.5
 	github.com/julienschmidt/httprouter => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 )
