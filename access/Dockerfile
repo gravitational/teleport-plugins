@@ -1,7 +1,7 @@
 # Build the plugin binary
 ARG GO_VERSION
 
-FROM golang:${GO_VERSION} as builder
+FROM golang:${GO_VERSION}-bullseye as builder
 
 ARG ACCESS_PLUGIN
 ARG GITREF
