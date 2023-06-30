@@ -1,0 +1,14 @@
+name: Security Scan
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [
+      "master",
+      "main"
+    ]
+
+jobs:
+  scanning:
+    uses: bisontrails/.github/.github/workflows/required_security_scan.yml@main
+    secrets: inherit
