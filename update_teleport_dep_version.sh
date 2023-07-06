@@ -11,7 +11,9 @@ which jq >/dev/null || { echo "jq is required" && exit 1; }
 which sed >/dev/null || { echo "sed is required" && exit 1; }
 
 function sed_inline() {
-  sed -i'' "$@"
+  # Do not use in-place flag (sed -i) as it's not portable b/w Linux and macOS.
+  sed "$@" > go.mod.tmp
+  mv go.mod.tmp go.mod
 }
 
 version=$1
@@ -31,7 +33,7 @@ object_date=$(echo "$object" | jq -r .committer.date | sed 's/[-:TZ]//g')
 object_sha="$(echo "$object" | jq -r .sha)"
 pseudo_version="v0.0.0-${object_date}-${object_sha:0:12}"
 
-sed_inline -e $"s#^\tgithub.com/gravitational/teleport .*#\tgithub.com/gravitational/teleport $pseudo_version // ref: $ref#" go.mod
+sed_inline -e $"s#^\tgithub.com/gravitational/teleport => .*#\tgithub.com/gravitational/teleport => github.com/gravitational/teleport $pseudo_version // ref: $ref#" go.mod
 sed_inline -e $"s#^\tgithub.com/gravitational/teleport/api => .*#\tgithub.com/gravitational/teleport/api => github.com/gravitational/teleport/api $pseudo_version // ref: $ref#" go.mod
 
 go mod tidy
