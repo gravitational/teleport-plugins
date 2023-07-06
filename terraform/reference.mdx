@@ -107,15 +107,16 @@ Metadata is the app resource metadata.
 
 Spec is the app resource spec.
 
-|         Name         |  Type  | Required |                               Description                                |
-|----------------------|--------|----------|--------------------------------------------------------------------------|
-| aws                  | object |          | AWS contains additional options for AWS applications.                    |
-| cloud                | string |          | Cloud identifies the cloud instance the app represents.                  |
-| dynamic_labels       | object |          | DynamicLabels are the app's command labels.                              |
-| insecure_skip_verify | bool   |          | InsecureSkipVerify disables app's TLS certificate verification.          |
-| public_addr          | string |          | PublicAddr is the public address the application is accessible at.       |
-| rewrite              | object |          | Rewrite is a list of rewriting rules to apply to requests and responses. |
-| uri                  | string |          | URI is the web app endpoint.                                             |
+|         Name         |       Type       | Required |                                Description                                |
+|----------------------|------------------|----------|---------------------------------------------------------------------------|
+| aws                  | object           |          | AWS contains additional options for AWS applications.                     |
+| cloud                | string           |          | Cloud identifies the cloud instance the app represents.                   |
+| dynamic_labels       | object           |          | DynamicLabels are the app's command labels.                               |
+| insecure_skip_verify | bool             |          | InsecureSkipVerify disables app's TLS certificate verification.           |
+| public_addr          | string           |          | PublicAddr is the public address the application is accessible at.        |
+| rewrite              | object           |          | Rewrite is a list of rewriting rules to apply to requests and responses.  |
+| uri                  | string           |          | URI is the web app endpoint.                                              |
+| user_groups          | array of strings |          | UserGroups are a list of user group IDs that this app is associated with. |
 
 #### spec.aws
 
@@ -197,22 +198,23 @@ Metadata is resource metadata
 
 Spec is an AuthPreference specification
 
-|          Name           |  Type  | Required |                                                              Description                                                               |
-|-------------------------|--------|----------|----------------------------------------------------------------------------------------------------------------------------------------|
-| allow_headless          | bool   |          |                                                                                                                                        |
-| allow_local_auth        | bool   |          |                                                                                                                                        |
-| allow_passwordless      | bool   |          |                                                                                                                                        |
-| connector_name          | string |          | ConnectorName is the name of the OIDC or SAML connector. If this value is not set the first connector in the backend will be used.     |
-| device_trust            | object |          | DeviceTrust holds settings related to trusted device verification. Requires Teleport Enterprise.                                       |
-| disconnect_expired_cert | bool   |          |                                                                                                                                        |
-| idp                     | object |          | IDP is a set of options related to accessing IdPs within Teleport. Requires Teleport Enterprise.                                       |
-| locking_mode            | string |          | LockingMode is the cluster-wide locking mode default.                                                                                  |
-| message_of_the_day      | string |          |                                                                                                                                        |
-| require_session_mfa     | number |          | RequireMFAType is the type of MFA requirement enforced for this cluster: 0:Off, 1:Session, 2:SessionAndHardwareKey, 3:HardwareKeyTouch |
-| second_factor           | string |          | SecondFactor is the type of second factor.                                                                                             |
-| type                    | string |          | Type is the type of authentication.                                                                                                    |
-| u2f                     | object |          | U2F are the settings for the U2F device.                                                                                               |
-| webauthn                | object |          | Webauthn are the settings for server-side Web Authentication support.                                                                  |
+|          Name           |   Type   | Required |                                                              Description                                                               |
+|-------------------------|----------|----------|----------------------------------------------------------------------------------------------------------------------------------------|
+| allow_headless          | bool     |          |                                                                                                                                        |
+| allow_local_auth        | bool     |          |                                                                                                                                        |
+| allow_passwordless      | bool     |          |                                                                                                                                        |
+| connector_name          | string   |          | ConnectorName is the name of the OIDC or SAML connector. If this value is not set the first connector in the backend will be used.     |
+| default_session_ttl     | duration |          | DefaultSessionTTL is the TTL to use for user certs when an explicit TTL is not requested.                                              |
+| device_trust            | object   |          | DeviceTrust holds settings related to trusted device verification. Requires Teleport Enterprise.                                       |
+| disconnect_expired_cert | bool     |          |                                                                                                                                        |
+| idp                     | object   |          | IDP is a set of options related to accessing IdPs within Teleport. Requires Teleport Enterprise.                                       |
+| locking_mode            | string   |          | LockingMode is the cluster-wide locking mode default.                                                                                  |
+| message_of_the_day      | string   |          |                                                                                                                                        |
+| require_session_mfa     | number   |          | RequireMFAType is the type of MFA requirement enforced for this cluster: 0:Off, 1:Session, 2:SessionAndHardwareKey, 3:HardwareKeyTouch |
+| second_factor           | string   |          | SecondFactor is the type of second factor.                                                                                             |
+| type                    | string   |          | Type is the type of authentication.                                                                                                    |
+| u2f                     | object   |          | U2F are the settings for the U2F device.                                                                                               |
+| webauthn                | object   |          | Webauthn are the settings for server-side Web Authentication support.                                                                  |
 
 #### spec.device_trust
 
@@ -488,6 +490,7 @@ AWS contains AWS specific settings for RDS/Aurora/Redshift databases.
 | elasticache         | object |          | ElastiCache contains AWS ElastiCache Redis specific metadata.                                                                                      |
 | external_id         | string |          | ExternalID is an optional AWS external ID used to enable assuming an AWS role across accounts.                                                     |
 | memorydb            | object |          | MemoryDB contains AWS MemoryDB specific metadata.                                                                                                  |
+| opensearch          | object |          | OpenSearch contains AWS OpenSearch specific metadata.                                                                                              |
 | rds                 | object |          | RDS contains RDS specific metadata.                                                                                                                |
 | rdsproxy            | object |          | RDSProxy contains AWS Proxy specific metadata.                                                                                                     |
 | redshift            | object |          | Redshift contains Redshift specific metadata.                                                                                                      |
@@ -516,6 +519,16 @@ MemoryDB contains AWS MemoryDB specific metadata.
 | cluster_name  | string |          | ClusterName is the name of the MemoryDB cluster.                     |
 | endpoint_type | string |          | EndpointType is the type of the endpoint.                            |
 | tls_enabled   | bool   |          | TLSEnabled indicates whether in-transit encryption (TLS) is enabled. |
+
+##### spec.aws.opensearch
+
+OpenSearch contains AWS OpenSearch specific metadata.
+
+|     Name      |  Type  | Required |                Description                |
+|---------------|--------|----------|-------------------------------------------|
+| domain_id     | string |          | DomainID is the ID of the domain.         |
+| domain_name   | string |          | DomainName is the name of the domain.     |
+| endpoint_type | string |          | EndpointType is the type of the endpoint. |
 
 ##### spec.aws.rds
 
@@ -1539,6 +1552,7 @@ Options is for OpenSSH options like agent forwarding.
 | create_db_user             | bool             |          |                                                                                                                                                                            |
 | create_desktop_user        | bool             |          |                                                                                                                                                                            |
 | create_host_user           | bool             |          |                                                                                                                                                                            |
+| create_host_user_mode      | number           |          | CreateHostUserMode allows users to be automatically created on a host when not set to off                                                                                  |
 | desktop_clipboard          | bool             |          |                                                                                                                                                                            |
 | desktop_directory_sharing  | bool             |          |                                                                                                                                                                            |
 | device_trust_mode          | string           |          | DeviceTrustMode is the device authorization mode used for the resources associated with the role. See DeviceTrust.Mode. Reserved for future use, not yet used by Teleport. |
@@ -1925,6 +1939,7 @@ Specification of the device.
 
 |        Name         |       Type       | Required | Description |
 |---------------------|------------------|----------|-------------|
+| external_id         | string           |          |             |
 | jamf_binary_version | string           |          |             |
 | model_identifier    | string           |          |             |
 | os_build            | string           |          |             |

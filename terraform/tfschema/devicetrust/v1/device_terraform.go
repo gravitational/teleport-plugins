@@ -99,6 +99,11 @@ func GenSchemaDeviceV1(ctx context.Context) (github_com_hashicorp_terraform_plug
 				},
 				"profile": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+						"external_id": {
+							Description: "",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"jamf_binary_version": {
 							Description: "",
 							Optional:    true,
@@ -502,6 +507,23 @@ func CopyDeviceV1FromTerraform(_ context.Context, tf github_com_hashicorp_terraf
 													t = string(v.Value)
 												}
 												obj.JamfBinaryVersion = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["external_id"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"DeviceV1.spec.profile.external_id"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"DeviceV1.spec.profile.external_id", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.ExternalId = t
 											}
 										}
 									}
@@ -1030,6 +1052,28 @@ func CopyDeviceV1ToTerraform(ctx context.Context, obj github_com_gravitational_t
 											v.Value = string(obj.JamfBinaryVersion)
 											v.Unknown = false
 											tf.Attrs["jamf_binary_version"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["external_id"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"DeviceV1.spec.profile.external_id"})
+										} else {
+											v, ok := tf.Attrs["external_id"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"DeviceV1.spec.profile.external_id", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"DeviceV1.spec.profile.external_id", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.ExternalId) == ""
+											}
+											v.Value = string(obj.ExternalId)
+											v.Unknown = false
+											tf.Attrs["external_id"] = v
 										}
 									}
 								}

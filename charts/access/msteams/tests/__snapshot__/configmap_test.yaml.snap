@@ -28,6 +28,6 @@ should match the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-msteams
-        app.kubernetes.io/version: 13.1.5
-        helm.sh/chart: teleport-plugin-msteams-13.1.5
+        app.kubernetes.io/version: 13.2.0
+        helm.sh/chart: teleport-plugin-msteams-13.2.0
       name: RELEASE-NAME-teleport-plugin-msteams
