@@ -86,7 +86,7 @@ slack:
   token: xoxb-testtoken
 
 roleToRecipients:
-  '*': access-requests@example.com
+  '*': [access-requests@example.com]
 ```
 
 Alternatively, you can pass arguments from the command line (useful for one-liners or scripts):
@@ -96,7 +96,7 @@ helm install teleport-plugin-slack teleport/teleport-plugin-slack \
   --set 'teleport.address=teleport.example.com:443' \
   --set 'teleport.identitySecretName=teleport-plugin-slack-identity' \
   --set 'slack.token=xoxb-testtoken' \
-  --set 'roleToRecipients.*=access-requests@example.com'
+  --set 'roleToRecipients.*[0]=access-requests@example.com'
 ```
 
 See [Settings](#settings) for more details.
