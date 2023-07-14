@@ -69,7 +69,7 @@ func main() {
 }
 
 func run(configPath string, debug bool) error {
-	conf, err := pagerduty.LoadConfig(configPath)
+	conf, err := LoadConfig(configPath)
 	if err != nil {
 		return trace.Wrap(err)
 	}
