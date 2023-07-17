@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/gravitational/kingpin"
+	"github.com/gravitational/teleport/integrations/access/jira"
 	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/trace"
@@ -88,7 +89,7 @@ func run(configPath string, insecure bool, debug bool) error {
 	}
 
 	conf.HTTP.Insecure = insecure
-	app, err := NewApp(*conf)
+	app, err := jira.NewApp(*conf)
 	if err != nil {
 		return trace.Wrap(err)
 	}
