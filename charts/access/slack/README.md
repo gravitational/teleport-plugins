@@ -193,4 +193,41 @@ The following values can be set for the Helm chart:
     <td><code>"INFO"</code></td>
     <td>no</td>
   </tr>
+
+  <tr>
+    <td><code>annotations.config</code></td>
+    <td>
+      Annotations to add to the configmap.
+    </td>
+    <td>map</td>
+    <td><code>{}</code></td>
+    <td>no</td>
+  </tr>
+  <tr>
+    <td><code>annotations.deployment</code></td>
+    <td>
+      Annotations to add to the deployment.
+    </td>
+    <td>map</td>
+    <td><code>{}</code></td>
+    <td>no</td>
+  </tr>
+  <tr>
+    <td><code>annotations.pod</code></td>
+    <td>
+      Annotations to add to every pod created by the deployment.
+    </td>
+    <td>map</td>
+    <td><code>{}</code></td>
+    <td>no</td>
+  </tr>
+  <tr>
+    <td><code>annotations.secret</code></td>
+    <td>
+      Annotations to add to the secret.
+    </td>
+    <td>map</td>
+    <td><code>{}</code></td>
+    <td>no</td>
+  </tr>
 </table>

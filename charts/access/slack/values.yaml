@@ -23,6 +23,18 @@ log:
 
 secretVolumeName: "password-file"
 
+# Kubernetes annotations to apply
+# https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations/
+annotations:
+  # Annotations for the ConfigMap
+  config: {}
+  # Annotations for the Deployment
+  deployment: {}
+  # Annotations for each Pod in the Deployment
+  pod: {}
+  # Annotations for the Secret
+  secret: {}
+
 #
 # Deployment
 #
