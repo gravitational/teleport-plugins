@@ -16,7 +16,8 @@
         "teleport",
         "slack",
         "roleToRecipients",
-        "log"
+        "log",
+        "annotations"
     ],
     "properties": {
         "image": {
@@ -393,6 +394,38 @@
             "examples": [
                 "my-secret-volume"
             ]
+        },
+        "annotations": {
+            "$id": "#/properties/annotations",
+            "type": "object",
+            "required": [
+                "config",
+                "deployment",
+                "pod",
+                "secret"
+            ],
+            "properties": {
+                "config": {
+                    "$id": "#/properties/annotations/properties/config",
+                    "type": "object",
+                    "default": {}
+                },
+                "deployment": {
+                    "$id": "#/properties/annotations/properties/deployment",
+                    "type": "object",
+                    "default": {}
+                },
+                "pod": {
+                    "$id": "#/properties/annotations/properties/pod",
+                    "type": "object",
+                    "default": {}
+                },
+                "secret": {
+                    "$id": "#/properties/annotations/properties/secret",
+                    "type": "object",
+                    "default": {}
+                }
+            }
         }
     },
     "additionalProperties": true
