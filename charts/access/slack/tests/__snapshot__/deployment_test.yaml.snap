@@ -23,37 +23,37 @@ should match the snapshot:
             app.kubernetes.io/name: teleport-plugin-slack
         spec:
           containers:
-          - command:
-            - /usr/local/bin/teleport-plugin
-            - start
-            - --config
-            - /etc/teleport-slack.toml
-            image: gcr.io/overridden/repository:v98.76.54
-            imagePullPolicy: IfNotPresent
-            name: teleport-plugin-slack
-            resources: {}
-            securityContext: {}
-            volumeMounts:
-            - mountPath: /etc/teleport-slack.toml
-              name: config
-              subPath: teleport-slack.toml
-            - mountPath: /var/lib/teleport/plugins/slack/auth_id
-              name: auth-id
-              subPath: auth_id
-            - mountPath: /var/lib/teleport/plugins/slack/slack-token
-              name: password-file
-              subPath: slackToken
+            - command:
+                - /usr/local/bin/teleport-plugin
+                - start
+                - --config
+                - /etc/teleport-slack.toml
+              image: gcr.io/overridden/repository:v98.76.54
+              imagePullPolicy: IfNotPresent
+              name: teleport-plugin-slack
+              resources: {}
+              securityContext: {}
+              volumeMounts:
+                - mountPath: /etc/teleport-slack.toml
+                  name: config
+                  subPath: teleport-slack.toml
+                - mountPath: /var/lib/teleport/plugins/slack/auth_id
+                  name: auth-id
+                  subPath: auth_id
+                - mountPath: /var/lib/teleport/plugins/slack/slack-token
+                  name: password-file
+                  subPath: slackToken
           securityContext: {}
           volumes:
-          - configMap:
-              defaultMode: 384
-              name: RELEASE-NAME-teleport-plugin-slack
-            name: config
-          - name: auth-id
-            secret:
-              defaultMode: 384
-              secretName: ""
-          - name: password-file
-            secret:
-              defaultMode: 384
-              secretName: RELEASE-NAME-teleport-plugin-slack-secret
+            - configMap:
+                defaultMode: 384
+                name: RELEASE-NAME-teleport-plugin-slack
+              name: config
+            - name: auth-id
+              secret:
+                defaultMode: 384
+                secretName: ""
+            - name: password-file
+              secret:
+                defaultMode: 384
+                secretName: RELEASE-NAME-teleport-plugin-slack-secret
