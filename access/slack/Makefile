@@ -1,4 +1,4 @@
-VERSION=13.2.2
+VERSION=13.2.2-hugoslackloop
 GO_VERSION=1.20.6
 
 BUILDDIR ?= build

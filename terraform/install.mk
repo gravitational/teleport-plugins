@@ -1,4 +1,4 @@
-VERSION=13.2.2
+VERSION=13.2.2-hugoslackloop
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
