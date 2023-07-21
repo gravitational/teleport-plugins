@@ -131,7 +131,7 @@ func (r resourceTeleportLoginRule) Create(ctx context.Context, req tfsdk.CreateR
 	loginRule = loginRuleI
 	
 
-	diags = schemav1.CopyLoginRuleToTerraform(ctx, *loginRule, &plan)
+	diags = schemav1.CopyLoginRuleToTerraform(ctx, loginRule, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -174,7 +174,7 @@ func (r resourceTeleportLoginRule) Read(ctx context.Context, req tfsdk.ReadResou
 	}
 
 	loginRule := loginRuleI
-	diags = schemav1.CopyLoginRuleToTerraform(ctx, *loginRule, &state)
+	diags = schemav1.CopyLoginRuleToTerraform(ctx, loginRule, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -251,7 +251,7 @@ func (r resourceTeleportLoginRule) Update(ctx context.Context, req tfsdk.UpdateR
 		}
 	}
 
-	diags = schemav1.CopyLoginRuleToTerraform(ctx, *loginRule, &plan)
+	diags = schemav1.CopyLoginRuleToTerraform(ctx, loginRule, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -300,7 +300,7 @@ func (r resourceTeleportLoginRule) ImportState(ctx context.Context, req tfsdk.Im
 		return
 	}
 
-	diags = schemav1.CopyLoginRuleToTerraform(ctx, *loginRule, &state)
+	diags = schemav1.CopyLoginRuleToTerraform(ctx, loginRule, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

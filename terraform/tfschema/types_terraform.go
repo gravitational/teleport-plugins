@@ -4667,7 +4667,7 @@ func CopyDatabaseV3FromTerraform(_ context.Context, tf github_com_hashicorp_terr
 }
 
 // CopyDatabaseV3ToTerraform copies contents of the source Terraform object into a target struct
-func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_types.DatabaseV3, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopyDatabaseV3ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.DatabaseV3, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false
@@ -7307,7 +7307,7 @@ func CopyAppV3FromTerraform(_ context.Context, tf github_com_hashicorp_terraform
 }
 
 // CopyAppV3ToTerraform copies contents of the source Terraform object into a target struct
-func CopyAppV3ToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_types.AppV3, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopyAppV3ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.AppV3, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false
@@ -9269,7 +9269,7 @@ func CopyProvisionTokenV2FromTerraform(_ context.Context, tf github_com_hashicor
 }
 
 // CopyProvisionTokenV2ToTerraform copies contents of the source Terraform object into a target struct
-func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_types.ProvisionTokenV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.ProvisionTokenV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false
@@ -11509,7 +11509,7 @@ func CopyClusterNetworkingConfigV2FromTerraform(_ context.Context, tf github_com
 }
 
 // CopyClusterNetworkingConfigV2ToTerraform copies contents of the source Terraform object into a target struct
-func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_types.ClusterNetworkingConfigV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopyClusterNetworkingConfigV2ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.ClusterNetworkingConfigV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false
@@ -12327,7 +12327,7 @@ func CopySessionRecordingConfigV2FromTerraform(_ context.Context, tf github_com_
 }
 
 // CopySessionRecordingConfigV2ToTerraform copies contents of the source Terraform object into a target struct
-func CopySessionRecordingConfigV2ToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_types.SessionRecordingConfigV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopySessionRecordingConfigV2ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.SessionRecordingConfigV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false
@@ -13233,7 +13233,7 @@ func CopyAuthPreferenceV2FromTerraform(_ context.Context, tf github_com_hashicor
 }
 
 // CopyAuthPreferenceV2ToTerraform copies contents of the source Terraform object into a target struct
-func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_types.AuthPreferenceV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.AuthPreferenceV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false
@@ -18156,7 +18156,7 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 }
 
 // CopyRoleV6ToTerraform copies contents of the source Terraform object into a target struct
-func CopyRoleV6ToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_types.RoleV6, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopyRoleV6ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.RoleV6, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false
@@ -25219,7 +25219,7 @@ func CopyUserV2FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 }
 
 // CopyUserV2ToTerraform copies contents of the source Terraform object into a target struct
-func CopyUserV2ToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_types.UserV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopyUserV2ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.UserV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false
@@ -26375,7 +26375,7 @@ func CopyOIDCConnectorV3FromTerraform(_ context.Context, tf github_com_hashicorp
 }
 
 // CopyOIDCConnectorV3ToTerraform copies contents of the source Terraform object into a target struct
-func CopyOIDCConnectorV3ToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_types.OIDCConnectorV3, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopyOIDCConnectorV3ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.OIDCConnectorV3, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false
@@ -27701,7 +27701,7 @@ func CopySAMLConnectorV2FromTerraform(_ context.Context, tf github_com_hashicorp
 }
 
 // CopySAMLConnectorV2ToTerraform copies contents of the source Terraform object into a target struct
-func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_types.SAMLConnectorV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopySAMLConnectorV2ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.SAMLConnectorV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false
@@ -29049,7 +29049,7 @@ func CopyGithubConnectorV3FromTerraform(_ context.Context, tf github_com_hashico
 }
 
 // CopyGithubConnectorV3ToTerraform copies contents of the source Terraform object into a target struct
-func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_types.GithubConnectorV3, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopyGithubConnectorV3ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.GithubConnectorV3, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false
@@ -30227,7 +30227,7 @@ func CopyTrustedClusterV2FromTerraform(_ context.Context, tf github_com_hashicor
 }
 
 // CopyTrustedClusterV2ToTerraform copies contents of the source Terraform object into a target struct
-func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_types.TrustedClusterV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.TrustedClusterV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false
@@ -31176,7 +31176,7 @@ func CopyOktaImportRuleV1FromTerraform(_ context.Context, tf github_com_hashicor
 }
 
 // CopyOktaImportRuleV1ToTerraform copies contents of the source Terraform object into a target struct
-func CopyOktaImportRuleV1ToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_types.OktaImportRuleV1, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopyOktaImportRuleV1ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.OktaImportRuleV1, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false

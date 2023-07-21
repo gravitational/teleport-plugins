@@ -136,7 +136,7 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 		return
 	}
 
-	diags = tfschema.CopyRoleV6ToTerraform(ctx, *role, &plan)
+	diags = tfschema.CopyRoleV6ToTerraform(ctx, role, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -179,7 +179,7 @@ func (r resourceTeleportRole) Read(ctx context.Context, req tfsdk.ReadResourceRe
 	}
 
 	role := roleI.(*apitypes.RoleV6)
-	diags = tfschema.CopyRoleV6ToTerraform(ctx, *role, &state)
+	diags = tfschema.CopyRoleV6ToTerraform(ctx, role, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -260,7 +260,7 @@ func (r resourceTeleportRole) Update(ctx context.Context, req tfsdk.UpdateResour
 	}
 
 	role = roleI.(*apitypes.RoleV6)
-	diags = tfschema.CopyRoleV6ToTerraform(ctx, *role, &plan)
+	diags = tfschema.CopyRoleV6ToTerraform(ctx, role, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -309,7 +309,7 @@ func (r resourceTeleportRole) ImportState(ctx context.Context, req tfsdk.ImportR
 		return
 	}
 
-	diags = tfschema.CopyRoleV6ToTerraform(ctx, *role, &state)
+	diags = tfschema.CopyRoleV6ToTerraform(ctx, role, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

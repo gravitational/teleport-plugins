@@ -343,7 +343,7 @@ func CopyLoginRuleFromTerraform(_ context.Context, tf github_com_hashicorp_terra
 }
 
 // CopyLoginRuleToTerraform copies contents of the source Terraform object into a target struct
-func CopyLoginRuleToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_gen_proto_go_teleport_loginrule_v1.LoginRule, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopyLoginRuleToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_gen_proto_go_teleport_loginrule_v1.LoginRule, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false

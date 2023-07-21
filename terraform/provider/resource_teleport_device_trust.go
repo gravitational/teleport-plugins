@@ -135,7 +135,7 @@ func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateRe
 	trustedDevice = trustedDeviceI
 	
 
-	diags = tfschema.CopyDeviceV1ToTerraform(ctx, *trustedDevice, &plan)
+	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDevice, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -178,7 +178,7 @@ func (r resourceTeleportDeviceV1) Read(ctx context.Context, req tfsdk.ReadResour
 	}
 
 	trustedDevice := trustedDeviceI
-	diags = tfschema.CopyDeviceV1ToTerraform(ctx, *trustedDevice, &state)
+	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDevice, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -255,7 +255,7 @@ func (r resourceTeleportDeviceV1) Update(ctx context.Context, req tfsdk.UpdateRe
 		}
 	}
 
-	diags = tfschema.CopyDeviceV1ToTerraform(ctx, *trustedDevice, &plan)
+	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDevice, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -304,7 +304,7 @@ func (r resourceTeleportDeviceV1) ImportState(ctx context.Context, req tfsdk.Imp
 		return
 	}
 
-	diags = tfschema.CopyDeviceV1ToTerraform(ctx, *trustedDevice, &state)
+	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDevice, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

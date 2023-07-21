@@ -67,7 +67,7 @@ func (r dataSourceTeleportTrustedCluster) Read(ctx context.Context, req tfsdk.Re
 
     var state types.Object
 	trustedCluster := trustedClusterI.(*apitypes.TrustedClusterV2)
-	diags = tfschema.CopyTrustedClusterV2ToTerraform(ctx, *trustedCluster, &state)
+	diags = tfschema.CopyTrustedClusterV2ToTerraform(ctx, trustedCluster, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

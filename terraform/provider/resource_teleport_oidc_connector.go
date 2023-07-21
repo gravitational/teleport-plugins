@@ -136,7 +136,7 @@ func (r resourceTeleportOIDCConnector) Create(ctx context.Context, req tfsdk.Cre
 		return
 	}
 
-	diags = tfschema.CopyOIDCConnectorV3ToTerraform(ctx, *oidcConnector, &plan)
+	diags = tfschema.CopyOIDCConnectorV3ToTerraform(ctx, oidcConnector, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -179,7 +179,7 @@ func (r resourceTeleportOIDCConnector) Read(ctx context.Context, req tfsdk.ReadR
 	}
 
 	oidcConnector := oidcConnectorI.(*apitypes.OIDCConnectorV3)
-	diags = tfschema.CopyOIDCConnectorV3ToTerraform(ctx, *oidcConnector, &state)
+	diags = tfschema.CopyOIDCConnectorV3ToTerraform(ctx, oidcConnector, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -260,7 +260,7 @@ func (r resourceTeleportOIDCConnector) Update(ctx context.Context, req tfsdk.Upd
 	}
 
 	oidcConnector = oidcConnectorI.(*apitypes.OIDCConnectorV3)
-	diags = tfschema.CopyOIDCConnectorV3ToTerraform(ctx, *oidcConnector, &plan)
+	diags = tfschema.CopyOIDCConnectorV3ToTerraform(ctx, oidcConnector, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -309,7 +309,7 @@ func (r resourceTeleportOIDCConnector) ImportState(ctx context.Context, req tfsd
 		return
 	}
 
-	diags = tfschema.CopyOIDCConnectorV3ToTerraform(ctx, *oidcConnector, &state)
+	diags = tfschema.CopyOIDCConnectorV3ToTerraform(ctx, oidcConnector, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

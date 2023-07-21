@@ -67,7 +67,7 @@ func (r dataSourceTeleportApp) Read(ctx context.Context, req tfsdk.ReadDataSourc
 
     var state types.Object
 	app := appI.(*apitypes.AppV3)
-	diags = tfschema.CopyAppV3ToTerraform(ctx, *app, &state)
+	diags = tfschema.CopyAppV3ToTerraform(ctx, app, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
