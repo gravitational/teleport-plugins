@@ -186,6 +186,11 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
+						"iam_policy_exists": {
+							Description: "IAMPolicyExists indicates whether the IAM Policy is configured properly for database access. If not, the user must update the AWS profile identity to allow access to the Database. Eg for an RDS Database: the underlying AWS profile allows for `rds-db:connect` for the Database",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.BoolType,
+						},
 						"memorydb": {
 							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 								"acl_name": {
@@ -4190,6 +4195,23 @@ func CopyDatabaseV3FromTerraform(_ context.Context, tf github_com_hashicorp_terr
 											}
 										}
 									}
+									{
+										a, ok := tf.Attrs["iam_policy_exists"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.AWS.IAMPolicyExists"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Bool)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.AWS.IAMPolicyExists", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
+											} else {
+												var t bool
+												if !v.Null && !v.Unknown {
+													t = bool(v.Value)
+												}
+												obj.IAMPolicyExists = t
+											}
+										}
+									}
 								}
 							}
 						}
@@ -6093,6 +6115,28 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj github_com_gravitational
 												v.Unknown = false
 												tf.Attrs["opensearch"] = v
 											}
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["iam_policy_exists"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.AWS.IAMPolicyExists"})
+										} else {
+											v, ok := tf.Attrs["iam_policy_exists"].(github_com_hashicorp_terraform_plugin_framework_types.Bool)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"DatabaseV3.Spec.AWS.IAMPolicyExists", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.Bool)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.IAMPolicyExists", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
+												}
+												v.Null = bool(obj.IAMPolicyExists) == false
+											}
+											v.Value = bool(obj.IAMPolicyExists)
+											v.Unknown = false
+											tf.Attrs["iam_policy_exists"] = v
 										}
 									}
 								}
