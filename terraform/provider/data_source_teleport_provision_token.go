@@ -67,7 +67,7 @@ func (r dataSourceTeleportProvisionToken) Read(ctx context.Context, req tfsdk.Re
 
     var state types.Object
 	provisionToken := provisionTokenI.(*apitypes.ProvisionTokenV2)
-	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, *provisionToken, &state)
+	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, provisionToken, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

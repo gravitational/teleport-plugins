@@ -100,7 +100,7 @@ func (r resourceTeleportAuthPreference) Create(ctx context.Context, req tfsdk.Cr
 		tries = tries + 1
 		authPreferenceI, err = r.p.Client.GetAuthPreference(ctx)
 		if err != nil {
-			resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
 			return
 		}
 		if authPreferenceBefore.GetMetadata().ID != authPreferenceI.GetMetadata().ID || false {
@@ -117,7 +117,7 @@ func (r resourceTeleportAuthPreference) Create(ctx context.Context, req tfsdk.Cr
 		}
 	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
 		return
 	}
 
@@ -129,7 +129,7 @@ func (r resourceTeleportAuthPreference) Create(ctx context.Context, req tfsdk.Cr
 		return
 	}
 
-	diags = tfschema.CopyAuthPreferenceV2ToTerraform(ctx, *authPreference, &plan)
+	diags = tfschema.CopyAuthPreferenceV2ToTerraform(ctx, authPreference, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -155,12 +155,12 @@ func (r resourceTeleportAuthPreference) Read(ctx context.Context, req tfsdk.Read
 
 	authPreferenceI, err := r.p.Client.GetAuthPreference(ctx)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
 		return
 	}
 
 	authPreference := authPreferenceI.(*apitypes.AuthPreferenceV2)
-	diags = tfschema.CopyAuthPreferenceV2ToTerraform(ctx, *authPreference, &state)
+	diags = tfschema.CopyAuthPreferenceV2ToTerraform(ctx, authPreference, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -237,12 +237,12 @@ func (r resourceTeleportAuthPreference) Update(ctx context.Context, req tfsdk.Up
 		}
 	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
 		return
 	}
 
 	authPreference = authPreferenceI.(*apitypes.AuthPreferenceV2)
-	diags = tfschema.CopyAuthPreferenceV2ToTerraform(ctx, *authPreference, &plan)
+	diags = tfschema.CopyAuthPreferenceV2ToTerraform(ctx, authPreference, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -259,7 +259,7 @@ func (r resourceTeleportAuthPreference) Update(ctx context.Context, req tfsdk.Up
 func (r resourceTeleportAuthPreference) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
 	err := r.p.Client.ResetAuthPreference(ctx)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
 		return
 	}
 
@@ -270,7 +270,7 @@ func (r resourceTeleportAuthPreference) Delete(ctx context.Context, req tfsdk.De
 func (r resourceTeleportAuthPreference) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	authPreferenceI, err := r.p.Client.GetAuthPreference(ctx)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error updating AuthPreference", trace.Wrap(err), "cluster_auth_preference"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating AuthPreference", trace.Wrap(err), "cluster_auth_preference"))
 		return
 	}
 
@@ -284,7 +284,7 @@ func (r resourceTeleportAuthPreference) ImportState(ctx context.Context, req tfs
 		return
 	}
 
-	diags = tfschema.CopyAuthPreferenceV2ToTerraform(ctx, *authPreference, &state)
+	diags = tfschema.CopyAuthPreferenceV2ToTerraform(ctx, authPreference, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

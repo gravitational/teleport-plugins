@@ -136,7 +136,7 @@ func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.C
 		return
 	}
 
-	diags = tfschema.CopyGithubConnectorV3ToTerraform(ctx, *githubConnector, &plan)
+	diags = tfschema.CopyGithubConnectorV3ToTerraform(ctx, githubConnector, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -179,7 +179,7 @@ func (r resourceTeleportGithubConnector) Read(ctx context.Context, req tfsdk.Rea
 	}
 
 	githubConnector := githubConnectorI.(*apitypes.GithubConnectorV3)
-	diags = tfschema.CopyGithubConnectorV3ToTerraform(ctx, *githubConnector, &state)
+	diags = tfschema.CopyGithubConnectorV3ToTerraform(ctx, githubConnector, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -260,7 +260,7 @@ func (r resourceTeleportGithubConnector) Update(ctx context.Context, req tfsdk.U
 	}
 
 	githubConnector = githubConnectorI.(*apitypes.GithubConnectorV3)
-	diags = tfschema.CopyGithubConnectorV3ToTerraform(ctx, *githubConnector, &plan)
+	diags = tfschema.CopyGithubConnectorV3ToTerraform(ctx, githubConnector, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -309,7 +309,7 @@ func (r resourceTeleportGithubConnector) ImportState(ctx context.Context, req tf
 		return
 	}
 
-	diags = tfschema.CopyGithubConnectorV3ToTerraform(ctx, *githubConnector, &state)
+	diags = tfschema.CopyGithubConnectorV3ToTerraform(ctx, githubConnector, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

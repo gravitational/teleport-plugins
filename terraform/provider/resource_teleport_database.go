@@ -136,7 +136,7 @@ func (r resourceTeleportDatabase) Create(ctx context.Context, req tfsdk.CreateRe
 		return
 	}
 
-	diags = tfschema.CopyDatabaseV3ToTerraform(ctx, *database, &plan)
+	diags = tfschema.CopyDatabaseV3ToTerraform(ctx, database, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -179,7 +179,7 @@ func (r resourceTeleportDatabase) Read(ctx context.Context, req tfsdk.ReadResour
 	}
 
 	database := databaseI.(*apitypes.DatabaseV3)
-	diags = tfschema.CopyDatabaseV3ToTerraform(ctx, *database, &state)
+	diags = tfschema.CopyDatabaseV3ToTerraform(ctx, database, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -260,7 +260,7 @@ func (r resourceTeleportDatabase) Update(ctx context.Context, req tfsdk.UpdateRe
 	}
 
 	database = databaseI.(*apitypes.DatabaseV3)
-	diags = tfschema.CopyDatabaseV3ToTerraform(ctx, *database, &plan)
+	diags = tfschema.CopyDatabaseV3ToTerraform(ctx, database, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -309,7 +309,7 @@ func (r resourceTeleportDatabase) ImportState(ctx context.Context, req tfsdk.Imp
 		return
 	}
 
-	diags = tfschema.CopyDatabaseV3ToTerraform(ctx, *database, &state)
+	diags = tfschema.CopyDatabaseV3ToTerraform(ctx, database, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

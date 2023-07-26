@@ -109,7 +109,7 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 		tries = tries + 1
 		{{.VarName}}I, err = r.p.Client.{{.GetMethod}}(ctx)
 		if err != nil {
-			resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))	
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 			return
 		}
 		if {{.VarName}}Before.GetMetadata().ID != {{.VarName}}I.GetMetadata().ID || {{.HasStaticID}} {
@@ -126,7 +126,7 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 		}
 	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
 
@@ -142,7 +142,7 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 	}
 	{{- end}}
 
-	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &plan)
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, {{.VarName}}, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -168,12 +168,12 @@ func (r resourceTeleport{{.Name}}) Read(ctx context.Context, req tfsdk.ReadResou
 
 	{{.VarName}}I, err := r.p.Client.Get{{.Name}}(ctx)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
 
 	{{.VarName}} := {{.VarName}}I.(*{{.ProtoPackage}}.{{.TypeName}})
-	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &state)
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, {{.VarName}}, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -250,12 +250,12 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 		}
 	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
 
 	{{.VarName}} = {{.VarName}}I.(*{{.ProtoPackage}}.{{.TypeName}})
-	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &plan)
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, {{.VarName}}, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -272,7 +272,7 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 func (r resourceTeleport{{.Name}}) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
 	err := r.p.Client.{{.DeleteMethod}}(ctx)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting {{.Name}}", trace.Wrap(err), "{{.Kind}}"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
 
@@ -283,7 +283,7 @@ func (r resourceTeleport{{.Name}}) Delete(ctx context.Context, req tfsdk.DeleteR
 func (r resourceTeleport{{.Name}}) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	{{.VarName}}I, err := r.p.Client.Get{{.Name}}(ctx)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error updating {{.Name}}", trace.Wrap(err), "{{.Kind}}"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
 
@@ -297,7 +297,7 @@ func (r resourceTeleport{{.Name}}) ImportState(ctx context.Context, req tfsdk.Im
 		return
 	}
 
-	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, *{{.VarName}}, &state)
+	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, {{.VarName}}, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

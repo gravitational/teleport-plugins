@@ -67,7 +67,7 @@ func (r dataSourceTeleportSAMLConnector) Read(ctx context.Context, req tfsdk.Rea
 
     var state types.Object
 	samlConnector := samlConnectorI.(*apitypes.SAMLConnectorV2)
-	diags = tfschema.CopySAMLConnectorV2ToTerraform(ctx, *samlConnector, &state)
+	diags = tfschema.CopySAMLConnectorV2ToTerraform(ctx, samlConnector, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

@@ -100,7 +100,7 @@ func (r resourceTeleportSessionRecordingConfig) Create(ctx context.Context, req 
 		tries = tries + 1
 		sessionRecordingConfigI, err = r.p.Client.GetSessionRecordingConfig(ctx)
 		if err != nil {
-			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
 			return
 		}
 		if sessionRecordingConfigBefore.GetMetadata().ID != sessionRecordingConfigI.GetMetadata().ID || false {
@@ -117,7 +117,7 @@ func (r resourceTeleportSessionRecordingConfig) Create(ctx context.Context, req 
 		}
 	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
 		return
 	}
 
@@ -129,7 +129,7 @@ func (r resourceTeleportSessionRecordingConfig) Create(ctx context.Context, req 
 		return
 	}
 
-	diags = tfschema.CopySessionRecordingConfigV2ToTerraform(ctx, *sessionRecordingConfig, &plan)
+	diags = tfschema.CopySessionRecordingConfigV2ToTerraform(ctx, sessionRecordingConfig, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -155,12 +155,12 @@ func (r resourceTeleportSessionRecordingConfig) Read(ctx context.Context, req tf
 
 	sessionRecordingConfigI, err := r.p.Client.GetSessionRecordingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
 		return
 	}
 
 	sessionRecordingConfig := sessionRecordingConfigI.(*apitypes.SessionRecordingConfigV2)
-	diags = tfschema.CopySessionRecordingConfigV2ToTerraform(ctx, *sessionRecordingConfig, &state)
+	diags = tfschema.CopySessionRecordingConfigV2ToTerraform(ctx, sessionRecordingConfig, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -237,12 +237,12 @@ func (r resourceTeleportSessionRecordingConfig) Update(ctx context.Context, req 
 		}
 	}
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
 		return
 	}
 
 	sessionRecordingConfig = sessionRecordingConfigI.(*apitypes.SessionRecordingConfigV2)
-	diags = tfschema.CopySessionRecordingConfigV2ToTerraform(ctx, *sessionRecordingConfig, &plan)
+	diags = tfschema.CopySessionRecordingConfigV2ToTerraform(ctx, sessionRecordingConfig, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -259,7 +259,7 @@ func (r resourceTeleportSessionRecordingConfig) Update(ctx context.Context, req 
 func (r resourceTeleportSessionRecordingConfig) Delete(ctx context.Context, req tfsdk.DeleteResourceRequest, resp *tfsdk.DeleteResourceResponse) {
 	err := r.p.Client.ResetSessionRecordingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
 		return
 	}
 
@@ -270,7 +270,7 @@ func (r resourceTeleportSessionRecordingConfig) Delete(ctx context.Context, req 
 func (r resourceTeleportSessionRecordingConfig) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
 	sessionRecordingConfigI, err := r.p.Client.GetSessionRecordingConfig(ctx)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))	
+		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
 		return
 	}
 
@@ -284,7 +284,7 @@ func (r resourceTeleportSessionRecordingConfig) ImportState(ctx context.Context,
 		return
 	}
 
-	diags = tfschema.CopySessionRecordingConfigV2ToTerraform(ctx, *sessionRecordingConfig, &state)
+	diags = tfschema.CopySessionRecordingConfigV2ToTerraform(ctx, sessionRecordingConfig, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

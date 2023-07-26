@@ -561,7 +561,7 @@ func CopyDeviceV1FromTerraform(_ context.Context, tf github_com_hashicorp_terraf
 }
 
 // CopyDeviceV1ToTerraform copies contents of the source Terraform object into a target struct
-func CopyDeviceV1ToTerraform(ctx context.Context, obj github_com_gravitational_teleport_api_types.DeviceV1, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+func CopyDeviceV1ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.DeviceV1, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
 	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
 	tf.Null = false
 	tf.Unknown = false
