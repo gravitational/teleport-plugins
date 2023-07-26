@@ -360,18 +360,19 @@ Metadata is resource metadata
 
 Spec is a ClusterNetworkingConfig specification
 
-|          Name           |   Type   | Required |                                                                                               Description                                                                                               |
-|-------------------------|----------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| client_idle_timeout     | duration |          | ClientIdleTimeout sets global cluster default setting for client idle timeouts.                                                                                                                         |
-| idle_timeout_message    | string   |          | ClientIdleTimeoutMessage is the message sent to the user when a connection times out.                                                                                                                   |
-| keep_alive_count_max    | number   |          | KeepAliveCountMax is the number of keep-alive messages that can be missed before the server disconnects the connection to the client.                                                                   |
-| keep_alive_interval     | duration |          | KeepAliveInterval is the interval at which the server sends keep-alive messages to the client.                                                                                                          |
-| proxy_listener_mode     | number   |          | ProxyListenerMode is proxy listener mode used by Teleport Proxies.                                                                                                                                      |
-| proxy_ping_interval     | duration |          | ProxyPingInterval defines in which interval the TLS routing ping message should be sent. This is applicable only when using ping-wrapped connections, regular TLS routing connections are not affected. |
-| routing_strategy        | number   |          | RoutingStrategy determines the strategy used to route to nodes.                                                                                                                                         |
-| session_control_timeout | duration |          | SessionControlTimeout is the session control lease expiry and defines the upper limit of how long a node may be out of contact with the auth server before it begins terminating controlled sessions.   |
-| tunnel_strategy         | object   |          | TunnelStrategyV1 determines the tunnel strategy used in the cluster.                                                                                                                                    |
-| web_idle_timeout        | duration |          | WebIdleTimeout sets global cluster default setting for the web UI idle timeouts.                                                                                                                        |
+|               Name               |   Type   | Required |                                                                                               Description                                                                                               |
+|----------------------------------|----------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| assist_command_execution_workers | number   |          | AssistCommandExecutionWorkers determines the number of workers that will execute arbitrary Assist commands on servers in parallel                                                                       |
+| client_idle_timeout              | duration |          | ClientIdleTimeout sets global cluster default setting for client idle timeouts.                                                                                                                         |
+| idle_timeout_message             | string   |          | ClientIdleTimeoutMessage is the message sent to the user when a connection times out.                                                                                                                   |
+| keep_alive_count_max             | number   |          | KeepAliveCountMax is the number of keep-alive messages that can be missed before the server disconnects the connection to the client.                                                                   |
+| keep_alive_interval              | duration |          | KeepAliveInterval is the interval at which the server sends keep-alive messages to the client.                                                                                                          |
+| proxy_listener_mode              | number   |          | ProxyListenerMode is proxy listener mode used by Teleport Proxies.                                                                                                                                      |
+| proxy_ping_interval              | duration |          | ProxyPingInterval defines in which interval the TLS routing ping message should be sent. This is applicable only when using ping-wrapped connections, regular TLS routing connections are not affected. |
+| routing_strategy                 | number   |          | RoutingStrategy determines the strategy used to route to nodes.                                                                                                                                         |
+| session_control_timeout          | duration |          | SessionControlTimeout is the session control lease expiry and defines the upper limit of how long a node may be out of contact with the auth server before it begins terminating controlled sessions.   |
+| tunnel_strategy                  | object   |          | TunnelStrategyV1 determines the tunnel strategy used in the cluster.                                                                                                                                    |
+| web_idle_timeout                 | duration |          | WebIdleTimeout sets global cluster default setting for the web UI idle timeouts.                                                                                                                        |
 
 #### spec.tunnel_strategy
 
@@ -483,20 +484,21 @@ AdminUser is the database admin user for automatic user provisioning.
 
 AWS contains AWS specific settings for RDS/Aurora/Redshift databases.
 
-|        Name         |  Type  | Required |                                                                    Description                                                                     |
-|---------------------|--------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------|
-| account_id          | string |          | AccountID is the AWS account ID this database belongs to.                                                                                          |
-| assume_role_arn     | string |          | AssumeRoleARN is an optional AWS role ARN to assume when accessing a database. Set this field and ExternalID to enable access across AWS accounts. |
-| elasticache         | object |          | ElastiCache contains AWS ElastiCache Redis specific metadata.                                                                                      |
-| external_id         | string |          | ExternalID is an optional AWS external ID used to enable assuming an AWS role across accounts.                                                     |
-| memorydb            | object |          | MemoryDB contains AWS MemoryDB specific metadata.                                                                                                  |
-| opensearch          | object |          | OpenSearch contains AWS OpenSearch specific metadata.                                                                                              |
-| rds                 | object |          | RDS contains RDS specific metadata.                                                                                                                |
-| rdsproxy            | object |          | RDSProxy contains AWS Proxy specific metadata.                                                                                                     |
-| redshift            | object |          | Redshift contains Redshift specific metadata.                                                                                                      |
-| redshift_serverless | object |          | RedshiftServerless contains AWS Redshift Serverless specific metadata.                                                                             |
-| region              | string |          | Region is a AWS cloud region.                                                                                                                      |
-| secret_store        | object |          | SecretStore contains secret store configurations.                                                                                                  |
+|        Name         |  Type  | Required |                                                                                                                                     Description                                                                                                                                     |
+|---------------------|--------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| account_id          | string |          | AccountID is the AWS account ID this database belongs to.                                                                                                                                                                                                                           |
+| assume_role_arn     | string |          | AssumeRoleARN is an optional AWS role ARN to assume when accessing a database. Set this field and ExternalID to enable access across AWS accounts.                                                                                                                                  |
+| elasticache         | object |          | ElastiCache contains AWS ElastiCache Redis specific metadata.                                                                                                                                                                                                                       |
+| external_id         | string |          | ExternalID is an optional AWS external ID used to enable assuming an AWS role across accounts.                                                                                                                                                                                      |
+| iam_policy_exists   | bool   |          | IAMPolicyExists indicates whether the IAM Policy is configured properly for database access. If not, the user must update the AWS profile identity to allow access to the Database. Eg for an RDS Database: the underlying AWS profile allows for `rds-db:connect` for the Database |
+| memorydb            | object |          | MemoryDB contains AWS MemoryDB specific metadata.                                                                                                                                                                                                                                   |
+| opensearch          | object |          | OpenSearch contains AWS OpenSearch specific metadata.                                                                                                                                                                                                                               |
+| rds                 | object |          | RDS contains RDS specific metadata.                                                                                                                                                                                                                                                 |
+| rdsproxy            | object |          | RDSProxy contains AWS Proxy specific metadata.                                                                                                                                                                                                                                      |
+| redshift            | object |          | Redshift contains Redshift specific metadata.                                                                                                                                                                                                                                       |
+| redshift_serverless | object |          | RedshiftServerless contains AWS Redshift Serverless specific metadata.                                                                                                                                                                                                              |
+| region              | string |          | Region is a AWS cloud region.                                                                                                                                                                                                                                                       |
+| secret_store        | object |          | SecretStore contains secret store configurations.                                                                                                                                                                                                                                   |
 
 ##### spec.aws.elasticache
 
@@ -1937,15 +1939,16 @@ Specification of the device.
 
 
 
-|        Name         |       Type       | Required | Description |
-|---------------------|------------------|----------|-------------|
-| external_id         | string           |          |             |
-| jamf_binary_version | string           |          |             |
-| model_identifier    | string           |          |             |
-| os_build            | string           |          |             |
-| os_usernames        | array of strings |          |             |
-| os_version          | string           |          |             |
-| update_time         | RFC3339 time     |          |             |
+|         Name          |       Type       | Required | Description |
+|-----------------------|------------------|----------|-------------|
+| external_id           | string           |          |             |
+| jamf_binary_version   | string           |          |             |
+| model_identifier      | string           |          |             |
+| os_build              | string           |          |             |
+| os_build_supplemental | string           |          |             |
+| os_usernames          | array of strings |          |             |
+| os_version            | string           |          |             |
+| update_time           | RFC3339 time     |          |             |
 
 #### spec.source
 

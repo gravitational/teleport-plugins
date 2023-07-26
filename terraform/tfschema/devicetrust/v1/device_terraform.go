@@ -119,6 +119,11 @@ func GenSchemaDeviceV1(ctx context.Context) (github_com_hashicorp_terraform_plug
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
+						"os_build_supplemental": {
+							Description: "",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"os_usernames": {
 							Description: "",
 							Optional:    true,
@@ -524,6 +529,23 @@ func CopyDeviceV1FromTerraform(_ context.Context, tf github_com_hashicorp_terraf
 													t = string(v.Value)
 												}
 												obj.ExternalId = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["os_build_supplemental"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"DeviceV1.spec.profile.os_build_supplemental"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"DeviceV1.spec.profile.os_build_supplemental", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.OsBuildSupplemental = t
 											}
 										}
 									}
@@ -1074,6 +1096,28 @@ func CopyDeviceV1ToTerraform(ctx context.Context, obj github_com_gravitational_t
 											v.Value = string(obj.ExternalId)
 											v.Unknown = false
 											tf.Attrs["external_id"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["os_build_supplemental"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"DeviceV1.spec.profile.os_build_supplemental"})
+										} else {
+											v, ok := tf.Attrs["os_build_supplemental"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"DeviceV1.spec.profile.os_build_supplemental", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"DeviceV1.spec.profile.os_build_supplemental", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.OsBuildSupplemental) == ""
+											}
+											v.Value = string(obj.OsBuildSupplemental)
+											v.Unknown = false
+											tf.Attrs["os_build_supplemental"] = v
 										}
 									}
 								}
