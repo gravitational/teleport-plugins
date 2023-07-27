@@ -97,6 +97,11 @@ func GenSchemaDeviceV1(ctx context.Context) (github_com_hashicorp_terraform_plug
 					Required:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
+				"owner": {
+					Description: "",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+				},
 				"profile": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 						"external_id": {
@@ -550,6 +555,23 @@ func CopyDeviceV1FromTerraform(_ context.Context, tf github_com_hashicorp_terraf
 										}
 									}
 								}
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["owner"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"DeviceV1.spec.owner"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"DeviceV1.spec.owner", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+							} else {
+								var t string
+								if !v.Null && !v.Unknown {
+									t = string(v.Value)
+								}
+								obj.Owner = t
 							}
 						}
 					}
@@ -1124,6 +1146,28 @@ func CopyDeviceV1ToTerraform(ctx context.Context, obj *github_com_gravitational_
 								v.Unknown = false
 								tf.Attrs["profile"] = v
 							}
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["owner"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"DeviceV1.spec.owner"})
+						} else {
+							v, ok := tf.Attrs["owner"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"DeviceV1.spec.owner", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"DeviceV1.spec.owner", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+								}
+								v.Null = string(obj.Owner) == ""
+							}
+							v.Value = string(obj.Owner)
+							v.Unknown = false
+							tf.Attrs["owner"] = v
 						}
 					}
 				}

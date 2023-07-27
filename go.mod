@@ -18,7 +18,7 @@ require (
 	github.com/jonboulle/clockwork v0.4.0
 	github.com/json-iterator/go v1.1.12
 	github.com/julienschmidt/httprouter v1.3.0
-	github.com/mailgun/holster/v3 v3.15.2
+	github.com/mailgun/holster/v3 v3.16.2
 	github.com/mailgun/mailgun-go/v4 v4.5.3
 	github.com/manifoldco/promptui v0.8.0
 	github.com/olekukonko/tablewriter v0.0.5
@@ -135,7 +135,7 @@ require (
 
 replace (
 	github.com/gogo/protobuf => github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf
-	github.com/gravitational/teleport => github.com/gravitational/teleport v0.0.0-20230725235931-549dcf160c7f // ref: heads/branch/v13
-	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20230725235931-549dcf160c7f // ref: heads/branch/v13
+	github.com/gravitational/teleport => github.com/gravitational/teleport v0.0.0-20230727045832-6229e47cc2ed // ref: tags/v13.2.5
+	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20230727045832-6229e47cc2ed // ref: tags/v13.2.5
 	github.com/julienschmidt/httprouter => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 )
