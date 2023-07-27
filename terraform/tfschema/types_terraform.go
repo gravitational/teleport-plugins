@@ -2437,6 +2437,11 @@ func GenSchemaUserV2(ctx context.Context) (github_com_hashicorp_terraform_plugin
 					Optional:    true,
 				},
 				"traits": GenSchemaTraits(ctx),
+				"trusted_device_ids": {
+					Description: "TrustedDeviceIDs contains the IDs of trusted devices enrolled by the user. Managed by the Device Trust subsystem, avoid manual edits.",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+				},
 			}),
 			Description: "Spec is a user specification",
 			Optional:    true,
@@ -25211,6 +25216,33 @@ func CopyUserV2FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 						}
 						CopyFromTraits(diags, a, &obj.Traits)
 					}
+					{
+						a, ok := tf.Attrs["trusted_device_ids"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"UserV2.Spec.TrustedDeviceIDs"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"UserV2.Spec.TrustedDeviceIDs", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+							} else {
+								obj.TrustedDeviceIDs = make([]string, len(v.Elems))
+								if !v.Null && !v.Unknown {
+									for k, a := range v.Elems {
+										v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+										if !ok {
+											diags.Append(attrReadConversionFailureDiag{"UserV2.Spec.TrustedDeviceIDs", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+										} else {
+											var t string
+											if !v.Null && !v.Unknown {
+												t = string(v.Value)
+											}
+											obj.TrustedDeviceIDs[k] = t
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -25849,6 +25881,59 @@ func CopyUserV2ToTerraform(ctx context.Context, obj *github_com_gravitational_te
 						} else {
 							v := CopyToTraits(diags, obj.Traits, t, tf.Attrs["traits"])
 							tf.Attrs["traits"] = v
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["trusted_device_ids"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"UserV2.Spec.TrustedDeviceIDs"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"UserV2.Spec.TrustedDeviceIDs", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+							} else {
+								c, ok := tf.Attrs["trusted_device_ids"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+								if !ok {
+									c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+										ElemType: o.ElemType,
+										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.TrustedDeviceIDs)),
+										Null:     true,
+									}
+								} else {
+									if c.Elems == nil {
+										c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.TrustedDeviceIDs))
+									}
+								}
+								if obj.TrustedDeviceIDs != nil {
+									t := o.ElemType
+									if len(obj.TrustedDeviceIDs) != len(c.Elems) {
+										c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.TrustedDeviceIDs))
+									}
+									for k, a := range obj.TrustedDeviceIDs {
+										v, ok := tf.Attrs["trusted_device_ids"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+										if !ok {
+											i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+											if err != nil {
+												diags.Append(attrWriteGeneralError{"UserV2.Spec.TrustedDeviceIDs", err})
+											}
+											v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"UserV2.Spec.TrustedDeviceIDs", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											}
+											v.Null = string(a) == ""
+										}
+										v.Value = string(a)
+										v.Unknown = false
+										c.Elems[k] = v
+									}
+									if len(obj.TrustedDeviceIDs) > 0 {
+										c.Null = false
+									}
+								}
+								c.Unknown = false
+								tf.Attrs["trusted_device_ids"] = c
+							}
 						}
 					}
 				}

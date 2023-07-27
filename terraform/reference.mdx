@@ -1932,6 +1932,7 @@ Specification of the device.
 | asset_tag     | string | *        |             |
 | enroll_status | string |          |             |
 | os_type       | string | *        |             |
+| owner         | string |          |             |
 | profile       | object |          |             |
 | source        | object |          |             |
 
@@ -1998,13 +1999,14 @@ Metadata is resource metadata
 
 Spec is a user specification
 
-|       Name        |         Type         | Required |                                                    Description                                                    |
-|-------------------|----------------------|----------|-------------------------------------------------------------------------------------------------------------------|
-| github_identities | object               |          | GithubIdentities list associated Github OAuth2 identities that let user log in using externally verified identity |
-| oidc_identities   | object               |          | OIDCIdentities lists associated OpenID Connect identities that let user log in using externally verified identity |
-| roles             | array of strings     |          | Roles is a list of roles assigned to user                                                                         |
-| saml_identities   | object               |          | SAMLIdentities lists associated SAML identities that let user log in using externally verified identity           |
-| traits            | map of string arrays |          |                                                                                                                   |
+|        Name        |         Type         | Required |                                                              Description                                                              |
+|--------------------|----------------------|----------|---------------------------------------------------------------------------------------------------------------------------------------|
+| github_identities  | object               |          | GithubIdentities list associated Github OAuth2 identities that let user log in using externally verified identity                     |
+| oidc_identities    | object               |          | OIDCIdentities lists associated OpenID Connect identities that let user log in using externally verified identity                     |
+| roles              | array of strings     |          | Roles is a list of roles assigned to user                                                                                             |
+| saml_identities    | object               |          | SAMLIdentities lists associated SAML identities that let user log in using externally verified identity                               |
+| traits             | map of string arrays |          |                                                                                                                                       |
+| trusted_device_ids | array of strings     |          | TrustedDeviceIDs contains the IDs of trusted devices enrolled by the user. Managed by the Device Trust subsystem, avoid manual edits. |
 
 #### spec.github_identities
 

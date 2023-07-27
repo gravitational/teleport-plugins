@@ -267,10 +267,10 @@ github.com/gravitational/kingpin v2.1.11-0.20220901134012-2a1956e29525+incompati
 github.com/gravitational/kingpin v2.1.11-0.20220901134012-2a1956e29525+incompatible/go.mod h1:LWxG30M3FcrjhOn3T4zz7JmBoQJ45MWZmOXgy9Ganoc=
 github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf h1:MQ4e8XcxvZTeuOmRl7yE519vcWc2h/lyvYzsvt41cdY=
 github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXPKa29o=
-github.com/gravitational/teleport v0.0.0-20230725235931-549dcf160c7f h1:5dFk2CkbPBArqtoifVZV6TnvqShbGgy/7jdhShCPPhs=
-github.com/gravitational/teleport v0.0.0-20230725235931-549dcf160c7f/go.mod h1:9AnFPGypjDq7iLEXgTyqNqPfsjPeI+IQrlQMnYqJs1o=
-github.com/gravitational/teleport/api v0.0.0-20230725235931-549dcf160c7f h1:kXNxzdcZJOJfHt5dbU6nnNW+t61cVL96lGVdASVD0r8=
-github.com/gravitational/teleport/api v0.0.0-20230725235931-549dcf160c7f/go.mod h1:2TVT5ljdYfypEeTBeHo7id1B8sT3yBaxn/JswF1wqxI=
+github.com/gravitational/teleport v0.0.0-20230727045832-6229e47cc2ed h1:vG8FE2JKkSruOFmYi2mxcMjyfZeJ2qc9bhSRHYnxvCY=
+github.com/gravitational/teleport v0.0.0-20230727045832-6229e47cc2ed/go.mod h1:/fu01b/6RdjnuEoHlngCxWRJu0k6QnjdVIM9YdvliNQ=
+github.com/gravitational/teleport/api v0.0.0-20230727045832-6229e47cc2ed h1:XGeCZiX/KGI7CLlBd0ZOsJN3Y7UMLCPNBCcySysvjd0=
+github.com/gravitational/teleport/api v0.0.0-20230727045832-6229e47cc2ed/go.mod h1:2TVT5ljdYfypEeTBeHo7id1B8sT3yBaxn/JswF1wqxI=
 github.com/gravitational/trace v1.2.1 h1:Iaf43aqbKV5H8bdiRs1qByjEHgAfADJ0lt0JwRyu+q8=
 github.com/gravitational/trace v1.2.1/go.mod h1:n0ijrq6psJY0sOI/NzLp+xdd8xl79jjwzVOFHDY6+kQ=
 github.com/grpc-ecosystem/go-grpc-middleware v1.0.0/go.mod h1:FiyG127CGDf3tlThmgyCl78X/SZQqEOJBCDaAfeWzPs=
@@ -415,8 +415,8 @@ github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0
 github.com/kylelemons/godebug v1.1.0/go.mod h1:9/0rRGxNHcop5bhtWyNeEfOS8JIWk580+fNqagV/RAw=
 github.com/lunixbochs/vtclean v0.0.0-20180621232353-2d01aacdc34a h1:weJVJJRzAJBFRlAiJQROKQs8oC9vOxvm4rZmBBk0ONw=
 github.com/lunixbochs/vtclean v0.0.0-20180621232353-2d01aacdc34a/go.mod h1:pHhQNgMf3btfWnGBVipUOjRYhoOsdGqdm/+2c2E2WMI=
-github.com/mailgun/holster/v3 v3.15.2 h1:QYyqKsdYthYKyF+hp+Ks0965CgtmxW8eLOrGSgXW/fI=
-github.com/mailgun/holster/v3 v3.15.2/go.mod h1:ZGvGvMpJiADhju+cfNsf/EF0JIy0dsAGdO5al1uZkJ4=
+github.com/mailgun/holster/v3 v3.16.2 h1:Zl5Spy4WdgLMKWbHgkuDwsQwsJN0Xr3Mgt2dZGJih18=
+github.com/mailgun/holster/v3 v3.16.2/go.mod h1:U3cbmr+/KfYqWINVCqyEhEID8hBDOPHEj+XmDKbi2nk=
 github.com/mailgun/mailgun-go/v4 v4.5.3 h1:Cc4IRTYZVSdDRD7H/wBJRYAwM9DBuFDsbBtsSwqTjCM=
 github.com/mailgun/mailgun-go/v4 v4.5.3/go.mod h1:FJlF9rI5cQT+mrwujtJjPMbIVy3Ebor9bKTVsJ0QU40=
 github.com/manifoldco/promptui v0.8.0 h1:R95mMF+McvXZQ7j1g8ucVZE1gLP3Sv6j9vlF9kyRqQo=
