@@ -1629,6 +1629,11 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 									Description: "ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.",
 									Optional:    true,
 								},
+								"max_duration": {
+									Description: "MaxDuration is the amount of time the access will be granted for. If this is zero, the default duration is used.",
+									Optional:    true,
+									Type:        DurationType{},
+								},
 								"roles": {
 									Description: "Roles is the name of roles which will match the request rule.",
 									Optional:    true,
@@ -1988,6 +1993,11 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 									}),
 									Description: "ClaimsToRoles specifies a mapping from claims (traits) to teleport roles.",
 									Optional:    true,
+								},
+								"max_duration": {
+									Description: "MaxDuration is the amount of time the access will be granted for. If this is zero, the default duration is used.",
+									Optional:    true,
+									Type:        DurationType{},
 								},
 								"roles": {
 									Description: "Roles is the name of roles which will match the request rule.",
@@ -15438,6 +15448,23 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 															}
 														}
 													}
+													{
+														a, ok := tf.Attrs["max_duration"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"RoleV6.Spec.Allow.Request.MaxDuration"})
+														} else {
+															v, ok := a.(DurationValue)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Allow.Request.MaxDuration", "DurationValue"})
+															} else {
+																var t github_com_gravitational_teleport_api_types.Duration
+																if !v.Null && !v.Unknown {
+																	t = github_com_gravitational_teleport_api_types.Duration(v.Value)
+																}
+																obj.MaxDuration = t
+															}
+														}
+													}
 												}
 											}
 										}
@@ -17036,6 +17063,23 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 																		}
 																	}
 																}
+															}
+														}
+													}
+													{
+														a, ok := tf.Attrs["max_duration"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"RoleV6.Spec.Deny.Request.MaxDuration"})
+														} else {
+															v, ok := a.(DurationValue)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Deny.Request.MaxDuration", "DurationValue"})
+															} else {
+																var t github_com_gravitational_teleport_api_types.Duration
+																if !v.Null && !v.Unknown {
+																	t = github_com_gravitational_teleport_api_types.Duration(v.Value)
+																}
+																obj.MaxDuration = t
 															}
 														}
 													}
@@ -20100,6 +20144,28 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj *github_com_gravitational_te
 															}
 														}
 													}
+													{
+														t, ok := tf.AttrTypes["max_duration"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Allow.Request.MaxDuration"})
+														} else {
+															v, ok := tf.Attrs["max_duration"].(DurationValue)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"RoleV6.Spec.Allow.Request.MaxDuration", err})
+																}
+																v, ok = i.(DurationValue)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Allow.Request.MaxDuration", "DurationValue"})
+																}
+																v.Null = false
+															}
+															v.Value = time.Duration(obj.MaxDuration)
+															v.Unknown = false
+															tf.Attrs["max_duration"] = v
+														}
+													}
 												}
 												v.Unknown = false
 												tf.Attrs["request"] = v
@@ -22885,6 +22951,28 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj *github_com_gravitational_te
 																c.Unknown = false
 																tf.Attrs["search_as_roles"] = c
 															}
+														}
+													}
+													{
+														t, ok := tf.AttrTypes["max_duration"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Deny.Request.MaxDuration"})
+														} else {
+															v, ok := tf.Attrs["max_duration"].(DurationValue)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"RoleV6.Spec.Deny.Request.MaxDuration", err})
+																}
+																v, ok = i.(DurationValue)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Deny.Request.MaxDuration", "DurationValue"})
+																}
+																v.Null = false
+															}
+															v.Value = time.Duration(obj.MaxDuration)
+															v.Unknown = false
+															tf.Attrs["max_duration"] = v
 														}
 													}
 												}
