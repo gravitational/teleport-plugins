@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/gravitational/kingpin"
+	"github.com/gravitational/teleport/integrations/access/discord"
 	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/trace"
@@ -84,7 +85,7 @@ func run(configPath string, debug bool) error {
 		logger.Standard().Debugf("DEBUG logging enabled")
 	}
 
-	app := NewDiscordApp(conf)
+	app := discord.NewApp(conf)
 	go lib.ServeSignals(app, 15*time.Second)
 
 	logger.Standard().Infof("Starting Teleport Access Discord Plugin %s:%s", Version, Gitref)

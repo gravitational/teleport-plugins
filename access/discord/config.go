@@ -17,34 +17,24 @@ limitations under the License.
 package main
 
 import (
-	"net/http"
-	"net/url"
 	"strings"
 
-	"github.com/go-resty/resty/v2"
-	"github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/teleport/integrations/access/common"
+	"github.com/gravitational/teleport/integrations/access/discord"
 	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/trace"
 	"github.com/pelletier/go-toml"
 )
 
-const discordAPIUrl = "https://discord.com/api/"
-
-type DiscordConfig struct {
-	common.BaseConfig
-	Discord common.GenericAPIConfig
-}
-
-// LoadDiscordConfig reads the config file, initializes a new DiscordConfig struct object, and returns it.
-// Optionally returns an error if the file is not readable, or if file format is invalid.
-func LoadDiscordConfig(filepath string) (*DiscordConfig, error) {
+// LoadDiscordConfig reads the config file, initializes a new Discord Config
+// struct object, and returns it. Optionally returns an error if the file is
+// not readable, or if file format is invalid.
+func LoadDiscordConfig(filepath string) (*discord.Config, error) {
 	t, err := toml.LoadFile(filepath)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
-	conf := &DiscordConfig{}
+	conf := &discord.Config{}
 	if err := t.Unmarshal(conf); err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -60,71 +50,4 @@ func LoadDiscordConfig(filepath string) (*DiscordConfig, error) {
 		return nil, trace.Wrap(err)
 	}
 	return conf, nil
-}
-
-// CheckAndSetDefaults checks the config struct for any logical errors, and sets default values
-// if some values are missing.
-// If critical values are missing and we can't set defaults for them — this will return an error.
-func (c *DiscordConfig) CheckAndSetDefaults() error {
-	if err := c.Teleport.CheckAndSetDefaults(); err != nil {
-		return trace.Wrap(err)
-	}
-	if c.Discord.Token == "" {
-		return trace.BadParameter("missing required value discord.token")
-	}
-	if c.Log.Output == "" {
-		c.Log.Output = "stderr"
-	}
-	if c.Log.Severity == "" {
-		c.Log.Severity = "info"
-	}
-
-	if len(c.Recipients) == 0 {
-		return trace.BadParameter("missing required value role_to_recipients.")
-	} else if len(c.Recipients[types.Wildcard]) == 0 {
-		return trace.BadParameter("missing required value role_to_recipients[%v].", types.Wildcard)
-	}
-
-	return nil
-}
-
-// NewBot initializes the new Discord message generator (DiscordBot)
-func (c *DiscordConfig) NewBot(clusterName, webProxyAddr string) (common.MessagingBot, error) {
-	var (
-		webProxyURL *url.URL
-		err         error
-	)
-	if webProxyAddr != "" {
-		if webProxyURL, err = lib.AddrToURL(webProxyAddr); err != nil {
-			return DiscordBot{}, trace.Wrap(err)
-		}
-	}
-
-	token := "Bot " + c.Discord.Token
-
-	client := resty.
-		NewWithClient(&http.Client{
-			Timeout: discordHTTPTimeout,
-			Transport: &http.Transport{
-				MaxConnsPerHost:     discordMaxConns,
-				MaxIdleConnsPerHost: discordMaxConns,
-			},
-		}).
-		SetHeader("Content-Type", "application/json").
-		SetHeader("Accept", "application/json").
-		SetHeader("Authorization", token)
-
-	// APIURL parameter is set only in tests
-	if endpoint := c.Discord.APIURL; endpoint != "" {
-		client.SetBaseURL(endpoint)
-	} else {
-		client.SetBaseURL(discordAPIUrl)
-		client.OnAfterResponse(onAfterResponseDiscord)
-	}
-
-	return DiscordBot{
-		client:      client,
-		clusterName: clusterName,
-		webProxyURL: webProxyURL,
-	}, nil
 }
