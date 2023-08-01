@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"time"
@@ -84,11 +85,7 @@ func run(configPath string, debug bool) error {
 		logger.Standard().Debugf("DEBUG logging enabled")
 	}
 
-	app, err := mattermost.NewMattermostApp(*conf)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
+	app := mattermost.NewMattermostApp(conf)
 	go lib.ServeSignals(app, 15*time.Second)
 
 	return trace.Wrap(
