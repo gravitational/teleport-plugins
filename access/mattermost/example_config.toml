@@ -20,17 +20,17 @@ addr = "example.com:3025"
 url = "https://mattermost.example.com" # Mattermost Server URL
 token = "api-token"                    # Mattermost Bot OAuth token
 
-# Notify recipients
+# Notify recipients (optional)
 #
 # The value is an array of strings, where each element is either:
 # - A channel name in the format 'team/channel', where / separates the 
 #   name of the team and the name of the channel
 # - The email address of a Mattermost user to notify via a direct message 
 #   when the plugin receives an Access Request event
-recipients = [
-"my-team-name/channel-name",
-"first.last@example.com"
-]
+# recipients = [
+#   "my-team-name/channel-name",
+#   "first.last@example.com"
+# ]
 
 [log]
 output = "stderr" # Logger output. Could be "stdout", "stderr" or "/var/lib/teleport/mattermost.log"
