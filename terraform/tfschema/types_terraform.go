@@ -186,10 +186,10 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
-						"iam_policy_exists": {
-							Description: "IAMPolicyExists indicates whether the IAM Policy is configured properly for database access. If not, the user must update the AWS profile identity to allow access to the Database. Eg for an RDS Database: the underlying AWS profile allows for `rds-db:connect` for the Database",
+						"iam_policy_status": {
+							Description: "IAMPolicyStatus indicates whether the IAM Policy is configured properly for database access. If not, the user must update the AWS profile identity to allow access to the Database. Eg for an RDS Database: the underlying AWS profile allows for `rds-db:connect` for the Database.",
 							Optional:    true,
-							Type:        github_com_hashicorp_terraform_plugin_framework_types.BoolType,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
 						},
 						"memorydb": {
 							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -4211,19 +4211,19 @@ func CopyDatabaseV3FromTerraform(_ context.Context, tf github_com_hashicorp_terr
 										}
 									}
 									{
-										a, ok := tf.Attrs["iam_policy_exists"]
+										a, ok := tf.Attrs["iam_policy_status"]
 										if !ok {
-											diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.AWS.IAMPolicyExists"})
+											diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.AWS.IAMPolicyStatus"})
 										} else {
-											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Bool)
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Int64)
 											if !ok {
-												diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.AWS.IAMPolicyExists", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
+												diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.AWS.IAMPolicyStatus", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
 											} else {
-												var t bool
+												var t github_com_gravitational_teleport_api_types.IAMPolicyStatus
 												if !v.Null && !v.Unknown {
-													t = bool(v.Value)
+													t = github_com_gravitational_teleport_api_types.IAMPolicyStatus(v.Value)
 												}
-												obj.IAMPolicyExists = t
+												obj.IAMPolicyStatus = t
 											}
 										}
 									}
@@ -6133,25 +6133,25 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj *github_com_gravitationa
 										}
 									}
 									{
-										t, ok := tf.AttrTypes["iam_policy_exists"]
+										t, ok := tf.AttrTypes["iam_policy_status"]
 										if !ok {
-											diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.AWS.IAMPolicyExists"})
+											diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.AWS.IAMPolicyStatus"})
 										} else {
-											v, ok := tf.Attrs["iam_policy_exists"].(github_com_hashicorp_terraform_plugin_framework_types.Bool)
+											v, ok := tf.Attrs["iam_policy_status"].(github_com_hashicorp_terraform_plugin_framework_types.Int64)
 											if !ok {
 												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
 												if err != nil {
-													diags.Append(attrWriteGeneralError{"DatabaseV3.Spec.AWS.IAMPolicyExists", err})
+													diags.Append(attrWriteGeneralError{"DatabaseV3.Spec.AWS.IAMPolicyStatus", err})
 												}
-												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.Bool)
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.Int64)
 												if !ok {
-													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.IAMPolicyExists", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
+													diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.IAMPolicyStatus", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
 												}
-												v.Null = bool(obj.IAMPolicyExists) == false
+												v.Null = int64(obj.IAMPolicyStatus) == 0
 											}
-											v.Value = bool(obj.IAMPolicyExists)
+											v.Value = int64(obj.IAMPolicyStatus)
 											v.Unknown = false
-											tf.Attrs["iam_policy_exists"] = v
+											tf.Attrs["iam_policy_status"] = v
 										}
 									}
 								}
