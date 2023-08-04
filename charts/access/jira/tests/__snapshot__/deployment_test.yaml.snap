@@ -7,8 +7,8 @@ should match the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-jira
-        app.kubernetes.io/version: 13.3.0
-        helm.sh/chart: teleport-plugin-jira-13.3.0
+        app.kubernetes.io/version: 12.4.14
+        helm.sh/chart: teleport-plugin-jira-12.4.14
       name: RELEASE-NAME-teleport-plugin-jira
     spec:
       replicas: 1

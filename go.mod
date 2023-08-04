@@ -136,7 +136,7 @@ require (
 
 replace (
 	github.com/gogo/protobuf => github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf
-	github.com/gravitational/teleport => github.com/gravitational/teleport v0.0.0-20230801160726-d1e081e6f144 // ref: tags/v13.3.0
-	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20230801160726-d1e081e6f144 // ref: tags/v13.3.0
+	github.com/gravitational/teleport => github.com/gravitational/teleport v0.0.0-20230803224509-50daf82a2968 // ref: tags/v12.4.14
+	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20230803224509-50daf82a2968 // ref: tags/v12.4.14
 	github.com/julienschmidt/httprouter => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 )
