@@ -197,15 +197,15 @@ func (s *TerraformBaseSuite) closeClient() {
 }
 
 // getFixture loads fixture and returns it as string or <error> if failed
-func (s *TerraformBaseSuite) getFixture(name string) string {
-	return s.getFixtureWithCustomConfig(name, s.terraformConfig)
+func (s *TerraformBaseSuite) getFixture(name string, formatArgs ...any) string {
+	return s.getFixtureWithCustomConfig(name, s.terraformConfig, formatArgs...)
 }
 
 // getFixtureWithCustomConfig loads fixture and returns it as string or <error> if failed
-func (s *TerraformBaseSuite) getFixtureWithCustomConfig(name string, config string) string {
+func (s *TerraformBaseSuite) getFixtureWithCustomConfig(name, config string, formatArgs ...any) string {
 	b, err := fixtures.ReadFile(filepath.Join("fixtures", name))
 	if err != nil {
 		return fmt.Sprintf("<error: %v fixture not found>", name)
 	}
-	return config + "\n" + string(b)
+	return config + "\n" + fmt.Sprintf(string(b), formatArgs...)
 }
