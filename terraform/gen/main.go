@@ -99,6 +99,8 @@ type payload struct {
 	// e.g. `terraform import <resource_type>.<resource_name> identifier`.
 	// This is also used to name the generated files.
 	TerraformResourceType string
+	// WithNonce is used to force upsert behavior for nonce protected values.
+	WithNonce bool
 }
 
 func (p *payload) CheckAndSetDefaults() error {
@@ -156,6 +158,21 @@ var (
 		Kind:                  "cluster_auth_preference",
 		HasStaticID:           false,
 		TerraformResourceType: "teleport_auth_preference",
+	}
+
+	clusterMaintenance = payload{
+		Name:                  "ClusterMaintenanceConfig",
+		TypeName:              "ClusterMaintenanceConfigV1",
+		VarName:               "clusterMaintenanceConfig",
+		GetMethod:             "GetClusterMaintenanceConfig",
+		CreateMethod:          "UpdateClusterMaintenanceConfig",
+		UpdateMethod:          "UpdateClusterMaintenanceConfig",
+		DeleteMethod:          "DeleteClusterMaintenanceConfig",
+		ID:                    `"cluster_maintenance_config"`,
+		Kind:                  "cluster_maintenance_config",
+		HasStaticID:           true,
+		TerraformResourceType: "teleport_cluster_maintenance_config",
+		WithNonce:             true,
 	}
 
 	clusterNetworking = payload{
@@ -374,6 +391,8 @@ func genTFSchema() {
 	generateDataSource(app, pluralDataSource)
 	generateResource(authPreference, singularResource)
 	generateDataSource(authPreference, singularDataSource)
+	generateResource(clusterMaintenance, singularResource)
+	generateDataSource(clusterMaintenance, singularDataSource)
 	generateResource(clusterNetworking, singularResource)
 	generateDataSource(clusterNetworking, singularDataSource)
 	generateResource(database, pluralResource)

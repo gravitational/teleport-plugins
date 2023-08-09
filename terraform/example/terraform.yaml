@@ -21,6 +21,7 @@ spec:
         - saml
         - cluster_auth_preference
         - cluster_networking_config
+        - cluster_maintenance_config
         - session_recording_config
         - app
         - db
