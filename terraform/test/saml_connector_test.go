@@ -17,6 +17,9 @@ limitations under the License.
 package test
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"regexp"
 
 	"github.com/gravitational/teleport/api/types"
@@ -145,11 +148,16 @@ func (s *TerraformSuite) TestImportSAMLConnector() {
 }
 
 func (s *TerraformSuite) TestSAMLConnectorWithEntityDescriptorURL() {
+	// Start test HTTP server that returns SAML descriptor.
+	httpServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, testDescriptor)
+	}))
+	s.T().Cleanup(httpServer.Close)
 	resource.Test(s.T(), resource.TestCase{
 		ProtoV6ProviderFactories: s.terraformProviders,
 		Steps: []resource.TestStep{
 			{
-				Config: s.getFixture("saml_connector_0_create_with_entitydescriptorurl.tf"),
+				Config: s.getFixture("saml_connector_0_create_with_entitydescriptorurl.tf", httpServer.URL),
 			},
 		},
 	})
@@ -166,3 +174,21 @@ func (s *TerraformSuite) TestSAMLConnectorWithoutEntityDescriptor() {
 		},
 	})
 }
+
+var testDescriptor = `<?xml version="1.0" encoding="UTF-8"?><md:EntityDescriptor entityID="http://www.okta.com/exk6q03a7zcGFUlm71d7" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata"><md:IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol"><md:KeyDescriptor use="signing"><ds:KeyInfo xmlns:ds="http://www.w3.org/2000/09/xmldsig#"><ds:X509Data><ds:X509Certificate>MIIDujCCAqKgAwIBAgIGAYXAcx/eMA0GCSqGSIb3DQEBCwUAMIGdMQswCQYDVQQGEwJVUzETMBEG
+A1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5jaXNjbzENMAsGA1UECgwET2t0YTEU
+MBIGA1UECwwLU1NPUHJvdmlkZXIxHjAcBgNVBAMMFWdyYXZpdGF0aW9uYWwtcHJldmlldzEcMBoG
+CSqGSIb3DQEJARYNaW5mb0Bva3RhLmNvbTAeFw0yMzAxMTcxNTU2MjhaFw0zMzAxMTcxNTU3Mjha
+MIGdMQswCQYDVQQGEwJVUzETMBEGA1UECAwKQ2FsaWZvcm5pYTEWMBQGA1UEBwwNU2FuIEZyYW5j
+aXNjbzENMAsGA1UECgwET2t0YTEUMBIGA1UECwwLU1NPUHJvdmlkZXIxHjAcBgNVBAMMFWdyYXZp
+dGF0aW9uYWwtcHJldmlldzEcMBoGCSqGSIb3DQEJARYNaW5mb0Bva3RhLmNvbTCCASIwDQYJKoZI
+hvcNAQEBBQADggEPADCCAQoCggEBALoIr14BqjPFRJGJOsVQ8RWKkhYzdP3foRRLZTQLHlv50afF
+UZCgng3HV8n5rFoZgSLEeVYs4+9RIQKctPCYQ9YE+dtQrU6ZkxEixvwvpxtFEfAK1KriQdPjBNxM
+EyTr4+khUckbS4cPNPy5/Bjw/TakCQCC5P/7r7GRcesEsuPnOnHPiIOdeEZ+DEpgndf0kwalgKs9
+xJWepooOLH9cWtFQXHM15PVbvFxW1fpt6LzXXxiW0UZxGP+744qY92KY9kIyV+gbtH4xOjQVftvc
+GIsxdr8pZ9PSDW+Ivx6KaR8zv+Kt6HRg6Svi8CJ8iA6uAPrbw0FxSlwuh0/GCWF2rTkCAwEAATAN
+BgkqhkiG9w0BAQsFAAOCAQEAFPtGtJNd2E95wTV5++FLelUaWCwZfChhOyBmNZc4y/aCHEMMApbQ
+ZdmVO08rv/E96e8xguURSHNUSctFe3sM/8ZDNVYI4MPt1Tz4PafVmQ0C8qrgNM2/nWlXHih7BXwH
+zWWhkLclbcBUszNCRuF9FeIDCOUXTP5qHcnM3cWTci6MWssIHe0uj4pPXFCPPvl6Pe200y6l9coz
+lAA/ybt7fxOF+iw1lDHPydVKP1diu0mJMS1jcytW3D9pAD9J23q3N6kT3ZpKBlr0HGQhCmuLNqj/
+ENwliNq8+0Ouew4Ww08DP+a1HdK4F1POi4MpJyyeAlaXvhGizIR1d9jV4hlqVQ==</ds:X509Certificate></ds:X509Data></ds:KeyInfo></md:KeyDescriptor><md:NameIDFormat>urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress</md:NameIDFormat><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://gravitational-preview.oktapreview.com/app/gravitational-preview_oktaintegrationtestingsso_1/exk6q03a7zcGFUlm71d7/sso/saml"/><md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect" Location="https://gravitational-preview.oktapreview.com/app/gravitational-preview_oktaintegrationtestingsso_1/exk6q03a7zcGFUlm71d7/sso/saml"/></md:IDPSSODescriptor></md:EntityDescriptor>`

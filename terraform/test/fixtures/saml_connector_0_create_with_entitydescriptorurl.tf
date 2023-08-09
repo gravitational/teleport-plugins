@@ -28,6 +28,6 @@ resource "teleport_saml_connector" "test" {
     }]
 
     acs                   = "https://example.com/v1/webapi/saml/acs"
-    entity_descriptor_url = "https://dev-84961217.okta.com/app/exk4d7tmnz9DEaEw85d7/sso/saml/metadata"
+    entity_descriptor_url = "%v/app/exk4d7tmnz9DEaEw85d7/sso/saml/metadata"
   }
 }
