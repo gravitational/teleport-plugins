@@ -11,6 +11,7 @@ types:
     - "ClusterNetworkingConfigV2"
     - "DatabaseV3"
     - "GithubConnectorV3"
+    - "NetworkRestrictionsV4"
     - "OIDCConnectorV3"
     - "OktaImportRuleV1"
     - "ProvisionTokenV2"
@@ -52,6 +53,13 @@ injected_fields:
       plan_modifiers:
         - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   GithubConnectorV3:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  NetworkRestrictionsV4:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
@@ -126,6 +134,9 @@ exclude_fields:
     # NetworkingConfig
     - "ClusterNetworkingConfigV2.Metadata.Name" # It's a singleton resource
 
+    # NetworkRestrictions
+    - "NetworkRestrictionsV4.Metadata.Name" # It's a singleton resource
+
     # Status
     - "DatabaseV3.Status"
 
@@ -176,6 +187,10 @@ computed_fields:
     # Github connector
     - "GithubConnectorV3.Kind"
     - "GithubConnectorV3.Version"
+
+    # Network Restrictions
+    - "NetworkRestrictionsV4.Kind"
+    - "NetworkRestrictionsV4.Version"
 
     # Provision token
     - "ProvisionTokenV2.Spec.AWSIIDTTL"
@@ -345,6 +360,8 @@ validators:
     - UseMapKeysPresentValidator("teleport.dev/origin")
   GithubConnectorV3.Version:
     - UseVersionBetween(3,3)
+  NetworkRestrictionsV4.Version:
+    - UseVersionBetween(4,4)
   OIDCConnectorV3.Version:
     - UseVersionBetween(3,3)
   OktaImportRuleV1.Version:

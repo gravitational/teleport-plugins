@@ -19,6 +19,7 @@ spec:
         - github
         - oidc
         - saml
+        - network_restrictions
         - cluster_auth_preference
         - cluster_networking_config
         - session_recording_config

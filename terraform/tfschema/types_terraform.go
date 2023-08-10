@@ -3112,6 +3112,92 @@ func GenSchemaTrustedClusterV2(ctx context.Context) (github_com_hashicorp_terraf
 	}}, nil
 }
 
+// GenSchemaNetworkRestrictionsV4 returns tfsdk.Schema definition for NetworkRestrictionsV4
+func GenSchemaNetworkRestrictionsV4(ctx context.Context) (github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema, github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics) {
+	return github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema{Attributes: map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+		"id": {
+			Computed:      true,
+			Optional:      false,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Required:      false,
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+		},
+		"kind": {
+			Computed:      true,
+			Description:   "Kind is the network restrictions resource kind.",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+		},
+		"metadata": {
+			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+				"description": {
+					Description: "Description is object description",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+				},
+				"expires": {
+					Description: "Expires is a global expiry time header can be set on any resource in the system.",
+					Optional:    true,
+					Type:        UseRFC3339Time(),
+					Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{MustTimeBeInFuture()},
+				},
+				"labels": {
+					Description: "Labels is a set of labels",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.MapType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+				},
+				"namespace": {
+					Computed:      true,
+					Description:   "Namespace is object namespace. The field should be called \"namespace\" when it returns in Teleport 2.4.",
+					Optional:      true,
+					PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+					Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+				},
+			}),
+			Description: "Metadata is the network restrictions metadata.",
+			Optional:    true,
+		},
+		"spec": {
+			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+				"allow": {
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"cidr": {
+						Description: "CIDR is IPv4 or IPv6 address. Valid value are either CIDR ranges (e.g. \"10.0.1.0/24\", \"fe::/8\") or a single IP address (e.g \"10.1.2.3\")",
+						Optional:    true,
+						Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+					}}),
+					Description: "Allow lists the addresses that should be allowed.",
+					Optional:    true,
+				},
+				"deny": {
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"cidr": {
+						Description: "CIDR is IPv4 or IPv6 address. Valid value are either CIDR ranges (e.g. \"10.0.1.0/24\", \"fe::/8\") or a single IP address (e.g \"10.1.2.3\")",
+						Optional:    true,
+						Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+					}}),
+					Description: "Deny lists the addresses that should be denied even if they're allowed by Allow condition.",
+					Optional:    true,
+				},
+			}),
+			Description: "Spec contains the network restrictions data",
+			Optional:    true,
+		},
+		"sub_kind": {
+			Description: "SubKind is an optional resource subkind.",
+			Optional:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+		},
+		"version": {
+			Computed:      true,
+			Description:   "Version is the resource version.",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(4, 4)},
+		},
+	}}, nil
+}
+
 // GenSchemaOktaImportRuleV1 returns tfsdk.Schema definition for OktaImportRuleV1
 func GenSchemaOktaImportRuleV1(ctx context.Context) (github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema, github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics) {
 	return github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema{Attributes: map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -30939,6 +31025,680 @@ func CopyTrustedClusterV2ToTerraform(ctx context.Context, obj *github_com_gravit
 								}
 								c.Unknown = false
 								tf.Attrs["role_map"] = c
+							}
+						}
+					}
+				}
+				v.Unknown = false
+				tf.Attrs["spec"] = v
+			}
+		}
+	}
+	return diags
+}
+
+// CopyNetworkRestrictionsV4FromTerraform copies contents of the source Terraform object into a target struct
+func CopyNetworkRestrictionsV4FromTerraform(_ context.Context, tf github_com_hashicorp_terraform_plugin_framework_types.Object, obj *github_com_gravitational_teleport_api_types.NetworkRestrictionsV4) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
+	{
+		a, ok := tf.Attrs["kind"]
+		if !ok {
+			diags.Append(attrReadMissingDiag{"NetworkRestrictionsV4.Kind"})
+		} else {
+			v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+			if !ok {
+				diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+			} else {
+				var t string
+				if !v.Null && !v.Unknown {
+					t = string(v.Value)
+				}
+				obj.Kind = t
+			}
+		}
+	}
+	{
+		a, ok := tf.Attrs["sub_kind"]
+		if !ok {
+			diags.Append(attrReadMissingDiag{"NetworkRestrictionsV4.SubKind"})
+		} else {
+			v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+			if !ok {
+				diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+			} else {
+				var t string
+				if !v.Null && !v.Unknown {
+					t = string(v.Value)
+				}
+				obj.SubKind = t
+			}
+		}
+	}
+	{
+		a, ok := tf.Attrs["version"]
+		if !ok {
+			diags.Append(attrReadMissingDiag{"NetworkRestrictionsV4.Version"})
+		} else {
+			v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+			if !ok {
+				diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+			} else {
+				var t string
+				if !v.Null && !v.Unknown {
+					t = string(v.Value)
+				}
+				obj.Version = t
+			}
+		}
+	}
+	{
+		a, ok := tf.Attrs["metadata"]
+		if !ok {
+			diags.Append(attrReadMissingDiag{"NetworkRestrictionsV4.Metadata"})
+		} else {
+			v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+			if !ok {
+				diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Metadata", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+			} else {
+				obj.Metadata = github_com_gravitational_teleport_api_types.Metadata{}
+				if !v.Null && !v.Unknown {
+					tf := v
+					obj := &obj.Metadata
+					{
+						a, ok := tf.Attrs["namespace"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"NetworkRestrictionsV4.Metadata.Namespace"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+							} else {
+								var t string
+								if !v.Null && !v.Unknown {
+									t = string(v.Value)
+								}
+								obj.Namespace = t
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["description"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"NetworkRestrictionsV4.Metadata.Description"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+							} else {
+								var t string
+								if !v.Null && !v.Unknown {
+									t = string(v.Value)
+								}
+								obj.Description = t
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["labels"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"NetworkRestrictionsV4.Metadata.Labels"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Map)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Metadata.Labels", "github.com/hashicorp/terraform-plugin-framework/types.Map"})
+							} else {
+								obj.Labels = make(map[string]string, len(v.Elems))
+								if !v.Null && !v.Unknown {
+									for k, a := range v.Elems {
+										v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+										if !ok {
+											diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Metadata.Labels", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+										} else {
+											var t string
+											if !v.Null && !v.Unknown {
+												t = string(v.Value)
+											}
+											obj.Labels[k] = t
+										}
+									}
+								}
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["expires"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"NetworkRestrictionsV4.Metadata.Expires"})
+						} else {
+							v, ok := a.(TimeValue)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Metadata.Expires", "TimeValue"})
+							} else {
+								var t *time.Time
+								if !v.Null && !v.Unknown {
+									c := time.Time(v.Value)
+									t = &c
+								}
+								obj.Expires = t
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	{
+		a, ok := tf.Attrs["spec"]
+		if !ok {
+			diags.Append(attrReadMissingDiag{"NetworkRestrictionsV4.Spec"})
+		} else {
+			v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+			if !ok {
+				diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Spec", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+			} else {
+				obj.Spec = github_com_gravitational_teleport_api_types.NetworkRestrictionsSpecV4{}
+				if !v.Null && !v.Unknown {
+					tf := v
+					obj := &obj.Spec
+					{
+						a, ok := tf.Attrs["allow"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"NetworkRestrictionsV4.Spec.Allow"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Spec.Allow", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+							} else {
+								obj.Allow = make([]github_com_gravitational_teleport_api_types.AddressCondition, len(v.Elems))
+								if !v.Null && !v.Unknown {
+									for k, a := range v.Elems {
+										v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+										if !ok {
+											diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Spec.Allow", "github_com_hashicorp_terraform_plugin_framework_types.Object"})
+										} else {
+											var t github_com_gravitational_teleport_api_types.AddressCondition
+											if !v.Null && !v.Unknown {
+												tf := v
+												obj := &t
+												{
+													a, ok := tf.Attrs["cidr"]
+													if !ok {
+														diags.Append(attrReadMissingDiag{"NetworkRestrictionsV4.Spec.Allow.CIDR"})
+													} else {
+														v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Spec.Allow.CIDR", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+														} else {
+															var t string
+															if !v.Null && !v.Unknown {
+																t = string(v.Value)
+															}
+															obj.CIDR = t
+														}
+													}
+												}
+											}
+											obj.Allow[k] = t
+										}
+									}
+								}
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["deny"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"NetworkRestrictionsV4.Spec.Deny"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Spec.Deny", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+							} else {
+								obj.Deny = make([]github_com_gravitational_teleport_api_types.AddressCondition, len(v.Elems))
+								if !v.Null && !v.Unknown {
+									for k, a := range v.Elems {
+										v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+										if !ok {
+											diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Spec.Deny", "github_com_hashicorp_terraform_plugin_framework_types.Object"})
+										} else {
+											var t github_com_gravitational_teleport_api_types.AddressCondition
+											if !v.Null && !v.Unknown {
+												tf := v
+												obj := &t
+												{
+													a, ok := tf.Attrs["cidr"]
+													if !ok {
+														diags.Append(attrReadMissingDiag{"NetworkRestrictionsV4.Spec.Deny.CIDR"})
+													} else {
+														v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															diags.Append(attrReadConversionFailureDiag{"NetworkRestrictionsV4.Spec.Deny.CIDR", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+														} else {
+															var t string
+															if !v.Null && !v.Unknown {
+																t = string(v.Value)
+															}
+															obj.CIDR = t
+														}
+													}
+												}
+											}
+											obj.Deny[k] = t
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return diags
+}
+
+// CopyNetworkRestrictionsV4ToTerraform copies contents of the source Terraform object into a target struct
+func CopyNetworkRestrictionsV4ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.NetworkRestrictionsV4, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
+	tf.Null = false
+	tf.Unknown = false
+	if tf.Attrs == nil {
+		tf.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value)
+	}
+	{
+		t, ok := tf.AttrTypes["kind"]
+		if !ok {
+			diags.Append(attrWriteMissingDiag{"NetworkRestrictionsV4.Kind"})
+		} else {
+			v, ok := tf.Attrs["kind"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+			if !ok {
+				i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+				if err != nil {
+					diags.Append(attrWriteGeneralError{"NetworkRestrictionsV4.Kind", err})
+				}
+				v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+				if !ok {
+					diags.Append(attrWriteConversionFailureDiag{"NetworkRestrictionsV4.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+				}
+				v.Null = string(obj.Kind) == ""
+			}
+			v.Value = string(obj.Kind)
+			v.Unknown = false
+			tf.Attrs["kind"] = v
+		}
+	}
+	{
+		t, ok := tf.AttrTypes["sub_kind"]
+		if !ok {
+			diags.Append(attrWriteMissingDiag{"NetworkRestrictionsV4.SubKind"})
+		} else {
+			v, ok := tf.Attrs["sub_kind"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+			if !ok {
+				i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+				if err != nil {
+					diags.Append(attrWriteGeneralError{"NetworkRestrictionsV4.SubKind", err})
+				}
+				v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+				if !ok {
+					diags.Append(attrWriteConversionFailureDiag{"NetworkRestrictionsV4.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+				}
+				v.Null = string(obj.SubKind) == ""
+			}
+			v.Value = string(obj.SubKind)
+			v.Unknown = false
+			tf.Attrs["sub_kind"] = v
+		}
+	}
+	{
+		t, ok := tf.AttrTypes["version"]
+		if !ok {
+			diags.Append(attrWriteMissingDiag{"NetworkRestrictionsV4.Version"})
+		} else {
+			v, ok := tf.Attrs["version"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+			if !ok {
+				i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+				if err != nil {
+					diags.Append(attrWriteGeneralError{"NetworkRestrictionsV4.Version", err})
+				}
+				v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+				if !ok {
+					diags.Append(attrWriteConversionFailureDiag{"NetworkRestrictionsV4.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+				}
+				v.Null = string(obj.Version) == ""
+			}
+			v.Value = string(obj.Version)
+			v.Unknown = false
+			tf.Attrs["version"] = v
+		}
+	}
+	{
+		a, ok := tf.AttrTypes["metadata"]
+		if !ok {
+			diags.Append(attrWriteMissingDiag{"NetworkRestrictionsV4.Metadata"})
+		} else {
+			o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+			if !ok {
+				diags.Append(attrWriteConversionFailureDiag{"NetworkRestrictionsV4.Metadata", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+			} else {
+				v, ok := tf.Attrs["metadata"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+				if !ok {
+					v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+						AttrTypes: o.AttrTypes,
+						Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+					}
+				} else {
+					if v.Attrs == nil {
+						v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+					}
+				}
+				{
+					obj := obj.Metadata
+					tf := &v
+					{
+						t, ok := tf.AttrTypes["namespace"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"NetworkRestrictionsV4.Metadata.Namespace"})
+						} else {
+							v, ok := tf.Attrs["namespace"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"NetworkRestrictionsV4.Metadata.Namespace", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"NetworkRestrictionsV4.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+								}
+								v.Null = string(obj.Namespace) == ""
+							}
+							v.Value = string(obj.Namespace)
+							v.Unknown = false
+							tf.Attrs["namespace"] = v
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["description"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"NetworkRestrictionsV4.Metadata.Description"})
+						} else {
+							v, ok := tf.Attrs["description"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"NetworkRestrictionsV4.Metadata.Description", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"NetworkRestrictionsV4.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+								}
+								v.Null = string(obj.Description) == ""
+							}
+							v.Value = string(obj.Description)
+							v.Unknown = false
+							tf.Attrs["description"] = v
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["labels"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"NetworkRestrictionsV4.Metadata.Labels"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.MapType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"NetworkRestrictionsV4.Metadata.Labels", "github.com/hashicorp/terraform-plugin-framework/types.MapType"})
+							} else {
+								c, ok := tf.Attrs["labels"].(github_com_hashicorp_terraform_plugin_framework_types.Map)
+								if !ok {
+									c = github_com_hashicorp_terraform_plugin_framework_types.Map{
+
+										ElemType: o.ElemType,
+										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels)),
+										Null:     true,
+									}
+								} else {
+									if c.Elems == nil {
+										c.Elems = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels))
+									}
+								}
+								if obj.Labels != nil {
+									t := o.ElemType
+									for k, a := range obj.Labels {
+										v, ok := tf.Attrs["labels"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+										if !ok {
+											i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+											if err != nil {
+												diags.Append(attrWriteGeneralError{"NetworkRestrictionsV4.Metadata.Labels", err})
+											}
+											v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"NetworkRestrictionsV4.Metadata.Labels", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											}
+											v.Null = false
+										}
+										v.Value = string(a)
+										v.Unknown = false
+										c.Elems[k] = v
+									}
+									if len(obj.Labels) > 0 {
+										c.Null = false
+									}
+								}
+								c.Unknown = false
+								tf.Attrs["labels"] = c
+							}
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["expires"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"NetworkRestrictionsV4.Metadata.Expires"})
+						} else {
+							v, ok := tf.Attrs["expires"].(TimeValue)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"NetworkRestrictionsV4.Metadata.Expires", err})
+								}
+								v, ok = i.(TimeValue)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"NetworkRestrictionsV4.Metadata.Expires", "TimeValue"})
+								}
+								v.Null = false
+							}
+							if obj.Expires == nil {
+								v.Null = true
+							} else {
+								v.Null = false
+								v.Value = time.Time(*obj.Expires)
+							}
+							v.Unknown = false
+							tf.Attrs["expires"] = v
+						}
+					}
+				}
+				v.Unknown = false
+				tf.Attrs["metadata"] = v
+			}
+		}
+	}
+	{
+		a, ok := tf.AttrTypes["spec"]
+		if !ok {
+			diags.Append(attrWriteMissingDiag{"NetworkRestrictionsV4.Spec"})
+		} else {
+			o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+			if !ok {
+				diags.Append(attrWriteConversionFailureDiag{"NetworkRestrictionsV4.Spec", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+			} else {
+				v, ok := tf.Attrs["spec"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+				if !ok {
+					v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+						AttrTypes: o.AttrTypes,
+						Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+					}
+				} else {
+					if v.Attrs == nil {
+						v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+					}
+				}
+				{
+					obj := obj.Spec
+					tf := &v
+					{
+						a, ok := tf.AttrTypes["allow"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"NetworkRestrictionsV4.Spec.Allow"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"NetworkRestrictionsV4.Spec.Allow", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+							} else {
+								c, ok := tf.Attrs["allow"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+								if !ok {
+									c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+										ElemType: o.ElemType,
+										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Allow)),
+										Null:     true,
+									}
+								} else {
+									if c.Elems == nil {
+										c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Allow))
+									}
+								}
+								if obj.Allow != nil {
+									o := o.ElemType.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+									if len(obj.Allow) != len(c.Elems) {
+										c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Allow))
+									}
+									for k, a := range obj.Allow {
+										v, ok := tf.Attrs["allow"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+										if !ok {
+											v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+												AttrTypes: o.AttrTypes,
+												Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+											}
+										} else {
+											if v.Attrs == nil {
+												v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+											}
+										}
+										{
+											obj := a
+											tf := &v
+											{
+												t, ok := tf.AttrTypes["cidr"]
+												if !ok {
+													diags.Append(attrWriteMissingDiag{"NetworkRestrictionsV4.Spec.Allow.CIDR"})
+												} else {
+													v, ok := tf.Attrs["cidr"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+													if !ok {
+														i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+														if err != nil {
+															diags.Append(attrWriteGeneralError{"NetworkRestrictionsV4.Spec.Allow.CIDR", err})
+														}
+														v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															diags.Append(attrWriteConversionFailureDiag{"NetworkRestrictionsV4.Spec.Allow.CIDR", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+														}
+														v.Null = string(obj.CIDR) == ""
+													}
+													v.Value = string(obj.CIDR)
+													v.Unknown = false
+													tf.Attrs["cidr"] = v
+												}
+											}
+										}
+										v.Unknown = false
+										c.Elems[k] = v
+									}
+									if len(obj.Allow) > 0 {
+										c.Null = false
+									}
+								}
+								c.Unknown = false
+								tf.Attrs["allow"] = c
+							}
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["deny"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"NetworkRestrictionsV4.Spec.Deny"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"NetworkRestrictionsV4.Spec.Deny", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+							} else {
+								c, ok := tf.Attrs["deny"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+								if !ok {
+									c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+										ElemType: o.ElemType,
+										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Deny)),
+										Null:     true,
+									}
+								} else {
+									if c.Elems == nil {
+										c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Deny))
+									}
+								}
+								if obj.Deny != nil {
+									o := o.ElemType.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+									if len(obj.Deny) != len(c.Elems) {
+										c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Deny))
+									}
+									for k, a := range obj.Deny {
+										v, ok := tf.Attrs["deny"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+										if !ok {
+											v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+												AttrTypes: o.AttrTypes,
+												Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+											}
+										} else {
+											if v.Attrs == nil {
+												v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+											}
+										}
+										{
+											obj := a
+											tf := &v
+											{
+												t, ok := tf.AttrTypes["cidr"]
+												if !ok {
+													diags.Append(attrWriteMissingDiag{"NetworkRestrictionsV4.Spec.Deny.CIDR"})
+												} else {
+													v, ok := tf.Attrs["cidr"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+													if !ok {
+														i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+														if err != nil {
+															diags.Append(attrWriteGeneralError{"NetworkRestrictionsV4.Spec.Deny.CIDR", err})
+														}
+														v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															diags.Append(attrWriteConversionFailureDiag{"NetworkRestrictionsV4.Spec.Deny.CIDR", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+														}
+														v.Null = string(obj.CIDR) == ""
+													}
+													v.Value = string(obj.CIDR)
+													v.Unknown = false
+													tf.Attrs["cidr"] = v
+												}
+											}
+										}
+										v.Unknown = false
+										c.Elems[k] = v
+									}
+									if len(obj.Deny) > 0 {
+										c.Null = false
+									}
+								}
+								c.Unknown = false
+								tf.Attrs["deny"] = c
 							}
 						}
 					}

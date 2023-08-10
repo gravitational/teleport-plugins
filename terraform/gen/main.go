@@ -231,6 +231,20 @@ var (
 		TerraformResourceType: "teleport_saml_connector",
 	}
 
+	networkRestrictions = payload{
+		Name:                  "NetworkRestrictions",
+		TypeName:              "NetworkRestrictionsV4",
+		VarName:               "networkRestrictions",
+		GetMethod:             "GetNetworkRestrictions",
+		CreateMethod:          "SetNetworkRestrictions",
+		UpdateMethod:          "SetNetworkRestrictions",
+		DeleteMethod:          "DeleteNetworkRestrictions",
+		ID:                    `"network_restrictions"`,
+		Kind:                  "network_restrictions",
+		HasStaticID:           false,
+		TerraformResourceType: "teleport_network_restrictions",
+	}
+
 	provisionToken = payload{
 		Name:                  "ProvisionToken",
 		TypeName:              "ProvisionTokenV2",
@@ -384,6 +398,8 @@ func genTFSchema() {
 	generateDataSource(oidcConnector, pluralDataSource)
 	generateResource(samlConnector, pluralResource)
 	generateDataSource(samlConnector, pluralDataSource)
+	generateResource(networkRestrictions, singularResource)
+	generateDataSource(networkRestrictions, singularDataSource)
 	generateResource(provisionToken, pluralResource)
 	generateDataSource(provisionToken, pluralDataSource)
 	generateResource(role, pluralResource)
@@ -444,6 +460,7 @@ var (
 		"trusted_device":            devicetrustSchema.GenSchemaDeviceV1,
 		"github_connector":          tfschema.GenSchemaGithubConnectorV3,
 		"login_rule":                loginruleSchema.GenSchemaLoginRule,
+		"network_restrictions":      tfschema.GenSchemaNetworkRestrictionsV4,
 		"okta_import_rule":          tfschema.GenSchemaOktaImportRuleV1,
 		"oidc_connector":            tfschema.GenSchemaOIDCConnectorV3,
 		"provision_token":           tfschema.GenSchemaProvisionTokenV2,

@@ -14,6 +14,7 @@ Supported resources:
 - [teleport_database](#teleport_database)
 - [teleport_github_connector](#teleport_github_connector)
 - [teleport_login_rule](#teleport_login_rule)
+- [teleport_network_restrictions](#teleport_network_restrictions)
 - [teleport_oidc_connector](#teleport_oidc_connector)
 - [teleport_okta_import_rule](#teleport_okta_import_rule)
 - [teleport_provision_token](#teleport_provision_token)
@@ -815,6 +816,73 @@ resource "teleport_login_rule" "example" {
         "external.groups",
       ]
     }
+  }
+}
+
+```
+
+## teleport_network_restrictions
+
+|   Name   |  Type  | Required |                  Description                   |
+|----------|--------|----------|------------------------------------------------|
+| metadata | object |          | Metadata is the network restrictions metadata. |
+| spec     | object |          | Spec contains the network restrictions data    |
+| sub_kind | string |          | SubKind is an optional resource subkind.       |
+| version  | string |          | Version is the resource version.               |
+
+### metadata
+
+Metadata is the network restrictions metadata.
+
+|    Name     |      Type      | Required |                                              Description                                               |
+|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                      |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
+| labels      | map of strings |          | Labels is a set of labels                                                                              |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+
+### spec
+
+Spec contains the network restrictions data
+
+| Name  |  Type  | Required |                                        Description                                         |
+|-------|--------|----------|--------------------------------------------------------------------------------------------|
+| allow | object |          | Allow lists the addresses that should be allowed.                                          |
+| deny  | object |          | Deny lists the addresses that should be denied even if they're allowed by Allow condition. |
+
+#### spec.allow
+
+Allow lists the addresses that should be allowed.
+
+| Name |  Type  | Required |                                                               Description                                                               |
+|------|--------|----------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| cidr | string |          | CIDR is IPv4 or IPv6 address. Valid value are either CIDR ranges (e.g. "10.0.1.0/24", "fe::/8") or a single IP address (e.g "10.1.2.3") |
+
+#### spec.deny
+
+Deny lists the addresses that should be denied even if they're allowed by Allow condition.
+
+| Name |  Type  | Required |                                                               Description                                                               |
+|------|--------|----------|-----------------------------------------------------------------------------------------------------------------------------------------|
+| cidr | string |          | CIDR is IPv4 or IPv6 address. Valid value are either CIDR ranges (e.g. "10.0.1.0/24", "fe::/8") or a single IP address (e.g "10.1.2.3") |
+
+Example:
+
+```
+# Teleport Network Restrictions
+
+resource "teleport_network_restrictions" "example" {
+   metadata = {
+    description = "network restrictions"
+  }
+
+  spec = {
+    allow = [{
+      cidr = "127.0.0.0/8"
+    }]
+    deny = [{
+      cidr = "10.1.2.4"
+    }]
   }
 }
 
