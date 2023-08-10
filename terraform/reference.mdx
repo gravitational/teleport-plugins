@@ -10,6 +10,7 @@ Supported resources:
 - [teleport_app](#teleport_app)
 - [teleport_auth_preference](#teleport_auth_preference)
 - [teleport_bot](#teleport_bot)
+- [teleport_cluster_maintenance_config](#teleport_cluster_maintenance_config)
 - [teleport_cluster_networking_config](#teleport_cluster_networking_config)
 - [teleport_database](#teleport_database)
 - [teleport_github_connector](#teleport_github_connector)
@@ -342,6 +343,64 @@ resource "teleport_bot" "example" {
   name = local.bot_name
   token_id = teleport_provision_token.bot_example.metadata.name
   roles = ["access"]
+}
+
+```
+
+## teleport_cluster_maintenance_config
+
+|   Name   |  Type  | Required |                                                        Description                                                         |
+|----------|--------|----------|----------------------------------------------------------------------------------------------------------------------------|
+| metadata | object |          | Metadata is resource metadata                                                                                              |
+| nonce    | number |          | Nonce is used to protect against concurrent modification of the maintenance window. Clients should treat nonces as opaque. |
+| spec     | object |          |                                                                                                                            |
+| sub_kind | string |          | SubKind is an optional resource sub kind, used in some resources                                                           |
+| version  | string |          | Version is version                                                                                                         |
+
+### metadata
+
+Metadata is resource metadata
+
+|    Name     |      Type      | Required |                                              Description                                               |
+|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                      |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
+| labels      | map of strings |          | Labels is a set of labels                                                                              |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+
+### spec
+
+
+
+|      Name      |  Type  | Required |                   Description                   |
+|----------------|--------|----------|-------------------------------------------------|
+| agent_upgrades | object |          | AgentUpgrades encodes the agent upgrade window. |
+
+#### spec.agent_upgrades
+
+AgentUpgrades encodes the agent upgrade window.
+
+|      Name      |       Type       | Required |                                              Description                                              |
+|----------------|------------------|----------|-------------------------------------------------------------------------------------------------------|
+| utc_start_hour | number           |          | UTCStartHour is the start hour of the maintenance window in UTC.                                      |
+| weekdays       | array of strings |          | Weekdays is an optional list of weekdays. If not specified, an agent upgrade window occurs every day. |
+
+Example:
+
+```
+# Teleport Cluster Networking config
+
+resource "teleport_cluster_maintenance_config" "example" {
+   metadata = {
+    description = "Maintenance config"
+  }
+
+  spec = {
+	agent_upgrades = {
+	  utc_start_hour = 1
+	  weekdays = [ "monday" ]
+	}
+  }
 }
 
 ```
