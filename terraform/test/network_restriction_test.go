@@ -17,7 +17,13 @@ limitations under the License.
 package test
 
 import (
+	"time"
+
+	"github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
+	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
+	"github.com/stretchr/testify/require"
 )
 
 func (s *TerraformSuite) TestNetworkRestrictions() {
@@ -50,6 +56,56 @@ func (s *TerraformSuite) TestNetworkRestrictions() {
 			{
 				Config:   s.getFixture("network_restrictions_1_update.tf"),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestImportNetworkRestrictions() {
+	r := "teleport_network_restrictions"
+	id := "test_import"
+	name := r + "." + id
+
+	networkRestrictions := &types.NetworkRestrictionsV4{
+		Metadata: types.Metadata{},
+		Spec: types.NetworkRestrictionsSpecV4{
+			Allow: []types.AddressCondition{{
+				CIDR: "127.0.0.0/8",
+			}},
+		},
+	}
+	err := networkRestrictions.CheckAndSetDefaults()
+	require.NoError(s.T(), err)
+
+	err = s.client.SetNetworkRestrictions(s.Context(), networkRestrictions)
+	require.NoError(s.T(), err)
+
+	require.Eventually(s.T(), func() bool {
+		_, err := s.client.GetNetworkRestrictions(s.Context())
+		if err != nil {
+			if !trace.IsNotFound(err) {
+				require.NoError(s.T(), err)
+			}
+			return false
+		}
+
+		return true
+	}, 5*time.Second, time.Second)
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:        s.terraformConfig + "\n" + `resource "` + r + `" "` + id + `" { }`,
+				ResourceName:  name,
+				ImportState:   true,
+				ImportStateId: id,
+				ImportStateCheck: func(state []*terraform.InstanceState) error {
+					require.Equal(s.T(), state[0].Attributes["kind"], "network_restrictions")
+					require.Equal(s.T(), state[0].Attributes["spec.allow.0.cidr"], "127.0.0.0/8")
+
+					return nil
+				},
 			},
 		},
 	})
