@@ -18,8 +18,6 @@ package test
 
 import (
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
-	"github.com/stretchr/testify/require"
 )
 
 func (s *TerraformSuite) TestNetworkRestrictions() {
@@ -38,7 +36,7 @@ func (s *TerraformSuite) TestNetworkRestrictions() {
 				),
 			},
 			{
-				Config: s.getFixture("network_restrictions_0_create.tf"),
+				Config:   s.getFixture("network_restrictions_0_create.tf"),
 				PlanOnly: true,
 			},
 			{
@@ -50,7 +48,7 @@ func (s *TerraformSuite) TestNetworkRestrictions() {
 				),
 			},
 			{
-				Config: s.getFixture("network_restrictions_1_update.tf"),
+				Config:   s.getFixture("network_restrictions_1_update.tf"),
 				PlanOnly: true,
 			},
 		},
