@@ -28,6 +28,9 @@ should match the snapshot:
             - start
             - --config
             - /etc/teleport-event-handler.toml
+            env:
+            - name: TELEPORT_PLUGIN_FAIL_FAST
+              value: "true"
             image: gcr.io/overridden/repository:v98.76.54
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-event-handler

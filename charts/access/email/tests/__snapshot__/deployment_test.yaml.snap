@@ -28,6 +28,9 @@ should be possible to override volume name (smtp on):
             - start
             - --config
             - /etc/teleport-email.toml
+            env:
+            - name: TELEPORT_PLUGIN_FAIL_FAST
+              value: "true"
             image: public.ecr.aws/gravitational/teleport-plugin-email:13.3.2
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
@@ -91,6 +94,9 @@ should match the snapshot:
             - start
             - --config
             - /etc/teleport-email.toml
+            env:
+            - name: TELEPORT_PLUGIN_FAIL_FAST
+              value: "true"
             image: gcr.io/overridden/repository:v98.76.54
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
@@ -147,6 +153,9 @@ should match the snapshot (mailgun on):
             - start
             - --config
             - /etc/teleport-email.toml
+            env:
+            - name: TELEPORT_PLUGIN_FAIL_FAST
+              value: "true"
             image: public.ecr.aws/gravitational/teleport-plugin-email:13.3.2
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
@@ -210,6 +219,9 @@ should match the snapshot (smtp on):
             - start
             - --config
             - /etc/teleport-email.toml
+            env:
+            - name: TELEPORT_PLUGIN_FAIL_FAST
+              value: "true"
             image: public.ecr.aws/gravitational/teleport-plugin-email:13.3.2
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
@@ -273,6 +285,9 @@ should mount external secret (mailgun on):
             - start
             - --config
             - /etc/teleport-email.toml
+            env:
+            - name: TELEPORT_PLUGIN_FAIL_FAST
+              value: "true"
             image: public.ecr.aws/gravitational/teleport-plugin-email:13.3.2
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
@@ -336,6 +351,9 @@ should mount external secret (smtp on):
             - start
             - --config
             - /etc/teleport-email.toml
+            env:
+            - name: TELEPORT_PLUGIN_FAIL_FAST
+              value: "true"
             image: public.ecr.aws/gravitational/teleport-plugin-email:13.3.2
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
