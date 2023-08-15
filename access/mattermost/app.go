@@ -97,7 +97,7 @@ func (a *App) run(ctx context.Context) error {
 		return trace.Wrap(err)
 	}
 
-	watcherJob := watcherjob.NewJob(
+	watcherJob, err := watcherjob.NewJob(
 		a.apiClient,
 		watcherjob.Config{
 			Watch:            types.Watch{Kinds: []types.WatchKind{types.WatchKind{Kind: types.KindAccessRequest}}},
@@ -105,6 +105,9 @@ func (a *App) run(ctx context.Context) error {
 		},
 		a.onWatcherEvent,
 	)
+	if err != nil {
+		return trace.Wrap(err)
+	}
 	a.SpawnCriticalJob(watcherJob)
 	ok, err := watcherJob.WaitReady(ctx)
 	if err != nil {
