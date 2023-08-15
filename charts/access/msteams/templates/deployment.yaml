@@ -35,6 +35,9 @@ spec:
             - start
             - "--config"
             - "/etc/teleport-msteams.toml"
+          env:
+            - name: "TELEPORT_PLUGIN_FAIL_FAST"
+              value: "true"
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:

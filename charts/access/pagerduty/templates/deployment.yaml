@@ -35,6 +35,9 @@ spec:
             - start
             - "--config"
             - "/etc/teleport-pagerduty.toml"
+          env:
+            - name: "TELEPORT_PLUGIN_FAIL_FAST"
+              value: "true"
           ports:
             - name: http
               containerPort: 80
