@@ -140,10 +140,11 @@ DynamicLabels are the app's command labels.
 
 Rewrite is a list of rewriting rules to apply to requests and responses.
 
-|   Name   |       Type       | Required |                                                                Description                                                                |
-|----------|------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------|
-| headers  | object           |          | Headers is a list of headers to inject when passing the request over to the application.                                                  |
-| redirect | array of strings |          | Redirect defines a list of hosts which will be rewritten to the public address of the application if they occur in the "Location" header. |
+|    Name    |       Type       | Required |                                                                Description                                                                |
+|------------|------------------|----------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| headers    | object           |          | Headers is a list of headers to inject when passing the request over to the application.                                                  |
+| jwt_claims | string           |          | JWTClaims configures whether roles/traits are included in the JWT token.                                                                  |
+| redirect   | array of strings |          | Redirect defines a list of hosts which will be rewritten to the public address of the application if they occur in the "Location" header. |
 
 ##### spec.rewrite.headers
 
