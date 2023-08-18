@@ -18,15 +18,20 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"time"
 
 	"github.com/gravitational/kingpin"
+	"github.com/gravitational/teleport/integrations/access/mattermost"
 	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/trace"
 )
+
+//go:embed example_config.toml
+var exampleConfig string
 
 func main() {
 	logger.Init()
@@ -64,7 +69,7 @@ func main() {
 }
 
 func run(configPath string, debug bool) error {
-	conf, err := LoadConfig(configPath)
+	conf, err := mattermost.LoadConfig(configPath)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -80,11 +85,7 @@ func run(configPath string, debug bool) error {
 		logger.Standard().Debugf("DEBUG logging enabled")
 	}
 
-	app, err := NewApp(*conf)
-	if err != nil {
-		return trace.Wrap(err)
-	}
-
+	app := mattermost.NewMattermostApp(conf)
 	go lib.ServeSignals(app, 15*time.Second)
 
 	return trace.Wrap(
