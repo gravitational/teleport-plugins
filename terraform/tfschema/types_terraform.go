@@ -605,6 +605,11 @@ func GenSchemaAppV3(ctx context.Context) (github_com_hashicorp_terraform_plugin_
 							Description: "Headers is a list of headers to inject when passing the request over to the application.",
 							Optional:    true,
 						},
+						"jwt_claims": {
+							Description: "JWTClaims configures whether roles/traits are included in the JWT token.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
 						"redirect": {
 							Description: "Redirect defines a list of hosts which will be rewritten to the public address of the application if they occur in the \"Location\" header.",
 							Optional:    true,
@@ -7231,6 +7236,23 @@ func CopyAppV3FromTerraform(_ context.Context, tf github_com_hashicorp_terraform
 											}
 										}
 									}
+									{
+										a, ok := tf.Attrs["jwt_claims"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"AppV3.Spec.Rewrite.JWTClaims"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"AppV3.Spec.Rewrite.JWTClaims", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.JWTClaims = t
+											}
+										}
+									}
 								}
 							}
 						}
@@ -7987,6 +8009,28 @@ func CopyAppV3ToTerraform(ctx context.Context, obj *github_com_gravitational_tel
 												c.Unknown = false
 												tf.Attrs["headers"] = c
 											}
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["jwt_claims"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"AppV3.Spec.Rewrite.JWTClaims"})
+										} else {
+											v, ok := tf.Attrs["jwt_claims"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"AppV3.Spec.Rewrite.JWTClaims", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"AppV3.Spec.Rewrite.JWTClaims", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.JWTClaims) == ""
+											}
+											v.Value = string(obj.JWTClaims)
+											v.Unknown = false
+											tf.Attrs["jwt_claims"] = v
 										}
 									}
 								}

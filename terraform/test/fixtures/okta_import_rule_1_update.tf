@@ -15,7 +15,7 @@ resource "teleport_okta_import_rule" "test" {
         add_labels = {
           "label1" : "value1",
         }
-        matches = [
+        match = [
           {
             app_ids = ["1", "2", "3"]
           },
@@ -25,7 +25,7 @@ resource "teleport_okta_import_rule" "test" {
         add_labels = {
           "label2" : "value2",
         }
-        matches = [
+        match = [
           {
             group_ids = ["1", "2", "3"]
           },
@@ -35,7 +35,7 @@ resource "teleport_okta_import_rule" "test" {
         add_labels = {
           "label3" : "value3",
         }
-        matches = [
+        match = [
           {
             group_ids = ["1", "2", "3"]
           },
