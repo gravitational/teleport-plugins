@@ -78,7 +78,10 @@ func (a *App) Run(ctx context.Context) error {
 	}
 
 	a.Process = lib.NewProcess(ctx)
-	a.watcherJob = a.newWatcherJob()
+	a.watcherJob, err = a.newWatcherJob()
+	if err != nil {
+		return trace.Wrap(err)
+	}
 
 	a.SpawnCriticalJob(a.mainJob)
 	a.SpawnCriticalJob(a.watcherJob)
@@ -203,7 +206,7 @@ func (a *App) initBot(ctx context.Context) error {
 }
 
 // newWatcherJob creates WatcherJob
-func (a *App) newWatcherJob() lib.ServiceJob {
+func (a *App) newWatcherJob() (lib.ServiceJob, error) {
 	return watcherjob.NewJob(
 		a.apiClient,
 		watcherjob.Config{

@@ -7,8 +7,8 @@ should match the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-msteams
-        app.kubernetes.io/version: 13.3.2
-        helm.sh/chart: teleport-plugin-msteams-13.3.2
+        app.kubernetes.io/version: 13.3.4
+        helm.sh/chart: teleport-plugin-msteams-13.3.4
       name: RELEASE-NAME-teleport-plugin-msteams
     spec:
       replicas: 1
@@ -28,6 +28,9 @@ should match the snapshot:
             - start
             - --config
             - /etc/teleport-msteams.toml
+            env:
+            - name: TELEPORT_PLUGIN_FAIL_FAST
+              value: "true"
             image: gcr.io/overridden/repository:v98.76.54
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-msteams
