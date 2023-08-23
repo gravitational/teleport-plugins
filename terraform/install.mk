@@ -1,4 +1,4 @@
-VERSION=13.3.4
+VERSION=13.3.5
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
