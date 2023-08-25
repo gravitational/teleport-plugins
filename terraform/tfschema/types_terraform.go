@@ -2599,11 +2599,6 @@ func GenSchemaOIDCConnectorV3(ctx context.Context) (github_com_hashicorp_terrafo
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
-				"max_age": {
-					Description: "",
-					Optional:    true,
-					Type:        DurationType{},
-				},
 				"prompt": {
 					Description: "Prompt is an optional OIDC prompt. An empty string omits prompt. If not specified, it defaults to select_account for backwards compatibility.",
 					Optional:    true,
@@ -26589,23 +26584,6 @@ func CopyOIDCConnectorV3FromTerraform(_ context.Context, tf github_com_hashicorp
 							}
 						}
 					}
-					{
-						a, ok := tf.Attrs["max_age"]
-						if !ok {
-							diags.Append(attrReadMissingDiag{"OIDCConnectorSpecV3.Value"})
-						} else {
-							v, ok := a.(DurationValue)
-							if !ok {
-								diags.Append(attrReadConversionFailureDiag{"OIDCConnectorSpecV3.Value", "DurationValue"})
-							} else {
-								var t github_com_gravitational_teleport_api_types.Duration
-								if !v.Null && !v.Unknown {
-									t = github_com_gravitational_teleport_api_types.Duration(v.Value)
-								}
-								obj.Value = t
-							}
-						}
-					}
 				}
 			}
 		}
@@ -27361,28 +27339,6 @@ func CopyOIDCConnectorV3ToTerraform(ctx context.Context, obj *github_com_gravita
 							v.Value = string(obj.UsernameClaim)
 							v.Unknown = false
 							tf.Attrs["username_claim"] = v
-						}
-					}
-					{
-						t, ok := tf.AttrTypes["max_age"]
-						if !ok {
-							diags.Append(attrWriteMissingDiag{"OIDCConnectorSpecV3.Value"})
-						} else {
-							v, ok := tf.Attrs["max_age"].(DurationValue)
-							if !ok {
-								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
-								if err != nil {
-									diags.Append(attrWriteGeneralError{"OIDCConnectorSpecV3.Value", err})
-								}
-								v, ok = i.(DurationValue)
-								if !ok {
-									diags.Append(attrWriteConversionFailureDiag{"OIDCConnectorSpecV3.Value", "DurationValue"})
-								}
-								v.Null = false
-							}
-							v.Value = time.Duration(obj.Value)
-							v.Unknown = false
-							tf.Attrs["max_age"] = v
 						}
 					}
 				}
