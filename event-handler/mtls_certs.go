@@ -58,37 +58,47 @@ func GenerateMTLSCerts(cn string, dnsNames []string, ips []string, ttl time.Dura
 	notBefore := time.Now()
 	notAfter := notBefore.Add(ttl)
 
-	entity := pkix.Name{
+	entityCA := pkix.Name{
+                Country:    []string{"US"},
+                CommonName: "Teleport Event Handler mTLS CA",
+        }
+
+	entityClient := pkix.Name{
+                Country:    []string{"US"},
+                CommonName: "Teleport Event Handler mTLS Client",
+        }
+
+	entityServer := pkix.Name{
 		Country:    []string{"US"},
 		CommonName: cn,
 	}
 
 	c := &MTLSCerts{
 		caCert: x509.Certificate{ // caCert is a fluentd CA certificate
-			Subject:               entity,
+			Subject:               entityCA,
 			NotBefore:             notBefore,
 			NotAfter:              notAfter,
 			IsCA:                  true,
 			MaxPathLenZero:        true,
 			KeyUsage:              x509.KeyUsageCRLSign | x509.KeyUsageCertSign,
 			BasicConstraintsValid: true,
-			Issuer:                entity,
+			Issuer:                entityCA,
 		},
 		clientCert: x509.Certificate{ // clientCert is a fluentd client certificate
-			Subject:     entity,
+			Subject:     entityClient,
 			NotBefore:   notBefore,
 			NotAfter:    notAfter,
 			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 			KeyUsage:    x509.KeyUsageDigitalSignature,
-			Issuer:      entity,
+			Issuer:      entityCA,
 		},
 		serverCert: x509.Certificate{ // Server CSR
-			Subject:     entity,
+			Subject:     entityServer,
 			NotBefore:   notBefore,
 			NotAfter:    notAfter,
 			KeyUsage:    x509.KeyUsageDigitalSignature,
 			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-			Issuer:      entity,
+			Issuer:      entityCA,
 		},
 	}
 
