@@ -30,7 +30,7 @@ steps:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
       TERRAFORM_VERSION: 1.4.6-1
-      TELEPORT_VERSION: 13.0.3
+      TELEPORT_VERSION: 13.3.6
     commands:
       - echo Testing plugins against Teleport $TELEPORT_VERSION
       - apt update && apt install -y software-properties-common
@@ -86,7 +86,7 @@ steps:
 
   - name: Install Teleport
     environment:
-      TELEPORT_VERSION: 13.0.3
+      TELEPORT_VERSION: 13.3.6
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
       - set -u
@@ -1405,6 +1405,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 96e52d64db77e31da4a612b5e0838c171a50ac0762143dfd159946871865811a
+hmac: fef88289161f5ab1a334635da813cd0e8af827fa2554ec494326baf1f3f46caf
 
 ...

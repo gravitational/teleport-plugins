@@ -17,6 +17,8 @@ limitations under the License.
 package test
 
 import (
+	"time"
+
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/wrappers"
 	"github.com/gravitational/trace"
@@ -63,6 +65,7 @@ func (s *TerraformSuite) TestOIDCConnector() {
 					resource.TestCheckResourceAttr(name, "spec.client_id", "client"),
 					resource.TestCheckResourceAttr(name, "spec.claims_to_roles.0.claim", "test"),
 					resource.TestCheckResourceAttr(name, "spec.claims_to_roles.0.roles.0", "teleport"),
+					resource.TestCheckResourceAttr(name, "spec.max_age", "5m0s"),
 				),
 			},
 			{
@@ -94,6 +97,9 @@ func (s *TerraformSuite) TestImportOIDCConnector() {
 			RedirectURLs: wrappers.Strings{
 				"https://example.com/redirect",
 			},
+			MaxAge: &types.MaxAge{
+				Value: types.Duration(5 * time.Minute),
+			},
 		},
 	}
 
@@ -116,6 +122,7 @@ func (s *TerraformSuite) TestImportOIDCConnector() {
 					require.Equal(s.T(), state[0].Attributes["spec.client_id"], "Iv1.3386eee92ff932a4")
 					require.Equal(s.T(), state[0].Attributes["spec.claims_to_roles.0.claim"], "test")
 					require.Equal(s.T(), state[0].Attributes["spec.claims_to_roles.0.roles.0"], "terraform")
+					require.Equal(s.T(), state[0].Attributes["spec.max_age"], "5m0s")
 
 					return nil
 				},

@@ -183,6 +183,12 @@ func (s *EventHandlerSuite) TestEvents() {
 		evt, err := s.fakeFluentd.GetMessage(s.Context())
 		require.NoError(t, err)
 
+		// Ignore unrelated events
+		if strings.Contains(evt, `"event":"role.created"`) || strings.Contains(evt, `"event":"user.create"`) {
+			i--
+			continue
+		}
+
 		require.Contains(t, evt, `"event":"instance.join"`)
 
 		if strings.Contains(evt, `"role":"Proxy"`) {

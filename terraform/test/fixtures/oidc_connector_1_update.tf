@@ -17,5 +17,6 @@ resource "teleport_oidc_connector" "test" {
     }]
 
     redirect_url = ["https://example.com/redirect"]
+    max_age      = "5m0s"
   }
 }
