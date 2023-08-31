@@ -59,14 +59,14 @@ func GenerateMTLSCerts(cn string, dnsNames []string, ips []string, ttl time.Dura
 	notAfter := notBefore.Add(ttl)
 
 	entityCA := pkix.Name{
-                Country:    []string{"US"},
-                CommonName: "Teleport Event Handler mTLS CA",
-        }
+		Country:    []string{"US"},
+		CommonName: "Teleport Event Handler mTLS CA",
+	}
 
 	entityClient := pkix.Name{
-                Country:    []string{"US"},
-                CommonName: "Teleport Event Handler mTLS Client",
-        }
+		Country:    []string{"US"},
+		CommonName: "Teleport Event Handler mTLS Client",
+	}
 
 	entityServer := pkix.Name{
 		Country:    []string{"US"},
