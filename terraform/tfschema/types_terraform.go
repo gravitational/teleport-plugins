@@ -27386,9 +27386,10 @@ func CopyOIDCConnectorV3ToTerraform(ctx context.Context, obj *github_com_gravita
 								v.Null = false
 							}
 							if obj.MaxAge == nil {
-								obj.MaxAge = &github_com_gravitational_teleport_api_types.MaxAge{}
+								v.Null = true
+							} else {
+								v.Value = time.Duration(obj.Value)
 							}
-							v.Value = time.Duration(obj.Value)
 							v.Unknown = false
 							tf.Attrs["max_age"] = v
 						}
