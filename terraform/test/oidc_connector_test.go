@@ -130,3 +130,41 @@ func (s *TerraformSuite) TestImportOIDCConnector() {
 		},
 	})
 }
+
+func (s *TerraformSuite) TestOIDCConnectorWithoutMaxAge() {
+	connectorName := "test_max_age"
+
+	checkDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetOIDCConnector(s.Context(), connectorName, false)
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("oidc_connector_without_max_age.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					func(_ *terraform.State) error {
+						connector, err := s.client.GetOIDCConnector(s.Context(), connectorName, false)
+						if err != nil {
+							return err
+						}
+
+						_, maxAgeWasSet := connector.GetMaxAge()
+						if maxAgeWasSet {
+							return trace.Errorf("max age was set but it is not part of the terraform definition")
+						}
+
+						return nil
+					},
+				),
+			},
+		},
+	})
+}
