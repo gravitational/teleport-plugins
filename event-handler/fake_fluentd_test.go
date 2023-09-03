@@ -74,7 +74,7 @@ func NewFakeFluentd() (*FakeFluentd, error) {
 
 // writeCerts generates and writes temporary mTLS keys
 func (f *FakeFluentd) writeCerts() error {
-	g, err := GenerateMTLSCerts("localhost", []string{"localhost"}, []string{}, time.Hour, 1024)
+	g, err := GenerateMTLSCerts([]string{"localhost"}, []string{}, time.Hour, 1024)
 	if err != nil {
 		return trace.Wrap(err)
 	}

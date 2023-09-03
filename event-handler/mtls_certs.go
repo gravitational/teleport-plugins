@@ -54,51 +54,46 @@ type keyPair struct {
 }
 
 // GenerateMTLSCerts creates new MTLS certificate generator
-func GenerateMTLSCerts(cn string, dnsNames []string, ips []string, ttl time.Duration, length int) (*MTLSCerts, error) {
+func GenerateMTLSCerts(dnsNames []string, ips []string, ttl time.Duration, length int) (*MTLSCerts, error) {
 	notBefore := time.Now()
 	notAfter := notBefore.Add(ttl)
 
-	entityCA := pkix.Name{
-		Country:    []string{"US"},
-		CommonName: "Teleport Event Handler mTLS CA",
+	caDistinguishedName := pkix.Name{
+		CommonName: "CA",
 	}
-
-	entityClient := pkix.Name{
-		Country:    []string{"US"},
-		CommonName: "Teleport Event Handler mTLS Client",
+	serverDistinguishedName := pkix.Name{
+		CommonName: "Server",
 	}
-
-	entityServer := pkix.Name{
-		Country:    []string{"US"},
-		CommonName: cn,
+	clientDistinguishedName := pkix.Name{
+		CommonName: "Client",
 	}
 
 	c := &MTLSCerts{
-		caCert: x509.Certificate{ // caCert is a fluentd CA certificate
-			Subject:               entityCA,
+		caCert: x509.Certificate{
+			Issuer:                caDistinguishedName,
+			Subject:               caDistinguishedName,
 			NotBefore:             notBefore,
 			NotAfter:              notAfter,
 			IsCA:                  true,
 			MaxPathLenZero:        true,
 			KeyUsage:              x509.KeyUsageCRLSign | x509.KeyUsageCertSign,
 			BasicConstraintsValid: true,
-			Issuer:                entityCA,
 		},
-		clientCert: x509.Certificate{ // clientCert is a fluentd client certificate
-			Subject:     entityClient,
+		clientCert: x509.Certificate{
+			Issuer:      caDistinguishedName,
+			Subject:     clientDistinguishedName,
 			NotBefore:   notBefore,
 			NotAfter:    notAfter,
 			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
 			KeyUsage:    x509.KeyUsageDigitalSignature,
-			Issuer:      entityCA,
 		},
-		serverCert: x509.Certificate{ // Server CSR
-			Subject:     entityServer,
+		serverCert: x509.Certificate{
+			Issuer:      caDistinguishedName,
+			Subject:     serverDistinguishedName,
 			NotBefore:   notBefore,
 			NotAfter:    notAfter,
 			KeyUsage:    x509.KeyUsageDigitalSignature,
 			ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-			Issuer:      entityCA,
 		},
 	}
 
@@ -124,8 +119,11 @@ func GenerateMTLSCerts(cn string, dnsNames []string, ips []string, ttl time.Dura
 
 	c.serverCert.SerialNumber = sn
 
-	// Append SANs and IPs
+	// Append SANs and IPs to Server and Client certs
 	if err := c.appendSANs(&c.serverCert, dnsNames, ips); err != nil {
+		return nil, trace.Wrap(err)
+	}
+	if err := c.appendSANs(&c.clientCert, dnsNames, ips); err != nil {
 		return nil, trace.Wrap(err)
 	}
 
