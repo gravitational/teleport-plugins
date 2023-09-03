@@ -130,7 +130,7 @@ func RunConfigureCmd(cfg *ConfigureCmdConfig) error {
 		confPath:           path.Join(cfg.Out, confFileName),
 	}
 
-	g, err := GenerateMTLSCerts(cfg.CN, cfg.DNSNames, cfg.IP, cfg.TTL, cfg.Length)
+	g, err := GenerateMTLSCerts(cfg.DNSNames, cfg.IP, cfg.TTL, cfg.Length)
 	if err != nil {
 		return trace.Wrap(err)
 	}
