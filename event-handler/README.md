@@ -212,7 +212,6 @@ The generated `teleport-event-handler.toml` would contain the following plugin c
 storage = "./storage" # Plugin will save it's state here
 timeout = "10s"
 batch = 20
-namespace = "default"
 
 [fluentd]
 cert = "client.crt"
@@ -293,7 +292,6 @@ You may specify configuration options via command line arguments, environment va
 | fluentd-key         | Fluentd TLS key file                                | FDFWD_FLUENTD_KEY         |
 | storage             | Storage directory                                   | FDFWD_STORAGE             |
 | batch               | Fetch batch size                                    | FDFWD_BATCH               |
-| namespace           | Events namespace                                    | FDFWD_NAMESPACE           |
 | types               | Comma-separated list of event types to forward      | FDFWD_TYPES               |
 | skip-session-types  | Comma-separated list of session event types to skip | FDFWD_SKIP_SESSION_TYPES  |
 | start-time          | Minimum event time (RFC3339 format)                 | FDFWD_START_TIME          |

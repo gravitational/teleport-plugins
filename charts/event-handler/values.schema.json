@@ -307,21 +307,18 @@
             "default": {
                 "storagePath": "/var/lib/teleport/plugins/event-handler/storage",
                 "timeout": "10s",
-                "batch": 20,
-                "namespace": "default"
+                "batch": 20
             },
             "examples": [
                 {
                     "storagePath": "/var/lib/teleport/plugins/event-handler/storage",
                     "timeout": "10s",
-                    "batch": 20,
-                    "namespace": "default"
+                    "batch": 20
                 }
             ],
             "required": [
                 "storagePath",
-                "timeout",
-                "namespace"
+                "timeout"
             ],
             "properties": {
                 "storagePath": {
@@ -342,11 +339,6 @@
                     "$id": "#/properties/eventHandler/properties/batch",
                     "type": "number",
                     "default": 20
-                },
-                "namespace": {
-                    "$id": "#/properties/eventHandler/properties/namespace",
-                    "type": "string",
-                    "default": "default"
                 }
             },
             "additionalProperties": true

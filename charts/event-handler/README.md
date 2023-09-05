@@ -101,7 +101,6 @@ eventHandler:
   storagePath: "/var/lib/teleport/plugins/event-handler/storage"
   timeout: "10s"
   batch: 20
-  namespace: "default"
 
 fluentd:
   url: "https://fluentd.fluentd.svc.cluster.local/events.log"
@@ -170,13 +169,6 @@ The following values can be set for the Helm chart:
   <tr>
     <td><code>eventHandler.batch</code></td>
     <td>Maximum number of events fetched from Teleport in one request</td>
-    <td>string</td>
-    <td><code>20</code></td>
-    <td>no</td>
-  </tr>
-  <tr>
-    <td><code>eventHandler.namespace</code></td>
-    <td>Namespace where the events are received from</td>
     <td>string</td>
     <td><code>20</code></td>
     <td>no</td>

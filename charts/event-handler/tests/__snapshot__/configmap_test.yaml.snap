@@ -6,7 +6,6 @@ should match the snapshot:
         storage = "/var/lib/teleport/plugins/event-handler/storage"
         timeout = "10s"
         batch = 20
-        namespace = "default"
 
         [teleport]
         addr = "teleport.example.com:1234"

@@ -214,7 +214,7 @@ func (t *TeleportEventsWatcher) getEvents(ctx context.Context) ([]*auditlogpb.Ev
 		ctx,
 		t.startTime,
 		time.Now().UTC(),
-		t.config.Namespace,
+		"default",
 		t.config.Types,
 		t.config.BatchSize,
 		types.EventOrderAscending,

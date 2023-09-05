@@ -1,7 +1,6 @@
 storage = "./storage"
 timeout = "10s"
 batch = 20
-namespace = "default"
 
 [forward.fluentd]
 ca = "{{index .CaCertPath}}"
