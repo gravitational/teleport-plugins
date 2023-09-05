@@ -40,6 +40,14 @@ func TestGenerateClientCertFile(t *testing.T) {
 	require.NotNil(t, certs.clientCert.Issuer)
 	require.NotNil(t, certs.serverCert.Issuer)
 
+	// make sure certs are different
+	require.NotEqual(t, certs.caCert.Subject.CommonName, certs.clientCert.Subject.CommonName, "CA and client certs should be different")
+	require.NotEqual(t, certs.caCert.Subject.CommonName, certs.serverCert.Subject.CommonName, "CA and server certs should be different")
+
+	// Server cert should have SAN
+	require.NotNil(t, certs.serverCert.DNSNames)
+	require.Equal(t, certs.serverCert.DNSNames[0], "localhost")
+
 	// Write the cert to the tempdir
 	err = certs.ClientCert.WriteFile(path.Join(td, cp), path.Join(td, kp), ".")
 	require.NoError(t, err)
