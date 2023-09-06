@@ -26602,10 +26602,12 @@ func CopyOIDCConnectorV3FromTerraform(_ context.Context, tf github_com_hashicorp
 								if !v.Null && !v.Unknown {
 									t = github_com_gravitational_teleport_api_types.Duration(v.Value)
 								}
-								if obj.MaxAge == nil {
-									obj.MaxAge = &github_com_gravitational_teleport_api_types.MaxAge{}
+								if !v.Null && !v.Unknown {
+									if obj.MaxAge == nil {
+										obj.MaxAge = &github_com_gravitational_teleport_api_types.MaxAge{}
+									}
+									obj.Value = t
 								}
-								obj.Value = t
 							}
 						}
 					}
@@ -27384,9 +27386,10 @@ func CopyOIDCConnectorV3ToTerraform(ctx context.Context, obj *github_com_gravita
 								v.Null = false
 							}
 							if obj.MaxAge == nil {
-								obj.MaxAge = &github_com_gravitational_teleport_api_types.MaxAge{}
+								v.Null = true
+							} else {
+								v.Value = time.Duration(obj.Value)
 							}
-							v.Value = time.Duration(obj.Value)
 							v.Unknown = false
 							tf.Attrs["max_age"] = v
 						}
