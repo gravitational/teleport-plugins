@@ -46,7 +46,7 @@ func TestGenerateClientCertFile(t *testing.T) {
 
 	// Server cert should have SAN
 	require.NotNil(t, certs.serverCert.DNSNames)
-	require.Equal(t, certs.serverCert.DNSNames[0], "localhost")
+	require.Equal(t, "localhost", certs.serverCert.DNSNames[0])
 
 	// Write the cert to the tempdir
 	err = certs.ClientCert.WriteFile(path.Join(td, cp), path.Join(td, kp), ".")
