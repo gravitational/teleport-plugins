@@ -27,16 +27,16 @@ jobs:
         with:
           go-version: '1.20.8'
 
-      - name: Setup Terraform 1.4.6
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: '1.4.6'
+          terraform_version: '1.5.6'
           terraform_wrapper: false
 
       - name: Install Teleport
         uses: teleport-actions/setup@v1
         with:
-          version: 13.3.6
+          version: 13.3.8
           enterprise: true
 
       - name: make test-terraform

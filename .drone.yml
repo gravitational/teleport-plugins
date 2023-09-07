@@ -19,7 +19,7 @@ workspace:
 
 steps:
   - name: Run linter
-    image: golangci/golangci-lint:v1.51.2
+    image: golangci/golangci-lint:v1.54.2
     commands:
       - make lint
 
@@ -29,8 +29,8 @@ steps:
       RUNNER_TEMP: /tmp
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TERRAFORM_VERSION: 1.4.6-1
-      TELEPORT_VERSION: 13.3.6
+      TERRAFORM_VERSION: 1.5.6-1
+      TELEPORT_VERSION: 13.3.8
     commands:
       - echo Testing plugins against Teleport $TELEPORT_VERSION
       - apt update && apt install -y gnupg software-properties-common
@@ -72,8 +72,8 @@ steps:
     environment:
       GO_VERSION: go1.20.8
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
-      TERRAFORM_VERSION: 1.4.6
-      TERRAFORM_ARCHIVE: terraform_1.4.6_darwin_amd64.zip
+      TERRAFORM_VERSION: 1.5.6
+      TERRAFORM_ARCHIVE: terraform_1.5.6_darwin_amd64.zip
     commands:
       - set -u
       - mkdir -p $TOOLCHAIN_DIR
@@ -86,7 +86,7 @@ steps:
 
   - name: Install Teleport
     environment:
-      TELEPORT_VERSION: 13.3.6
+      TELEPORT_VERSION: 13.3.8
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
       - set -u
@@ -1405,6 +1405,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 58400da35f98ba776332fd8b7b21c0b01b72bba9b75626b480689785fa1cb567
+hmac: c17310f28e521b2e143130a48fa7b820de102c97bc00564e46212a220e095f1c
 
 ...

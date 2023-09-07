@@ -1,6 +1,6 @@
 module github.com/gravitational/teleport-plugins
 
-go 1.19
+go 1.20
 
 require (
 	github.com/DanielTitkov/go-adaptive-cards v0.2.2
