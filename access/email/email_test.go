@@ -256,9 +256,9 @@ func (s *EmailSuite) createAccessRequest(suggestedReviewers []string) types.Acce
 	t.Helper()
 
 	req := s.newAccessRequest(suggestedReviewers)
-	err := s.requestor().CreateAccessRequest(s.Context(), req)
+	out, err := s.requestor().CreateAccessRequestV2(s.Context(), req)
 	require.NoError(t, err)
-	return req
+	return out
 }
 
 func (s *EmailSuite) checkPluginData(reqID string, cond func(PluginData) bool) PluginData {
@@ -533,7 +533,7 @@ func (s *EmailSuite) TestRace() {
 				return setRaceErr(trace.Wrap(err))
 			}
 			req.SetSuggestedReviewers([]string{s.userNames.reviewer1, s.userNames.reviewer2})
-			if err := s.requestor().CreateAccessRequest(ctx, req); err != nil {
+			if _, err := s.requestor().CreateAccessRequestV2(ctx, req); err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
 			return nil
