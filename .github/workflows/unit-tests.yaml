@@ -37,7 +37,7 @@ jobs:
       - name: Install Teleport
         uses: teleport-actions/setup@v1
         with:
-          version: 13.3.6
+          version: 13.3.8
           enterprise: true
 
       - name: Run unit tests
@@ -63,7 +63,7 @@ jobs:
       - name: Install Teleport
         uses: teleport-actions/setup@v1
         with:
-          version: 13.1.0
+          version: 13.3.8
           enterprise: true
 
       - name: Run unit tests

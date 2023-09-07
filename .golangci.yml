@@ -1,8 +1,4 @@
 issues:
-  exclude-rules:
-    - linters:
-      - gosimple
-      text: "S1002: should omit comparison to bool constant"
   exclude-use-default: true
   max-same-issues: 0
   max-issues-per-linter: 0
@@ -22,22 +18,31 @@ linters:
     - revive
     - staticcheck
     - unconvert
-    # Re-add the `unused` linter when this issue is fixed and released in the golangci-lint
-    # https://github.com/dominikh/go-tools/issues/1361
-    # - unused
+    - unused
 
 linters-settings:
   depguard:
-    list-type: denylist
-    include-go-root: true # check against stdlib
-    packages-with-error-message:
-      - io/ioutil: 'use "io" or "os" packages instead'
-      - github.com/golang/protobuf: 'use "google.golang.org/protobuf"'
-      - github.com/hashicorp/go-uuid: 'use "github.com/google/uuid" instead'
-      - github.com/pborman/uuid: 'use "github.com/google/uuid" instead'
-      - github.com/siddontang/go-log/log: 'use "github.com/sirupsen/logrus" instead'
-      - github.com/siddontang/go/log: 'use "github.com/sirupsen/logrus" instead'
-      - go.uber.org/atomic: 'use "sync/atomic" instead'
+    rules:
+      main:
+        deny:
+          - pkg: io/ioutil
+            desc: 'use "io" or "os" packages instead'
+          - pkg: github.com/golang/protobuf
+            desc: 'use "google.golang.org/protobuf"'
+          - pkg: github.com/hashicorp/go-uuid
+            desc: 'use "github.com/google/uuid" instead'
+          - pkg: github.com/pborman/uuid
+            desc: 'use "github.com/google/uuid" instead'
+          - pkg: github.com/siddontang/go-log/log
+            desc: 'use "github.com/sirupsen/logrus" instead'
+          - pkg: github.com/siddontang/go/log
+            desc: 'use "github.com/sirupsen/logrus" instead'
+          - pkg: github.com/tj/assert
+            desc: 'use "github.com/stretchr/testify/assert" instead'
+          - pkg: go.uber.org/atomic
+            desc: 'use "sync/atomic" instead'
+          - pkg: golang.design
+            desc: 'experimental project, not to be confused with official Go packages'
   misspell:
     locale: US
   gci:
@@ -51,11 +56,15 @@ linters-settings:
     allow-unused: true # Enabled because of conditional builds / build tags.
     require-explanation: true
     require-specific: true
+  revive:
+    rules:
+    - name: unused-parameter
+      disabled: true
 output:
   uniq-by-line: false
 
 run:
-  go: '1.19'
+  go: '1.20'
   skip-dirs:
     - (^|/)node_modules/
     - ^api/gen/

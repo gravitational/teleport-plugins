@@ -19,7 +19,7 @@ workspace:
 
 steps:
   - name: Run linter
-    image: golangci/golangci-lint:v1.51.2
+    image: golangci/golangci-lint:v1.54.2
     commands:
       - make lint
 
@@ -29,13 +29,13 @@ steps:
       RUNNER_TEMP: /tmp
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
-      TERRAFORM_VERSION: 1.4.6-1
-      TELEPORT_VERSION: 13.3.6
+      TERRAFORM_VERSION: 1.5.6-1
+      TELEPORT_VERSION: 13.3.8
     commands:
       - echo Testing plugins against Teleport $TELEPORT_VERSION
       - apt update && apt install -y software-properties-common
-      - curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
-      - apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+      - wget -O- https://apt.releases.hashicorp.com/gpg | gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      - echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | tee /etc/apt/sources.list.d/hashicorp.list
       - curl -fsSL https://apt.releases.teleport.dev/gpg -o /usr/share/keyrings/teleport-archive-keyring.asc
       - bash -c 'source /etc/os-release; echo "deb [signed-by=/usr/share/keyrings/teleport-archive-keyring.asc] https://apt.releases.teleport.dev/$ID $VERSION_CODENAME stable/v13" | tee /etc/apt/sources.list.d/teleport.list > /dev/null'
       - apt update && apt install -y terraform=$TERRAFORM_VERSION teleport-ent=$TELEPORT_VERSION
@@ -72,8 +72,8 @@ steps:
     environment:
       GO_VERSION: go1.20.8
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
-      TERRAFORM_VERSION: 1.4.6
-      TERRAFORM_ARCHIVE: terraform_1.4.6_darwin_amd64.zip
+      TERRAFORM_VERSION: 1.5.6
+      TERRAFORM_ARCHIVE: terraform_1.5.6_darwin_amd64.zip
     commands:
       - set -u
       - mkdir -p $TOOLCHAIN_DIR
@@ -86,7 +86,7 @@ steps:
 
   - name: Install Teleport
     environment:
-      TELEPORT_VERSION: 13.3.6
+      TELEPORT_VERSION: 13.3.8
       TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
     commands:
       - set -u
@@ -1405,6 +1405,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 0c8e35319be9a03554ea090d2fee80430b137ae6b9c4c1ef16e067f7f6323a6f
+hmac: 248c0bc9022aff64498109f7e26ffcc97b9cfa000e387be854880f359ed40b1c
 
 ...
