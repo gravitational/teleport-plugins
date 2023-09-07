@@ -78,10 +78,10 @@ steps:
       - set -u
       - mkdir -p $TOOLCHAIN_DIR
       - mkdir -p $TOOLCHAIN_DIR/terraform
-      - curl --silent -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
+      - curl --no-progress-meter -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
       - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
       - rm -rf $GO_VERSION.darwin-amd64.tar.gz
-      - curl --silent -O https://releases.hashicorp.com/terraform/$TERRAFORM_VERSION/$TERRAFORM_ARCHIVE
+      - curl --no-progress-meter -O https://releases.hashicorp.com/terraform/$TERRAFORM_VERSION/$TERRAFORM_ARCHIVE
       - unzip $TERRAFORM_ARCHIVE -d $TOOLCHAIN_DIR/terraform/
 
   - name: Install Teleport
@@ -92,7 +92,7 @@ steps:
       - set -u
       - mkdir -p $TOOLCHAIN_DIR
       - mkdir -p $TOOLCHAIN_DIR/teleport
-      - curl -O https://cdn.teleport.dev/teleport-ent-v$TELEPORT_VERSION-darwin-amd64-bin.tar.gz
+      - curl --no-progress-meter -O https://cdn.teleport.dev/teleport-ent-v$TELEPORT_VERSION-darwin-amd64-bin.tar.gz
       - tar -C $TOOLCHAIN_DIR -xzf teleport-ent-v$TELEPORT_VERSION-darwin-amd64-bin.tar.gz
       - rm -rf teleport-ent-v$TELEPORT_VERSION-darwin-amd64-bin.tar.gz
 
@@ -190,7 +190,7 @@ steps:
     commands:
       - set -u
       - mkdir -p $TOOLCHAIN_DIR
-      - curl --silent -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
+      - curl --no-progress-meter -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
       - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
       - rm -rf $GO_VERSION.darwin-amd64.tar.gz
 
@@ -533,7 +533,7 @@ steps:
     commands:
       - set -u
       - mkdir -p $TOOLCHAIN_DIR
-      - curl --silent -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
+      - curl --no-progress-meter -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
       - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
       - rm -rf $GO_VERSION.darwin-amd64.tar.gz
 
@@ -770,7 +770,7 @@ steps:
     commands:
       - set -u
       - mkdir -p $TOOLCHAIN_DIR
-      - curl --silent -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
+      - curl --no-progress-meter -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
       - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
       - rm -rf $GO_VERSION.darwin-amd64.tar.gz
 
@@ -1405,6 +1405,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 0c8e35319be9a03554ea090d2fee80430b137ae6b9c4c1ef16e067f7f6323a6f
+hmac: 2658efaa4fe866feae2e88381604397e621ab9f52a7f9c912c1afc53ef30c254
 
 ...
