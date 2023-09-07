@@ -211,6 +211,7 @@ Spec is an AuthPreference specification
 | idp                     | object   |          | IDP is a set of options related to accessing IdPs within Teleport. Requires Teleport Enterprise.                                       |
 | locking_mode            | string   |          | LockingMode is the cluster-wide locking mode default.                                                                                  |
 | message_of_the_day      | string   |          |                                                                                                                                        |
+| okta                    | object   |          | Okta is a set of options related to the Okta service in Teleport. Requires Teleport Enterprise.                                        |
 | require_session_mfa     | number   |          | RequireMFAType is the type of MFA requirement enforced for this cluster: 0:Off, 1:Session, 2:SessionAndHardwareKey, 3:HardwareKeyTouch |
 | second_factor           | string   |          | SecondFactor is the type of second factor.                                                                                             |
 | type                    | string   |          | Type is the type of authentication.                                                                                                    |
@@ -242,6 +243,14 @@ SAML are options related to the Teleport SAML IdP.
 |  Name   | Type | Required | Description |
 |---------|------|----------|-------------|
 | enabled | bool |          |             |
+
+#### spec.okta
+
+Okta is a set of options related to the Okta service in Teleport. Requires Teleport Enterprise.
+
+|    Name     |   Type   | Required |                               Description                                |
+|-------------|----------|----------|--------------------------------------------------------------------------|
+| sync_period | duration |          | SyncPeriod is the duration between synchronization calls in nanoseconds. |
 
 #### spec.u2f
 
@@ -544,6 +553,7 @@ RDS contains RDS specific metadata.
 | instance_id | string           |          | InstanceID is the RDS instance identifier.                        |
 | resource_id | string           |          | ResourceID is the RDS instance resource identifier (db-xxx).      |
 | subnets     | array of strings |          | Subnets is a list of subnets for the RDS instance.                |
+| vpc_id      | string           |          | VPCID is the VPC where the RDS is running.                        |
 
 ##### spec.aws.rdsproxy
 

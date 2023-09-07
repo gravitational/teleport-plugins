@@ -112,9 +112,6 @@ type IngestConfig struct {
 	// BatchSize is a fetch batch size
 	BatchSize int `help:"Fetch batch size" default:"20" env:"FDFWD_BATCH" name:"batch"`
 
-	// Namespace is events namespace
-	Namespace string `help:"Events namespace" default:"default" env:"FDFWD_NAMESPACE"`
-
 	// Types are event types to log
 	Types []string `help:"Comma-separated list of event types to forward" env:"FDFWD_TYPES"`
 
@@ -234,7 +231,6 @@ func (c *StartCmdConfig) Dump(ctx context.Context) {
 
 	// Log configuration variables
 	log.WithField("batch", c.BatchSize).Info("Using batch size")
-	log.WithField("namespace", c.Namespace).Info("Using namespace")
 	log.WithField("types", c.Types).Info("Using type filter")
 	log.WithField("types", c.SkipSessionTypes).Info("Skipping session events of type")
 	log.WithField("value", c.StartTime).Info("Using start time")

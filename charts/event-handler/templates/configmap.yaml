@@ -9,7 +9,6 @@ data:
     storage = {{ .Values.eventHandler.storagePath | toJson }}
     timeout = {{ .Values.eventHandler.timeout | toJson }}
     batch = {{ .Values.eventHandler.batch }}
-    namespace = {{ .Values.eventHandler.namespace | toJson }}
 
     [teleport]
     addr = "{{ .Values.teleport.address }}"

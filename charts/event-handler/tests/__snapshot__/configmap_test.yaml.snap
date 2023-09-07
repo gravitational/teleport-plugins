@@ -6,7 +6,6 @@ should match the snapshot:
         storage = "/var/lib/teleport/plugins/event-handler/storage"
         timeout = "10s"
         batch = 20
-        namespace = "default"
 
         [teleport]
         addr = "teleport.example.com:1234"
@@ -24,6 +23,6 @@ should match the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-event-handler
-        app.kubernetes.io/version: 13.3.7
-        helm.sh/chart: teleport-plugin-event-handler-13.3.7
+        app.kubernetes.io/version: 13.3.8
+        helm.sh/chart: teleport-plugin-event-handler-13.3.8
       name: RELEASE-NAME-teleport-plugin-event-handler
