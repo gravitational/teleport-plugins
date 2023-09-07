@@ -22,10 +22,10 @@ jobs:
       - name: Checkout Teleport Plugins
         uses: actions/checkout@v3
 
-      - name: Setup Go 1.20.8
+      - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.20.8'
+          go-version: '1.21.1'
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -36,7 +36,7 @@ jobs:
       - name: Install Teleport
         uses: teleport-actions/setup@v1
         with:
-          version: 13.3.8
+          version: 14.0.0-alpha.2
           enterprise: true
 
       - name: make test-terraform
