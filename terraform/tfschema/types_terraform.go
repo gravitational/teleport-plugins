@@ -265,6 +265,11 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 									Optional:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
 								},
+								"vpc_id": {
+									Description: "VPCID is the VPC where the RDS is running.",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+								},
 							}),
 							Description: "RDS contains RDS specific metadata.",
 							Optional:    true,
@@ -1300,6 +1305,15 @@ func GenSchemaAuthPreferenceV2(ctx context.Context) (github_com_hashicorp_terraf
 					Description: "",
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+				},
+				"okta": {
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"sync_period": {
+						Description: "SyncPeriod is the duration between synchronization calls in nanoseconds.",
+						Optional:    true,
+						Type:        DurationType{},
+					}}),
+					Description: "Okta is a set of options related to the Okta service in Teleport. Requires Teleport Enterprise.",
+					Optional:    true,
 				},
 				"require_session_mfa": {
 					Description: "RequireMFAType is the type of MFA requirement enforced for this cluster.",
@@ -3730,6 +3744,23 @@ func CopyDatabaseV3FromTerraform(_ context.Context, tf github_com_hashicorp_terr
 															}
 														}
 													}
+													{
+														a, ok := tf.Attrs["vpc_id"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.AWS.RDS.VPCID"})
+														} else {
+															v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.AWS.RDS.VPCID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															} else {
+																var t string
+																if !v.Null && !v.Unknown {
+																	t = string(v.Value)
+																}
+																obj.VPCID = t
+															}
+														}
+													}
 												}
 											}
 										}
@@ -5439,6 +5470,28 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj *github_com_gravitationa
 																c.Unknown = false
 																tf.Attrs["subnets"] = c
 															}
+														}
+													}
+													{
+														t, ok := tf.AttrTypes["vpc_id"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.AWS.RDS.VPCID"})
+														} else {
+															v, ok := tf.Attrs["vpc_id"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"DatabaseV3.Spec.AWS.RDS.VPCID", err})
+																}
+																v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.RDS.VPCID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+																}
+																v.Null = string(obj.VPCID) == ""
+															}
+															v.Value = string(obj.VPCID)
+															v.Unknown = false
+															tf.Attrs["vpc_id"] = v
 														}
 													}
 												}
@@ -13289,6 +13342,41 @@ func CopyAuthPreferenceV2FromTerraform(_ context.Context, tf github_com_hashicor
 							}
 						}
 					}
+					{
+						a, ok := tf.Attrs["okta"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"AuthPreferenceV2.Spec.Okta"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"AuthPreferenceV2.Spec.Okta", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+							} else {
+								obj.Okta = nil
+								if !v.Null && !v.Unknown {
+									tf := v
+									obj.Okta = &github_com_gravitational_teleport_api_types.OktaOptions{}
+									obj := obj.Okta
+									{
+										a, ok := tf.Attrs["sync_period"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"AuthPreferenceV2.Spec.Okta.SyncPeriod"})
+										} else {
+											v, ok := a.(DurationValue)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"AuthPreferenceV2.Spec.Okta.SyncPeriod", "DurationValue"})
+											} else {
+												var t github_com_gravitational_teleport_api_types.Duration
+												if !v.Null && !v.Unknown {
+													t = github_com_gravitational_teleport_api_types.Duration(v.Value)
+												}
+												obj.SyncPeriod = t
+											}
+										}
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
@@ -14255,6 +14343,60 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj *github_com_gravit
 							v.Value = time.Duration(obj.DefaultSessionTTL)
 							v.Unknown = false
 							tf.Attrs["default_session_ttl"] = v
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["okta"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"AuthPreferenceV2.Spec.Okta"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.Okta", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+							} else {
+								v, ok := tf.Attrs["okta"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+								if !ok {
+									v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+										AttrTypes: o.AttrTypes,
+										Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+									}
+								} else {
+									if v.Attrs == nil {
+										v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+									}
+								}
+								if obj.Okta == nil {
+									v.Null = true
+								} else {
+									obj := obj.Okta
+									tf := &v
+									{
+										t, ok := tf.AttrTypes["sync_period"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"AuthPreferenceV2.Spec.Okta.SyncPeriod"})
+										} else {
+											v, ok := tf.Attrs["sync_period"].(DurationValue)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"AuthPreferenceV2.Spec.Okta.SyncPeriod", err})
+												}
+												v, ok = i.(DurationValue)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.Okta.SyncPeriod", "DurationValue"})
+												}
+												v.Null = false
+											}
+											v.Value = time.Duration(obj.SyncPeriod)
+											v.Unknown = false
+											tf.Attrs["sync_period"] = v
+										}
+									}
+								}
+								v.Unknown = false
+								tf.Attrs["okta"] = v
+							}
 						}
 					}
 				}
