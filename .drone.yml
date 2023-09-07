@@ -33,9 +33,9 @@ steps:
       TELEPORT_VERSION: 13.3.6
     commands:
       - echo Testing plugins against Teleport $TELEPORT_VERSION
-      - apt update && apt install -y software-properties-common
-      - curl -fsSL https://apt.releases.hashicorp.com/gpg | apt-key add -
-      - apt-add-repository "deb [arch=amd64] https://apt.releases.hashicorp.com $(lsb_release -cs) main"
+      - apt update && apt install -y gnupg software-properties-common
+      - curl -fsSL https://apt.releases.hashicorp.com/gpg | gpg --dearmor > /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      - echo "deb [signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" > /etc/apt/sources.list.d/hashicorp.list
       - curl -fsSL https://apt.releases.teleport.dev/gpg -o /usr/share/keyrings/teleport-archive-keyring.asc
       - bash -c 'source /etc/os-release; echo "deb [signed-by=/usr/share/keyrings/teleport-archive-keyring.asc] https://apt.releases.teleport.dev/$ID $VERSION_CODENAME stable/v13" | tee /etc/apt/sources.list.d/teleport.list > /dev/null'
       - apt update && apt install -y terraform=$TERRAFORM_VERSION teleport-ent=$TELEPORT_VERSION
@@ -1405,6 +1405,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 2658efaa4fe866feae2e88381604397e621ab9f52a7f9c912c1afc53ef30c254
+hmac: 58400da35f98ba776332fd8b7b21c0b01b72bba9b75626b480689785fa1cb567
 
 ...
