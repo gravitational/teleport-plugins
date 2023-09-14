@@ -32,7 +32,7 @@ func (s *TerraformSuite) TestClusterMaintenanceConfig() {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "cluster_maintenance_config"),
 					resource.TestCheckResourceAttr(name, "spec.agent_upgrades.utc_start_hour", "1"),
-					resource.TestCheckResourceAttr(name, "spec.agent_upgrades.weekdays[0]", "monday"),
+					resource.TestCheckResourceAttr(name, "spec.agent_upgrades.weekdays.0", "monday"),
 				),
 			},
 			{
@@ -44,7 +44,7 @@ func (s *TerraformSuite) TestClusterMaintenanceConfig() {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "cluster_maintenance_config"),
 					resource.TestCheckResourceAttr(name, "spec.agent_upgrades.utc_start_hour", "12"),
-					resource.TestCheckResourceAttr(name, "spec.agent_upgrades.weekdays[0]", "tuesday"),
+					resource.TestCheckResourceAttr(name, "spec.agent_upgrades.weekdays.0", "tuesday"),
 				),
 			},
 			{
