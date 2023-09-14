@@ -4,9 +4,9 @@ resource "teleport_cluster_maintenance_config" "test" {
   }
 
   spec = {
-	agent_upgrades = {
-	  utc_start_hour = 1
-	  weekdays = [ "monday" ]
-	}
+    agent_upgrades = {
+      utc_start_hour = 1
+      weekdays       = ["monday"]
+    }
   }
 }
