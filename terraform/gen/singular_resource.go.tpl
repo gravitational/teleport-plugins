@@ -230,6 +230,10 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 		return
 	}
 
+	{{- if .WithNonce}}
+	{{.VarName}} = {{.VarName}}.WithNonce(math.MaxUint64).(*{{.ProtoPackage}}.{{.TypeName}})
+	{{- end}}
+
 	err = r.p.Client.{{.UpdateMethod}}(ctx, {{.VarName}})
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating {{.Name}}", trace.Wrap(err), "{{.Kind}}"))

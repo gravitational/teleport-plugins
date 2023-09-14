@@ -211,6 +211,7 @@ func (r resourceTeleportClusterMaintenanceConfig) Update(ctx context.Context, re
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterMaintenanceConfig", trace.Wrap(err), "cluster_maintenance_config"))
 		return
 	}
+	clusterMaintenanceConfig = clusterMaintenanceConfig.WithNonce(math.MaxUint64).(*apitypes.ClusterMaintenanceConfigV1)
 
 	err = r.p.Client.UpdateClusterMaintenanceConfig(ctx, clusterMaintenanceConfig)
 	if err != nil {
