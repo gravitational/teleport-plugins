@@ -20,6 +20,9 @@ package provider
 import (
 	"context"
 	"fmt"
+{{- if .WithNonce}}
+	 "math"
+{{- end}}
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -85,10 +88,18 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 	{{- end}}
 
 	{{.VarName}}Before, err := r.p.Client.Get{{.Name}}(ctx)
-	if err != nil {
+	if err != nil && !trace.IsNotFound(err) {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
+
+	if {{.VarName}}Before == nil {
+		{{.VarName}}Before = &{{.ProtoPackage}}.{{.TypeName}}{}
+	}
+
+	{{- if .WithNonce}}
+	{{.VarName}} = {{.VarName}}.WithNonce(math.MaxUint64).(*{{.ProtoPackage}}.{{.TypeName}})
+	{{- end}}
 
 	err = r.p.Client.{{.CreateMethod}}(ctx, {{.VarName}})
 	if err != nil {
@@ -218,6 +229,10 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
+
+	{{- if .WithNonce}}
+	{{.VarName}} = {{.VarName}}.WithNonce(math.MaxUint64).(*{{.ProtoPackage}}.{{.TypeName}})
+	{{- end}}
 
 	err = r.p.Client.{{.UpdateMethod}}(ctx, {{.VarName}})
 	if err != nil {

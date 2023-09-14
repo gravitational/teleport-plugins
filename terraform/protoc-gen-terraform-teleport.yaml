@@ -8,6 +8,7 @@ use_state_for_unknown_by_default: true
 types:
     - "AppV3"
     - "AuthPreferenceV2"
+    - "ClusterMaintenanceConfigV1"
     - "ClusterNetworkingConfigV2"
     - "DatabaseV3"
     - "GithubConnectorV3"
@@ -31,6 +32,13 @@ injected_fields:
       plan_modifiers:
         - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   AuthPreferenceV2:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  ClusterMaintenanceConfigV1:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
@@ -123,6 +131,9 @@ exclude_fields:
     # AuthPreference
     - "AuthPreferenceV2.Metadata.Name" # It's a singleton resource
 
+    # ClusterMaintenanceConfig
+    - "ClusterMaintenanceConfigV1.Metadata.Name" # It's a singleton resource
+
     # NetworkingConfig
     - "ClusterNetworkingConfigV2.Metadata.Name" # It's a singleton resource
 
@@ -162,6 +173,10 @@ computed_fields:
     - "AuthPreferenceV2.Metadata.Labels"
     - "AuthPreferenceV2.Kind"
     - "AuthPreferenceV2.Version"
+
+    # ClusterMaintenanceConfig
+    - "ClusterMaintenanceConfigV1.Kind"
+    - "ClusterMaintenanceConfigV1.Version"
 
     # Cluster networking
     - "ClusterNetworkingConfigV2.Spec.KeepAliveCountMax"
@@ -363,6 +378,8 @@ validators:
     - UseMapKeysPresentValidator("teleport.dev/origin")
   UserV2.Version:
     - UseVersionBetween(2,2)
+  ClsuterMaintenanceConfigV1.Version:
+    - UserVersionBetween(1,1)
 
 time_type:
     type: "TimeType"

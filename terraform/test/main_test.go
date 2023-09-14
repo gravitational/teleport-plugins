@@ -120,6 +120,7 @@ func (s *TerraformBaseSuite) SetupSuite() {
 				types.NewRule("user", unrestricted),
 				types.NewRule("cluster_auth_preference", unrestricted),
 				types.NewRule("cluster_networking_config", unrestricted),
+				types.NewRule("cluster_maintenance_config", unrestricted),
 				types.NewRule("session_recording_config", unrestricted),
 				types.NewRule("db", unrestricted),
 				types.NewRule("app", unrestricted),

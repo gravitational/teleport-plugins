@@ -99,6 +99,8 @@ type payload struct {
 	// e.g. `terraform import <resource_type>.<resource_name> identifier`.
 	// This is also used to name the generated files.
 	TerraformResourceType string
+	// WithNonce is used to force upsert behavior for nonce protected values.
+	WithNonce bool
 }
 
 func (p *payload) CheckAndSetDefaults() error {
@@ -156,6 +158,21 @@ var (
 		Kind:                  "cluster_auth_preference",
 		HasStaticID:           false,
 		TerraformResourceType: "teleport_auth_preference",
+	}
+
+	clusterMaintenance = payload{
+		Name:                  "ClusterMaintenanceConfig",
+		TypeName:              "ClusterMaintenanceConfigV1",
+		VarName:               "clusterMaintenanceConfig",
+		GetMethod:             "GetClusterMaintenanceConfig",
+		CreateMethod:          "UpdateClusterMaintenanceConfig",
+		UpdateMethod:          "UpdateClusterMaintenanceConfig",
+		DeleteMethod:          "DeleteClusterMaintenanceConfig",
+		ID:                    `"cluster_maintenance_config"`,
+		Kind:                  "cluster_maintenance_config",
+		HasStaticID:           true,
+		TerraformResourceType: "teleport_cluster_maintenance_config",
+		WithNonce:             true,
 	}
 
 	clusterNetworking = payload{
@@ -374,6 +391,8 @@ func genTFSchema() {
 	generateDataSource(app, pluralDataSource)
 	generateResource(authPreference, singularResource)
 	generateDataSource(authPreference, singularDataSource)
+	generateResource(clusterMaintenance, singularResource)
+	generateDataSource(clusterMaintenance, singularDataSource)
 	generateResource(clusterNetworking, singularResource)
 	generateDataSource(clusterNetworking, singularDataSource)
 	generateResource(database, pluralResource)
@@ -436,22 +455,23 @@ func generate(p payload, tpl, outFile string) {
 // Create Docs Markdown
 var (
 	mapResourceSchema = map[string]func(context.Context) (tfsdk.Schema, diag.Diagnostics){
-		"app":                       tfschema.GenSchemaAppV3,
-		"auth_preference":           tfschema.GenSchemaAuthPreferenceV2,
-		"bot":                       provider.GenSchemaBot,
-		"cluster_networking_config": tfschema.GenSchemaClusterNetworkingConfigV2,
-		"database":                  tfschema.GenSchemaDatabaseV3,
-		"trusted_device":            devicetrustSchema.GenSchemaDeviceV1,
-		"github_connector":          tfschema.GenSchemaGithubConnectorV3,
-		"login_rule":                loginruleSchema.GenSchemaLoginRule,
-		"okta_import_rule":          tfschema.GenSchemaOktaImportRuleV1,
-		"oidc_connector":            tfschema.GenSchemaOIDCConnectorV3,
-		"provision_token":           tfschema.GenSchemaProvisionTokenV2,
-		"role":                      tfschema.GenSchemaRoleV6,
-		"saml_connector":            tfschema.GenSchemaSAMLConnectorV2,
-		"session_recording_config":  tfschema.GenSchemaSessionRecordingConfigV2,
-		"trusted_cluster":           tfschema.GenSchemaTrustedClusterV2,
-		"user":                      tfschema.GenSchemaUserV2,
+		"app":                        tfschema.GenSchemaAppV3,
+		"auth_preference":            tfschema.GenSchemaAuthPreferenceV2,
+		"bot":                        provider.GenSchemaBot,
+		"cluster_maintenance_config": tfschema.GenSchemaClusterMaintenanceConfigV1,
+		"cluster_networking_config":  tfschema.GenSchemaClusterNetworkingConfigV2,
+		"database":                   tfschema.GenSchemaDatabaseV3,
+		"trusted_device":             devicetrustSchema.GenSchemaDeviceV1,
+		"github_connector":           tfschema.GenSchemaGithubConnectorV3,
+		"login_rule":                 loginruleSchema.GenSchemaLoginRule,
+		"okta_import_rule":           tfschema.GenSchemaOktaImportRuleV1,
+		"oidc_connector":             tfschema.GenSchemaOIDCConnectorV3,
+		"provision_token":            tfschema.GenSchemaProvisionTokenV2,
+		"role":                       tfschema.GenSchemaRoleV6,
+		"saml_connector":             tfschema.GenSchemaSAMLConnectorV2,
+		"session_recording_config":   tfschema.GenSchemaSessionRecordingConfigV2,
+		"trusted_cluster":            tfschema.GenSchemaTrustedClusterV2,
+		"user":                       tfschema.GenSchemaUserV2,
 	}
 
 	// hiddenFields are fields that are not outputted to the reference doc.
