@@ -1395,12 +1395,11 @@ JoinSessions specifies policies to allow users to join other sessions.
 
 KubernetesResources is the Kubernetes Resources this Role grants access to.
 
-|   Name    |       Type       | Required |                                     Description                                     |
-|-----------|------------------|----------|-------------------------------------------------------------------------------------|
-| kind      | string           |          | Kind specifies the Kubernetes Resource type. At the moment only "pod" is supported. |
-| name      | string           |          | Name is the resource name. It supports wildcards.                                   |
-| namespace | string           |          | Namespace is the resource namespace. It supports wildcards.                         |
-| verbs     | array of strings |          | Verbs are the allowed Kubernetes verbs for the following resource.                  |
+|   Name    |  Type  | Required |                                     Description                                     |
+|-----------|--------|----------|-------------------------------------------------------------------------------------|
+| kind      | string |          | Kind specifies the Kubernetes Resource type. At the moment only "pod" is supported. |
+| name      | string |          | Name is the resource name. It supports wildcards.                                   |
+| namespace | string |          | Namespace is the resource namespace. It supports wildcards.                         |
 
 ##### spec.allow.request
 
@@ -1550,12 +1549,11 @@ JoinSessions specifies policies to allow users to join other sessions.
 
 KubernetesResources is the Kubernetes Resources this Role grants access to.
 
-|   Name    |       Type       | Required |                                     Description                                     |
-|-----------|------------------|----------|-------------------------------------------------------------------------------------|
-| kind      | string           |          | Kind specifies the Kubernetes Resource type. At the moment only "pod" is supported. |
-| name      | string           |          | Name is the resource name. It supports wildcards.                                   |
-| namespace | string           |          | Namespace is the resource namespace. It supports wildcards.                         |
-| verbs     | array of strings |          | Verbs are the allowed Kubernetes verbs for the following resource.                  |
+|   Name    |  Type  | Required |                                     Description                                     |
+|-----------|--------|----------|-------------------------------------------------------------------------------------|
+| kind      | string |          | Kind specifies the Kubernetes Resource type. At the moment only "pod" is supported. |
+| name      | string |          | Name is the resource name. It supports wildcards.                                   |
+| namespace | string |          | Namespace is the resource namespace. It supports wildcards.                         |
 
 ##### spec.deny.request
 
@@ -1667,7 +1665,7 @@ Options is for OpenSSH options like agent forwarding.
 | port_forwarding            | bool             |          |                                                                                                                                                                            |
 | record_session             | object           |          | RecordDesktopSession indicates whether desktop access sessions should be recorded. It defaults to true unless explicitly set to false.                                     |
 | request_access             | string           |          | RequestAccess defines the access request strategy (optional|note|always) where optional is the default.                                                                    |
-| request_prompt             | string           |          | RequestPrompt is an optional message which tells users what they aught to request.                                                                                         |
+| request_prompt             | string           |          | RequestPrompt is an optional message which tells users what they aught to                                                                                                  |
 | require_session_mfa        | number           |          | RequireMFAType is the type of MFA requirement enforced for this role: 0:Off, 1:Session, 2:SessionAndHardwareKey, 3:HardwareKeyTouch                                        |
 | ssh_file_copy              | bool             |          |                                                                                                                                                                            |
 
