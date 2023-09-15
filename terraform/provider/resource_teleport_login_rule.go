@@ -55,6 +55,7 @@ func (r resourceTeleportLoginRuleType) NewResource(_ context.Context, p tfsdk.Pr
 
 // Create creates the LoginRule
 func (r resourceTeleportLoginRule) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	var err error
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
 	}
@@ -74,13 +75,15 @@ func (r resourceTeleportLoginRule) Create(ctx context.Context, req tfsdk.CreateR
 	}
 
 	
+	loginRuleResource := loginRule
 
-	_, err := r.p.Client.GetLoginRule(ctx, loginRule.Metadata.Name)
+	id := loginRuleResource.Metadata.Name
+
+	_, err = r.p.Client.GetLoginRule(ctx, id)
 	if !trace.IsNotFound(err) {
 		if err == nil {
-			n := loginRule.Metadata.Name
 			existErr := fmt.Sprintf("LoginRule exists in Teleport. Either remove it (tctl rm login_rule/%v)"+
-				" or import it to the existing state (terraform import teleport_login_rule.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_login_rule.%v %v)", id, id, id)
 
 			resp.Diagnostics.Append(diagFromErr("LoginRule exists in Teleport", trace.Errorf(existErr)))
 			return
@@ -92,17 +95,12 @@ func (r resourceTeleportLoginRule) Create(ctx context.Context, req tfsdk.CreateR
 
 	
 
-	_, err = r.p.Client.UpsertLoginRule(ctx, loginRule)
+	_, err = r.p.Client.UpsertLoginRule(ctx, loginRuleResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating LoginRule", trace.Wrap(err), "login_rule"))
 		return
 	}
-
-	id := loginRule.Metadata.Name
-	// Not really an inferface, just using the same name for easier templating.
-	var loginRuleI *loginrulev1.LoginRule
-	
-
+		var loginRuleI *loginrulev1.LoginRule
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
@@ -128,8 +126,9 @@ func (r resourceTeleportLoginRule) Create(ctx context.Context, req tfsdk.CreateR
 		return
 	}
 
-	loginRule = loginRuleI
+	loginRuleResource = loginRuleI
 	
+	loginRule = loginRuleResource
 
 	diags = schemav1.CopyLoginRuleToTerraform(ctx, loginRule, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -172,7 +171,6 @@ func (r resourceTeleportLoginRule) Read(ctx context.Context, req tfsdk.ReadResou
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading LoginRule", trace.Wrap(err), "login_rule"))
 		return
 	}
-
 	loginRule := loginRuleI
 	diags = schemav1.CopyLoginRuleToTerraform(ctx, loginRule, &state)
 	resp.Diagnostics.Append(diags...)
@@ -207,10 +205,11 @@ func (r resourceTeleportLoginRule) Update(ctx context.Context, req tfsdk.UpdateR
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	loginRuleResource := loginRule
 
-	name := loginRule.Metadata.Name
 
 	
+	name := loginRuleResource.Metadata.Name
 
 	loginRuleBefore, err := r.p.Client.GetLoginRule(ctx, name)
 	if err != nil {
@@ -218,27 +217,25 @@ func (r resourceTeleportLoginRule) Update(ctx context.Context, req tfsdk.UpdateR
 		return
 	}
 
-	_, err = r.p.Client.UpsertLoginRule(ctx, loginRule)
+	_, err = r.p.Client.UpsertLoginRule(ctx, loginRuleResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating LoginRule", err, "login_rule"))
 		return
 	}
-
-	
+		var loginRuleI *loginrulev1.LoginRule
 
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
 		tries = tries + 1
-		loginRule, err = r.p.Client.GetLoginRule(ctx, name)
+		loginRuleI, err = r.p.Client.GetLoginRule(ctx, name)
 		if err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading LoginRule", err, "login_rule"))
 			return
 		}
-		if loginRuleBefore.GetMetadata().ID != loginRule.GetMetadata().ID || false {
+		if loginRuleBefore.GetMetadata().ID != loginRuleI.GetMetadata().ID || false {
 			break
 		}
-		
 
 		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading LoginRule", trace.Wrap(err), "login_rule"))
@@ -251,6 +248,8 @@ func (r resourceTeleportLoginRule) Update(ctx context.Context, req tfsdk.UpdateR
 		}
 	}
 
+	loginRuleResource = loginRuleI
+	
 	diags = schemav1.CopyLoginRuleToTerraform(ctx, loginRule, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -290,6 +289,7 @@ func (r resourceTeleportLoginRule) ImportState(ctx context.Context, req tfsdk.Im
 		return
 	}
 
+	loginRuleResource := loginRule
 	
 
 	var state types.Object
@@ -300,13 +300,14 @@ func (r resourceTeleportLoginRule) ImportState(ctx context.Context, req tfsdk.Im
 		return
 	}
 
-	diags = schemav1.CopyLoginRuleToTerraform(ctx, loginRule, &state)
+	diags = schemav1.CopyLoginRuleToTerraform(ctx, loginRuleResource, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	id := loginRule.Metadata.Name
 
-	state.Attrs["id"] = types.String{Value: loginRule.Metadata.Name}
+	state.Attrs["id"] = types.String{Value: id}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 
 	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema"
+	
 	apitypes "github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 )
@@ -66,6 +67,7 @@ func (r dataSourceTeleportOIDCConnector) Read(ctx context.Context, req tfsdk.Rea
 	}
 
     var state types.Object
+	
 	oidcConnector := oidcConnectorI.(*apitypes.OIDCConnectorV3)
 	diags = tfschema.CopyOIDCConnectorV3ToTerraform(ctx, oidcConnector, &state)
 	resp.Diagnostics.Append(diags...)

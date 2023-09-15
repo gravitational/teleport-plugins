@@ -55,6 +55,7 @@ func (r resourceTeleportUserType) NewResource(_ context.Context, p tfsdk.Provide
 
 // Create creates the User
 func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	var err error
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
 	}
@@ -74,13 +75,15 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 	}
 
 	
+	userResource := user
 
-	_, err := r.p.Client.GetUser(user.Metadata.Name, false)
+	id := userResource.Metadata.Name
+
+	_, err = r.p.Client.GetUser(id, false)
 	if !trace.IsNotFound(err) {
 		if err == nil {
-			n := user.Metadata.Name
 			existErr := fmt.Sprintf("User exists in Teleport. Either remove it (tctl rm user/%v)"+
-				" or import it to the existing state (terraform import teleport_user.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_user.%v %v)", id, id, id)
 
 			resp.Diagnostics.Append(diagFromErr("User exists in Teleport", trace.Errorf(existErr)))
 			return
@@ -90,21 +93,20 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 		return
 	}
 
-	err = user.CheckAndSetDefaults()
+	err = userResource.CheckAndSetDefaults()
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error setting User defaults", trace.Wrap(err), "user"))
 		return
 	}
 
-	err = r.p.Client.CreateUser(ctx, user)
+	err = r.p.Client.CreateUser(ctx, userResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating User", trace.Wrap(err), "user"))
 		return
 	}
-
-	id := user.Metadata.Name
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var userI apitypes.User
-
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
@@ -130,11 +132,12 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 		return
 	}
 
-	user, ok := userI.(*apitypes.UserV2)
+	userResource, ok := userI.(*apitypes.UserV2)
 	if !ok {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Errorf("Can not convert %T to UserV2", userI), "user"))
 		return
 	}
+	user = userResource
 
 	diags = tfschema.CopyUserV2ToTerraform(ctx, user, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -177,7 +180,7 @@ func (r resourceTeleportUser) Read(ctx context.Context, req tfsdk.ReadResourceRe
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
 		return
 	}
-
+	
 	user := userI.(*apitypes.UserV2)
 	diags = tfschema.CopyUserV2ToTerraform(ctx, user, &state)
 	resp.Diagnostics.Append(diags...)
@@ -212,14 +215,14 @@ func (r resourceTeleportUser) Update(ctx context.Context, req tfsdk.UpdateResour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	userResource := user
 
-	name := user.Metadata.Name
 
-	err := user.CheckAndSetDefaults()
-	if err != nil {
+	if err := userResource.CheckAndSetDefaults(); err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating User", err, "user"))
 		return
 	}
+	name := userResource.Metadata.Name
 
 	userBefore, err := r.p.Client.GetUser(name, false)
 	if err != nil {
@@ -227,12 +230,13 @@ func (r resourceTeleportUser) Update(ctx context.Context, req tfsdk.UpdateResour
 		return
 	}
 
-	err = r.p.Client.UpdateUser(ctx, user)
+	err = r.p.Client.UpdateUser(ctx, userResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating User", err, "user"))
 		return
 	}
-
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var userI apitypes.User
 
 	tries := 0
@@ -259,7 +263,11 @@ func (r resourceTeleportUser) Update(ctx context.Context, req tfsdk.UpdateResour
 		}
 	}
 
-	user = userI.(*apitypes.UserV2)
+	userResource, ok := userI.(*apitypes.UserV2)
+	if !ok {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Errorf("Can not convert %T to UserV2", userI), "user"))
+		return
+	}
 	diags = tfschema.CopyUserV2ToTerraform(ctx, user, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -293,13 +301,14 @@ func (r resourceTeleportUser) Delete(ctx context.Context, req tfsdk.DeleteResour
 
 // ImportState imports User state
 func (r resourceTeleportUser) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	userI, err := r.p.Client.GetUser(req.ID, false)
+	user, err := r.p.Client.GetUser(req.ID, false)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
 		return
 	}
 
-	user := userI.(*apitypes.UserV2)
+	
+	userResource := user.(*apitypes.UserV2)
 
 	var state types.Object
 
@@ -309,13 +318,14 @@ func (r resourceTeleportUser) ImportState(ctx context.Context, req tfsdk.ImportR
 		return
 	}
 
-	diags = tfschema.CopyUserV2ToTerraform(ctx, user, &state)
+	diags = tfschema.CopyUserV2ToTerraform(ctx, userResource, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	id := userResource.GetName()
 
-	state.Attrs["id"] = types.String{Value: user.Metadata.Name}
+	state.Attrs["id"] = types.String{Value: id}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

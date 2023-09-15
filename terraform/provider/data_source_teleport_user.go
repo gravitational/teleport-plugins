@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 
 	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema"
+	
 	apitypes "github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 )
@@ -66,6 +67,7 @@ func (r dataSourceTeleportUser) Read(ctx context.Context, req tfsdk.ReadDataSour
 	}
 
     var state types.Object
+	
 	user := userI.(*apitypes.UserV2)
 	diags = tfschema.CopyUserV2ToTerraform(ctx, user, &state)
 	resp.Diagnostics.Append(diags...)

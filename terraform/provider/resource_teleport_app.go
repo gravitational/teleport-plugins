@@ -55,6 +55,7 @@ func (r resourceTeleportAppType) NewResource(_ context.Context, p tfsdk.Provider
 
 // Create creates the App
 func (r resourceTeleportApp) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	var err error
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
 	}
@@ -74,13 +75,15 @@ func (r resourceTeleportApp) Create(ctx context.Context, req tfsdk.CreateResourc
 	}
 
 	
+	appResource := app
 
-	_, err := r.p.Client.GetApp(ctx, app.Metadata.Name)
+	id := appResource.Metadata.Name
+
+	_, err = r.p.Client.GetApp(ctx, id)
 	if !trace.IsNotFound(err) {
 		if err == nil {
-			n := app.Metadata.Name
 			existErr := fmt.Sprintf("App exists in Teleport. Either remove it (tctl rm app/%v)"+
-				" or import it to the existing state (terraform import teleport_app.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_app.%v %v)", id, id, id)
 
 			resp.Diagnostics.Append(diagFromErr("App exists in Teleport", trace.Errorf(existErr)))
 			return
@@ -90,21 +93,20 @@ func (r resourceTeleportApp) Create(ctx context.Context, req tfsdk.CreateResourc
 		return
 	}
 
-	err = app.CheckAndSetDefaults()
+	err = appResource.CheckAndSetDefaults()
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error setting App defaults", trace.Wrap(err), "app"))
 		return
 	}
 
-	err = r.p.Client.CreateApp(ctx, app)
+	err = r.p.Client.CreateApp(ctx, appResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating App", trace.Wrap(err), "app"))
 		return
 	}
-
-	id := app.Metadata.Name
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var appI apitypes.Application
-
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
@@ -130,11 +132,12 @@ func (r resourceTeleportApp) Create(ctx context.Context, req tfsdk.CreateResourc
 		return
 	}
 
-	app, ok := appI.(*apitypes.AppV3)
+	appResource, ok := appI.(*apitypes.AppV3)
 	if !ok {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Errorf("Can not convert %T to AppV3", appI), "app"))
 		return
 	}
+	app = appResource
 
 	diags = tfschema.CopyAppV3ToTerraform(ctx, app, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -177,7 +180,7 @@ func (r resourceTeleportApp) Read(ctx context.Context, req tfsdk.ReadResourceReq
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(err), "app"))
 		return
 	}
-
+	
 	app := appI.(*apitypes.AppV3)
 	diags = tfschema.CopyAppV3ToTerraform(ctx, app, &state)
 	resp.Diagnostics.Append(diags...)
@@ -212,14 +215,14 @@ func (r resourceTeleportApp) Update(ctx context.Context, req tfsdk.UpdateResourc
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	appResource := app
 
-	name := app.Metadata.Name
 
-	err := app.CheckAndSetDefaults()
-	if err != nil {
+	if err := appResource.CheckAndSetDefaults(); err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating App", err, "app"))
 		return
 	}
+	name := appResource.Metadata.Name
 
 	appBefore, err := r.p.Client.GetApp(ctx, name)
 	if err != nil {
@@ -227,12 +230,13 @@ func (r resourceTeleportApp) Update(ctx context.Context, req tfsdk.UpdateResourc
 		return
 	}
 
-	err = r.p.Client.UpdateApp(ctx, app)
+	err = r.p.Client.UpdateApp(ctx, appResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating App", err, "app"))
 		return
 	}
-
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var appI apitypes.Application
 
 	tries := 0
@@ -259,7 +263,11 @@ func (r resourceTeleportApp) Update(ctx context.Context, req tfsdk.UpdateResourc
 		}
 	}
 
-	app = appI.(*apitypes.AppV3)
+	appResource, ok := appI.(*apitypes.AppV3)
+	if !ok {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Errorf("Can not convert %T to AppV3", appI), "app"))
+		return
+	}
 	diags = tfschema.CopyAppV3ToTerraform(ctx, app, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -293,13 +301,14 @@ func (r resourceTeleportApp) Delete(ctx context.Context, req tfsdk.DeleteResourc
 
 // ImportState imports App state
 func (r resourceTeleportApp) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	appI, err := r.p.Client.GetApp(ctx, req.ID)
+	app, err := r.p.Client.GetApp(ctx, req.ID)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(err), "app"))
 		return
 	}
 
-	app := appI.(*apitypes.AppV3)
+	
+	appResource := app.(*apitypes.AppV3)
 
 	var state types.Object
 
@@ -309,13 +318,14 @@ func (r resourceTeleportApp) ImportState(ctx context.Context, req tfsdk.ImportRe
 		return
 	}
 
-	diags = tfschema.CopyAppV3ToTerraform(ctx, app, &state)
+	diags = tfschema.CopyAppV3ToTerraform(ctx, appResource, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	id := appResource.GetName()
 
-	state.Attrs["id"] = types.String{Value: app.Metadata.Name}
+	state.Attrs["id"] = types.String{Value: id}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

@@ -79,11 +79,19 @@ endif
 		--terraform_out=config=protoc-gen-terraform-devicetrust.yaml:./tfschema \
 		teleport/legacy/types/device.proto
 
-	@go run ./gen/main.go
+	@protoc \
+		-I$(API_MOD_PATH)/proto \
+		-I$(PROTOBUF_MOD_PATH) \
+		--plugin=$(GENTERRAFORMPATH)/protoc-gen-terraform \
+		--terraform_out=config=protoc-gen-terraform-accesslist.yaml:./tfschema \
+		teleport/accesslist/v1/accesslist.proto
+
 	mv ./tfschema/github.com/gravitational/teleport/api/types/types_terraform.go ./tfschema/
 	mv ./tfschema/github.com/gravitational/teleport/api/gen/proto/go/teleport/loginrule/v1/loginrule_terraform.go ./tfschema/loginrule/v1/
+	mv ./tfschema/github.com/gravitational/teleport/api/gen/proto/go/teleport/accesslist/v1/accesslist_terraform.go ./tfschema/accesslist/v1/
 	mv ./tfschema/github.com/gravitational/teleport/api/types/device_terraform.go ./tfschema/devicetrust/v1/
 	rm -r ./tfschema/github.com/
+	@go run ./gen/main.go
 	@go run ./gen/main.go docs
 
 .PHONY: release

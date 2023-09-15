@@ -26,6 +26,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 
 	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema"
+	
 	apitypes "github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 )
@@ -66,6 +67,7 @@ func (r dataSourceTeleportTrustedCluster) Read(ctx context.Context, req tfsdk.Re
 	}
 
     var state types.Object
+	
 	trustedCluster := trustedClusterI.(*apitypes.TrustedClusterV2)
 	diags = tfschema.CopyTrustedClusterV2ToTerraform(ctx, trustedCluster, &state)
 	resp.Diagnostics.Append(diags...)

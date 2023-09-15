@@ -66,6 +66,7 @@ func (r dataSourceTeleportDeviceV1) Read(ctx context.Context, req tfsdk.ReadData
 
     var state types.Object
 	trustedDevice := trustedDeviceI
+	
 	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDevice, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

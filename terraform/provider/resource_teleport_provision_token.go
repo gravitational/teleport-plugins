@@ -58,6 +58,7 @@ func (r resourceTeleportProvisionTokenType) NewResource(_ context.Context, p tfs
 
 // Create creates the ProvisionToken
 func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	var err error
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
 	}
@@ -86,13 +87,15 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 		provisionToken.Metadata.Name = hex.EncodeToString(b)
 	}
 	
+	provisionTokenResource := provisionToken
 
-	_, err := r.p.Client.GetToken(ctx, provisionToken.Metadata.Name)
+	id := provisionTokenResource.Metadata.Name
+
+	_, err = r.p.Client.GetToken(ctx, id)
 	if !trace.IsNotFound(err) {
 		if err == nil {
-			n := provisionToken.Metadata.Name
 			existErr := fmt.Sprintf("ProvisionToken exists in Teleport. Either remove it (tctl rm token/%v)"+
-				" or import it to the existing state (terraform import teleport_provision_token.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_provision_token.%v %v)", id, id, id)
 
 			resp.Diagnostics.Append(diagFromErr("ProvisionToken exists in Teleport", trace.Errorf(existErr)))
 			return
@@ -102,21 +105,20 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 		return
 	}
 
-	err = provisionToken.CheckAndSetDefaults()
+	err = provisionTokenResource.CheckAndSetDefaults()
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error setting ProvisionToken defaults", trace.Wrap(err), "token"))
 		return
 	}
 
-	err = r.p.Client.UpsertToken(ctx, provisionToken)
+	err = r.p.Client.UpsertToken(ctx, provisionTokenResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating ProvisionToken", trace.Wrap(err), "token"))
 		return
 	}
-
-	id := provisionToken.Metadata.Name
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var provisionTokenI apitypes.ProvisionToken
-
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
@@ -142,11 +144,12 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 		return
 	}
 
-	provisionToken, ok := provisionTokenI.(*apitypes.ProvisionTokenV2)
+	provisionTokenResource, ok := provisionTokenI.(*apitypes.ProvisionTokenV2)
 	if !ok {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Errorf("Can not convert %T to ProvisionTokenV2", provisionTokenI), "token"))
 		return
 	}
+	provisionToken = provisionTokenResource
 
 	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, provisionToken, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -189,7 +192,7 @@ func (r resourceTeleportProvisionToken) Read(ctx context.Context, req tfsdk.Read
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))
 		return
 	}
-
+	
 	provisionToken := provisionTokenI.(*apitypes.ProvisionTokenV2)
 	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, provisionToken, &state)
 	resp.Diagnostics.Append(diags...)
@@ -224,14 +227,14 @@ func (r resourceTeleportProvisionToken) Update(ctx context.Context, req tfsdk.Up
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	provisionTokenResource := provisionToken
 
-	name := provisionToken.Metadata.Name
 
-	err := provisionToken.CheckAndSetDefaults()
-	if err != nil {
+	if err := provisionTokenResource.CheckAndSetDefaults(); err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating ProvisionToken", err, "token"))
 		return
 	}
+	name := provisionTokenResource.Metadata.Name
 
 	provisionTokenBefore, err := r.p.Client.GetToken(ctx, name)
 	if err != nil {
@@ -239,12 +242,13 @@ func (r resourceTeleportProvisionToken) Update(ctx context.Context, req tfsdk.Up
 		return
 	}
 
-	err = r.p.Client.UpsertToken(ctx, provisionToken)
+	err = r.p.Client.UpsertToken(ctx, provisionTokenResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating ProvisionToken", err, "token"))
 		return
 	}
-
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var provisionTokenI apitypes.ProvisionToken
 
 	tries := 0
@@ -271,7 +275,11 @@ func (r resourceTeleportProvisionToken) Update(ctx context.Context, req tfsdk.Up
 		}
 	}
 
-	provisionToken = provisionTokenI.(*apitypes.ProvisionTokenV2)
+	provisionTokenResource, ok := provisionTokenI.(*apitypes.ProvisionTokenV2)
+	if !ok {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Errorf("Can not convert %T to ProvisionTokenV2", provisionTokenI), "token"))
+		return
+	}
 	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, provisionToken, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -305,13 +313,14 @@ func (r resourceTeleportProvisionToken) Delete(ctx context.Context, req tfsdk.De
 
 // ImportState imports ProvisionToken state
 func (r resourceTeleportProvisionToken) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	provisionTokenI, err := r.p.Client.GetToken(ctx, req.ID)
+	provisionToken, err := r.p.Client.GetToken(ctx, req.ID)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))
 		return
 	}
 
-	provisionToken := provisionTokenI.(*apitypes.ProvisionTokenV2)
+	
+	provisionTokenResource := provisionToken.(*apitypes.ProvisionTokenV2)
 
 	var state types.Object
 
@@ -321,13 +330,14 @@ func (r resourceTeleportProvisionToken) ImportState(ctx context.Context, req tfs
 		return
 	}
 
-	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, provisionToken, &state)
+	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, provisionTokenResource, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	id := provisionTokenResource.GetName()
 
-	state.Attrs["id"] = types.String{Value: provisionToken.Metadata.Name}
+	state.Attrs["id"] = types.String{Value: id}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

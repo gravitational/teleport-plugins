@@ -55,6 +55,7 @@ func (r resourceTeleportOIDCConnectorType) NewResource(_ context.Context, p tfsd
 
 // Create creates the OIDCConnector
 func (r resourceTeleportOIDCConnector) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	var err error
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
 	}
@@ -74,13 +75,15 @@ func (r resourceTeleportOIDCConnector) Create(ctx context.Context, req tfsdk.Cre
 	}
 
 	
+	oidcConnectorResource := oidcConnector
 
-	_, err := r.p.Client.GetOIDCConnector(ctx, oidcConnector.Metadata.Name, true)
+	id := oidcConnectorResource.Metadata.Name
+
+	_, err = r.p.Client.GetOIDCConnector(ctx, id, true)
 	if !trace.IsNotFound(err) {
 		if err == nil {
-			n := oidcConnector.Metadata.Name
 			existErr := fmt.Sprintf("OIDCConnector exists in Teleport. Either remove it (tctl rm oidc/%v)"+
-				" or import it to the existing state (terraform import teleport_oidc_connector.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_oidc_connector.%v %v)", id, id, id)
 
 			resp.Diagnostics.Append(diagFromErr("OIDCConnector exists in Teleport", trace.Errorf(existErr)))
 			return
@@ -90,21 +93,20 @@ func (r resourceTeleportOIDCConnector) Create(ctx context.Context, req tfsdk.Cre
 		return
 	}
 
-	err = oidcConnector.CheckAndSetDefaults()
+	err = oidcConnectorResource.CheckAndSetDefaults()
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error setting OIDCConnector defaults", trace.Wrap(err), "oidc"))
 		return
 	}
 
-	err = r.p.Client.UpsertOIDCConnector(ctx, oidcConnector)
+	err = r.p.Client.UpsertOIDCConnector(ctx, oidcConnectorResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating OIDCConnector", trace.Wrap(err), "oidc"))
 		return
 	}
-
-	id := oidcConnector.Metadata.Name
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var oidcConnectorI apitypes.OIDCConnector
-
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
@@ -130,11 +132,12 @@ func (r resourceTeleportOIDCConnector) Create(ctx context.Context, req tfsdk.Cre
 		return
 	}
 
-	oidcConnector, ok := oidcConnectorI.(*apitypes.OIDCConnectorV3)
+	oidcConnectorResource, ok := oidcConnectorI.(*apitypes.OIDCConnectorV3)
 	if !ok {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Errorf("Can not convert %T to OIDCConnectorV3", oidcConnectorI), "oidc"))
 		return
 	}
+	oidcConnector = oidcConnectorResource
 
 	diags = tfschema.CopyOIDCConnectorV3ToTerraform(ctx, oidcConnector, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -177,7 +180,7 @@ func (r resourceTeleportOIDCConnector) Read(ctx context.Context, req tfsdk.ReadR
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(err), "oidc"))
 		return
 	}
-
+	
 	oidcConnector := oidcConnectorI.(*apitypes.OIDCConnectorV3)
 	diags = tfschema.CopyOIDCConnectorV3ToTerraform(ctx, oidcConnector, &state)
 	resp.Diagnostics.Append(diags...)
@@ -212,14 +215,14 @@ func (r resourceTeleportOIDCConnector) Update(ctx context.Context, req tfsdk.Upd
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	oidcConnectorResource := oidcConnector
 
-	name := oidcConnector.Metadata.Name
 
-	err := oidcConnector.CheckAndSetDefaults()
-	if err != nil {
+	if err := oidcConnectorResource.CheckAndSetDefaults(); err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating OIDCConnector", err, "oidc"))
 		return
 	}
+	name := oidcConnectorResource.Metadata.Name
 
 	oidcConnectorBefore, err := r.p.Client.GetOIDCConnector(ctx, name, true)
 	if err != nil {
@@ -227,12 +230,13 @@ func (r resourceTeleportOIDCConnector) Update(ctx context.Context, req tfsdk.Upd
 		return
 	}
 
-	err = r.p.Client.UpsertOIDCConnector(ctx, oidcConnector)
+	err = r.p.Client.UpsertOIDCConnector(ctx, oidcConnectorResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating OIDCConnector", err, "oidc"))
 		return
 	}
-
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var oidcConnectorI apitypes.OIDCConnector
 
 	tries := 0
@@ -259,7 +263,11 @@ func (r resourceTeleportOIDCConnector) Update(ctx context.Context, req tfsdk.Upd
 		}
 	}
 
-	oidcConnector = oidcConnectorI.(*apitypes.OIDCConnectorV3)
+	oidcConnectorResource, ok := oidcConnectorI.(*apitypes.OIDCConnectorV3)
+	if !ok {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Errorf("Can not convert %T to OIDCConnectorV3", oidcConnectorI), "oidc"))
+		return
+	}
 	diags = tfschema.CopyOIDCConnectorV3ToTerraform(ctx, oidcConnector, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -293,13 +301,14 @@ func (r resourceTeleportOIDCConnector) Delete(ctx context.Context, req tfsdk.Del
 
 // ImportState imports OIDCConnector state
 func (r resourceTeleportOIDCConnector) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	oidcConnectorI, err := r.p.Client.GetOIDCConnector(ctx, req.ID, true)
+	oidcConnector, err := r.p.Client.GetOIDCConnector(ctx, req.ID, true)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(err), "oidc"))
 		return
 	}
 
-	oidcConnector := oidcConnectorI.(*apitypes.OIDCConnectorV3)
+	
+	oidcConnectorResource := oidcConnector.(*apitypes.OIDCConnectorV3)
 
 	var state types.Object
 
@@ -309,13 +318,14 @@ func (r resourceTeleportOIDCConnector) ImportState(ctx context.Context, req tfsd
 		return
 	}
 
-	diags = tfschema.CopyOIDCConnectorV3ToTerraform(ctx, oidcConnector, &state)
+	diags = tfschema.CopyOIDCConnectorV3ToTerraform(ctx, oidcConnectorResource, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	id := oidcConnectorResource.GetName()
 
-	state.Attrs["id"] = types.String{Value: oidcConnector.Metadata.Name}
+	state.Attrs["id"] = types.String{Value: id}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

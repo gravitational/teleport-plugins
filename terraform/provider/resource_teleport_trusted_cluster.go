@@ -55,6 +55,7 @@ func (r resourceTeleportTrustedClusterType) NewResource(_ context.Context, p tfs
 
 // Create creates the TrustedCluster
 func (r resourceTeleportTrustedCluster) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	var err error
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
 	}
@@ -74,13 +75,15 @@ func (r resourceTeleportTrustedCluster) Create(ctx context.Context, req tfsdk.Cr
 	}
 
 	
+	trustedClusterResource := trustedCluster
 
-	_, err := r.p.Client.GetTrustedCluster(ctx, trustedCluster.Metadata.Name)
+	id := trustedClusterResource.Metadata.Name
+
+	_, err = r.p.Client.GetTrustedCluster(ctx, id)
 	if !trace.IsNotFound(err) {
 		if err == nil {
-			n := trustedCluster.Metadata.Name
 			existErr := fmt.Sprintf("TrustedCluster exists in Teleport. Either remove it (tctl rm trusted_cluster/%v)"+
-				" or import it to the existing state (terraform import teleport_trusted_cluster.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_trusted_cluster.%v %v)", id, id, id)
 
 			resp.Diagnostics.Append(diagFromErr("TrustedCluster exists in Teleport", trace.Errorf(existErr)))
 			return
@@ -90,21 +93,20 @@ func (r resourceTeleportTrustedCluster) Create(ctx context.Context, req tfsdk.Cr
 		return
 	}
 
-	err = trustedCluster.CheckAndSetDefaults()
+	err = trustedClusterResource.CheckAndSetDefaults()
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error setting TrustedCluster defaults", trace.Wrap(err), "trusted_cluster"))
 		return
 	}
 
-	_, err = r.p.Client.UpsertTrustedCluster(ctx, trustedCluster)
+	_, err = r.p.Client.UpsertTrustedCluster(ctx, trustedClusterResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating TrustedCluster", trace.Wrap(err), "trusted_cluster"))
 		return
 	}
-
-	id := trustedCluster.Metadata.Name
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var trustedClusterI apitypes.TrustedCluster
-
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
@@ -130,11 +132,12 @@ func (r resourceTeleportTrustedCluster) Create(ctx context.Context, req tfsdk.Cr
 		return
 	}
 
-	trustedCluster, ok := trustedClusterI.(*apitypes.TrustedClusterV2)
+	trustedClusterResource, ok := trustedClusterI.(*apitypes.TrustedClusterV2)
 	if !ok {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Errorf("Can not convert %T to TrustedClusterV2", trustedClusterI), "trusted_cluster"))
 		return
 	}
+	trustedCluster = trustedClusterResource
 
 	diags = tfschema.CopyTrustedClusterV2ToTerraform(ctx, trustedCluster, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -177,7 +180,7 @@ func (r resourceTeleportTrustedCluster) Read(ctx context.Context, req tfsdk.Read
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))
 		return
 	}
-
+	
 	trustedCluster := trustedClusterI.(*apitypes.TrustedClusterV2)
 	diags = tfschema.CopyTrustedClusterV2ToTerraform(ctx, trustedCluster, &state)
 	resp.Diagnostics.Append(diags...)
@@ -212,14 +215,14 @@ func (r resourceTeleportTrustedCluster) Update(ctx context.Context, req tfsdk.Up
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	trustedClusterResource := trustedCluster
 
-	name := trustedCluster.Metadata.Name
 
-	err := trustedCluster.CheckAndSetDefaults()
-	if err != nil {
+	if err := trustedClusterResource.CheckAndSetDefaults(); err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating TrustedCluster", err, "trusted_cluster"))
 		return
 	}
+	name := trustedClusterResource.Metadata.Name
 
 	trustedClusterBefore, err := r.p.Client.GetTrustedCluster(ctx, name)
 	if err != nil {
@@ -227,12 +230,13 @@ func (r resourceTeleportTrustedCluster) Update(ctx context.Context, req tfsdk.Up
 		return
 	}
 
-	_, err = r.p.Client.UpsertTrustedCluster(ctx, trustedCluster)
+	_, err = r.p.Client.UpsertTrustedCluster(ctx, trustedClusterResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating TrustedCluster", err, "trusted_cluster"))
 		return
 	}
-
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var trustedClusterI apitypes.TrustedCluster
 
 	tries := 0
@@ -259,7 +263,11 @@ func (r resourceTeleportTrustedCluster) Update(ctx context.Context, req tfsdk.Up
 		}
 	}
 
-	trustedCluster = trustedClusterI.(*apitypes.TrustedClusterV2)
+	trustedClusterResource, ok := trustedClusterI.(*apitypes.TrustedClusterV2)
+	if !ok {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Errorf("Can not convert %T to TrustedClusterV2", trustedClusterI), "trusted_cluster"))
+		return
+	}
 	diags = tfschema.CopyTrustedClusterV2ToTerraform(ctx, trustedCluster, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -293,13 +301,14 @@ func (r resourceTeleportTrustedCluster) Delete(ctx context.Context, req tfsdk.De
 
 // ImportState imports TrustedCluster state
 func (r resourceTeleportTrustedCluster) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	trustedClusterI, err := r.p.Client.GetTrustedCluster(ctx, req.ID)
+	trustedCluster, err := r.p.Client.GetTrustedCluster(ctx, req.ID)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))
 		return
 	}
 
-	trustedCluster := trustedClusterI.(*apitypes.TrustedClusterV2)
+	
+	trustedClusterResource := trustedCluster.(*apitypes.TrustedClusterV2)
 
 	var state types.Object
 
@@ -309,13 +318,14 @@ func (r resourceTeleportTrustedCluster) ImportState(ctx context.Context, req tfs
 		return
 	}
 
-	diags = tfschema.CopyTrustedClusterV2ToTerraform(ctx, trustedCluster, &state)
+	diags = tfschema.CopyTrustedClusterV2ToTerraform(ctx, trustedClusterResource, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	id := trustedClusterResource.GetName()
 
-	state.Attrs["id"] = types.String{Value: trustedCluster.Metadata.Name}
+	state.Attrs["id"] = types.String{Value: id}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

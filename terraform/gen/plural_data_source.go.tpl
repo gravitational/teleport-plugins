@@ -27,7 +27,11 @@ import (
 
 	{{.SchemaPackage}} "{{.SchemaPackagePath}}"
 	{{if not .IsPlainStruct -}}
+	{{- if .ConvertPackagePath}}
+	convert "{{.ConvertPackagePath}}"
+	{{ else }}
 	{{.ProtoPackage}} "{{.ProtoPackagePath}}"
+	{{- end}}
 	{{end -}}
 	"github.com/gravitational/trace"
 )
@@ -55,7 +59,11 @@ func (r dataSourceTeleport{{.Name}}Type) NewDataSource(_ context.Context, p tfsd
 // Read reads teleport {{.Name}}
 func (r dataSourceTeleport{{.Name}}) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
 	var id types.String
+	{{- if .ConvertPackagePath}}
+	diags := req.Config.GetAttribute(ctx, path.Root("header").AtName("metadata").AtName("name"), &id)
+	{{- else }}
 	diags := req.Config.GetAttribute(ctx, path.Root("metadata").AtName("name"), &id)
+	{{- end}}
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -70,9 +78,11 @@ func (r dataSourceTeleport{{.Name}}) Read(ctx context.Context, req tfsdk.ReadDat
     var state types.Object
 	{{if .IsPlainStruct -}}
 	{{.VarName}} := {{.VarName}}I
-	{{else -}}
+	{{else if .ConvertPackagePath -}}
+	{{.VarName}} := convert.ToProto({{.VarName}}I)
+	{{else}}
 	{{.VarName}} := {{.VarName}}I.(*{{.ProtoPackage}}.{{.TypeName}})
-	{{end -}}
+	{{- end}}
 	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, {{.VarName}}, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

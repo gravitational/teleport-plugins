@@ -56,6 +56,7 @@ func (r resourceTeleportDeviceV1Type) NewResource(_ context.Context, p tfsdk.Pro
 
 // Create creates the DeviceV1
 func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	var err error
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
 	}
@@ -78,13 +79,15 @@ func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateRe
 		trustedDevice.Metadata.Name = uuid.NewString()
 	}
 	
+	trustedDeviceResource := trustedDevice
 
-	_, err := r.p.Client.GetDeviceResource(ctx, trustedDevice.Metadata.Name)
+	id := trustedDeviceResource.Metadata.Name
+
+	_, err = r.p.Client.GetDeviceResource(ctx, id)
 	if !trace.IsNotFound(err) {
 		if err == nil {
-			n := trustedDevice.Metadata.Name
 			existErr := fmt.Sprintf("DeviceV1 exists in Teleport. Either remove it (tctl rm device/%v)"+
-				" or import it to the existing state (terraform import teleport_device_trust.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_device_trust.%v %v)", id, id, id)
 
 			resp.Diagnostics.Append(diagFromErr("DeviceV1 exists in Teleport", trace.Errorf(existErr)))
 			return
@@ -96,17 +99,12 @@ func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateRe
 
 	
 
-	_, err = r.p.Client.UpsertDeviceResource(ctx, trustedDevice)
+	_, err = r.p.Client.UpsertDeviceResource(ctx, trustedDeviceResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating DeviceV1", trace.Wrap(err), "device"))
 		return
 	}
-
-	id := trustedDevice.Metadata.Name
-	// Not really an inferface, just using the same name for easier templating.
-	var trustedDeviceI *apitypes.DeviceV1
-	
-
+		var trustedDeviceI *apitypes.DeviceV1
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
@@ -132,8 +130,9 @@ func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateRe
 		return
 	}
 
-	trustedDevice = trustedDeviceI
+	trustedDeviceResource = trustedDeviceI
 	
+	trustedDevice = trustedDeviceResource
 
 	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDevice, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -176,7 +175,6 @@ func (r resourceTeleportDeviceV1) Read(ctx context.Context, req tfsdk.ReadResour
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading DeviceV1", trace.Wrap(err), "device"))
 		return
 	}
-
 	trustedDevice := trustedDeviceI
 	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDevice, &state)
 	resp.Diagnostics.Append(diags...)
@@ -211,10 +209,11 @@ func (r resourceTeleportDeviceV1) Update(ctx context.Context, req tfsdk.UpdateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	trustedDeviceResource := trustedDevice
 
-	name := trustedDevice.Metadata.Name
 
 	
+	name := trustedDeviceResource.Metadata.Name
 
 	trustedDeviceBefore, err := r.p.Client.GetDeviceResource(ctx, name)
 	if err != nil {
@@ -222,27 +221,25 @@ func (r resourceTeleportDeviceV1) Update(ctx context.Context, req tfsdk.UpdateRe
 		return
 	}
 
-	_, err = r.p.Client.UpsertDeviceResource(ctx, trustedDevice)
+	_, err = r.p.Client.UpsertDeviceResource(ctx, trustedDeviceResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating DeviceV1", err, "device"))
 		return
 	}
-
-	
+		var trustedDeviceI *apitypes.DeviceV1
 
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
 		tries = tries + 1
-		trustedDevice, err = r.p.Client.GetDeviceResource(ctx, name)
+		trustedDeviceI, err = r.p.Client.GetDeviceResource(ctx, name)
 		if err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading DeviceV1", err, "device"))
 			return
 		}
-		if trustedDeviceBefore.GetMetadata().ID != trustedDevice.GetMetadata().ID || true {
+		if trustedDeviceBefore.GetMetadata().ID != trustedDeviceI.GetMetadata().ID || true {
 			break
 		}
-		
 
 		if err := backoff.Do(ctx); err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading DeviceV1", trace.Wrap(err), "device"))
@@ -255,6 +252,8 @@ func (r resourceTeleportDeviceV1) Update(ctx context.Context, req tfsdk.UpdateRe
 		}
 	}
 
+	trustedDeviceResource = trustedDeviceI
+	
 	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDevice, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -294,6 +293,7 @@ func (r resourceTeleportDeviceV1) ImportState(ctx context.Context, req tfsdk.Imp
 		return
 	}
 
+	trustedDeviceResource := trustedDevice
 	
 
 	var state types.Object
@@ -304,13 +304,14 @@ func (r resourceTeleportDeviceV1) ImportState(ctx context.Context, req tfsdk.Imp
 		return
 	}
 
-	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDevice, &state)
+	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDeviceResource, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	id := trustedDevice.Metadata.Name
 
-	state.Attrs["id"] = types.String{Value: trustedDevice.Metadata.Name}
+	state.Attrs["id"] = types.String{Value: id}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

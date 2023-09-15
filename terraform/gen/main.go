@@ -35,6 +35,7 @@ import (
 
 	"github.com/gravitational/teleport-plugins/terraform/provider"
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
+	accesslistSchema "github.com/gravitational/teleport-plugins/terraform/tfschema/accesslist/v1"
 	devicetrustSchema "github.com/gravitational/teleport-plugins/terraform/tfschema/devicetrust/v1"
 	loginruleSchema "github.com/gravitational/teleport-plugins/terraform/tfschema/loginrule/v1"
 )
@@ -93,6 +94,8 @@ type payload struct {
 	// IsPlainStruct states whether the resource type used by the API methods
 	// for this resource is a plain struct, rather than an interface.
 	IsPlainStruct bool
+	// HasCheckAndSetDefaults indicates whether the resource type has the CheckAndSetDefaults method
+	HasCheckAndSetDefaults bool
 	// ExtraImports contains a list of imports that are being used.
 	ExtraImports []string
 	// TerraformResourceType represents the resource type in Terraform code.
@@ -101,6 +104,8 @@ type payload struct {
 	TerraformResourceType string
 	// WithNonce is used to force upsert behavior for nonce protected values.
 	WithNonce bool
+	// ConvertPackagePath is the path of the package doing the conversion between protobuf and the go types.
+	ConvertPackagePath string
 }
 
 func (p *payload) CheckAndSetDefaults() error {
@@ -132,195 +137,208 @@ const (
 
 var (
 	app = payload{
-		Name:                  "App",
-		TypeName:              "AppV3",
-		VarName:               "app",
-		IfaceName:             "Application",
-		GetMethod:             "GetApp",
-		CreateMethod:          "CreateApp",
-		UpdateMethod:          "UpdateApp",
-		DeleteMethod:          "DeleteApp",
-		ID:                    `app.Metadata.Name`,
-		Kind:                  "app",
-		HasStaticID:           false,
-		TerraformResourceType: "teleport_app",
+		Name:                   "App",
+		TypeName:               "AppV3",
+		VarName:                "app",
+		IfaceName:              "Application",
+		GetMethod:              "GetApp",
+		CreateMethod:           "CreateApp",
+		UpdateMethod:           "UpdateApp",
+		DeleteMethod:           "DeleteApp",
+		ID:                     `app.Metadata.Name`,
+		Kind:                   "app",
+		HasStaticID:            false,
+		TerraformResourceType:  "teleport_app",
+		HasCheckAndSetDefaults: true,
 	}
 
 	authPreference = payload{
-		Name:                  "AuthPreference",
-		TypeName:              "AuthPreferenceV2",
-		VarName:               "authPreference",
-		GetMethod:             "GetAuthPreference",
-		CreateMethod:          "SetAuthPreference",
-		UpdateMethod:          "SetAuthPreference",
-		DeleteMethod:          "ResetAuthPreference",
-		ID:                    `"auth_preference"`,
-		Kind:                  "cluster_auth_preference",
-		HasStaticID:           false,
-		TerraformResourceType: "teleport_auth_preference",
+		Name:                   "AuthPreference",
+		TypeName:               "AuthPreferenceV2",
+		VarName:                "authPreference",
+		GetMethod:              "GetAuthPreference",
+		CreateMethod:           "SetAuthPreference",
+		UpdateMethod:           "SetAuthPreference",
+		DeleteMethod:           "ResetAuthPreference",
+		ID:                     `"auth_preference"`,
+		Kind:                   "cluster_auth_preference",
+		HasStaticID:            false,
+		TerraformResourceType:  "teleport_auth_preference",
+		HasCheckAndSetDefaults: true,
 	}
 
 	clusterMaintenance = payload{
-		Name:                  "ClusterMaintenanceConfig",
-		TypeName:              "ClusterMaintenanceConfigV1",
-		VarName:               "clusterMaintenanceConfig",
-		GetMethod:             "GetClusterMaintenanceConfig",
-		CreateMethod:          "UpdateClusterMaintenanceConfig",
-		UpdateMethod:          "UpdateClusterMaintenanceConfig",
-		DeleteMethod:          "DeleteClusterMaintenanceConfig",
-		ID:                    `"cluster_maintenance_config"`,
-		Kind:                  "cluster_maintenance_config",
-		HasStaticID:           true,
-		TerraformResourceType: "teleport_cluster_maintenance_config",
-		WithNonce:             true,
+		Name:                   "ClusterMaintenanceConfig",
+		TypeName:               "ClusterMaintenanceConfigV1",
+		VarName:                "clusterMaintenanceConfig",
+		GetMethod:              "GetClusterMaintenanceConfig",
+		CreateMethod:           "UpdateClusterMaintenanceConfig",
+		UpdateMethod:           "UpdateClusterMaintenanceConfig",
+		DeleteMethod:           "DeleteClusterMaintenanceConfig",
+		ID:                     `"cluster_maintenance_config"`,
+		Kind:                   "cluster_maintenance_config",
+		HasStaticID:            true,
+		TerraformResourceType:  "teleport_cluster_maintenance_config",
+		WithNonce:              true,
+		HasCheckAndSetDefaults: true,
 	}
 
 	clusterNetworking = payload{
-		Name:                  "ClusterNetworkingConfig",
-		TypeName:              "ClusterNetworkingConfigV2",
-		VarName:               "clusterNetworkingConfig",
-		GetMethod:             "GetClusterNetworkingConfig",
-		CreateMethod:          "SetClusterNetworkingConfig",
-		UpdateMethod:          "SetClusterNetworkingConfig",
-		DeleteMethod:          "ResetClusterNetworkingConfig",
-		ID:                    `"cluster_networking_config"`,
-		Kind:                  "cluster_networking_config",
-		HasStaticID:           false,
-		TerraformResourceType: "teleport_cluster_networking_config",
+		Name:                   "ClusterNetworkingConfig",
+		TypeName:               "ClusterNetworkingConfigV2",
+		VarName:                "clusterNetworkingConfig",
+		GetMethod:              "GetClusterNetworkingConfig",
+		CreateMethod:           "SetClusterNetworkingConfig",
+		UpdateMethod:           "SetClusterNetworkingConfig",
+		DeleteMethod:           "ResetClusterNetworkingConfig",
+		ID:                     `"cluster_networking_config"`,
+		Kind:                   "cluster_networking_config",
+		HasStaticID:            false,
+		TerraformResourceType:  "teleport_cluster_networking_config",
+		HasCheckAndSetDefaults: true,
 	}
 
 	database = payload{
-		Name:                  "Database",
-		TypeName:              "DatabaseV3",
-		VarName:               "database",
-		GetMethod:             "GetDatabase",
-		CreateMethod:          "CreateDatabase",
-		UpdateMethod:          "UpdateDatabase",
-		DeleteMethod:          "DeleteDatabase",
-		ID:                    `database.Metadata.Name`,
-		Kind:                  "db",
-		HasStaticID:           false,
-		TerraformResourceType: "teleport_database",
+		Name:                   "Database",
+		TypeName:               "DatabaseV3",
+		VarName:                "database",
+		GetMethod:              "GetDatabase",
+		CreateMethod:           "CreateDatabase",
+		UpdateMethod:           "UpdateDatabase",
+		DeleteMethod:           "DeleteDatabase",
+		ID:                     `database.Metadata.Name`,
+		Kind:                   "db",
+		HasStaticID:            false,
+		TerraformResourceType:  "teleport_database",
+		HasCheckAndSetDefaults: true,
 	}
 
 	githubConnector = payload{
-		Name:                  "GithubConnector",
-		TypeName:              "GithubConnectorV3",
-		VarName:               "githubConnector",
-		GetMethod:             "GetGithubConnector",
-		CreateMethod:          "UpsertGithubConnector",
-		UpdateMethod:          "UpsertGithubConnector",
-		DeleteMethod:          "DeleteGithubConnector",
-		WithSecrets:           "true",
-		ID:                    "githubConnector.Metadata.Name",
-		Kind:                  "github",
-		HasStaticID:           true,
-		TerraformResourceType: "teleport_github_connector",
+		Name:                   "GithubConnector",
+		TypeName:               "GithubConnectorV3",
+		VarName:                "githubConnector",
+		GetMethod:              "GetGithubConnector",
+		CreateMethod:           "UpsertGithubConnector",
+		UpdateMethod:           "UpsertGithubConnector",
+		DeleteMethod:           "DeleteGithubConnector",
+		WithSecrets:            "true",
+		ID:                     "githubConnector.Metadata.Name",
+		Kind:                   "github",
+		HasStaticID:            true,
+		TerraformResourceType:  "teleport_github_connector",
+		HasCheckAndSetDefaults: true,
 	}
 
 	oidcConnector = payload{
-		Name:                  "OIDCConnector",
-		TypeName:              "OIDCConnectorV3",
-		VarName:               "oidcConnector",
-		GetMethod:             "GetOIDCConnector",
-		CreateMethod:          "UpsertOIDCConnector",
-		UpdateMethod:          "UpsertOIDCConnector",
-		DeleteMethod:          "DeleteOIDCConnector",
-		WithSecrets:           "true",
-		ID:                    "oidcConnector.Metadata.Name",
-		Kind:                  "oidc",
-		HasStaticID:           true,
-		TerraformResourceType: "teleport_oidc_connector",
+		Name:                   "OIDCConnector",
+		TypeName:               "OIDCConnectorV3",
+		VarName:                "oidcConnector",
+		GetMethod:              "GetOIDCConnector",
+		CreateMethod:           "UpsertOIDCConnector",
+		UpdateMethod:           "UpsertOIDCConnector",
+		DeleteMethod:           "DeleteOIDCConnector",
+		WithSecrets:            "true",
+		ID:                     "oidcConnector.Metadata.Name",
+		Kind:                   "oidc",
+		HasStaticID:            true,
+		TerraformResourceType:  "teleport_oidc_connector",
+		HasCheckAndSetDefaults: true,
 	}
 
 	samlConnector = payload{
-		Name:                  "SAMLConnector",
-		TypeName:              "SAMLConnectorV2",
-		VarName:               "samlConnector",
-		GetMethod:             "GetSAMLConnector",
-		CreateMethod:          "UpsertSAMLConnector",
-		UpdateMethod:          "UpsertSAMLConnector",
-		DeleteMethod:          "DeleteSAMLConnector",
-		WithSecrets:           "true",
-		ID:                    "samlConnector.Metadata.Name",
-		Kind:                  "saml",
-		HasStaticID:           true,
-		TerraformResourceType: "teleport_saml_connector",
+		Name:                   "SAMLConnector",
+		TypeName:               "SAMLConnectorV2",
+		VarName:                "samlConnector",
+		GetMethod:              "GetSAMLConnector",
+		CreateMethod:           "UpsertSAMLConnector",
+		UpdateMethod:           "UpsertSAMLConnector",
+		DeleteMethod:           "DeleteSAMLConnector",
+		WithSecrets:            "true",
+		ID:                     "samlConnector.Metadata.Name",
+		Kind:                   "saml",
+		HasStaticID:            true,
+		TerraformResourceType:  "teleport_saml_connector",
+		HasCheckAndSetDefaults: true,
 	}
 
 	provisionToken = payload{
-		Name:                  "ProvisionToken",
-		TypeName:              "ProvisionTokenV2",
-		VarName:               "provisionToken",
-		GetMethod:             "GetToken",
-		CreateMethod:          "UpsertToken",
-		UpdateMethod:          "UpsertToken",
-		DeleteMethod:          "DeleteToken",
-		ID:                    "strconv.FormatInt(provisionToken.Metadata.ID, 10)", // must be a string
-		RandomMetadataName:    true,
-		Kind:                  "token",
-		HasStaticID:           false,
-		ExtraImports:          []string{"strconv"},
-		TerraformResourceType: "teleport_provision_token",
+		Name:                   "ProvisionToken",
+		TypeName:               "ProvisionTokenV2",
+		VarName:                "provisionToken",
+		GetMethod:              "GetToken",
+		CreateMethod:           "UpsertToken",
+		UpdateMethod:           "UpsertToken",
+		DeleteMethod:           "DeleteToken",
+		ID:                     "strconv.FormatInt(provisionToken.Metadata.ID, 10)", // must be a string
+		RandomMetadataName:     true,
+		Kind:                   "token",
+		HasStaticID:            false,
+		ExtraImports:           []string{"strconv"},
+		TerraformResourceType:  "teleport_provision_token",
+		HasCheckAndSetDefaults: true,
 	}
 
 	role = payload{
-		Name:                  "Role",
-		TypeName:              "RoleV6",
-		VarName:               "role",
-		GetMethod:             "GetRole",
-		CreateMethod:          "UpsertRole",
-		UpdateMethod:          "UpsertRole",
-		DeleteMethod:          "DeleteRole",
-		ID:                    "role.Metadata.Name",
-		Kind:                  "role",
-		HasStaticID:           false,
-		TerraformResourceType: "teleport_role",
+		Name:                   "Role",
+		TypeName:               "RoleV6",
+		VarName:                "role",
+		GetMethod:              "GetRole",
+		CreateMethod:           "UpsertRole",
+		UpdateMethod:           "UpsertRole",
+		DeleteMethod:           "DeleteRole",
+		ID:                     "role.Metadata.Name",
+		Kind:                   "role",
+		HasStaticID:            false,
+		TerraformResourceType:  "teleport_role",
+		HasCheckAndSetDefaults: true,
 	}
 
 	sessionRecording = payload{
-		Name:                  "SessionRecordingConfig",
-		TypeName:              "SessionRecordingConfigV2",
-		VarName:               "sessionRecordingConfig",
-		GetMethod:             "GetSessionRecordingConfig",
-		CreateMethod:          "SetSessionRecordingConfig",
-		UpdateMethod:          "SetSessionRecordingConfig",
-		DeleteMethod:          "ResetSessionRecordingConfig",
-		ID:                    `"session_recording_config"`,
-		Kind:                  "session_recording_config",
-		HasStaticID:           false,
-		TerraformResourceType: "teleport_session_recording_config",
+		Name:                   "SessionRecordingConfig",
+		TypeName:               "SessionRecordingConfigV2",
+		VarName:                "sessionRecordingConfig",
+		GetMethod:              "GetSessionRecordingConfig",
+		CreateMethod:           "SetSessionRecordingConfig",
+		UpdateMethod:           "SetSessionRecordingConfig",
+		DeleteMethod:           "ResetSessionRecordingConfig",
+		ID:                     `"session_recording_config"`,
+		Kind:                   "session_recording_config",
+		HasStaticID:            false,
+		TerraformResourceType:  "teleport_session_recording_config",
+		HasCheckAndSetDefaults: true,
 	}
 
 	trustedCluster = payload{
-		Name:                  "TrustedCluster",
-		TypeName:              "TrustedClusterV2",
-		VarName:               "trustedCluster",
-		GetMethod:             "GetTrustedCluster",
-		CreateMethod:          "UpsertTrustedCluster",
-		UpdateMethod:          "UpsertTrustedCluster",
-		DeleteMethod:          "DeleteTrustedCluster",
-		UpsertMethodArity:     2,
-		ID:                    "trustedCluster.Metadata.Name",
-		Kind:                  "trusted_cluster",
-		HasStaticID:           false,
-		TerraformResourceType: "teleport_trusted_cluster",
+		Name:                   "TrustedCluster",
+		TypeName:               "TrustedClusterV2",
+		VarName:                "trustedCluster",
+		GetMethod:              "GetTrustedCluster",
+		CreateMethod:           "UpsertTrustedCluster",
+		UpdateMethod:           "UpsertTrustedCluster",
+		DeleteMethod:           "DeleteTrustedCluster",
+		UpsertMethodArity:      2,
+		ID:                     "trustedCluster.Metadata.Name",
+		Kind:                   "trusted_cluster",
+		HasStaticID:            false,
+		TerraformResourceType:  "teleport_trusted_cluster",
+		HasCheckAndSetDefaults: true,
 	}
 
 	user = payload{
-		Name:                  "User",
-		TypeName:              "UserV2",
-		VarName:               "user",
-		GetMethod:             "GetUser",
-		CreateMethod:          "CreateUser",
-		UpdateMethod:          "UpdateUser",
-		DeleteMethod:          "DeleteUser",
-		WithSecrets:           "false",
-		GetWithoutContext:     true,
-		ID:                    "user.Metadata.Name",
-		Kind:                  "user",
-		HasStaticID:           false,
-		TerraformResourceType: "teleport_user",
+		Name:                   "User",
+		TypeName:               "UserV2",
+		VarName:                "user",
+		GetMethod:              "GetUser",
+		CreateMethod:           "CreateUser",
+		UpdateMethod:           "UpdateUser",
+		DeleteMethod:           "DeleteUser",
+		WithSecrets:            "false",
+		GetWithoutContext:      true,
+		ID:                     "user.Metadata.Name",
+		Kind:                   "user",
+		HasStaticID:            false,
+		TerraformResourceType:  "teleport_user",
+		HasCheckAndSetDefaults: true,
 	}
 
 	loginRule = payload{
@@ -362,19 +380,41 @@ var (
 	}
 
 	oktaImportRule = payload{
-		Name:                  "OktaImportRule",
-		TypeName:              "OktaImportRuleV1",
-		VarName:               "oktaImportRule",
-		IfaceName:             "OktaImportRule",
-		GetMethod:             "OktaClient().GetOktaImportRule",
-		CreateMethod:          "OktaClient().CreateOktaImportRule",
-		UpdateMethod:          "OktaClient().UpdateOktaImportRule",
-		DeleteMethod:          "OktaClient().DeleteOktaImportRule",
-		UpsertMethodArity:     2,
-		ID:                    "oktaImportRule.Metadata.Name",
-		Kind:                  "okta_import_rule",
-		HasStaticID:           false,
-		TerraformResourceType: "teleport_okta_import_rule",
+		Name:                   "OktaImportRule",
+		TypeName:               "OktaImportRuleV1",
+		VarName:                "oktaImportRule",
+		IfaceName:              "OktaImportRule",
+		GetMethod:              "OktaClient().GetOktaImportRule",
+		CreateMethod:           "OktaClient().CreateOktaImportRule",
+		UpdateMethod:           "OktaClient().UpdateOktaImportRule",
+		DeleteMethod:           "OktaClient().DeleteOktaImportRule",
+		UpsertMethodArity:      2,
+		ID:                     "oktaImportRule.Metadata.Name",
+		Kind:                   "okta_import_rule",
+		HasStaticID:            false,
+		TerraformResourceType:  "teleport_okta_import_rule",
+		HasCheckAndSetDefaults: true,
+	}
+
+	accessList = payload{
+		Name:                   "AccessList",
+		TypeName:               "AccessList",
+		VarName:                "accessList",
+		GetMethod:              "AccessListClient().GetAccessList",
+		CreateMethod:           "AccessListClient().UpsertAccessList",
+		UpsertMethodArity:      2,
+		UpdateMethod:           "AccessListClient().UpsertAccessList",
+		DeleteMethod:           "AccessListClient().DeleteAccessList",
+		ID:                     "accessList.Header.Metadata.Name",
+		Kind:                   "access_list",
+		HasStaticID:            false,
+		SchemaPackage:          "schemav1",
+		SchemaPackagePath:      "github.com/gravitational/teleport-plugins/terraform/tfschema/accesslist/v1",
+		ProtoPackage:           "accesslist",
+		ProtoPackagePath:       "github.com/gravitational/teleport/api/gen/proto/go/teleport/accesslist/v1",
+		TerraformResourceType:  "teleport_access_list",
+		ConvertPackagePath:     "github.com/gravitational/teleport/api/types/accesslist/convert/v1",
+		HasCheckAndSetDefaults: true,
 	}
 )
 
@@ -419,6 +459,8 @@ func genTFSchema() {
 	generateDataSource(deviceTrust, pluralDataSource)
 	generateResource(oktaImportRule, pluralResource)
 	generateDataSource(oktaImportRule, pluralDataSource)
+	generateResource(accessList, pluralResource)
+	generateDataSource(accessList, pluralDataSource)
 }
 
 func generateResource(p payload, tpl string) {
@@ -455,6 +497,7 @@ func generate(p payload, tpl, outFile string) {
 // Create Docs Markdown
 var (
 	mapResourceSchema = map[string]func(context.Context) (tfsdk.Schema, diag.Diagnostics){
+		"access_list":                accesslistSchema.GenSchemaAccessList,
 		"app":                        tfschema.GenSchemaAppV3,
 		"auth_preference":            tfschema.GenSchemaAuthPreferenceV2,
 		"bot":                        provider.GenSchemaBot,

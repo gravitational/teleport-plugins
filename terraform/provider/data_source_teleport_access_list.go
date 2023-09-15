@@ -25,51 +25,52 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 
-	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema"
+	schemav1 "github.com/gravitational/teleport-plugins/terraform/tfschema/accesslist/v1"
 	
-	apitypes "github.com/gravitational/teleport/api/types"
+	convert "github.com/gravitational/teleport/api/types/accesslist/convert/v1"
+	
 	"github.com/gravitational/trace"
 )
 
-// dataSourceTeleportSAMLConnectorType is the data source metadata type
-type dataSourceTeleportSAMLConnectorType struct{}
+// dataSourceTeleportAccessListType is the data source metadata type
+type dataSourceTeleportAccessListType struct{}
 
-// dataSourceTeleportSAMLConnector is the resource
-type dataSourceTeleportSAMLConnector struct {
+// dataSourceTeleportAccessList is the resource
+type dataSourceTeleportAccessList struct {
 	p Provider
 }
 
 // GetSchema returns the data source schema
-func (r dataSourceTeleportSAMLConnectorType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfschema.GenSchemaSAMLConnectorV2(ctx)
+func (r dataSourceTeleportAccessListType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+	return schemav1.GenSchemaAccessList(ctx)
 }
 
 // NewDataSource creates the empty data source
-func (r dataSourceTeleportSAMLConnectorType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
-	return dataSourceTeleportSAMLConnector{
+func (r dataSourceTeleportAccessListType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
+	return dataSourceTeleportAccessList{
 		p: *(p.(*Provider)),
 	}, nil
 }
 
-// Read reads teleport SAMLConnector
-func (r dataSourceTeleportSAMLConnector) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
+// Read reads teleport AccessList
+func (r dataSourceTeleportAccessList) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
 	var id types.String
-	diags := req.Config.GetAttribute(ctx, path.Root("metadata").AtName("name"), &id)
+	diags := req.Config.GetAttribute(ctx, path.Root("header").AtName("metadata").AtName("name"), &id)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	samlConnectorI, err := r.p.Client.GetSAMLConnector(ctx, id.Value, true)
+	accessListI, err := r.p.Client.AccessListClient().GetAccessList(ctx, id.Value)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AccessList", trace.Wrap(err), "access_list"))
 		return
 	}
 
     var state types.Object
+	accessList := convert.ToProto(accessListI)
 	
-	samlConnector := samlConnectorI.(*apitypes.SAMLConnectorV2)
-	diags = tfschema.CopySAMLConnectorV2ToTerraform(ctx, samlConnector, &state)
+	diags = schemav1.CopyAccessListToTerraform(ctx, accessList, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
