@@ -442,7 +442,7 @@ volumes:
 ---
 kind: pipeline
 type: kubernetes
-name: tag-build-terraform-linux
+name: tag-build-terraform
 
 trigger:
   event:
@@ -459,7 +459,11 @@ steps:
     image: golang:1.21.1
     commands:
       - mkdir -p build/
-      - make release/terraform
+      - go install github.com/konoui/lipo@latest
+      - make OS=linux ARCH=amd64 release/terraform
+      - make OS=darwin ARCH=amd64 release/terraform
+      - make OS=darwin ARCH=arm64 release/terraform
+      - make OS=darwin ARCH=universal release/terraform
       - find terraform/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
       - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
@@ -509,102 +513,8 @@ volumes:
 
 ---
 kind: pipeline
-type: exec
-name: tag-build-terraform-darwin
-
-concurrency:
-  limit: 1
-
-platform:
-  os: darwin
-  arch: amd64
-
-trigger:
-  event:
-    - tag
-  ref:
-    include:
-      - refs/tags/terraform-provider-teleport-v*
-
-steps:
-  - name: Install Go Toolchain
-    environment:
-      GO_VERSION: go1.21.1
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
-    commands:
-      - set -u
-      - mkdir -p $TOOLCHAIN_DIR
-      - curl --no-progress-meter -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
-      - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
-      - rm -rf $GO_VERSION.darwin-amd64.tar.gz
-
-  - name: Build artifacts
-    environment:
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
-      GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains/go
-      GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains/go/cache
-    commands:
-      - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
-      - mkdir -p build/
-      - go version
-      - make ARCH=amd64 release/terraform
-      - make ARCH=arm64 release/terraform
-      - make ARCH=universal release/terraform
-      - find terraform/ -iname "*.tar.gz" -print -exec cp {} build/ \;
-      - cd build
-      - for FILE in *.tar.gz; do shasum -a 256 $FILE > $FILE.sha256; done
-      - ls -l .
-
-  - name: Assume AWS Role
-    environment:
-      AWS_ACCESS_KEY_ID:
-        from_secret: AWS_ACCESS_KEY_ID
-      AWS_SECRET_ACCESS_KEY:
-        from_secret: AWS_SECRET_ACCESS_KEY
-      AWS_ROLE:
-        from_secret: AWS_ROLE
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
-    commands:
-    - aws sts get-caller-identity
-    - export AWS_SHARED_CREDENTIALS_FILE="$TOOLCHAIN_DIR/credentials"
-    - |-
-        printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
-          $(aws sts assume-role \
-            --role-arn "$AWS_ROLE" \
-            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
-            --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
-            --output text) \
-            > "$AWS_SHARED_CREDENTIALS_FILE"
-    - unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
-    - aws sts get-caller-identity
-
-  - name: Upload to S3
-    environment:
-      AWS_S3_BUCKET:
-        from_secret: AWS_S3_BUCKET
-      AWS_REGION: us-west-2
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
-    commands:
-      - export AWS_SHARED_CREDENTIALS_FILE="$TOOLCHAIN_DIR/credentials"
-      - cd build
-      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
-
-  - name: Clean up toolchains (post)
-    environment:
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
-    when:
-      status:
-      - success
-      - failure
-    commands:
-      - set -u
-      - chmod -R u+rw $TOOLCHAIN_DIR
-      - rm -rf $TOOLCHAIN_DIR
-
----
-kind: pipeline
 type: kubernetes
-name: tag-build-event-handler-linux
+name: tag-build-event-handler
 
 trigger:
   event:
@@ -621,7 +531,8 @@ steps:
     image: golang:1.21.1
     commands:
       - mkdir -p build/
-      - make release/event-handler
+      - make OS=linux ARCH=amd64 release/event-handler
+      - make OS=darwin ARCH=amd64 release/event-handler
       - find event-handler/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
       - for FILE in *.tar.gz; do sha256sum $FILE > $FILE.sha256; done
@@ -743,97 +654,6 @@ volumes:
     temp: {}
   - name: awsconfig
     temp: {}
-
----
-kind: pipeline
-type: exec
-name: tag-build-event-handler-darwin
-
-concurrency:
-  limit: 1
-
-platform:
-  os: darwin
-  arch: amd64
-
-trigger:
-  event:
-    - tag
-  ref:
-    include:
-      - refs/tags/teleport-event-handler-v*
-
-steps:
-  - name: Install Go Toolchain
-    environment:
-      GO_VERSION: go1.21.1
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
-    commands:
-      - set -u
-      - mkdir -p $TOOLCHAIN_DIR
-      - curl --no-progress-meter -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
-      - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
-      - rm -rf $GO_VERSION.darwin-amd64.tar.gz
-
-  - name: Build artifacts
-    environment:
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
-      GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains/go
-      GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains/go/cache
-    commands:
-      - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
-      - mkdir -p build/
-      - make release/event-handler
-      - find event-handler/ -iname "*.tar.gz" -print -exec cp {} build/ \;
-      - cd build
-      - for FILE in *.tar.gz; do shasum -a 256 $FILE > $FILE.sha256; done
-      - ls -l .
-
-  - name: Assume AWS Role
-    environment:
-      AWS_ACCESS_KEY_ID:
-        from_secret: AWS_ACCESS_KEY_ID
-      AWS_SECRET_ACCESS_KEY:
-        from_secret: AWS_SECRET_ACCESS_KEY
-      AWS_ROLE:
-        from_secret: AWS_ROLE
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
-    commands:
-    - aws sts get-caller-identity
-    - export AWS_SHARED_CREDENTIALS_FILE="$TOOLCHAIN_DIR/credentials"
-    - |-
-        printf "[default]\naws_access_key_id = %s\naws_secret_access_key = %s\naws_session_token = %s" \
-          $(aws sts assume-role \
-            --role-arn "$AWS_ROLE" \
-            --role-session-name $(echo "drone-${DRONE_REPO}/${DRONE_BUILD_NUMBER}" | sed "s|/|-|g") \
-            --query "Credentials.[AccessKeyId,SecretAccessKey,SessionToken]" \
-            --output text) \
-            > "$AWS_SHARED_CREDENTIALS_FILE"
-    - unset AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY
-    - aws sts get-caller-identity
-
-  - name: Upload to S3
-    environment:
-      AWS_S3_BUCKET:
-        from_secret: AWS_S3_BUCKET
-      AWS_REGION: us-west-2
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
-    commands:
-      - export AWS_SHARED_CREDENTIALS_FILE="$TOOLCHAIN_DIR/credentials"
-      - cd build
-      - aws s3 sync . s3://$AWS_S3_BUCKET/teleport-plugins/tag/${DRONE_TAG}/
-
-  - name: Clean up toolchains (post)
-    environment:
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}-${DRONE_STAGE_NAME}/toolchains
-    when:
-      status:
-      - success
-      - failure
-    commands:
-      - set -u
-      - chmod -R u+rw $TOOLCHAIN_DIR
-      - rm -rf $TOOLCHAIN_DIR
 
 ---
 kind: pipeline
@@ -1244,8 +1064,7 @@ trigger:
       - refs/tags/terraform-provider-teleport-v*
 
 depends_on:
-  - tag-build-terraform-linux
-  - tag-build-terraform-darwin
+  - tag-build-terraform
 
 concurrency:
   limit: 1
@@ -1406,6 +1225,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 425a71127807e20a715648d0ab87f362c204dcc7dbc986771815dd3082697641
+hmac: 984abb30a71742f7fcf8f4e9cc414c6b76cee2345380a6bac5763a5245ba9ac7
 
 ...
