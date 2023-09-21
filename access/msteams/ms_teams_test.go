@@ -242,9 +242,9 @@ func (s *TeamsSuite) createAccessRequest(reviewers []msapi.User) types.AccessReq
 	t.Helper()
 
 	req := s.newAccessRequest(reviewers)
-	err := s.requestor().CreateAccessRequest(s.Context(), req)
+	out, err := s.requestor().CreateAccessRequestV2(s.Context(), req)
 	require.NoError(t, err)
-	return req
+	return out
 }
 
 func (s *TeamsSuite) checkPluginData(reqID string, cond func(interface{}) bool) interface{} {
@@ -609,7 +609,7 @@ func (s *TeamsSuite) TestRace() {
 				return setRaceErr(trace.Wrap(err))
 			}
 			req.SetSuggestedReviewers([]string{reviewer1.Mail, reviewer2.Mail})
-			if err := s.requestor().CreateAccessRequest(ctx, req); err != nil {
+			if _, err := s.requestor().CreateAccessRequestV2(ctx, req); err != nil {
 				return setRaceErr(trace.Wrap(err))
 			}
 			return nil

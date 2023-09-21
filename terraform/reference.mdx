@@ -96,13 +96,14 @@ provider "teleport" {
 
 Metadata is the app resource metadata.
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| name        | string         | *        | Name is an object name                                                                                 |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| name        | string         | *        | Name is an object name                                                                                                                                                                       |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
@@ -189,12 +190,13 @@ resource "teleport_app" "example" {
 
 Metadata is resource metadata
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
@@ -361,12 +363,13 @@ resource "teleport_bot" "example" {
 
 Metadata is resource metadata
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
@@ -418,12 +421,13 @@ resource "teleport_cluster_maintenance_config" "example" {
 
 Metadata is resource metadata
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
@@ -432,6 +436,7 @@ Spec is a ClusterNetworkingConfig specification
 |               Name               |   Type   | Required |                                                                                               Description                                                                                               |
 |----------------------------------|----------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | assist_command_execution_workers | number   |          | AssistCommandExecutionWorkers determines the number of workers that will execute arbitrary Assist commands on servers in parallel                                                                       |
+| case_insensitive_routing         | bool     |          | CaseInsensitiveRouting causes proxies to use case-insensitive hostname matching.                                                                                                                        |
 | client_idle_timeout              | duration |          | ClientIdleTimeout sets global cluster default setting for client idle timeouts.                                                                                                                         |
 | idle_timeout_message             | string   |          | ClientIdleTimeoutMessage is the message sent to the user when a connection times out.                                                                                                                   |
 | keep_alive_count_max             | number   |          | KeepAliveCountMax is the number of keep-alive messages that can be missed before the server disconnects the connection to the client.                                                                   |
@@ -501,13 +506,14 @@ resource "teleport_cluster_networking_config" "example" {
 
 Metadata is the database metadata.
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| name        | string         | *        | Name is an object name                                                                                 |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| name        | string         | *        | Name is an object name                                                                                                                                                                       |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
@@ -524,6 +530,7 @@ Spec is the database spec.
 | gcp            | object |          | GCP contains parameters specific to GCP Cloud SQL databases.                                                                                 |
 | mongo_atlas    | object |          | MongoAtlas contains Atlas metadata about the database.                                                                                       |
 | mysql          | object |          | MySQL is an additional section with MySQL database options.                                                                                  |
+| oracle         | object |          | Oracle is an additional Oracle configuration options.                                                                                        |
 | protocol       | string | *        | Protocol is the database protocol: postgres, mysql, mongodb, etc.                                                                            |
 | tls            | object |          | TLS is the TLS configuration used when establishing connection to target database. Allows to provide custom CA cert or override server name. |
 | uri            | string | *        | URI is the database connection endpoint.                                                                                                     |
@@ -705,6 +712,14 @@ MySQL is an additional section with MySQL database options.
 |----------------|--------|----------|-------------------------------------------------------------------------------------------------------|
 | server_version | string |          | ServerVersion is the server version reported by DB proxy if the runtime information is not available. |
 
+#### spec.oracle
+
+Oracle is an additional Oracle configuration options.
+
+|    Name    |  Type  | Required |                                      Description                                       |
+|------------|--------|----------|----------------------------------------------------------------------------------------|
+| audit_user | string |          | AuditUser is the Oracle database user privilege to access internal Oracle audit trail. |
+
 #### spec.tls
 
 TLS is the TLS configuration used when establishing connection to target database. Allows to provide custom CA cert or override server name.
@@ -749,13 +764,14 @@ resource "teleport_database" "example" {
 
 Metadata holds resource metadata.
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| name        | string         | *        | Name is an object name                                                                                 |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| name        | string         | *        | Name is an object name                                                                                                                                                                       |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
@@ -842,13 +858,14 @@ resource "teleport_github_connector" "github" {
 
 Metadata is resource metadata.
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| name        | string         |          | Name is an object name                                                                                 |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| name        | string         |          | Name is an object name                                                                                                                                                                       |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### traits_map
 
@@ -903,13 +920,14 @@ resource "teleport_login_rule" "example" {
 
 Metadata holds resource metadata.
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| name        | string         | *        | Name is an object name                                                                                 |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| name        | string         | *        | Name is an object name                                                                                                                                                                       |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
@@ -990,13 +1008,14 @@ resource "teleport_oidc_connector" "example" {
 
 Metadata is resource metadata
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| name        | string         | *        | Name is an object name                                                                                 |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| name        | string         | *        | Name is an object name                                                                                                                                                                       |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
@@ -1104,13 +1123,14 @@ resource "teleport_okta_import_rule" "example" {
 
 Metadata is resource metadata
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| name        | string         |          | Name is an object name                                                                                 |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| name        | string         |          | Name is an object name                                                                                                                                                                       |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
@@ -1247,9 +1267,11 @@ Allow is a list of TokenRules, nodes using this token must match one allow rule 
 
 Kubernetes allows the configuration of options specific to the "kubernetes" join method.
 
-| Name  |  Type  | Required |                                          Description                                          |
-|-------|--------|----------|-----------------------------------------------------------------------------------------------|
-| allow | object |          | Allow is a list of Rules, nodes using this token must match one allow rule to use this token. |
+|    Name     |  Type  | Required |                                                                                       Description                                                                                        |
+|-------------|--------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| allow       | object |          | Allow is a list of Rules, nodes using this token must match one allow rule to use this token.                                                                                            |
+| static_jwks | object |          | StaticJWKS is the configuration specific to the `static_jwks` type.                                                                                                                      |
+| type        | string |          | Type controls which behavior should be used for validating the Kubernetes Service Account token. Support values: - `in_cluster` - `static_jwks` If unset, this defaults to `in_cluster`. |
 
 ##### spec.kubernetes.allow
 
@@ -1258,6 +1280,14 @@ Allow is a list of Rules, nodes using this token must match one allow rule to us
 |      Name       |  Type  | Required |                                                     Description                                                     |
 |-----------------|--------|----------|---------------------------------------------------------------------------------------------------------------------|
 | service_account | string |          | ServiceAccount is the namespaced name of the Kubernetes service account. Its format is "namespace:service-account". |
+
+##### spec.kubernetes.static_jwks
+
+StaticJWKS is the configuration specific to the `static_jwks` type.
+
+| Name |  Type  | Required |                                                                                             Description                                                                                              |
+|------|--------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| jwks | string |          | JWKS should be the JSON Web Key Set formatted public keys of that the Kubernetes Cluster uses to sign service account tokens. This can be fetched from /openid/v1/jwks on the Kubernetes API Server. |
 
 Example:
 
@@ -1309,13 +1339,14 @@ resource "teleport_provision_token" "iam-token" {
 
 Metadata is resource metadata
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| name        | string         | *        | Name is an object name                                                                                 |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| name        | string         | *        | Name is an object name                                                                                                                                                                       |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
@@ -1395,11 +1426,12 @@ JoinSessions specifies policies to allow users to join other sessions.
 
 KubernetesResources is the Kubernetes Resources this Role grants access to.
 
-|   Name    |  Type  | Required |                                     Description                                     |
-|-----------|--------|----------|-------------------------------------------------------------------------------------|
-| kind      | string |          | Kind specifies the Kubernetes Resource type. At the moment only "pod" is supported. |
-| name      | string |          | Name is the resource name. It supports wildcards.                                   |
-| namespace | string |          | Namespace is the resource namespace. It supports wildcards.                         |
+|   Name    |       Type       | Required |                                     Description                                     |
+|-----------|------------------|----------|-------------------------------------------------------------------------------------|
+| kind      | string           |          | Kind specifies the Kubernetes Resource type. At the moment only "pod" is supported. |
+| name      | string           |          | Name is the resource name. It supports wildcards.                                   |
+| namespace | string           |          | Namespace is the resource namespace. It supports wildcards.                         |
+| verbs     | array of strings |          | Verbs are the allowed Kubernetes verbs for the following resource.                  |
 
 ##### spec.allow.request
 
@@ -1549,11 +1581,12 @@ JoinSessions specifies policies to allow users to join other sessions.
 
 KubernetesResources is the Kubernetes Resources this Role grants access to.
 
-|   Name    |  Type  | Required |                                     Description                                     |
-|-----------|--------|----------|-------------------------------------------------------------------------------------|
-| kind      | string |          | Kind specifies the Kubernetes Resource type. At the moment only "pod" is supported. |
-| name      | string |          | Name is the resource name. It supports wildcards.                                   |
-| namespace | string |          | Namespace is the resource namespace. It supports wildcards.                         |
+|   Name    |       Type       | Required |                                     Description                                     |
+|-----------|------------------|----------|-------------------------------------------------------------------------------------|
+| kind      | string           |          | Kind specifies the Kubernetes Resource type. At the moment only "pod" is supported. |
+| name      | string           |          | Name is the resource name. It supports wildcards.                                   |
+| namespace | string           |          | Namespace is the resource namespace. It supports wildcards.                         |
+| verbs     | array of strings |          | Verbs are the allowed Kubernetes verbs for the following resource.                  |
 
 ##### spec.deny.request
 
@@ -1665,7 +1698,7 @@ Options is for OpenSSH options like agent forwarding.
 | port_forwarding            | bool             |          |                                                                                                                                                                            |
 | record_session             | object           |          | RecordDesktopSession indicates whether desktop access sessions should be recorded. It defaults to true unless explicitly set to false.                                     |
 | request_access             | string           |          | RequestAccess defines the access request strategy (optional|note|always) where optional is the default.                                                                    |
-| request_prompt             | string           |          | RequestPrompt is an optional message which tells users what they aught to                                                                                                  |
+| request_prompt             | string           |          | RequestPrompt is an optional message which tells users what they aught to request.                                                                                         |
 | require_session_mfa        | number           |          | RequireMFAType is the type of MFA requirement enforced for this role: 0:Off, 1:Session, 2:SessionAndHardwareKey, 3:HardwareKeyTouch                                        |
 | ssh_file_copy              | bool             |          |                                                                                                                                                                            |
 
@@ -1774,13 +1807,14 @@ resource "teleport_role" "example" {
 
 Metadata holds resource metadata.
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| name        | string         | *        | Name is an object name                                                                                 |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| name        | string         | *        | Name is an object name                                                                                                                                                                       |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
@@ -1892,12 +1926,13 @@ resource "teleport_saml_connector" "example" {
 
 Metadata is resource metadata
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
@@ -1941,13 +1976,14 @@ resource "teleport_session_recording_config" "example" {
 
 Metadata holds resource metadata.
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| name        | string         | *        | Name is an object name                                                                                 |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| name        | string         | *        | Name is an object name                                                                                                                                                                       |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
@@ -2011,10 +2047,11 @@ resource "teleport_trusted_cluster" "cluster" {
 
 Metadata is resource metadata
 
-|  Name  |      Type      | Required |        Description        |
-|--------|----------------|----------|---------------------------|
-| labels | map of strings |          | Labels is a set of labels |
-| name   | string         |          | Name is an object name    |
+|   Name   |      Type      | Required |                                                                                         Description                                                                                          |
+|----------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| labels   | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| name     | string         |          | Name is an object name                                                                                                                                                                       |
+| revision | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
@@ -2080,13 +2117,14 @@ resource "teleport_trusted_device" "TESTDEVICE1" {
 
 Metadata is resource metadata
 
-|    Name     |      Type      | Required |                                              Description                                               |
-|-------------|----------------|----------|--------------------------------------------------------------------------------------------------------|
-| description | string         |          | Description is object description                                                                      |
-| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                       |
-| labels      | map of strings |          | Labels is a set of labels                                                                              |
-| name        | string         | *        | Name is an object name                                                                                 |
-| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4. |
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| name        | string         | *        | Name is an object name                                                                                                                                                                       |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
 
 ### spec
 
