@@ -512,13 +512,6 @@ kind: pipeline
 type: exec
 name: tag-build-terraform-darwin
 
-concurrency:
-  limit: 1
-
-platform:
-  os: darwin
-  arch: amd64
-
 trigger:
   event:
     - tag
@@ -547,9 +540,10 @@ steps:
       - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
       - mkdir -p build/
       - go version
-      - make ARCH=amd64 release/terraform
-      - make ARCH=arm64 release/terraform
-      - make ARCH=universal release/terraform
+      - go install github.com/konoui/lipo@latest
+      - make OS=darwin ARCH=amd64 release/terraform
+      - make OS=darwin ARCH=arm64 release/terraform
+      - make OS=darwin ARCH=universal release/terraform
       - find terraform/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
       - for FILE in *.tar.gz; do shasum -a 256 $FILE > $FILE.sha256; done
@@ -749,13 +743,6 @@ kind: pipeline
 type: exec
 name: tag-build-event-handler-darwin
 
-concurrency:
-  limit: 1
-
-platform:
-  os: darwin
-  arch: amd64
-
 trigger:
   event:
     - tag
@@ -783,7 +770,7 @@ steps:
     commands:
       - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
       - mkdir -p build/
-      - make release/event-handler
+      - make OS=darwin ARCH=amd64 release/event-handler
       - find event-handler/ -iname "*.tar.gz" -print -exec cp {} build/ \;
       - cd build
       - for FILE in *.tar.gz; do shasum -a 256 $FILE > $FILE.sha256; done
@@ -1406,6 +1393,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 425a71127807e20a715648d0ab87f362c204dcc7dbc986771815dd3082697641
+hmac: 1827b705eb7b214e3ad85b2b5a1dc7ba6ee5f9f5ad0fbf5beb843f718d7c78ad
 
 ...
