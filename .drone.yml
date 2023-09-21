@@ -44,90 +44,6 @@ steps:
 
 ---
 kind: pipeline
-type: exec
-name: test-darwin
-
-concurrency:
-  limit: 1
-
-platform:
-  os: darwin
-  arch: amd64
-
-trigger:
-  branch:
-    - master
-    - branch/*
-  event:
-    include:
-      - push
-  repo:
-    include:
-      - gravitational/*
-
-workspace:
-  path: /tmp/teleport-plugins/test-darwin
-
-steps:
-  - name: Install Go Toolchain
-    environment:
-      GO_VERSION: go1.21.1
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
-      TERRAFORM_VERSION: 1.5.6
-      TERRAFORM_ARCHIVE: terraform_1.5.6_darwin_amd64.zip
-    commands:
-      - set -u
-      - mkdir -p $TOOLCHAIN_DIR
-      - mkdir -p $TOOLCHAIN_DIR/terraform
-      - curl --no-progress-meter -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
-      - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
-      - rm -rf $GO_VERSION.darwin-amd64.tar.gz
-      - curl --no-progress-meter -O https://releases.hashicorp.com/terraform/$TERRAFORM_VERSION/$TERRAFORM_ARCHIVE
-      - unzip $TERRAFORM_ARCHIVE -d $TOOLCHAIN_DIR/terraform/
-
-  - name: Install Teleport
-    environment:
-      TELEPORT_VERSION: 14.0.0
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
-    commands:
-      - set -u
-      - mkdir -p $TOOLCHAIN_DIR
-      - mkdir -p $TOOLCHAIN_DIR/teleport
-      - curl --no-progress-meter -O https://cdn.teleport.dev/teleport-ent-v$TELEPORT_VERSION-darwin-amd64-bin.tar.gz
-      - tar -C $TOOLCHAIN_DIR -xzf teleport-ent-v$TELEPORT_VERSION-darwin-amd64-bin.tar.gz
-      - rm -rf teleport-ent-v$TELEPORT_VERSION-darwin-amd64-bin.tar.gz
-
-  - name: Run tests
-    environment:
-      RUNNER_TEMP: /tmp
-      TELEPORT_ENTERPRISE_LICENSE:
-        from_secret: TELEPORT_ENTERPRISE_LICENSE
-      GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
-      GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
-    commands:
-      - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
-      - go version
-      - export PATH=$TOOLCHAIN_DIR/terraform:$PATH
-      - terraform version
-      - export PATH=$TOOLCHAIN_DIR/teleport-ent:$PATH
-      - teleport version
-      - ulimit -n 1024
-      - go clean --cache
-      - make test
-
-  - name: Clean up toolchains (post)
-    when:
-      status:
-      - success
-      - failure
-    commands:
-      - set -u
-      - chmod -R u+rw /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
-      - rm -rf /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
-
----
-kind: pipeline
 type: kubernetes
 name: build-on-push-linux
 
@@ -154,67 +70,6 @@ steps:
     commands:
       - make build-all
 
----
-kind: pipeline
-type: exec
-name: build-on-push-darwin
-
-concurrency:
-  limit: 1
-
-platform:
-  os: darwin
-  arch: amd64
-
-trigger:
-  branch:
-    - master
-    - branch/*
-  event:
-    include:
-      - push
-  repo:
-    include:
-      - gravitational/*
-
-depends_on:
-  - test-darwin
-
-workspace:
-  path: /tmp/teleport-plugins/build-darwin
-
-steps:
-  - name: Install Go Toolchain
-    environment:
-      GO_VERSION: go1.21.1
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
-    commands:
-      - set -u
-      - mkdir -p $TOOLCHAIN_DIR
-      - curl --no-progress-meter -O https://dl.google.com/go/$GO_VERSION.darwin-amd64.tar.gz
-      - tar -C  $TOOLCHAIN_DIR -xzf $GO_VERSION.darwin-amd64.tar.gz
-      - rm -rf $GO_VERSION.darwin-amd64.tar.gz
-
-  - name: Build artifacts (darwin)
-    environment:
-      GOPATH: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go
-      GOCACHE: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/go/cache
-      TOOLCHAIN_DIR: /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}/toolchains
-    commands:
-      - export PATH=$TOOLCHAIN_DIR/go/bin:$PATH
-      - go version
-      - go clean
-      - make build-all
-
-  - name: Clean up toolchains (post)
-    when:
-      status:
-      - success
-      - failure
-    commands:
-      - set -u
-      - chmod -R u+rw /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
-      - rm -rf /tmp/teleport-plugins/${DRONE_BUILD_NUMBER}-${DRONE_BUILD_CREATED}
 ---
 kind: pipeline
 type: kubernetes
@@ -1225,6 +1080,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 984abb30a71742f7fcf8f4e9cc414c6b76cee2345380a6bac5763a5245ba9ac7
+hmac: 2cc330c76cbc12ef7346166576eb27e011ee7897e97e3c2eb0f288d98160c299
 
 ...
