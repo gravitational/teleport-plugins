@@ -1,6 +1,8 @@
 module github.com/gravitational/teleport-plugins
 
-go 1.20
+go 1.21
+
+toolchain go1.21.1
 
 require (
 	github.com/DanielTitkov/go-adaptive-cards v0.2.2
@@ -36,8 +38,6 @@ require (
 )
 
 require (
-	cloud.google.com/go/compute v1.23.0 // indirect
-	cloud.google.com/go/compute/metadata v0.2.3 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/alecthomas/assert v1.0.0 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
@@ -134,8 +134,8 @@ require (
 
 replace (
 	github.com/gogo/protobuf => github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf
-	github.com/gravitational/teleport => github.com/gravitational/teleport v0.0.0-20230907013922-2b1bb84b13df // ref: heads/branch/v14
-	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20230907013922-2b1bb84b13df // ref: heads/branch/v14
+	github.com/gravitational/teleport => github.com/gravitational/teleport v0.0.0-20230920220719-599429b9733c // ref: tags/v14.0.0
+	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20230920220719-599429b9733c // ref: tags/v14.0.0
 	github.com/julienschmidt/httprouter => github.com/rw-access/httprouter v1.3.1-0.20210321233808-98e93175c124
 	github.com/microsoft/go-mssqldb => github.com/gravitational/go-mssqldb v0.11.1-0.20230331180905-0f76f1751cd3
 )
