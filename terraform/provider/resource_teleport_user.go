@@ -22,15 +22,16 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 
-	apitypes "github.com/gravitational/teleport/api/types"
-	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema"
-	"github.com/gravitational/teleport/integrations/lib/backoff"
 	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
+
+	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema"
+	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/teleport/integrations/lib/backoff"
 )
 
 // resourceTeleportUserType is the resource metadata type
@@ -72,8 +73,6 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	
 
 	_, err := r.p.Client.GetUser(user.Metadata.Name, false)
 	if !trace.IsNotFound(err) {
@@ -227,6 +226,7 @@ func (r resourceTeleportUser) Update(ctx context.Context, req tfsdk.UpdateResour
 		return
 	}
 
+	user.SetRevision(userBefore.GetRevision())
 	err = r.p.Client.UpdateUser(ctx, user)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating User", err, "user"))
@@ -244,7 +244,7 @@ func (r resourceTeleportUser) Update(ctx context.Context, req tfsdk.UpdateResour
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", err, "user"))
 			return
 		}
-		if userBefore.GetMetadata().ID != userI.GetMetadata().ID || false {
+		if userBefore.GetRevision() != userI.GetRevision() || false {
 			break
 		}
 
