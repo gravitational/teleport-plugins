@@ -1,6 +1,6 @@
 # Defines Teleport Slack image, based on Teleport OSS image.
-ARG RUNTIME="go1.16.2"
-ARG BBOX="quay.io/gravitational/teleport-buildbox"
+ARG RUNTIME="go1.21.1"
+ARG BBOX="public.ecr.aws/gravitational/teleport-buildbox"
 FROM $BBOX:$RUNTIME
 
 RUN apt-get update

@@ -7,11 +7,11 @@ SRCDIR ?= /go/src/github.com/gravitational/teleport-plugins
 MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 
 # Teleport Enterprise Binary release name. Can be any teleport
-# enterprise version, but has to be available on get.gravitational.com
-RELEASE ?= teleport-ent-v6.0.2-linux-amd64-bin
+# enterprise version, but has to be available on cdn.teleport.dev
+RELEASE ?= teleport-ent-v14.0.0-linux-amd64-bin
 
 RUNTIME ?= go1.21.1
-BBOX ?= quay.io/gravitational/teleport-buildbox:$(RUNTIME)
+BBOX ?= public.ecr.aws/gravitational/teleport-buildbox:$(RUNTIME)
 
 # Teleport CLI and plugins CLI flags to pass to them on start
 # This is used in insecure-up and debug to pass

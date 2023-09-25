@@ -29,15 +29,15 @@ $ ./install
 
 ### Docker Image
 ```bash
-$ docker pull quay.io/gravitational/teleport-plugin-msteams:9.0.2
+$ docker pull public.ecr.aws/gravitational/teleport-plugin-msteams:9.0.2
 ```
 
 ```bash
-$ docker run quay.io/gravitational/teleport-plugin-msteams:9.0.2 version
+$ docker run public.ecr.aws/gravitational/teleport-plugin-msteams:9.0.2 version
 teleport-msteams v9.0.2 git:teleport-msteams-v9.0.2-0-g9e149895 go1.17.8
 ```
 
-For a list of available tags, visit [https://quay.io/](https://quay.io/repository/gravitational/teleport-plugin-msteams?tab=tags)
+For a list of available tags, visit [https://gallery.ecr.aws/](https://gallery.ecr.aws/gravitational/teleport-plugin-msteams)
 
 ### Building from source
 
@@ -168,7 +168,7 @@ $ teleport-msteams start -c ~/msteams/teleport-msteams.toml
 or with docker:
 
 ```bash
-$ docker run -v <path/to/config>:~/msteams/teleport-msteams.toml quay.io/gravitational/teleport-plugin-msteams:9.0.2 start
+$ docker run -v <path/to/config>:~/msteams/teleport-msteams.toml public.ecr.aws/gravitational/teleport-plugin-msteams:9.0.2 start
 ```
 
 ## Usage
