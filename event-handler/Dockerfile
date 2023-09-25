@@ -1,7 +1,8 @@
 # Build the plugin binary
 ARG GO_VERSION
+ARG BASE_IMAGE=gcr.io/distroless/static-debian12
 
-FROM golang:${GO_VERSION}-bullseye as builder
+FROM golang:${GO_VERSION}-bookworm as builder
 
 ARG GITREF
 
@@ -21,7 +22,7 @@ RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/base@sha256:03dcbf61f859d0ae4c69c6242c9e5c3d7e1a42e5d3b69eb235e81a5810dd768e
+FROM $BASE_IMAGE
 
 COPY --from=builder /workspace/event-handler/build/teleport-event-handler /usr/local/bin/teleport-event-handler
 
