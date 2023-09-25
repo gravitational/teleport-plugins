@@ -316,6 +316,7 @@ steps:
       - mkdir -p build/
       - go install github.com/konoui/lipo@latest
       - make OS=linux ARCH=amd64 release/terraform
+      - make OS=linux ARCH=arm64 release/terraform
       - make OS=darwin ARCH=amd64 release/terraform
       - make OS=darwin ARCH=arm64 release/terraform
       - make OS=darwin ARCH=universal release/terraform
@@ -1080,6 +1081,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 2cc330c76cbc12ef7346166576eb27e011ee7897e97e3c2eb0f288d98160c299
+hmac: b81fb2f7c884dbd9afebb84942b6ff51c2779da1d9cae97d5d7ae58714a5aa2e
 
 ...
