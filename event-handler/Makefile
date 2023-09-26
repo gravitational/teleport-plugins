@@ -28,7 +28,6 @@ IDENTITY_FILE=example/keys/identity
 DOCKER_NAME=teleport-plugin-event-handler
 DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/$(DOCKER_NAME):$(VERSION)
 DOCKER_IMAGE_ECR_PUBLIC = public.ecr.aws/gravitational/$(DOCKER_NAME):$(VERSION)
-DOCKER_IMAGE_QUAY = quay.io/gravitational/$(DOCKER_NAME):$(VERSION)
 DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg GITREF=$(GITREF)
 
 RELEASE_NAME = teleport-event-handler
@@ -66,13 +65,7 @@ docker-push:
 	docker push ${DOCKER_IMAGE}
 
 .PHONY: docker-promote
-docker-promote: docker-promote-quay docker-promote-ecr-public
-
-.PHONY: docker-promote-quay
-docker-promote-quay:
-	docker pull ${DOCKER_IMAGE} && \
-	docker tag ${DOCKER_IMAGE} ${DOCKER_IMAGE_QUAY} && \
-	docker push ${DOCKER_IMAGE_QUAY}
+docker-promote: docker-promote-ecr-public
 
 .PHONY: docker-promote-ecr-public
 docker-promote-ecr-public:
