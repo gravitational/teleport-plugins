@@ -1,5 +1,5 @@
 ARG GO_VER
-FROM golang:${GO_VER}-bullseye
+FROM golang:${GO_VER}-bookworm
 
 ARG UID
 ARG GID
