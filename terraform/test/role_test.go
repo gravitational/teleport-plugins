@@ -325,10 +325,49 @@ func (s *TerraformSuite) TestRoleWithKubernetesResources() {
 					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.kind", "pod"),
 					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.name", "*"),
 					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.namespace", "myns"),
+					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.verbs.0", "*"),
 				),
 			},
 			{
 				Config:   s.getFixture("role_with_kube_resources.tf"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestRoleWithKubernetesVerbs() {
+	checkDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetRole(s.Context(), "kube_verbs")
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := "teleport_role.kube_verbs"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("role_with_kube_verbs.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "role"),
+					resource.TestCheckResourceAttr(name, "version", "v7"),
+					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "onev6"),
+					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.kind", "pod"),
+					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.name", "*"),
+					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.namespace", "myns"),
+					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.verbs.0", "get"),
+					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.verbs.1", "watch"),
+					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.verbs.2", "list"),
+				),
+			},
+			{
+				Config:   s.getFixture("role_with_kube_verbs.tf"),
 				PlanOnly: true,
 			},
 		},
