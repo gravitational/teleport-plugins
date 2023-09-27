@@ -7,6 +7,7 @@ description: Terraform provider resources reference
 
 Supported resources:
 
+- [teleport_access_list](#teleport_access_list)
 - [teleport_app](#teleport_app)
 - [teleport_auth_preference](#teleport_auth_preference)
 - [teleport_bot](#teleport_bot)
@@ -81,6 +82,165 @@ provider "teleport" {
   key_path     = "tf.key"
   root_ca_path = "tf.ca"
 }
+```
+
+## teleport_access_list
+
+|  Name  |  Type  | Required |                  Description                   |
+|--------|--------|----------|------------------------------------------------|
+| header | object |          | header is the header for the resource.         |
+| spec   | object |          | spec is the specification for the access list. |
+
+### header
+
+header is the header for the resource.
+
+|   Name   |  Type  | Required |                            Description                             |
+|----------|--------|----------|--------------------------------------------------------------------|
+| kind     | string |          | kind is a resource kind.                                           |
+| metadata | object |          | metadata is resource metadata.                                     |
+| sub_kind | string |          | sub_kind is an optional resource sub kind, used in some resources. |
+| version  | string |          | version is version.                                                |
+
+#### header.metadata
+
+metadata is resource metadata.
+
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | description is object description.                                                                                                                                                           |
+| expires     | RFC3339 time   |          |                                                                                                                                                                                              |
+| labels      | map of strings |          | labels is a set of labels.                                                                                                                                                                   |
+| name        | string         | *        | name is an object name.                                                                                                                                                                      |
+| namespace   | string         |          | namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
+
+### spec
+
+spec is the specification for the access list.
+
+|        Name         |  Type  | Required |                                                                                                                 Description                                                                                                                  |
+|---------------------|--------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| audit               | object |          | audit describes the frequency that this access list must be audited.                                                                                                                                                                         |
+| description         | string |          | description is an optional plaintext description of the access list.                                                                                                                                                                         |
+| grants              | object | *        | grants describes the access granted by membership to this access list.                                                                                                                                                                       |
+| membership_requires | object | *        | membership_requires describes the requirements for a user to be a member of the access list. For a membership to an access list to be effective, the user must meet the requirements of Membership_requires and must be in the members list. |
+| owners              | object | *        | owners is a list of owners of the access list.                                                                                                                                                                                               |
+| ownership_requires  | object | *        | ownership_requires describes the requirements for a user to be an owner of the access list. For ownership of an access list to be effective, the user must meet the requirements of ownership_requires and must be in the owners list.       |
+| title               | string |          | title is a plaintext short description of the access list.                                                                                                                                                                                   |
+
+#### spec.audit
+
+audit describes the frequency that this access list must be audited.
+
+|      Name       |     Type     | Required | Description |
+|-----------------|--------------|----------|-------------|
+| frequency       | duration     |          |             |
+| next_audit_date | RFC3339 time |          |             |
+
+#### spec.grants
+
+grants describes the access granted by membership to this access list.
+
+|  Name  |       Type       | Required |                                     Description                                     |
+|--------|------------------|----------|-------------------------------------------------------------------------------------|
+| roles  | array of strings |          | roles are the roles that are granted to users who are members of the access list.   |
+| traits | object           |          | traits are the traits that are granted to users who are members of the access list. |
+
+##### spec.grants.traits
+
+traits are the traits that are granted to users who are members of the access list.
+
+|  Name  |       Type       | Required |             Description             |
+|--------|------------------|----------|-------------------------------------|
+| key    | string           |          | key is the name of the trait.       |
+| values | array of strings |          | values is the list of trait values. |
+
+#### spec.membership_requires
+
+membership_requires describes the requirements for a user to be a member of the access list. For a membership to an access list to be effective, the user must meet the requirements of Membership_requires and must be in the members list.
+
+|  Name  |       Type       | Required |                                 Description                                  |
+|--------|------------------|----------|------------------------------------------------------------------------------|
+| roles  | array of strings |          | roles are the user roles that must be present for the user to obtain access. |
+| traits | object           |          | traits are the traits that must be present for the user to obtain access.    |
+
+##### spec.membership_requires.traits
+
+traits are the traits that must be present for the user to obtain access.
+
+|  Name  |       Type       | Required |             Description             |
+|--------|------------------|----------|-------------------------------------|
+| key    | string           |          | key is the name of the trait.       |
+| values | array of strings |          | values is the list of trait values. |
+
+#### spec.owners
+
+owners is a list of owners of the access list.
+
+|    Name     |  Type  | Required |                                   Description                                    |
+|-------------|--------|----------|----------------------------------------------------------------------------------|
+| description | string |          | description is the plaintext description of the owner and why they are an owner. |
+| name        | string |          | name is the username of the owner.                                               |
+
+#### spec.ownership_requires
+
+ownership_requires describes the requirements for a user to be an owner of the access list. For ownership of an access list to be effective, the user must meet the requirements of ownership_requires and must be in the owners list.
+
+|  Name  |       Type       | Required |                                 Description                                  |
+|--------|------------------|----------|------------------------------------------------------------------------------|
+| roles  | array of strings |          | roles are the user roles that must be present for the user to obtain access. |
+| traits | object           |          | traits are the traits that must be present for the user to obtain access.    |
+
+##### spec.ownership_requires.traits
+
+traits are the traits that must be present for the user to obtain access.
+
+|  Name  |       Type       | Required |             Description             |
+|--------|------------------|----------|-------------------------------------|
+| key    | string           |          | key is the name of the trait.       |
+| values | array of strings |          | values is the list of trait values. |
+
+Example:
+
+```
+resource "teleport_access_list" "crane-operation" {
+  header = {
+    metadata = {
+      name = "crane-operation"
+      labels = {
+        example = "yes"
+      }
+    }
+  }
+  spec = {
+    description = "Used to grant access to the crane."
+    owners = [
+      {
+        name = "gru"
+        description = "The supervillain."
+      }
+    ]
+    membership_requires = {
+      roles = ["minion"]
+    }
+    ownership_requires = {
+      roles = ["supervillain"]
+    }
+    grants = {
+      roles = ["crane-operator"]
+      traits = [{
+        key = "allowed-machines"
+        values = ["crane", "forklift"]
+      }]
+    }
+    title = "Crane operation"
+    audit = {
+      frequency = "3600h"  // 150 days
+    }
+  }
+}
+
 ```
 
 ## teleport_app

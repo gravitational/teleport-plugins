@@ -55,6 +55,7 @@ func (r resourceTeleportGithubConnectorType) NewResource(_ context.Context, p tf
 
 // Create creates the GithubConnector
 func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	var err error
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
 	}
@@ -74,13 +75,15 @@ func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.C
 	}
 
 	
+	githubConnectorResource := githubConnector
 
-	_, err := r.p.Client.GetGithubConnector(ctx, githubConnector.Metadata.Name, true)
+	id := githubConnectorResource.Metadata.Name
+
+	_, err = r.p.Client.GetGithubConnector(ctx, id, true)
 	if !trace.IsNotFound(err) {
 		if err == nil {
-			n := githubConnector.Metadata.Name
 			existErr := fmt.Sprintf("GithubConnector exists in Teleport. Either remove it (tctl rm github/%v)"+
-				" or import it to the existing state (terraform import teleport_github_connector.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_github_connector.%v %v)", id, id, id)
 
 			resp.Diagnostics.Append(diagFromErr("GithubConnector exists in Teleport", trace.Errorf(existErr)))
 			return
@@ -90,21 +93,20 @@ func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.C
 		return
 	}
 
-	err = githubConnector.CheckAndSetDefaults()
+	err = githubConnectorResource.CheckAndSetDefaults()
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error setting GithubConnector defaults", trace.Wrap(err), "github"))
 		return
 	}
 
-	err = r.p.Client.UpsertGithubConnector(ctx, githubConnector)
+	err = r.p.Client.UpsertGithubConnector(ctx, githubConnectorResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating GithubConnector", trace.Wrap(err), "github"))
 		return
 	}
-
-	id := githubConnector.Metadata.Name
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var githubConnectorI apitypes.GithubConnector
-
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
@@ -130,11 +132,12 @@ func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.C
 		return
 	}
 
-	githubConnector, ok := githubConnectorI.(*apitypes.GithubConnectorV3)
+	githubConnectorResource, ok := githubConnectorI.(*apitypes.GithubConnectorV3)
 	if !ok {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Errorf("Can not convert %T to GithubConnectorV3", githubConnectorI), "github"))
 		return
 	}
+	githubConnector = githubConnectorResource
 
 	diags = tfschema.CopyGithubConnectorV3ToTerraform(ctx, githubConnector, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -177,7 +180,7 @@ func (r resourceTeleportGithubConnector) Read(ctx context.Context, req tfsdk.Rea
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))
 		return
 	}
-
+	
 	githubConnector := githubConnectorI.(*apitypes.GithubConnectorV3)
 	diags = tfschema.CopyGithubConnectorV3ToTerraform(ctx, githubConnector, &state)
 	resp.Diagnostics.Append(diags...)
@@ -212,14 +215,14 @@ func (r resourceTeleportGithubConnector) Update(ctx context.Context, req tfsdk.U
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	githubConnectorResource := githubConnector
 
-	name := githubConnector.Metadata.Name
 
-	err := githubConnector.CheckAndSetDefaults()
-	if err != nil {
+	if err := githubConnectorResource.CheckAndSetDefaults(); err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating GithubConnector", err, "github"))
 		return
 	}
+	name := githubConnectorResource.Metadata.Name
 
 	githubConnectorBefore, err := r.p.Client.GetGithubConnector(ctx, name, true)
 	if err != nil {
@@ -227,12 +230,13 @@ func (r resourceTeleportGithubConnector) Update(ctx context.Context, req tfsdk.U
 		return
 	}
 
-	err = r.p.Client.UpsertGithubConnector(ctx, githubConnector)
+	err = r.p.Client.UpsertGithubConnector(ctx, githubConnectorResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating GithubConnector", err, "github"))
 		return
 	}
-
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var githubConnectorI apitypes.GithubConnector
 
 	tries := 0
@@ -259,7 +263,11 @@ func (r resourceTeleportGithubConnector) Update(ctx context.Context, req tfsdk.U
 		}
 	}
 
-	githubConnector = githubConnectorI.(*apitypes.GithubConnectorV3)
+	githubConnectorResource, ok := githubConnectorI.(*apitypes.GithubConnectorV3)
+	if !ok {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Errorf("Can not convert %T to GithubConnectorV3", githubConnectorI), "github"))
+		return
+	}
 	diags = tfschema.CopyGithubConnectorV3ToTerraform(ctx, githubConnector, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -293,13 +301,14 @@ func (r resourceTeleportGithubConnector) Delete(ctx context.Context, req tfsdk.D
 
 // ImportState imports GithubConnector state
 func (r resourceTeleportGithubConnector) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	githubConnectorI, err := r.p.Client.GetGithubConnector(ctx, req.ID, true)
+	githubConnector, err := r.p.Client.GetGithubConnector(ctx, req.ID, true)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))
 		return
 	}
 
-	githubConnector := githubConnectorI.(*apitypes.GithubConnectorV3)
+	
+	githubConnectorResource := githubConnector.(*apitypes.GithubConnectorV3)
 
 	var state types.Object
 
@@ -309,13 +318,14 @@ func (r resourceTeleportGithubConnector) ImportState(ctx context.Context, req tf
 		return
 	}
 
-	diags = tfschema.CopyGithubConnectorV3ToTerraform(ctx, githubConnector, &state)
+	diags = tfschema.CopyGithubConnectorV3ToTerraform(ctx, githubConnectorResource, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	id := githubConnectorResource.GetName()
 
-	state.Attrs["id"] = types.String{Value: githubConnector.Metadata.Name}
+	state.Attrs["id"] = types.String{Value: id}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

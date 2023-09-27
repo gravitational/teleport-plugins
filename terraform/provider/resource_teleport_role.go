@@ -55,6 +55,7 @@ func (r resourceTeleportRoleType) NewResource(_ context.Context, p tfsdk.Provide
 
 // Create creates the Role
 func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	var err error
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
 	}
@@ -74,13 +75,15 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 	}
 
 	
+	roleResource := role
 
-	_, err := r.p.Client.GetRole(ctx, role.Metadata.Name)
+	id := roleResource.Metadata.Name
+
+	_, err = r.p.Client.GetRole(ctx, id)
 	if !trace.IsNotFound(err) {
 		if err == nil {
-			n := role.Metadata.Name
 			existErr := fmt.Sprintf("Role exists in Teleport. Either remove it (tctl rm role/%v)"+
-				" or import it to the existing state (terraform import teleport_role.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_role.%v %v)", id, id, id)
 
 			resp.Diagnostics.Append(diagFromErr("Role exists in Teleport", trace.Errorf(existErr)))
 			return
@@ -90,21 +93,20 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 		return
 	}
 
-	err = role.CheckAndSetDefaults()
+	err = roleResource.CheckAndSetDefaults()
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error setting Role defaults", trace.Wrap(err), "role"))
 		return
 	}
 
-	err = r.p.Client.UpsertRole(ctx, role)
+	err = r.p.Client.UpsertRole(ctx, roleResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating Role", trace.Wrap(err), "role"))
 		return
 	}
-
-	id := role.Metadata.Name
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var roleI apitypes.Role
-
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
@@ -130,11 +132,12 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 		return
 	}
 
-	role, ok := roleI.(*apitypes.RoleV6)
+	roleResource, ok := roleI.(*apitypes.RoleV6)
 	if !ok {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Errorf("Can not convert %T to RoleV6", roleI), "role"))
 		return
 	}
+	role = roleResource
 
 	diags = tfschema.CopyRoleV6ToTerraform(ctx, role, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -177,7 +180,7 @@ func (r resourceTeleportRole) Read(ctx context.Context, req tfsdk.ReadResourceRe
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
 		return
 	}
-
+	
 	role := roleI.(*apitypes.RoleV6)
 	diags = tfschema.CopyRoleV6ToTerraform(ctx, role, &state)
 	resp.Diagnostics.Append(diags...)
@@ -212,14 +215,14 @@ func (r resourceTeleportRole) Update(ctx context.Context, req tfsdk.UpdateResour
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	roleResource := role
 
-	name := role.Metadata.Name
 
-	err := role.CheckAndSetDefaults()
-	if err != nil {
+	if err := roleResource.CheckAndSetDefaults(); err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating Role", err, "role"))
 		return
 	}
+	name := roleResource.Metadata.Name
 
 	roleBefore, err := r.p.Client.GetRole(ctx, name)
 	if err != nil {
@@ -227,12 +230,13 @@ func (r resourceTeleportRole) Update(ctx context.Context, req tfsdk.UpdateResour
 		return
 	}
 
-	err = r.p.Client.UpsertRole(ctx, role)
+	err = r.p.Client.UpsertRole(ctx, roleResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating Role", err, "role"))
 		return
 	}
-
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var roleI apitypes.Role
 
 	tries := 0
@@ -259,7 +263,11 @@ func (r resourceTeleportRole) Update(ctx context.Context, req tfsdk.UpdateResour
 		}
 	}
 
-	role = roleI.(*apitypes.RoleV6)
+	roleResource, ok := roleI.(*apitypes.RoleV6)
+	if !ok {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Errorf("Can not convert %T to RoleV6", roleI), "role"))
+		return
+	}
 	diags = tfschema.CopyRoleV6ToTerraform(ctx, role, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -293,13 +301,14 @@ func (r resourceTeleportRole) Delete(ctx context.Context, req tfsdk.DeleteResour
 
 // ImportState imports Role state
 func (r resourceTeleportRole) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	roleI, err := r.p.Client.GetRole(ctx, req.ID)
+	role, err := r.p.Client.GetRole(ctx, req.ID)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
 		return
 	}
 
-	role := roleI.(*apitypes.RoleV6)
+	
+	roleResource := role.(*apitypes.RoleV6)
 
 	var state types.Object
 
@@ -309,13 +318,14 @@ func (r resourceTeleportRole) ImportState(ctx context.Context, req tfsdk.ImportR
 		return
 	}
 
-	diags = tfschema.CopyRoleV6ToTerraform(ctx, role, &state)
+	diags = tfschema.CopyRoleV6ToTerraform(ctx, roleResource, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	id := roleResource.GetName()
 
-	state.Attrs["id"] = types.String{Value: role.Metadata.Name}
+	state.Attrs["id"] = types.String{Value: id}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

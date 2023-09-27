@@ -66,6 +66,7 @@ func (r dataSourceTeleportLoginRule) Read(ctx context.Context, req tfsdk.ReadDat
 
     var state types.Object
 	loginRule := loginRuleI
+	
 	diags = schemav1.CopyLoginRuleToTerraform(ctx, loginRule, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

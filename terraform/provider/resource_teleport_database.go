@@ -55,6 +55,7 @@ func (r resourceTeleportDatabaseType) NewResource(_ context.Context, p tfsdk.Pro
 
 // Create creates the Database
 func (r resourceTeleportDatabase) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	var err error
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
 	}
@@ -74,13 +75,15 @@ func (r resourceTeleportDatabase) Create(ctx context.Context, req tfsdk.CreateRe
 	}
 
 	
+	databaseResource := database
 
-	_, err := r.p.Client.GetDatabase(ctx, database.Metadata.Name)
+	id := databaseResource.Metadata.Name
+
+	_, err = r.p.Client.GetDatabase(ctx, id)
 	if !trace.IsNotFound(err) {
 		if err == nil {
-			n := database.Metadata.Name
 			existErr := fmt.Sprintf("Database exists in Teleport. Either remove it (tctl rm db/%v)"+
-				" or import it to the existing state (terraform import teleport_database.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_database.%v %v)", id, id, id)
 
 			resp.Diagnostics.Append(diagFromErr("Database exists in Teleport", trace.Errorf(existErr)))
 			return
@@ -90,21 +93,20 @@ func (r resourceTeleportDatabase) Create(ctx context.Context, req tfsdk.CreateRe
 		return
 	}
 
-	err = database.CheckAndSetDefaults()
+	err = databaseResource.CheckAndSetDefaults()
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error setting Database defaults", trace.Wrap(err), "db"))
 		return
 	}
 
-	err = r.p.Client.CreateDatabase(ctx, database)
+	err = r.p.Client.CreateDatabase(ctx, databaseResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating Database", trace.Wrap(err), "db"))
 		return
 	}
-
-	id := database.Metadata.Name
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var databaseI apitypes.Database
-
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
@@ -130,11 +132,12 @@ func (r resourceTeleportDatabase) Create(ctx context.Context, req tfsdk.CreateRe
 		return
 	}
 
-	database, ok := databaseI.(*apitypes.DatabaseV3)
+	databaseResource, ok := databaseI.(*apitypes.DatabaseV3)
 	if !ok {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Errorf("Can not convert %T to DatabaseV3", databaseI), "db"))
 		return
 	}
+	database = databaseResource
 
 	diags = tfschema.CopyDatabaseV3ToTerraform(ctx, database, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -177,7 +180,7 @@ func (r resourceTeleportDatabase) Read(ctx context.Context, req tfsdk.ReadResour
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
 		return
 	}
-
+	
 	database := databaseI.(*apitypes.DatabaseV3)
 	diags = tfschema.CopyDatabaseV3ToTerraform(ctx, database, &state)
 	resp.Diagnostics.Append(diags...)
@@ -212,14 +215,14 @@ func (r resourceTeleportDatabase) Update(ctx context.Context, req tfsdk.UpdateRe
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	databaseResource := database
 
-	name := database.Metadata.Name
 
-	err := database.CheckAndSetDefaults()
-	if err != nil {
+	if err := databaseResource.CheckAndSetDefaults(); err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating Database", err, "db"))
 		return
 	}
+	name := databaseResource.Metadata.Name
 
 	databaseBefore, err := r.p.Client.GetDatabase(ctx, name)
 	if err != nil {
@@ -227,12 +230,13 @@ func (r resourceTeleportDatabase) Update(ctx context.Context, req tfsdk.UpdateRe
 		return
 	}
 
-	err = r.p.Client.UpdateDatabase(ctx, database)
+	err = r.p.Client.UpdateDatabase(ctx, databaseResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating Database", err, "db"))
 		return
 	}
-
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var databaseI apitypes.Database
 
 	tries := 0
@@ -259,7 +263,11 @@ func (r resourceTeleportDatabase) Update(ctx context.Context, req tfsdk.UpdateRe
 		}
 	}
 
-	database = databaseI.(*apitypes.DatabaseV3)
+	databaseResource, ok := databaseI.(*apitypes.DatabaseV3)
+	if !ok {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Errorf("Can not convert %T to DatabaseV3", databaseI), "db"))
+		return
+	}
 	diags = tfschema.CopyDatabaseV3ToTerraform(ctx, database, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -293,13 +301,14 @@ func (r resourceTeleportDatabase) Delete(ctx context.Context, req tfsdk.DeleteRe
 
 // ImportState imports Database state
 func (r resourceTeleportDatabase) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	databaseI, err := r.p.Client.GetDatabase(ctx, req.ID)
+	database, err := r.p.Client.GetDatabase(ctx, req.ID)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
 		return
 	}
 
-	database := databaseI.(*apitypes.DatabaseV3)
+	
+	databaseResource := database.(*apitypes.DatabaseV3)
 
 	var state types.Object
 
@@ -309,13 +318,14 @@ func (r resourceTeleportDatabase) ImportState(ctx context.Context, req tfsdk.Imp
 		return
 	}
 
-	diags = tfschema.CopyDatabaseV3ToTerraform(ctx, database, &state)
+	diags = tfschema.CopyDatabaseV3ToTerraform(ctx, databaseResource, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	id := databaseResource.GetName()
 
-	state.Attrs["id"] = types.String{Value: database.Metadata.Name}
+	state.Attrs["id"] = types.String{Value: id}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

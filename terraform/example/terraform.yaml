@@ -28,6 +28,7 @@ spec:
         - login_rule
         - device
         - okta_import_rule
+        - access_list
         verbs: ['list','create','read','update','delete']
 version: v6
 ---

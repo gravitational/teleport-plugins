@@ -130,6 +130,7 @@ func (s *TerraformBaseSuite) SetupSuite() {
 				types.NewRule("saml", unrestricted),
 				types.NewRule("login_rule", unrestricted),
 				types.NewRule("device", unrestricted),
+				types.NewRule("access_list", unrestricted),
 			},
 			Logins: []string{me.Username},
 		},

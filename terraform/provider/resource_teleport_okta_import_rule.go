@@ -55,6 +55,7 @@ func (r resourceTeleportOktaImportRuleType) NewResource(_ context.Context, p tfs
 
 // Create creates the OktaImportRule
 func (r resourceTeleportOktaImportRule) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	var err error
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
 	}
@@ -74,13 +75,15 @@ func (r resourceTeleportOktaImportRule) Create(ctx context.Context, req tfsdk.Cr
 	}
 
 	
+	oktaImportRuleResource := oktaImportRule
 
-	_, err := r.p.Client.OktaClient().GetOktaImportRule(ctx, oktaImportRule.Metadata.Name)
+	id := oktaImportRuleResource.Metadata.Name
+
+	_, err = r.p.Client.OktaClient().GetOktaImportRule(ctx, id)
 	if !trace.IsNotFound(err) {
 		if err == nil {
-			n := oktaImportRule.Metadata.Name
 			existErr := fmt.Sprintf("OktaImportRule exists in Teleport. Either remove it (tctl rm okta_import_rule/%v)"+
-				" or import it to the existing state (terraform import teleport_okta_import_rule.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_okta_import_rule.%v %v)", id, id, id)
 
 			resp.Diagnostics.Append(diagFromErr("OktaImportRule exists in Teleport", trace.Errorf(existErr)))
 			return
@@ -90,21 +93,20 @@ func (r resourceTeleportOktaImportRule) Create(ctx context.Context, req tfsdk.Cr
 		return
 	}
 
-	err = oktaImportRule.CheckAndSetDefaults()
+	err = oktaImportRuleResource.CheckAndSetDefaults()
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error setting OktaImportRule defaults", trace.Wrap(err), "okta_import_rule"))
 		return
 	}
 
-	_, err = r.p.Client.OktaClient().CreateOktaImportRule(ctx, oktaImportRule)
+	_, err = r.p.Client.OktaClient().CreateOktaImportRule(ctx, oktaImportRuleResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating OktaImportRule", trace.Wrap(err), "okta_import_rule"))
 		return
 	}
-
-	id := oktaImportRule.Metadata.Name
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var oktaImportRuleI apitypes.OktaImportRule
-
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
@@ -130,11 +132,12 @@ func (r resourceTeleportOktaImportRule) Create(ctx context.Context, req tfsdk.Cr
 		return
 	}
 
-	oktaImportRule, ok := oktaImportRuleI.(*apitypes.OktaImportRuleV1)
+	oktaImportRuleResource, ok := oktaImportRuleI.(*apitypes.OktaImportRuleV1)
 	if !ok {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OktaImportRule", trace.Errorf("Can not convert %T to OktaImportRuleV1", oktaImportRuleI), "okta_import_rule"))
 		return
 	}
+	oktaImportRule = oktaImportRuleResource
 
 	diags = tfschema.CopyOktaImportRuleV1ToTerraform(ctx, oktaImportRule, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -177,7 +180,7 @@ func (r resourceTeleportOktaImportRule) Read(ctx context.Context, req tfsdk.Read
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OktaImportRule", trace.Wrap(err), "okta_import_rule"))
 		return
 	}
-
+	
 	oktaImportRule := oktaImportRuleI.(*apitypes.OktaImportRuleV1)
 	diags = tfschema.CopyOktaImportRuleV1ToTerraform(ctx, oktaImportRule, &state)
 	resp.Diagnostics.Append(diags...)
@@ -212,14 +215,14 @@ func (r resourceTeleportOktaImportRule) Update(ctx context.Context, req tfsdk.Up
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	oktaImportRuleResource := oktaImportRule
 
-	name := oktaImportRule.Metadata.Name
 
-	err := oktaImportRule.CheckAndSetDefaults()
-	if err != nil {
+	if err := oktaImportRuleResource.CheckAndSetDefaults(); err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating OktaImportRule", err, "okta_import_rule"))
 		return
 	}
+	name := oktaImportRuleResource.Metadata.Name
 
 	oktaImportRuleBefore, err := r.p.Client.OktaClient().GetOktaImportRule(ctx, name)
 	if err != nil {
@@ -227,12 +230,13 @@ func (r resourceTeleportOktaImportRule) Update(ctx context.Context, req tfsdk.Up
 		return
 	}
 
-	_, err = r.p.Client.OktaClient().UpdateOktaImportRule(ctx, oktaImportRule)
+	_, err = r.p.Client.OktaClient().UpdateOktaImportRule(ctx, oktaImportRuleResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating OktaImportRule", err, "okta_import_rule"))
 		return
 	}
-
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var oktaImportRuleI apitypes.OktaImportRule
 
 	tries := 0
@@ -259,7 +263,11 @@ func (r resourceTeleportOktaImportRule) Update(ctx context.Context, req tfsdk.Up
 		}
 	}
 
-	oktaImportRule = oktaImportRuleI.(*apitypes.OktaImportRuleV1)
+	oktaImportRuleResource, ok := oktaImportRuleI.(*apitypes.OktaImportRuleV1)
+	if !ok {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OktaImportRule", trace.Errorf("Can not convert %T to OktaImportRuleV1", oktaImportRuleI), "okta_import_rule"))
+		return
+	}
 	diags = tfschema.CopyOktaImportRuleV1ToTerraform(ctx, oktaImportRule, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -293,13 +301,14 @@ func (r resourceTeleportOktaImportRule) Delete(ctx context.Context, req tfsdk.De
 
 // ImportState imports OktaImportRule state
 func (r resourceTeleportOktaImportRule) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	oktaImportRuleI, err := r.p.Client.OktaClient().GetOktaImportRule(ctx, req.ID)
+	oktaImportRule, err := r.p.Client.OktaClient().GetOktaImportRule(ctx, req.ID)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OktaImportRule", trace.Wrap(err), "okta_import_rule"))
 		return
 	}
 
-	oktaImportRule := oktaImportRuleI.(*apitypes.OktaImportRuleV1)
+	
+	oktaImportRuleResource := oktaImportRule.(*apitypes.OktaImportRuleV1)
 
 	var state types.Object
 
@@ -309,13 +318,14 @@ func (r resourceTeleportOktaImportRule) ImportState(ctx context.Context, req tfs
 		return
 	}
 
-	diags = tfschema.CopyOktaImportRuleV1ToTerraform(ctx, oktaImportRule, &state)
+	diags = tfschema.CopyOktaImportRuleV1ToTerraform(ctx, oktaImportRuleResource, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	id := oktaImportRuleResource.GetName()
 
-	state.Attrs["id"] = types.String{Value: oktaImportRule.Metadata.Name}
+	state.Attrs["id"] = types.String{Value: id}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

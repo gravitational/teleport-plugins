@@ -55,6 +55,7 @@ func (r resourceTeleportSAMLConnectorType) NewResource(_ context.Context, p tfsd
 
 // Create creates the SAMLConnector
 func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
+	var err error
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return
 	}
@@ -74,13 +75,15 @@ func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.Cre
 	}
 
 	
+	samlConnectorResource := samlConnector
 
-	_, err := r.p.Client.GetSAMLConnector(ctx, samlConnector.Metadata.Name, true)
+	id := samlConnectorResource.Metadata.Name
+
+	_, err = r.p.Client.GetSAMLConnector(ctx, id, true)
 	if !trace.IsNotFound(err) {
 		if err == nil {
-			n := samlConnector.Metadata.Name
 			existErr := fmt.Sprintf("SAMLConnector exists in Teleport. Either remove it (tctl rm saml/%v)"+
-				" or import it to the existing state (terraform import teleport_saml_connector.%v %v)", n, n, n)
+				" or import it to the existing state (terraform import teleport_saml_connector.%v %v)", id, id, id)
 
 			resp.Diagnostics.Append(diagFromErr("SAMLConnector exists in Teleport", trace.Errorf(existErr)))
 			return
@@ -90,21 +93,20 @@ func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.Cre
 		return
 	}
 
-	err = samlConnector.CheckAndSetDefaults()
+	err = samlConnectorResource.CheckAndSetDefaults()
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error setting SAMLConnector defaults", trace.Wrap(err), "saml"))
 		return
 	}
 
-	err = r.p.Client.UpsertSAMLConnector(ctx, samlConnector)
+	err = r.p.Client.UpsertSAMLConnector(ctx, samlConnectorResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating SAMLConnector", trace.Wrap(err), "saml"))
 		return
 	}
-
-	id := samlConnector.Metadata.Name
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var samlConnectorI apitypes.SAMLConnector
-
 	tries := 0
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
@@ -130,11 +132,12 @@ func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.Cre
 		return
 	}
 
-	samlConnector, ok := samlConnectorI.(*apitypes.SAMLConnectorV2)
+	samlConnectorResource, ok := samlConnectorI.(*apitypes.SAMLConnectorV2)
 	if !ok {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Errorf("Can not convert %T to SAMLConnectorV2", samlConnectorI), "saml"))
 		return
 	}
+	samlConnector = samlConnectorResource
 
 	diags = tfschema.CopySAMLConnectorV2ToTerraform(ctx, samlConnector, &plan)
 	resp.Diagnostics.Append(diags...)
@@ -177,7 +180,7 @@ func (r resourceTeleportSAMLConnector) Read(ctx context.Context, req tfsdk.ReadR
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))
 		return
 	}
-
+	
 	samlConnector := samlConnectorI.(*apitypes.SAMLConnectorV2)
 	diags = tfschema.CopySAMLConnectorV2ToTerraform(ctx, samlConnector, &state)
 	resp.Diagnostics.Append(diags...)
@@ -212,14 +215,14 @@ func (r resourceTeleportSAMLConnector) Update(ctx context.Context, req tfsdk.Upd
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	samlConnectorResource := samlConnector
 
-	name := samlConnector.Metadata.Name
 
-	err := samlConnector.CheckAndSetDefaults()
-	if err != nil {
+	if err := samlConnectorResource.CheckAndSetDefaults(); err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SAMLConnector", err, "saml"))
 		return
 	}
+	name := samlConnectorResource.Metadata.Name
 
 	samlConnectorBefore, err := r.p.Client.GetSAMLConnector(ctx, name, true)
 	if err != nil {
@@ -227,12 +230,13 @@ func (r resourceTeleportSAMLConnector) Update(ctx context.Context, req tfsdk.Upd
 		return
 	}
 
-	err = r.p.Client.UpsertSAMLConnector(ctx, samlConnector)
+	err = r.p.Client.UpsertSAMLConnector(ctx, samlConnectorResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SAMLConnector", err, "saml"))
 		return
 	}
-
+		
+	// Not really an inferface, just using the same name for easier templating.
 	var samlConnectorI apitypes.SAMLConnector
 
 	tries := 0
@@ -259,7 +263,11 @@ func (r resourceTeleportSAMLConnector) Update(ctx context.Context, req tfsdk.Upd
 		}
 	}
 
-	samlConnector = samlConnectorI.(*apitypes.SAMLConnectorV2)
+	samlConnectorResource, ok := samlConnectorI.(*apitypes.SAMLConnectorV2)
+	if !ok {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Errorf("Can not convert %T to SAMLConnectorV2", samlConnectorI), "saml"))
+		return
+	}
 	diags = tfschema.CopySAMLConnectorV2ToTerraform(ctx, samlConnector, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -293,13 +301,14 @@ func (r resourceTeleportSAMLConnector) Delete(ctx context.Context, req tfsdk.Del
 
 // ImportState imports SAMLConnector state
 func (r resourceTeleportSAMLConnector) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	samlConnectorI, err := r.p.Client.GetSAMLConnector(ctx, req.ID, true)
+	samlConnector, err := r.p.Client.GetSAMLConnector(ctx, req.ID, true)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))
 		return
 	}
 
-	samlConnector := samlConnectorI.(*apitypes.SAMLConnectorV2)
+	
+	samlConnectorResource := samlConnector.(*apitypes.SAMLConnectorV2)
 
 	var state types.Object
 
@@ -309,13 +318,14 @@ func (r resourceTeleportSAMLConnector) ImportState(ctx context.Context, req tfsd
 		return
 	}
 
-	diags = tfschema.CopySAMLConnectorV2ToTerraform(ctx, samlConnector, &state)
+	diags = tfschema.CopySAMLConnectorV2ToTerraform(ctx, samlConnectorResource, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
+	id := samlConnectorResource.GetName()
 
-	state.Attrs["id"] = types.String{Value: samlConnector.Metadata.Name}
+	state.Attrs["id"] = types.String{Value: id}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
