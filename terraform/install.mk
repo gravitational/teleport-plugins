@@ -1,4 +1,4 @@
-VERSION=14.0.0
+VERSION=14.0.1-fred.test.1
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)

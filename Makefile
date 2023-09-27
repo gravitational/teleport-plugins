@@ -223,7 +223,7 @@ update-helm-version-%:
 
 .PHONY: update-teleport-dep-version
 update-teleport-dep-version:
-	./update_teleport_dep_version.sh v$(VERSION)
+	./update_teleport_dep_version.sh v14.0.1
 
 .PHONY: update-tag
 update-tag:
