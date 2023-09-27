@@ -41,7 +41,11 @@ func DecodePluginData(dataMap map[string]string) (PluginData, error) {
 	data := PluginData{}
 	var errors []error
 
-	data.AccessRequestData = plugindata.DecodeAccessRequestData(dataMap)
+	accessRequestData, err := plugindata.DecodeAccessRequestData(dataMap)
+	if err != nil {
+		return data, trace.Wrap(err, "failed to decode access request data")
+	}
+	data.AccessRequestData = accessRequestData
 
 	if str := dataMap["messages"]; str != "" {
 		for _, encodedMsg := range strings.Split(str, ",") {
@@ -70,7 +74,11 @@ func DecodePluginData(dataMap map[string]string) (PluginData, error) {
 
 // EncodePluginData serializes plugin data to a string map
 func EncodePluginData(data PluginData) (map[string]string, error) {
-	result := plugindata.EncodeAccessRequestData(data.AccessRequestData)
+	result, err := plugindata.EncodeAccessRequestData(data.AccessRequestData)
+	if err != nil {
+		return nil, trace.Wrap(err, "failed to encode access request data")
+	}
+
 	var errors []error
 
 	var encodedMessages []string
