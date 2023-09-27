@@ -1,4 +1,4 @@
-VERSION=14.0.1
+VERSION=14.0.1-fred.test.2
 GO_VERSION=1.21.1
 
 BUILDDIR ?= build
