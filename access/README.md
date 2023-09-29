@@ -17,10 +17,10 @@ For more specific examples of how to build a custom access request workflow with
 The Teleport documentation includes access request plugins guides for integration
 with the following solutions:
 
-- [Discord](https://goteleport.com/docs/ver/15.x/access-controls/access-request-plugins/ssh-approval-discord/)
-- [Email](https://goteleport.com/docs/ver/15.x/access-controls/access-request-plugins/ssh-approval-email/)
+- [Discord](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-discord/)
+- [Email](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-email/)
 - [JIRA](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-jira/)
 - [Mattermost](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-mattermost/)
-- [Microsoft Teams](https://goteleport.com/docs/ver/15.x/access-controls/access-request-plugins/ssh-approval-msteams/)
+- [Microsoft Teams](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-msteams/)
 - [PagerDuty](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-pagerduty/)
 - [Slack](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-slack/)
