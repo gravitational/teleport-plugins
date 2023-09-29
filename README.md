@@ -1,18 +1,15 @@
-# Teleport Access Request plugins and example applications
+# Teleport plugins and example applications
 
-Access Request plugins enable you to integrate access requests for resources protected by
-Teleport with your organization's existing messaging and project management solutions, such as Slack, JIRA, and Mattermost.
-If you have a self-hosted Teleport deployment, you can find information for configuring access
-request plugins in [Just-in-Time Access Request Plugins](https://goteleport.com/docs/access-controls/access-request-plugins/).
+Teleport plugins allow you to integrate the Teleport Access Platform and workflows with other tools you use to support your infrastructure.
 
-[![Build Status](https://drone.platform.teleport.sh/api/badges/gravitational/teleport-plugins/status.svg)](https://drone.platform.teleport.sh/gravitational/teleport-plugins/)
+For example, Teleport Access Request plugins enable you to integrate access requests for resources protected by Teleport with your organization's existing messaging and project management solutions, such as Slack, JIRA, and Mattermost.
+If you have a self-hosted Teleport deployment, you can find information about configuring access request plugins in [Just-in-Time Access Request Plugins](https://goteleport.com/docs/access-controls/access-request-plugins/).
 
 ## Access API
 
 The [access](./access) package exposes a simple API for managing access requests
-which can be used for writing plugins. More info can be found in
-[access/README.md](./access/README.md), including instructions on how to
-properly provision necessary certificates.
+that can be used for writing plugins. You can find the current Teleport Access API in the main [Teleport repository](https://github.com/gravitational/teleport). For
+more information, see [access/README.md](./access/README.md).
 
 ## Existing plugin guides
 
