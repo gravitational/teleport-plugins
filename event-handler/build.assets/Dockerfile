@@ -1,5 +1,5 @@
-ARG GO_VER
-FROM golang:${GO_VER}-bookworm
+ARG GO_VERSION
+FROM golang:${GO_VERSION}-bookworm
 
 ARG UID
 ARG GID

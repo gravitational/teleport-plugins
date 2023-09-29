@@ -12,15 +12,6 @@ which can be used for writing plugins. More info can be found in
 [access/README.md](./access/README.md), including instructions on how to
 properly provision necessary certificates.
 
-### API Example
-
-The [access/example](./access/example) plugin automatically approves access
-requests based on a user whitelist. This is a good place to start if you are
-trying to understand how to use the [`access`](./access) API.
-
-Use `make access-example` to build the plugin and
-`./build/access-example configure` to print out a sample configuration file.
-
 ### Slack
 
 [See setup instructions on Teleport's website](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-slack/)
