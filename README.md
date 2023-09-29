@@ -1,6 +1,6 @@
 # Teleport plugins and example applications
 
-Teleport plugins allow you to integrate the Teleport Access Platform and workflows with other tools you use to support your infrastructure.
+Teleport plugins allow you to integrate the Teleport Access Platform and Teleport workflows with other tools you use to support your infrastructure.
 
 For example, Teleport Access Request plugins enable you to integrate access requests for resources protected by Teleport with your organization's existing messaging and project management solutions, such as Slack, JIRA, and Mattermost.
 If you have a self-hosted Teleport deployment, you can find information about configuring access request plugins in [Just-in-Time Access Request Plugins](https://goteleport.com/docs/access-controls/access-request-plugins/).
