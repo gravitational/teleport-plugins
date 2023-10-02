@@ -44,13 +44,9 @@ access-msteams:
 access-pagerduty:
 	$(MAKE) -C access/pagerduty
 
-.PHONY: access-example
-access-example:
-	go build -o build/access-example ./access/example
-
 .PHONY: access-email
 access-email:
-	go build -o build/access-email ./access/email
+	$(MAKE) -C access/email
 
 # Build specific access plugin with docker
 .PHONY: docker-build-access-%
@@ -288,6 +284,7 @@ update-goversion:
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/pagerduty/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/email/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/Makefile
+	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/build.assets/Makefile
 	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
 	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/unit-tests.yaml
 	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/terraform-tests.yaml

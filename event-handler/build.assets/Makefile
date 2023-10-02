@@ -2,7 +2,7 @@ LOCALDIR := $(dir $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
 TOP ?= $(abspath $(LOCALDIR)/../..)
 SRCDIR=/go/src/github.com/gravitational/teleport-plugins/event-handler
 VERSION=0.0.1
-CGOFLAG ?= CGO_ENABLED=1
+CGOFLAG ?= CGO_ENABLED=0
 BUILDDIR=$(TOP)/build
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
@@ -19,10 +19,10 @@ DOCKERFLAGS := --rm \
 
 BUILDFORHOST := -e OS=$(OS) \
 	-e ARCH=$(ARCH) \
-	-e CGOFLAG="CGO_ENABLED=0"
+	-e CGOFLAG=$(CGOFLAG)
 
 DOCKERPULLFLAGS ?= --pull
-GO_VER = 1.18
+GO_VERSION = 1.21.1
 
 NOROOT=-u $$(id -u):$$(id -g)
 BINDIR=/usr/local/bin
@@ -30,7 +30,7 @@ BINDIR=/usr/local/bin
 .PHONY: buildbox
 buildbox:
 	docker build \
-		--build-arg GO_VER=$(GO_VER) \
+		--build-arg GO_VERSION=$(GO_VERSION) \
 		--build-arg UID=$(shell id -u) \
 		--build-arg GID=$(shell id -g) \
 		--build-arg ARCH=$(ARCH) \
