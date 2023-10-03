@@ -7,7 +7,7 @@ GITTAG=v$(VERSION)
 GITREF ?= $(shell git describe --dirty --long --tags --match '*msteams*')
 ADDFLAGS ?=
 BUILDFLAGS ?= $(ADDFLAGS) -ldflags "-w -s -X main.Gitref=$(GITREF) -X main.Version=$(VERSION)"
-CGOFLAG ?= CGO_ENABLED=1
+CGOFLAG ?= CGO_ENABLED=0
 
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
