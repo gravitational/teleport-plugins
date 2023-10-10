@@ -115,7 +115,7 @@ func (a *App) SendEvent(ctx context.Context, url string, e *TeleportEvent) error
 				break
 			}
 
-			log.Error("Error sending event to Teleport: ", err)
+			log.Error("Error sending event to fluentd: ", err)
 
 			bErr := backoff.Do(ctx)
 			if bErr != nil {
