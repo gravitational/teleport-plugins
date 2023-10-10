@@ -235,7 +235,9 @@ func (c *StartCmdConfig) Dump(ctx context.Context) {
 	log.WithField("url", c.FluentdURL).Info("Using Fluentd url")
 	log.WithField("url", c.FluentdSessionURL).Info("Using Fluentd session url")
 	if c.FluentdCA != "" {
-		log.WithField("ca", c.FluentdCA).Info("Using Fluentd ca")
+		log.WithField("ca", c.FluentdCA).Info("Using Fluentd CA")
+	} else {
+		log.Info("Using system trust store to validate fluentd CA")
 	}
 	if c.FluentdCert != "" {
 		log.WithField("cert", c.FluentdCert).Info("Using Fluentd cert")
