@@ -43,9 +43,15 @@ type FluentdClient struct {
 
 // NewFluentdClient creates new FluentdClient
 func NewFluentdClient(c *FluentdConfig) (*FluentdClient, error) {
-	cert, err := tls.LoadX509KeyPair(c.FluentdCert, c.FluentdKey)
-	if err != nil {
-		return nil, trace.Wrap(err)
+	var certs []tls.Certificate
+	if c.FluentdCert != "" && c.FluentdKey != "" {
+		cert, err := tls.LoadX509KeyPair(c.FluentdCert, c.FluentdKey)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		certs = append(certs, cert)
+	} else if c.FluentdCert != "" || c.FluentdKey != "" {
+		return nil, trace.BadParameter("both fluentd_cert and fluentd_key should be specified")
 	}
 
 	ca, err := getCertPool(c)
@@ -57,7 +63,7 @@ func NewFluentdClient(c *FluentdConfig) (*FluentdClient, error) {
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
 				RootCAs:      ca,
-				Certificates: []tls.Certificate{cert},
+				Certificates: certs,
 			},
 		},
 		Timeout: httpTimeout,
