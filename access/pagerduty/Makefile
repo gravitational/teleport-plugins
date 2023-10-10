@@ -1,5 +1,5 @@
 VERSION=14.0.1
-GO_VERSION=1.21.1
+GO_VERSION=1.21.2
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-pagerduty

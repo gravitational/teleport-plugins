@@ -1,58 +1,35 @@
-# Teleport Plugins and Example Applications
+# Teleport plugins and example applications
 
-A set of plugins for Teleport's for Access Workflows and example applications for Teleport Application Access.
+Teleport plugins allow you to integrate the Teleport Access Platform and Teleport workflows with other tools you use to support your infrastructure.
 
-[![Build Status](https://drone.platform.teleport.sh/api/badges/gravitational/teleport-plugins/status.svg)](https://drone.platform.teleport.sh/gravitational/teleport-plugins/)
-
+For example, Teleport Access Request plugins enable you to integrate access requests for resources protected by Teleport with your organization's existing messaging and project management solutions, such as Slack, JIRA, and Mattermost.
+If you have a self-hosted Teleport deployment, you can find information about configuring access request plugins in [Just-in-Time Access Request Plugins](https://goteleport.com/docs/access-controls/access-request-plugins/).
 
 ## Access API
 
 The [access](./access) package exposes a simple API for managing access requests
-which can be used for writing plugins. More info can be found in
-[access/README.md](./access/README.md), including instructions on how to
-properly provision necessary certificates.
+that can be used for writing plugins. You can find the current Teleport Access API in the main [Teleport repository](https://github.com/gravitational/teleport). For
+more information, see [access/README.md](./access/README.md).
 
-### Slack
+## Existing plugin guides
 
-[See setup instructions on Teleport's website](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-slack/)
+The Teleport documentation includes access request plugins guides for integration
+with the following solutions:
 
-A basic slack plugin (WIP) can be found in [access/slack](./access/slack). The
-plugin can be built with `make access-slack` and instructions for configuring
-the plugin can be found in the plugin's [README](./access/slack/README.md).
-
-### JIRA
-
-[See setup instructions on Teleport's website](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-jira/)
-
-A basic Teleport / JIRA integration (WIP) can be found in
-[access/jira](./access/jira). The plugin can be built with `make access-jira`
-and instructions for configuring the plugin can be found in the plugin's
-[README](./access/jira/README.md).
-
-### Mattermost
-
-[See setup instructions on Teleport's website](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-mattermost/)
-
-Mattermost is a private cloud messaging platform (think Slack for enterprise).
-Teleport provides a Mattermost integration that supports request flows similar
-to Slack integration above. The plugin can be built with
-`make access-mattermost`, and instructions for configuring the plugin can be
-found in the plugin's [README](./access/mattermost/README.md).
-
-### PagerDuty
-
-[See setup instructions on Teleport's website](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-pagerduty/)
-
-A Teleport integration with Pagerduty that allows your team to treat Teleport
-permission requests as Pagerduty incidents, and provides Pagerduty special
-actions to approve or deny permission requests. Run `make teleport-pagerduty` to
-build it. More docs in the [README](./access/pagerduty/README.md).
+- [Discord](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-discord/)
+- [Email](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-email/)
+- [JIRA](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-jira/)
+- [Mattermost](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-mattermost/)
+- [Microsoft Teams](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-msteams/)
+- [PagerDuty](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-pagerduty/)
+- [Slack](https://goteleport.com/docs/access-controls/access-request-plugins/ssh-approval-slack/)
 
 ## Event Handler
 
-The [Teleport Event Handler Plugin](./event-handler) is used to export audit log events to a fluentd service. For more information, visit the Fluentd setup guide at [goteleport.com](https://goteleport.com/docs/management/export-audit-events/fluentd/) or checkout the [README](./event-handler/README.md).
+The [Teleport Event Handler Plugin](./event-handler) is used to export audit log events to a `fluentd` service. 
+For more information, see [Fluentd](https://goteleport.com/docs/management/export-audit-events/fluentd/).
 
 ## Terraform Provider
 
-The [Teleport Terraform Provider](./terraform) makes it easy to create resources using
-Terraform. More info can be found in [terraform/README.md](./terraform/README.md).
+The [Teleport Terraform Provider](./terraform) makes it easy to create resources using Terraform. 
+For more information, see [Terraform Provider]((https://goteleport.com/docs/setup/guides/terraform-provider/).
