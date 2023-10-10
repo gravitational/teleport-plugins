@@ -34,10 +34,10 @@ var cli CLI
 
 const (
 	// pluginName is the plugin name
-	pluginName = "Teleport event handler"
+	pluginName = "teleport-event-handler"
 
 	// pluginDescription is the plugin description
-	pluginDescription = "Forwards Teleport AuditLog to external sources"
+	pluginDescription = "Forwards Teleport audit logs to external sources"
 
 	// gracefulShutdownTimeout is the graceful shutdown timeout
 	gracefulShutdownTimeout = 5 * time.Second

@@ -49,10 +49,10 @@ func KongTOMLResolver(r io.Reader) (kong.Resolver, error) {
 		}
 
 		value := config.Get(name)
-		valueWithinSeciton := config.Get(strings.ReplaceAll(name, "-", "."))
+		valueWithinSection := config.Get(strings.ReplaceAll(name, "-", "."))
 
-		if valueWithinSeciton != nil {
-			return valueWithinSeciton, nil
+		if valueWithinSection != nil {
+			return valueWithinSection, nil
 		}
 
 		return value, nil

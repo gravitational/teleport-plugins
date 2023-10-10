@@ -43,22 +43,37 @@ type FluentdClient struct {
 
 // NewFluentdClient creates new FluentdClient
 func NewFluentdClient(c *FluentdConfig) (*FluentdClient, error) {
-	cert, err := tls.LoadX509KeyPair(c.FluentdCert, c.FluentdKey)
-	if err != nil {
-		return nil, trace.Wrap(err)
+	// Error if the user provides a cert with no private key
+	if c.FluentdCert != "" && c.FluentdKey == "" {
+		return nil, trace.Errorf("fluentd cert provided with no private key")
 	}
 
-	ca, err := getCertPool(c)
-	if err != nil {
-		return nil, trace.Wrap(err)
+	// Error if the user provides a private key with no cert
+	if c.FluentdCert == "" && c.FluentdKey != "" {
+		return nil, trace.Errorf("fluentd private key provided with no cert")
+	}
+
+	tlsConfig := &tls.Config{}
+	if c.FluentdCert != "" && c.FluentdKey != "" {
+		cert, err := tls.LoadX509KeyPair(c.FluentdCert, c.FluentdKey)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{cert}
+	}
+
+	// The Use of a CA is optional - append it if set. The system trust store is automatically used when not set.
+	if c.FluentdCA != "" {
+		ca, err := getCertPool(c)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		tlsConfig.RootCAs = ca
 	}
 
 	client := &http.Client{
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				RootCAs:      ca,
-				Certificates: []tls.Certificate{cert},
-			},
+			TLSClientConfig: tlsConfig,
 		},
 		Timeout: httpTimeout,
 	}

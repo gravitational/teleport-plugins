@@ -38,10 +38,10 @@ type FluentdConfig struct {
 	FluentdSessionURL string `help:"fluentd session url" required:"true" env:"FDFWD_FLUENTD_SESSION_URL"`
 
 	// FluentdCert is a path to fluentd cert
-	FluentdCert string `help:"fluentd TLS certificate file" required:"true" type:"existingfile" env:"FDWRD_FLUENTD_CERT"`
+	FluentdCert string `help:"fluentd TLS certificate file" type:"existingfile" env:"FDWRD_FLUENTD_CERT"`
 
 	// FluentdKey is a path to fluentd key
-	FluentdKey string `help:"fluentd TLS key file" required:"true" type:"existingfile" env:"FDWRD_FLUENTD_KEY"`
+	FluentdKey string `help:"fluentd TLS key file" type:"existingfile" env:"FDWRD_FLUENTD_KEY"`
 
 	// FluentdCA is a path to fluentd CA
 	FluentdCA string `help:"fluentd TLS CA file" type:"existingfile" env:"FDWRD_FLUENTD_CA"`
@@ -234,9 +234,15 @@ func (c *StartCmdConfig) Dump(ctx context.Context) {
 	log.WithField("timeout", c.Timeout).Info("Using timeout")
 	log.WithField("url", c.FluentdURL).Info("Using Fluentd url")
 	log.WithField("url", c.FluentdSessionURL).Info("Using Fluentd session url")
-	log.WithField("ca", c.FluentdCA).Info("Using Fluentd ca")
-	log.WithField("cert", c.FluentdCert).Info("Using Fluentd cert")
-	log.WithField("key", c.FluentdKey).Info("Using Fluentd key")
+	if c.FluentdCA != "" {
+		log.WithField("ca", c.FluentdCA).Info("Using Fluentd ca")
+	}
+	if c.FluentdCert != "" {
+		log.WithField("cert", c.FluentdCert).Info("Using Fluentd cert")
+	}
+	if c.FluentdKey != "" {
+		log.WithField("key", c.FluentdKey).Info("Using Fluentd key")
+	}
 
 	if c.TeleportIdentityFile != "" {
 		log.WithField("file", c.TeleportIdentityFile).Info("Using Teleport identity file")
