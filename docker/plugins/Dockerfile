@@ -1,5 +1,5 @@
 # Defines Teleport Slack image, based on Teleport OSS image.
-ARG RUNTIME="go1.21.1"
+ARG RUNTIME="go1.21.3"
 ARG BBOX="public.ecr.aws/gravitational/teleport-buildbox"
 FROM $BBOX:$RUNTIME
 
