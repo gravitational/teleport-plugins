@@ -20,7 +20,7 @@ Add the following configuration section to your `terraform` configuration block:
 terraform {
   required_providers {
     teleport = {
-      version = ">= (=teleport.version=)"
+      version = "~> (=teleport.major_version=).0"
       source  = "terraform.releases.teleport.dev/gravitational/teleport"
     }
   }
