@@ -276,6 +276,10 @@ promote-tag:
 update-goversion:
 	# Make sure GOVERSION is set on the command line "make update-goversion GOVERSION=x.y.z".
 	@test $(GOVERSION)
+	$(SED) 's/^toolchain go.*/toolchain go$(GOVERSION)/' go.mod
+	$(SED) 's/^toolchain go.*/toolchain go$(GOVERSION)/' tooling/go.mod
+	$(SED) 's/^ARG RUNTIME="go.*/ARG RUNTIME="go$(GOVERSION)"/' docker/plugins/Dockerfile
+	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/discord/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/jira/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/mattermost/Makefile
