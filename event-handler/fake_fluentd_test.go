@@ -21,11 +21,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path"
-	"strings"
 	"time"
 
 	"github.com/gravitational/teleport/integrations/lib/logger"
@@ -153,17 +153,14 @@ func (f *FakeFluentd) GetURL() string {
 
 // Respond is the response function
 func (f *FakeFluentd) Respond(w http.ResponseWriter, r *http.Request) {
-	var req = make([]byte, r.ContentLength)
-
-	_, err := r.Body.Read(req)
-	// We omit err here because it always returns weird EOF.
-	// It has something to do with httptest, known bug.
-	// TODO: find out and resolve.
-	if !trace.IsEOF(err) {
-		logger.Standard().WithError(err).Error("FakeFluentd Respond() failed")
+	req, err := io.ReadAll(r.Body)
+	if err != nil {
+		logger.Standard().WithError(err).Error("FakeFluentd Respond() failed to read body")
+		fmt.Fprintln(w, "NOK")
+		return
 	}
 
-	f.chMessages <- strings.TrimSpace(string(req))
+	f.chMessages <- string(req)
 	fmt.Fprintln(w, "OK")
 }
 

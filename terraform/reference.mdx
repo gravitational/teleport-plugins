@@ -133,10 +133,19 @@ spec is the specification for the access list.
 
 audit describes the frequency that this access list must be audited.
 
-|      Name       |     Type     | Required | Description |
-|-----------------|--------------|----------|-------------|
-| frequency       | duration     |          |             |
-| next_audit_date | RFC3339 time |          |             |
+|      Name       |     Type     | Required |               Description               |
+|-----------------|--------------|----------|-----------------------------------------|
+| next_audit_date | RFC3339 time |          |                                         |
+| recurrence      | object       |          | recurrence is the recurrence definition |
+
+##### spec.audit.recurrence
+
+recurrence is the recurrence definition
+
+|     Name     |  Type  | Required |                             Description                             |
+|--------------|--------|----------|---------------------------------------------------------------------|
+| day_of_month | number |          | day_of_month is the day of month that reviews will be scheduled on. |
+| frequency    | number |          | frequency is the frequency of reviews.                              |
 
 #### spec.grants
 
