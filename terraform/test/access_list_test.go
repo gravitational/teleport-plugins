@@ -48,6 +48,7 @@ func (s *TerraformSuite) TestAccessList() {
 					resource.TestCheckResourceAttr(name, "spec.owners.0.name", "gru"),
 					resource.TestCheckResourceAttr(name, "spec.membership_requires.roles.0", "minion"),
 					resource.TestCheckResourceAttr(name, "spec.grants.roles.0", "crane-operator"),
+					resource.TestCheckResourceAttr(name, "spec.audit.recurrence.frequency", "6"),
 				),
 			},
 			{

@@ -30,7 +30,7 @@ steps:
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
       TERRAFORM_VERSION: 1.5.6-1
-      TELEPORT_VERSION: 14.0.0
+      TELEPORT_VERSION: 14.0.3
     commands:
       - echo Testing plugins against Teleport $TELEPORT_VERSION
       - apt update && apt install -y gnupg software-properties-common
@@ -1081,6 +1081,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 7329d41f2acd4c65f990204ced4435154add3fed15634bc7bcab06791dec41a1
+hmac: 63e4d9ad2fc74400265609424f058f2ccbd18c52d60c5e884ba07181c3cdd637
 
 ...
