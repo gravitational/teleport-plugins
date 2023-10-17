@@ -24,12 +24,9 @@ import (
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/integrations/lib"
-	"github.com/gravitational/teleport/integrations/lib/credentials"
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/teleport/integrations/lib/watcherjob"
 	"github.com/gravitational/trace"
-	"google.golang.org/grpc"
-	grpcbackoff "google.golang.org/grpc/backoff"
 )
 
 const (
@@ -37,8 +34,6 @@ const (
 	minServerVersion = "6.1.0-beta.1"
 	// pluginName is used to tag PluginData and as a Delegator in Audit log.
 	pluginName = "email"
-	// backoffMaxDelay is a maximum time GRPC client waits before reconnection attempt.
-	grpcBackoffMaxDelay = time.Second * 2
 	// initTimeout is used to bound execution time of health check and teleport version check.
 	initTimeout = time.Second * 10
 	// handlerTimeout is used to bound the execution time of watcher event handler.
@@ -127,44 +122,18 @@ func (a *App) run(ctx context.Context) error {
 func (a *App) init(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, initTimeout)
 	defer cancel()
-	log := logger.Get(ctx)
 
-	if validCred, err := credentials.CheckIfExpired(a.conf.Teleport.Credentials()); err != nil {
-		log.Warn(err)
-		if !validCred {
-			return trace.BadParameter(
-				"No valid credentials found, this likely means credentials are expired. In this case, please sign new credentials and increase their TTL if needed.",
-			)
-		}
-		log.Info("At least one non-expired credential has been found, continuing startup")
-	}
-
-	var (
-		err          error
-		webProxyAddr string
-		pong         proto.PingResponse
-	)
-
-	bk := grpcbackoff.DefaultConfig
-	bk.MaxDelay = grpcBackoffMaxDelay
-	if a.apiClient, err = client.New(ctx, client.Config{
-		Addrs:       a.conf.Teleport.GetAddrs(),
-		Credentials: a.conf.Teleport.Credentials(),
-		DialOpts: []grpc.DialOption{
-			grpc.WithConnectParams(grpc.ConnectParams{Backoff: bk, MinConnectTimeout: initTimeout}),
-			grpc.WithDefaultCallOptions(
-				grpc.WaitForReady(true),
-			),
-			grpc.WithReturnConnectionError(),
-		},
-	}); err != nil {
+	var err error
+	if a.apiClient, err = a.conf.Teleport.NewClient(ctx); err != nil {
 		return trace.Wrap(err)
 	}
 
-	if pong, err = a.checkTeleportVersion(ctx); err != nil {
+	pong, err := a.checkTeleportVersion(ctx)
+	if err != nil {
 		return trace.Wrap(err)
 	}
 
+	var webProxyAddr string
 	if pong.ServerFeatures.AdvancedAccessWorkflows {
 		webProxyAddr = pong.ProxyPublicAddr
 	}
