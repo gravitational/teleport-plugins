@@ -25,6 +25,7 @@ import (
 	auditlogpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/auditlog/v1"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/events"
+	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/teleport/integrations/lib/credentials"
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/trace"
@@ -80,17 +81,23 @@ func NewTeleportEventsWatcher(
 	cursor string,
 	id string,
 ) (*TeleportEventsWatcher, error) {
-	var err error
-
-	config := client.Config{
-		Addrs: []string{c.TeleportAddr},
-		Credentials: []client.Credentials{
-			client.LoadIdentityFile(c.TeleportIdentityFile),
-			client.LoadKeyPair(c.TeleportCert, c.TeleportKey, c.TeleportCA),
-		},
+	var creds []client.Credentials
+	switch {
+	case c.TeleportIdentityFile != "" && !c.TeleportRefreshIdentity:
+		creds = []client.Credentials{client.LoadIdentityFile(c.TeleportIdentityFile)}
+	case c.TeleportIdentityFile != "" && c.TeleportRefreshIdentity:
+		cred, err := lib.NewIdentityFileWatcher(ctx, c.TeleportIdentityFile, c.TeleportRefreshIdentityInterval)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		creds = []client.Credentials{cred}
+	case c.TeleportCert != "" && c.TeleportKey != "" && c.TeleportCA != "":
+		creds = []client.Credentials{client.LoadKeyPair(c.TeleportCert, c.TeleportKey, c.TeleportCA)}
+	default:
+		return nil, trace.BadParameter("no credentials configured")
 	}
 
-	if validCred, err := credentials.CheckIfExpired(config.Credentials); err != nil {
+	if validCred, err := credentials.CheckIfExpired(creds); err != nil {
 		log.Warn(err)
 		if !validCred {
 			return nil, trace.BadParameter(
@@ -100,13 +107,18 @@ func NewTeleportEventsWatcher(
 		log.Info("At least one non-expired credential has been found, continuing startup")
 	}
 
-	client, err := client.New(ctx, config)
+	config := client.Config{
+		Addrs:       []string{c.TeleportAddr},
+		Credentials: creds,
+	}
+
+	teleportClient, err := client.New(ctx, config)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
 
 	tc := TeleportEventsWatcher{
-		client:    client,
+		client:    teleportClient,
 		pos:       -1,
 		cursor:    cursor,
 		config:    c,
