@@ -190,7 +190,7 @@ func GenSchemaAccessList(ctx context.Context) (github_com_hashicorp_terraform_pl
 						},
 					}),
 					Description: "membership_requires describes the requirements for a user to be a member of the access list. For a membership to an access list to be effective, the user must meet the requirements of Membership_requires and must be in the members list.",
-					Required:    true,
+					Optional:    true,
 				},
 				"owners": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -233,7 +233,7 @@ func GenSchemaAccessList(ctx context.Context) (github_com_hashicorp_terraform_pl
 						},
 					}),
 					Description: "ownership_requires describes the requirements for a user to be an owner of the access list. For ownership of an access list to be effective, the user must meet the requirements of ownership_requires and must be in the owners list.",
-					Required:    true,
+					Optional:    true,
 				},
 				"title": {
 					Description: "title is a plaintext short description of the access list.",
