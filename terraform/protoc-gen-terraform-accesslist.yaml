@@ -48,8 +48,6 @@ required_fields:
     - "Metadata.name"
     - "AccessList.spec.owners"
     - "AccessList.spec.grants"
-    - "AccessList.spec.membership_requires"
-    - "AccessList.spec.ownership_requires"
 
 plan_modifiers:
     # Force to recreate resource if it's name changes
