@@ -71,3 +71,4 @@ custom_types:
   "AccessList.header.metadata.expires": Timestamp
   "AccessList.spec.audit.next_audit_date": Timestamp
   "AccessList.spec.audit.frequency": Duration
+  "AccessList.spec.audit.notifications.start": Duration
