@@ -34,6 +34,7 @@ import (
 	github_com_hashicorp_terraform_plugin_framework_tfsdk "github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	github_com_hashicorp_terraform_plugin_framework_types "github.com/hashicorp/terraform-plugin-framework/types"
 	github_com_hashicorp_terraform_plugin_go_tftypes "github.com/hashicorp/terraform-plugin-go/tftypes"
+	_ "google.golang.org/protobuf/types/known/durationpb"
 	_ "google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -113,6 +114,11 @@ func GenSchemaAccessList(ctx context.Context) (github_com_hashicorp_terraform_pl
 				"audit": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 						"next_audit_date": GenSchemaTimestamp(ctx),
+						"notifications": {
+							Attributes:  github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"start": GenSchemaDuration(ctx)}),
+							Description: "notifications is the configuration for notifying users.",
+							Optional:    true,
+						},
 						"recurrence": {
 							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 								"day_of_month": {
@@ -601,6 +607,31 @@ func CopyAccessListFromTerraform(_ context.Context, tf github_com_hashicorp_terr
 																obj.DayOfMonth = t
 															}
 														}
+													}
+												}
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["notifications"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"AccessList.spec.audit.notifications"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"AccessList.spec.audit.notifications", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+											} else {
+												obj.Notifications = nil
+												if !v.Null && !v.Unknown {
+													tf := v
+													obj.Notifications = &github_com_gravitational_teleport_api_gen_proto_go_teleport_accesslist_v1.Notifications{}
+													obj := obj.Notifications
+													{
+														a, ok := tf.Attrs["start"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"AccessList.spec.audit.notifications.start"})
+														}
+														CopyFromDuration(diags, a, &obj.Start)
 													}
 												}
 											}
@@ -1531,6 +1562,47 @@ func CopyAccessListToTerraform(ctx context.Context, obj *github_com_gravitationa
 												}
 												v.Unknown = false
 												tf.Attrs["recurrence"] = v
+											}
+										}
+									}
+									{
+										a, ok := tf.AttrTypes["notifications"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"AccessList.spec.audit.notifications"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"AccessList.spec.audit.notifications", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+											} else {
+												v, ok := tf.Attrs["notifications"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+												if !ok {
+													v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+														AttrTypes: o.AttrTypes,
+														Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+													}
+												} else {
+													if v.Attrs == nil {
+														v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+													}
+												}
+												if obj.Notifications == nil {
+													v.Null = true
+												} else {
+													obj := obj.Notifications
+													tf := &v
+													{
+														t, ok := tf.AttrTypes["start"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"AccessList.spec.audit.notifications.start"})
+														} else {
+															v := CopyToDuration(diags, obj.Start, t, tf.Attrs["start"])
+															tf.Attrs["start"] = v
+														}
+													}
+												}
+												v.Unknown = false
+												tf.Attrs["notifications"] = v
 											}
 										}
 									}
