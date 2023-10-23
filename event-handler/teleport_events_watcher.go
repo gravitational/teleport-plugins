@@ -293,7 +293,7 @@ func (t *TeleportEventsWatcher) Events(ctx context.Context) (chan *TeleportEvent
 				err := t.fetch(ctx)
 				if err != nil {
 					e <- trace.Wrap(err)
-					continue
+					break
 				}
 
 				// If there is still nothing new on current page, sleep
