@@ -241,7 +241,7 @@ func (s *EventHandlerSuite) TestEvents() {
 	require.Contains(t, evt, `"user":"`+s.userNames.plugin+`"`)
 	require.Contains(t, evt, `"roles":["access-event-handler"]`)
 
-	err = s.ruler().CreateUser(s.Context(), &types.UserV2{
+	_, err = s.ruler().CreateUser(s.Context(), &types.UserV2{
 		Metadata: types.Metadata{
 			Name: "fake-ruler",
 		},
