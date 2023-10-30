@@ -26,7 +26,9 @@ resource "teleport_access_list" "test" {
     }
     title = "Hello"
     audit = {
-      frequency = "3600h"
+      recurrence = {
+        frequency = 6
+      }
     }
   }
 }

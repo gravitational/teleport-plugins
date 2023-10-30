@@ -25,12 +25,12 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: '1.21.1'
+          go-version-file: 'go.mod'
 
       - name: Install Teleport
         uses: teleport-actions/setup@v1
         with:
-          version: 14.0.0
+          version: 14.0.3
           enterprise: true
 
       - name: Run unit tests

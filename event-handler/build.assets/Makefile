@@ -1,7 +1,8 @@
+VERSION=0.0.1
+GO_VERSION=1.21.3
 LOCALDIR := $(dir $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
 TOP ?= $(abspath $(LOCALDIR)/../..)
 SRCDIR=/go/src/github.com/gravitational/teleport-plugins/event-handler
-VERSION=0.0.1
 CGOFLAG ?= CGO_ENABLED=0
 BUILDDIR=$(TOP)/build
 OS ?= $(shell go env GOOS)
@@ -22,7 +23,6 @@ BUILDFORHOST := -e OS=$(OS) \
 	-e CGOFLAG=$(CGOFLAG)
 
 DOCKERPULLFLAGS ?= --pull
-GO_VERSION = 1.21.1
 
 NOROOT=-u $$(id -u):$$(id -g)
 BINDIR=/usr/local/bin

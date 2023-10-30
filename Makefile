@@ -276,6 +276,10 @@ promote-tag:
 update-goversion:
 	# Make sure GOVERSION is set on the command line "make update-goversion GOVERSION=x.y.z".
 	@test $(GOVERSION)
+	$(SED) 's/^toolchain go.*/toolchain go$(GOVERSION)/' go.mod
+	$(SED) 's/^toolchain go.*/toolchain go$(GOVERSION)/' tooling/go.mod
+	$(SED) 's/^ARG RUNTIME="go.*/ARG RUNTIME="go$(GOVERSION)"/' docker/plugins/Dockerfile
+	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/discord/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/jira/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' access/mattermost/Makefile
@@ -286,12 +290,6 @@ update-goversion:
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/build.assets/Makefile
 	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
-	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/unit-tests.yaml
-	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/terraform-tests.yaml
-	$(SED) 's/Setup Go .*/Setup Go $(GOVERSION)/g' .github/workflows/lint.yaml
-	$(SED) "s/go-version: '.*/go-version: '$(GOVERSION)'/g" .github/workflows/unit-tests.yaml
-	$(SED) "s/go-version: '.*/go-version: '$(GOVERSION)'/g" .github/workflows/terraform-tests.yaml
-	$(SED) "s/go-version: '.*/go-version: '$(GOVERSION)'/g" .github/workflows/lint.yaml
 	$(SED) 's/image: golang:.*/image: golang:$(GOVERSION)/g' .drone.yml
 	$(SED) 's/GO_VERSION: go.*/GO_VERSION: go$(GOVERSION)/g' .drone.yml
 	@echo Please sign .drone.yml before staging and committing the changes

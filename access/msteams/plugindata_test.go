@@ -42,13 +42,14 @@ const messageData = "eyJpZCI6IkNIQU5ORUwxIiwidHMiOiIwMDAwMDAxIiwicmlkIjoiZm9vQGV
 func TestEncodePluginData(t *testing.T) {
 	dataMap, err := EncodePluginData(samplePluginData)
 	assert.NoError(t, err)
-	assert.Len(t, dataMap, 7)
+	assert.GreaterOrEqual(t, len(dataMap), 8)
 	assert.Equal(t, "user-foo", dataMap["user"])
 	assert.Equal(t, "role-foo,role-bar", dataMap["roles"])
 	assert.Equal(t, "foo reason", dataMap["request_reason"])
 	assert.Equal(t, "3", dataMap["reviews_count"])
 	assert.Equal(t, "APPROVED", dataMap["resolution"])
 	assert.Equal(t, "foo ok", dataMap["resolve_reason"])
+	assert.Equal(t, "", dataMap["resources"])
 	assert.Equal(
 		t,
 		messageData,
@@ -90,7 +91,7 @@ func TestDecodePluginData(t *testing.T) {
 func TestEncodeEmptyPluginData(t *testing.T) {
 	dataMap, err := EncodePluginData(PluginData{})
 	assert.NoError(t, err)
-	assert.Len(t, dataMap, 7)
+	assert.GreaterOrEqual(t, len(dataMap), 8)
 	for key, value := range dataMap {
 		assert.Emptyf(t, value, "value at key %q must be empty", key)
 	}

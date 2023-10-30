@@ -48,8 +48,6 @@ required_fields:
     - "Metadata.name"
     - "AccessList.spec.owners"
     - "AccessList.spec.grants"
-    - "AccessList.spec.membership_requires"
-    - "AccessList.spec.ownership_requires"
 
 plan_modifiers:
     # Force to recreate resource if it's name changes
@@ -73,3 +71,4 @@ custom_types:
   "AccessList.header.metadata.expires": Timestamp
   "AccessList.spec.audit.next_audit_date": Timestamp
   "AccessList.spec.audit.frequency": Duration
+  "AccessList.spec.audit.notifications.start": Duration

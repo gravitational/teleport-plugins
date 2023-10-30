@@ -1375,6 +1375,11 @@ func GenSchemaAuthPreferenceV2(ctx context.Context) (github_com_hashicorp_terraf
 					Description: "Okta is a set of options related to the Okta service in Teleport. Requires Teleport Enterprise.",
 					Optional:    true,
 				},
+				"piv_slot": {
+					Description: "PIVSlot is a PIV slot that Teleport clients should use instead of the default based on private key policy. For example, \"9a\" or \"9e\".",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+				},
 				"require_session_mfa": {
 					Description: "RequireMFAType is the type of MFA requirement enforced for this cluster.",
 					Optional:    true,
@@ -14040,6 +14045,23 @@ func CopyAuthPreferenceV2FromTerraform(_ context.Context, tf github_com_hashicor
 							}
 						}
 					}
+					{
+						a, ok := tf.Attrs["piv_slot"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"AuthPreferenceV2.Spec.PIVSlot"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"AuthPreferenceV2.Spec.PIVSlot", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+							} else {
+								var t string
+								if !v.Null && !v.Unknown {
+									t = string(v.Value)
+								}
+								obj.PIVSlot = t
+							}
+						}
+					}
 				}
 			}
 		}
@@ -15082,6 +15104,28 @@ func CopyAuthPreferenceV2ToTerraform(ctx context.Context, obj *github_com_gravit
 								v.Unknown = false
 								tf.Attrs["okta"] = v
 							}
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["piv_slot"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"AuthPreferenceV2.Spec.PIVSlot"})
+						} else {
+							v, ok := tf.Attrs["piv_slot"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"AuthPreferenceV2.Spec.PIVSlot", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"AuthPreferenceV2.Spec.PIVSlot", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+								}
+								v.Null = string(obj.PIVSlot) == ""
+							}
+							v.Value = string(obj.PIVSlot)
+							v.Unknown = false
+							tf.Attrs["piv_slot"] = v
 						}
 					}
 				}

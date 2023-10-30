@@ -24,13 +24,13 @@ steps:
       - make lint
 
   - name: Run tests
-    image: golang:1.21.1
+    image: golang:1.21.3
     environment:
       RUNNER_TEMP: /tmp
       TELEPORT_ENTERPRISE_LICENSE:
         from_secret: TELEPORT_ENTERPRISE_LICENSE
       TERRAFORM_VERSION: 1.5.6-1
-      TELEPORT_VERSION: 14.0.0
+      TELEPORT_VERSION: 14.0.3
     commands:
       - echo Testing plugins against Teleport $TELEPORT_VERSION
       - apt update && apt install -y gnupg software-properties-common
@@ -66,7 +66,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.21.1
+    image: golang:1.21.3
     commands:
       - make build-all
 
@@ -97,7 +97,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.21.1
+    image: golang:1.21.3
     commands:
       - mkdir -p build/
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
@@ -311,7 +311,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.21.1
+    image: golang:1.21.3
     commands:
       - mkdir -p build/
       - go install github.com/konoui/lipo@latest
@@ -384,7 +384,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.21.1
+    image: golang:1.21.3
     commands:
       - mkdir -p build/
       - make OS=linux ARCH=amd64 release/event-handler
@@ -927,7 +927,7 @@ concurrency:
 
 steps:
   - name: Upload terraform provider to staging registry
-    image: golang:1.21.1
+    image: golang:1.21.3
     commands:
       - cd tooling
       - |
@@ -985,7 +985,7 @@ concurrency:
 
 steps:
   - name: Upload terraform provider to staging registry
-    image: golang:1.21.1
+    image: golang:1.21.3
     commands:
       - cd tooling
       - |
@@ -1043,7 +1043,7 @@ concurrency:
 
 steps:
   - name: Promote terraform provider to public registry
-    image: golang:1.21.1
+    image: golang:1.21.3
     commands:
       - cd tooling
       - |
@@ -1081,6 +1081,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: b81fb2f7c884dbd9afebb84942b6ff51c2779da1d9cae97d5d7ae58714a5aa2e
+hmac: 63e4d9ad2fc74400265609424f058f2ccbd18c52d60c5e884ba07181c3cdd637
 
 ...

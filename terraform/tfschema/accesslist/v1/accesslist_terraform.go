@@ -113,8 +113,28 @@ func GenSchemaAccessList(ctx context.Context) (github_com_hashicorp_terraform_pl
 			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 				"audit": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
-						"frequency":       GenSchemaDuration(ctx),
 						"next_audit_date": GenSchemaTimestamp(ctx),
+						"notifications": {
+							Attributes:  github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"start": GenSchemaDuration(ctx)}),
+							Description: "notifications is the configuration for notifying users.",
+							Optional:    true,
+						},
+						"recurrence": {
+							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+								"day_of_month": {
+									Description: "day_of_month is the day of month that reviews will be scheduled on.",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
+								},
+								"frequency": {
+									Description: "frequency is the frequency of reviews.",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
+								},
+							}),
+							Description: "recurrence is the recurrence definition",
+							Optional:    true,
+						},
 					}),
 					Description: "audit describes the frequency that this access list must be audited.",
 					Optional:    true,
@@ -176,7 +196,7 @@ func GenSchemaAccessList(ctx context.Context) (github_com_hashicorp_terraform_pl
 						},
 					}),
 					Description: "membership_requires describes the requirements for a user to be a member of the access list. For a membership to an access list to be effective, the user must meet the requirements of Membership_requires and must be in the members list.",
-					Required:    true,
+					Optional:    true,
 				},
 				"owners": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -219,7 +239,7 @@ func GenSchemaAccessList(ctx context.Context) (github_com_hashicorp_terraform_pl
 						},
 					}),
 					Description: "ownership_requires describes the requirements for a user to be an owner of the access list. For ownership of an access list to be effective, the user must meet the requirements of ownership_requires and must be in the owners list.",
-					Required:    true,
+					Optional:    true,
 				},
 				"title": {
 					Description: "title is a plaintext short description of the access list.",
@@ -534,18 +554,88 @@ func CopyAccessListFromTerraform(_ context.Context, tf github_com_hashicorp_terr
 									obj.Audit = &github_com_gravitational_teleport_api_gen_proto_go_teleport_accesslist_v1.AccessListAudit{}
 									obj := obj.Audit
 									{
-										a, ok := tf.Attrs["frequency"]
-										if !ok {
-											diags.Append(attrReadMissingDiag{"AccessList.spec.audit.frequency"})
-										}
-										CopyFromDuration(diags, a, &obj.Frequency)
-									}
-									{
 										a, ok := tf.Attrs["next_audit_date"]
 										if !ok {
 											diags.Append(attrReadMissingDiag{"AccessList.spec.audit.next_audit_date"})
 										}
 										CopyFromTimestamp(diags, a, &obj.NextAuditDate)
+									}
+									{
+										a, ok := tf.Attrs["recurrence"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"AccessList.spec.audit.recurrence"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"AccessList.spec.audit.recurrence", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+											} else {
+												obj.Recurrence = nil
+												if !v.Null && !v.Unknown {
+													tf := v
+													obj.Recurrence = &github_com_gravitational_teleport_api_gen_proto_go_teleport_accesslist_v1.Recurrence{}
+													obj := obj.Recurrence
+													{
+														a, ok := tf.Attrs["frequency"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"AccessList.spec.audit.recurrence.frequency"})
+														} else {
+															v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"AccessList.spec.audit.recurrence.frequency", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
+															} else {
+																var t github_com_gravitational_teleport_api_gen_proto_go_teleport_accesslist_v1.ReviewFrequency
+																if !v.Null && !v.Unknown {
+																	t = github_com_gravitational_teleport_api_gen_proto_go_teleport_accesslist_v1.ReviewFrequency(v.Value)
+																}
+																obj.Frequency = t
+															}
+														}
+													}
+													{
+														a, ok := tf.Attrs["day_of_month"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"AccessList.spec.audit.recurrence.day_of_month"})
+														} else {
+															v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"AccessList.spec.audit.recurrence.day_of_month", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
+															} else {
+																var t github_com_gravitational_teleport_api_gen_proto_go_teleport_accesslist_v1.ReviewDayOfMonth
+																if !v.Null && !v.Unknown {
+																	t = github_com_gravitational_teleport_api_gen_proto_go_teleport_accesslist_v1.ReviewDayOfMonth(v.Value)
+																}
+																obj.DayOfMonth = t
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["notifications"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"AccessList.spec.audit.notifications"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"AccessList.spec.audit.notifications", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+											} else {
+												obj.Notifications = nil
+												if !v.Null && !v.Unknown {
+													tf := v
+													obj.Notifications = &github_com_gravitational_teleport_api_gen_proto_go_teleport_accesslist_v1.Notifications{}
+													obj := obj.Notifications
+													{
+														a, ok := tf.Attrs["start"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"AccessList.spec.audit.notifications.start"})
+														}
+														CopyFromDuration(diags, a, &obj.Start)
+													}
+												}
+											}
+										}
 									}
 								}
 							}
@@ -1391,21 +1481,129 @@ func CopyAccessListToTerraform(ctx context.Context, obj *github_com_gravitationa
 									obj := obj.Audit
 									tf := &v
 									{
-										t, ok := tf.AttrTypes["frequency"]
-										if !ok {
-											diags.Append(attrWriteMissingDiag{"AccessList.spec.audit.frequency"})
-										} else {
-											v := CopyToDuration(diags, obj.Frequency, t, tf.Attrs["frequency"])
-											tf.Attrs["frequency"] = v
-										}
-									}
-									{
 										t, ok := tf.AttrTypes["next_audit_date"]
 										if !ok {
 											diags.Append(attrWriteMissingDiag{"AccessList.spec.audit.next_audit_date"})
 										} else {
 											v := CopyToTimestamp(diags, obj.NextAuditDate, t, tf.Attrs["next_audit_date"])
 											tf.Attrs["next_audit_date"] = v
+										}
+									}
+									{
+										a, ok := tf.AttrTypes["recurrence"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"AccessList.spec.audit.recurrence"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"AccessList.spec.audit.recurrence", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+											} else {
+												v, ok := tf.Attrs["recurrence"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+												if !ok {
+													v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+														AttrTypes: o.AttrTypes,
+														Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+													}
+												} else {
+													if v.Attrs == nil {
+														v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+													}
+												}
+												if obj.Recurrence == nil {
+													v.Null = true
+												} else {
+													obj := obj.Recurrence
+													tf := &v
+													{
+														t, ok := tf.AttrTypes["frequency"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"AccessList.spec.audit.recurrence.frequency"})
+														} else {
+															v, ok := tf.Attrs["frequency"].(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"AccessList.spec.audit.recurrence.frequency", err})
+																}
+																v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"AccessList.spec.audit.recurrence.frequency", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
+																}
+																v.Null = int64(obj.Frequency) == 0
+															}
+															v.Value = int64(obj.Frequency)
+															v.Unknown = false
+															tf.Attrs["frequency"] = v
+														}
+													}
+													{
+														t, ok := tf.AttrTypes["day_of_month"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"AccessList.spec.audit.recurrence.day_of_month"})
+														} else {
+															v, ok := tf.Attrs["day_of_month"].(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"AccessList.spec.audit.recurrence.day_of_month", err})
+																}
+																v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"AccessList.spec.audit.recurrence.day_of_month", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
+																}
+																v.Null = int64(obj.DayOfMonth) == 0
+															}
+															v.Value = int64(obj.DayOfMonth)
+															v.Unknown = false
+															tf.Attrs["day_of_month"] = v
+														}
+													}
+												}
+												v.Unknown = false
+												tf.Attrs["recurrence"] = v
+											}
+										}
+									}
+									{
+										a, ok := tf.AttrTypes["notifications"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"AccessList.spec.audit.notifications"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"AccessList.spec.audit.notifications", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+											} else {
+												v, ok := tf.Attrs["notifications"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+												if !ok {
+													v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+														AttrTypes: o.AttrTypes,
+														Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+													}
+												} else {
+													if v.Attrs == nil {
+														v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+													}
+												}
+												if obj.Notifications == nil {
+													v.Null = true
+												} else {
+													obj := obj.Notifications
+													tf := &v
+													{
+														t, ok := tf.AttrTypes["start"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"AccessList.spec.audit.notifications.start"})
+														} else {
+															v := CopyToDuration(diags, obj.Start, t, tf.Attrs["start"])
+															tf.Attrs["start"] = v
+														}
+													}
+												}
+												v.Unknown = false
+												tf.Attrs["notifications"] = v
+											}
 										}
 									}
 								}
