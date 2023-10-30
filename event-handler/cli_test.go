@@ -38,7 +38,16 @@ func TestStartCmdConfig(t *testing.T) {
 					TeleportRefreshEnabled:  true,
 					TeleportRefreshInterval: 2 * time.Minute,
 				},
-				IngestConfig: IngestConfig{},
+				IngestConfig: IngestConfig{
+					StorageDir:          "./storage",
+					BatchSize:           20,
+					SkipSessionTypesRaw: []string{"print"},
+					SkipSessionTypes: map[string]struct{}{
+						"print": {},
+					},
+					Timeout:     10 * time.Second,
+					Concurrency: 5,
+				},
 				LockConfig: LockConfig{
 					LockFailedAttemptsCount: 3,
 					LockPeriod:              time.Minute,
