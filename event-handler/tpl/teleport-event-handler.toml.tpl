@@ -12,3 +12,4 @@ session-url = "https://localhost:8888/session"
 [teleport]
 addr = "{{.Addr}}"
 identity = "identity"
+refresh.enabled = true

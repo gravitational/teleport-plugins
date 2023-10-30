@@ -55,13 +55,13 @@ type TeleportConfig struct {
 	// TeleportIdentityFile is a path to Teleport identity file
 	TeleportIdentityFile string `help:"Teleport identity file" type:"existingfile" name:"teleport-identity" env:"FDFWD_TELEPORT_IDENTITY"`
 
-	// TeleportRefreshIdentity will reload the identity file from disk on the
+	// TeleportRefreshEnabled will reload the identity file from disk on the
 	// configured interval.
-	TeleportRefreshIdentity bool `help:"Configures the identity file to be reloaded from disk at a configured interval." env:"FDFWD_TELEPORT_REFRESH_IDENTITY"`
+	TeleportRefreshEnabled bool `help:"Configures the identity file to be reloaded from disk at a configured interval." env:"FDFWD_TELEPORT_REFRESH_ENABLED"`
 
-	// TeleportRefreshIdentityInterval is how often the identity file should
+	// TeleportRefreshInterval is how often the identity file should
 	// be reloaded from disk.
-	TeleportRefreshIdentityInterval time.Duration `help:"Configures how often the identity file should be reloaded from disk." env:"FDFWD_TELEPORT_REFRESH_IDENTITY_INTERVAL" default:"1m"`
+	TeleportRefreshInterval time.Duration `help:"Configures how often the identity file should be reloaded from disk." env:"FDFWD_TELEPORT_REFRESH_INTERVAL" default:"1m"`
 
 	// TeleportCA is a path to Teleport CA file
 	TeleportCA string `help:"Teleport TLS CA file" type:"existingfile" env:"FDFWD_TELEPORT_CA"`
@@ -249,8 +249,8 @@ func (c *StartCmdConfig) Dump(ctx context.Context) {
 	if c.TeleportIdentityFile != "" {
 		log.WithField("file", c.TeleportIdentityFile).Info("Using Teleport identity file")
 	}
-	if c.TeleportRefreshIdentity {
-		log.WithField("interval", c.TeleportRefreshIdentityInterval).Info("Using Teleport identity file refresh")
+	if c.TeleportRefreshEnabled {
+		log.WithField("interval", c.TeleportRefreshInterval).Info("Using Teleport identity file refresh")
 	}
 
 	if c.TeleportKey != "" {

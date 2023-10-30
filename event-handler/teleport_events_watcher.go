@@ -83,10 +83,10 @@ func NewTeleportEventsWatcher(
 ) (*TeleportEventsWatcher, error) {
 	var creds []client.Credentials
 	switch {
-	case c.TeleportIdentityFile != "" && !c.TeleportRefreshIdentity:
+	case c.TeleportIdentityFile != "" && !c.TeleportRefreshEnabled:
 		creds = []client.Credentials{client.LoadIdentityFile(c.TeleportIdentityFile)}
-	case c.TeleportIdentityFile != "" && c.TeleportRefreshIdentity:
-		cred, err := lib.NewIdentityFileWatcher(ctx, c.TeleportIdentityFile, c.TeleportRefreshIdentityInterval)
+	case c.TeleportIdentityFile != "" && c.TeleportRefreshEnabled:
+		cred, err := lib.NewIdentityFileWatcher(ctx, c.TeleportIdentityFile, c.TeleportRefreshInterval)
 		if err != nil {
 			return nil, trace.Wrap(err)
 		}
