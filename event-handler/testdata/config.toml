@@ -1,4 +1,4 @@
-storage = "./storage" # Plugin will save it's state here
+storage = "./storage" # Plugin will save its state here
 timeout = "10s"
 batch = 20
 
