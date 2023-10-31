@@ -1,12 +1,13 @@
 package main
 
 import (
-	"github.com/alecthomas/kong"
-	"github.com/stretchr/testify/require"
 	"os"
 	"path"
 	"testing"
 	"time"
+
+	"github.com/alecthomas/kong"
+	"github.com/stretchr/testify/require"
 )
 
 // StartCmdConfig is mostly to test that the TOML file parsing works as
