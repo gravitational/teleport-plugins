@@ -22,14 +22,11 @@ import (
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/integrations/lib"
-	"github.com/gravitational/teleport/integrations/lib/credentials"
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	pd "github.com/gravitational/teleport/integrations/lib/plugindata"
 	"github.com/gravitational/teleport/integrations/lib/stringset"
 	"github.com/gravitational/teleport/integrations/lib/watcherjob"
 	"github.com/gravitational/trace"
-	"google.golang.org/grpc"
-	grpcbackoff "google.golang.org/grpc/backoff"
 )
 
 const (
@@ -37,10 +34,8 @@ const (
 	pluginName = "msteams"
 	// minServerVersion is the minimal teleport version the plugin supports.
 	minServerVersion = "8.0.0"
-	// grpcBackoffMaxDelay is a maximum time GRPC client waits before reconnection attempt.
-	grpcBackoffMaxDelay = time.Second * 2
-	// minConnectTimeout GRPC connect timeout.
-	minConnectTimeout = time.Second * 10
+	// initTimeout is used to bound execution time of health check and teleport version check.
+	initTimeout = time.Second * 10
 	// handlerTimeout is used to bound the execution time of watcher event handler.
 	handlerTimeout = time.Second * 5
 )
@@ -106,36 +101,10 @@ func (a *App) WaitReady(ctx context.Context) (bool, error) {
 
 // init initializes the application
 func (a *App) init(ctx context.Context) error {
-	log := logger.Get(ctx)
-	if validCred, err := credentials.CheckIfExpired(a.conf.Teleport.Credentials()); err != nil {
-		log.Warn(err)
-		if !validCred {
-			return trace.BadParameter(
-				"No valid credentials found, this likely means credentials are expired. In this case, please sign new credentials and increase their TTL if needed.",
-			)
-		}
-		log.Info("At least one non-expired credential has been found, continuing startup")
-	}
+	ctx, cancel := context.WithTimeout(ctx, initTimeout)
+	defer cancel()
 
-	bk := grpcbackoff.DefaultConfig
-	bk.MaxDelay = grpcBackoffMaxDelay
-
-	apiClient, err := client.New(ctx, client.Config{
-		Addrs:       a.conf.Teleport.GetAddrs(),
-		Credentials: a.conf.Teleport.Credentials(),
-		DialOpts: []grpc.DialOption{
-			grpc.WithReturnConnectionError(),
-			grpc.WithDefaultCallOptions(
-				grpc.WaitForReady(true),
-			),
-			grpc.WithConnectParams(
-				grpc.ConnectParams{
-					Backoff:           bk,
-					MinConnectTimeout: minConnectTimeout,
-				},
-			),
-		},
-	})
+	apiClient, err := a.conf.Teleport.NewClient(ctx)
 	if err != nil {
 		return trace.Wrap(err)
 	}
