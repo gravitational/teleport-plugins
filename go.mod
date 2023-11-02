@@ -17,6 +17,7 @@ require (
 	github.com/hashicorp/terraform-plugin-framework v0.10.0
 	github.com/hashicorp/terraform-plugin-go v0.18.0
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.28.0 // indirect
+	github.com/hashicorp/terraform-plugin-testing v1.5.1
 	github.com/jonboulle/clockwork v0.4.0
 	github.com/json-iterator/go v1.1.12
 	github.com/julienschmidt/httprouter v1.3.0
@@ -36,8 +37,6 @@ require (
 	google.golang.org/protobuf v1.31.0
 	gopkg.in/mail.v2 v2.3.1
 )
-
-require github.com/hashicorp/terraform-plugin-testing v1.5.1
 
 require (
 	github.com/ProtonMail/go-crypto v0.0.0-20230217124315-7d5c6f04bbb8 // indirect
