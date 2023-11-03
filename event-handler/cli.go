@@ -22,9 +22,10 @@ import (
 	"time"
 
 	"github.com/alecthomas/kong"
+	"github.com/gravitational/trace"
+
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/teleport/integrations/lib/stringset"
-	"github.com/gravitational/trace"
 
 	"github.com/gravitational/teleport-plugins/event-handler/lib"
 )

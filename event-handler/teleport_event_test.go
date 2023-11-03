@@ -21,14 +21,15 @@ import (
 	"encoding/hex"
 	"testing"
 
-	auditlogpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/auditlog/v1"
-	"github.com/gravitational/teleport/api/types/events"
+	"github.com/gravitational/trace"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/gravitational/teleport-plugins/event-handler/lib"
+	auditlogpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/auditlog/v1"
+	"github.com/gravitational/teleport/api/types/events"
 )
 
 func TestNew(t *testing.T) {
@@ -39,7 +40,10 @@ func TestNew(t *testing.T) {
 		},
 	}
 
-	event, err := NewTeleportEvent(eventToJSON(t, events.AuditEvent(e)), "cursor")
+	protoEvent, err := eventToProto(events.AuditEvent(e))
+	require.NoError(t, err)
+
+	event, err := NewTeleportEvent(protoEvent, "cursor")
 	require.NoError(t, err)
 	assert.Equal(t, "test", event.ID)
 	assert.Equal(t, "mock", event.Type)
@@ -49,7 +53,10 @@ func TestNew(t *testing.T) {
 func TestGenID(t *testing.T) {
 	e := &events.SessionPrint{}
 
-	event, err := NewTeleportEvent(eventToJSON(t, events.AuditEvent(e)), "cursor")
+	protoEvent, err := eventToProto(events.AuditEvent(e))
+	require.NoError(t, err)
+
+	event, err := NewTeleportEvent(protoEvent, "cursor")
 	require.NoError(t, err)
 	assert.NotEmpty(t, event.ID)
 }
@@ -64,7 +71,10 @@ func TestSessionEnd(t *testing.T) {
 		},
 	}
 
-	event, err := NewTeleportEvent(eventToJSON(t, events.AuditEvent(e)), "cursor")
+	protoEvent, err := eventToProto(events.AuditEvent(e))
+	require.NoError(t, err)
+
+	event, err := NewTeleportEvent(protoEvent, "cursor")
 	require.NoError(t, err)
 	assert.NotEmpty(t, event.ID)
 	assert.NotEmpty(t, event.SessionID)
@@ -81,7 +91,10 @@ func TestFailedLogin(t *testing.T) {
 		},
 	}
 
-	event, err := NewTeleportEvent(eventToJSON(t, events.AuditEvent(e)), "cursor")
+	protoEvent, err := eventToProto(events.AuditEvent(e))
+	require.NoError(t, err)
+
+	event, err := NewTeleportEvent(protoEvent, "cursor")
 	require.NoError(t, err)
 	assert.NotEmpty(t, event.ID)
 	assert.True(t, event.IsFailedLogin)
@@ -97,28 +110,49 @@ func TestSuccessLogin(t *testing.T) {
 		},
 	}
 
-	event, err := NewTeleportEvent(eventToJSON(t, events.AuditEvent(e)), "cursor")
+	protoEvent, err := eventToProto(events.AuditEvent(e))
+	require.NoError(t, err)
+
+	event, err := NewTeleportEvent(protoEvent, "cursor")
 	require.NoError(t, err)
 	assert.NotEmpty(t, event.ID)
 	assert.False(t, event.IsFailedLogin)
 }
 
-func eventToJSON(t *testing.T, e events.AuditEvent) *auditlogpb.EventUnstructured {
+func eventToProto(e events.AuditEvent) (*auditlogpb.EventUnstructured, error) {
 	data, err := lib.FastMarshal(e)
-	require.NoError(t, err)
+	if err != nil {
+		return nil, trace.Wrap(err)
+	}
+
 	str := &structpb.Struct{}
-	err = str.UnmarshalJSON(data)
-	require.NoError(t, err)
+	if err = str.UnmarshalJSON(data); err != nil {
+		return nil, trace.Wrap(err)
+	}
+
 	id := e.GetID()
 	if id == "" {
 		hash := sha256.Sum256(data)
 		id = hex.EncodeToString(hash[:])
 	}
+
 	return &auditlogpb.EventUnstructured{
 		Type:         e.GetType(),
 		Unstructured: str,
 		Id:           id,
 		Index:        e.GetIndex(),
 		Time:         timestamppb.New(e.GetTime()),
+	}, nil
+}
+
+func eventsToProto(events []events.AuditEvent) ([]*auditlogpb.EventUnstructured, error) {
+	protoEvents := make([]*auditlogpb.EventUnstructured, len(events))
+	for i, event := range events {
+		protoEvent, err := eventToProto(event)
+		if err != nil {
+			return nil, trace.Wrap(err)
+		}
+		protoEvents[i] = protoEvent
 	}
+	return protoEvents, nil
 }
