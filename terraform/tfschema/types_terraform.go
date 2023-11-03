@@ -2304,7 +2304,12 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Optional:    true,
 							Type:        DurationType{},
 						},
-						"create_db_user":      GenSchemaBoolOption(ctx),
+						"create_db_user": GenSchemaBoolOption(ctx),
+						"create_db_user_mode": {
+							Description: "CreateDatabaseUserMode allows users to be automatically created on a database when not set to off.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
+						},
 						"create_desktop_user": GenSchemaBoolOption(ctx),
 						"create_host_user":    GenSchemaBoolOption(ctx),
 						"create_host_user_mode": {
@@ -15894,6 +15899,23 @@ func CopyRoleV6FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 											}
 										}
 									}
+									{
+										a, ok := tf.Attrs["create_db_user_mode"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"RoleV6.Spec.Options.CreateDatabaseUserMode"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"RoleV6.Spec.Options.CreateDatabaseUserMode", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
+											} else {
+												var t github_com_gravitational_teleport_api_types.CreateDatabaseUserMode
+												if !v.Null && !v.Unknown {
+													t = github_com_gravitational_teleport_api_types.CreateDatabaseUserMode(v.Value)
+												}
+												obj.CreateDatabaseUserMode = t
+											}
+										}
+									}
 								}
 							}
 						}
@@ -20282,6 +20304,28 @@ func CopyRoleV6ToTerraform(ctx context.Context, obj *github_com_gravitational_te
 											v.Value = int64(obj.CreateHostUserMode)
 											v.Unknown = false
 											tf.Attrs["create_host_user_mode"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["create_db_user_mode"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"RoleV6.Spec.Options.CreateDatabaseUserMode"})
+										} else {
+											v, ok := tf.Attrs["create_db_user_mode"].(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"RoleV6.Spec.Options.CreateDatabaseUserMode", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"RoleV6.Spec.Options.CreateDatabaseUserMode", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
+												}
+												v.Null = int64(obj.CreateDatabaseUserMode) == 0
+											}
+											v.Value = int64(obj.CreateDatabaseUserMode)
+											v.Unknown = false
+											tf.Attrs["create_db_user_mode"] = v
 										}
 									}
 								}
