@@ -17,12 +17,12 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 
 	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
