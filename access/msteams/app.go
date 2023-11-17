@@ -18,9 +18,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/teleport/integrations/access/common"
+	"github.com/gravitational/teleport/integrations/access/common/teleport"
 	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	pd "github.com/gravitational/teleport/integrations/lib/plugindata"
@@ -44,7 +45,7 @@ const (
 type App struct {
 	conf Config
 
-	apiClient  *client.Client
+	apiClient  teleport.Client
 	bot        *Bot
 	mainJob    lib.ServiceJob
 	watcherJob lib.ServiceJob
@@ -104,14 +105,14 @@ func (a *App) init(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, initTimeout)
 	defer cancel()
 
-	apiClient, err := a.conf.Teleport.NewClient(ctx)
+	var err error
+	a.apiClient, err = common.GetTeleportClient(ctx, a.conf.Teleport)
 	if err != nil {
 		return trace.Wrap(err)
 	}
 
-	a.apiClient = apiClient
 	a.pd = pd.NewCAS(
-		apiClient,
+		a.apiClient,
 		pluginName,
 		types.KindAccessRequest,
 		EncodePluginData,
