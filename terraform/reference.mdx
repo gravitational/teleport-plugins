@@ -1329,6 +1329,7 @@ Spec is a provisioning token V2 spec
 | join_method                    | string               |          | JoinMethod is the joining method required in order to use this token. Supported joining methods include "token", "ec2", and "iam".                      |
 | kubernetes                     | object               |          | Kubernetes allows the configuration of options specific to the "kubernetes" join method.                                                                |
 | roles                          | array of strings     | *        | Roles is a list of roles associated with the token, that will be converted to metadata in the SSH and X509 certificates issued to the user of the token |
+| spacelift                      | object               |          | Spacelift allows the configuration of options specific to the "spacelift" join method.                                                                  |
 | suggested_agent_matcher_labels | map of string arrays |          |                                                                                                                                                         |
 | suggested_labels               | map of string arrays |          |                                                                                                                                                         |
 
@@ -1477,6 +1478,26 @@ StaticJWKS is the configuration specific to the `static_jwks` type.
 | Name |  Type  | Required |                                                                                             Description                                                                                              |
 |------|--------|----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | jwks | string |          | JWKS should be the JSON Web Key Set formatted public keys of that the Kubernetes Cluster uses to sign service account tokens. This can be fetched from /openid/v1/jwks on the Kubernetes API Server. |
+
+#### spec.spacelift
+
+Spacelift allows the configuration of options specific to the "spacelift" join method.
+
+|   Name   |  Type  | Required |                                                   Description                                                    |
+|----------|--------|----------|------------------------------------------------------------------------------------------------------------------|
+| allow    | object |          | Allow is a list of Rules, nodes using this token must match one allow rule to use this token.                    |
+| hostname | string |          | Hostname is the hostname of the Spacelift tenant that tokens will originate from. E.g `example.app.spacelift.io` |
+
+##### spec.spacelift.allow
+
+Allow is a list of Rules, nodes using this token must match one allow rule to use this token.
+
+|    Name     |  Type  | Required |                                                                Description                                                                |
+|-------------|--------|----------|-------------------------------------------------------------------------------------------------------------------------------------------|
+| caller_id   | string |          | CallerID is the ID of the caller, ie. the stack or module that generated the run.                                                         |
+| caller_type | string |          | CallerType is the type of the caller, ie. the entity that owns the run - either `stack` or `module`.                                      |
+| scope       | string |          | Scope is the scope of the token - either `read` or `write`. See https://docs.spacelift.io/integrations/cloud-providers/oidc/#about-scopes |
+| space_id    | string |          | SpaceID is the ID of the space in which the run that owns the token was executed.                                                         |
 
 Example:
 
