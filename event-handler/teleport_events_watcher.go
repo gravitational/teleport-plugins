@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -30,7 +31,6 @@ import (
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/context"
 )
 
 const (
@@ -293,7 +293,7 @@ func (t *TeleportEventsWatcher) Events(ctx context.Context) (chan *TeleportEvent
 				err := t.fetch(ctx)
 				if err != nil {
 					e <- trace.Wrap(err)
-					continue
+					break
 				}
 
 				// If there is still nothing new on current page, sleep
