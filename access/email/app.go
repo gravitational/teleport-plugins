@@ -20,9 +20,10 @@ import (
 	"context"
 	"time"
 
-	"github.com/gravitational/teleport/api/client"
 	"github.com/gravitational/teleport/api/client/proto"
 	"github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/teleport/integrations/access/common"
+	"github.com/gravitational/teleport/integrations/access/common/teleport"
 	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/teleport/integrations/lib/watcherjob"
@@ -46,7 +47,7 @@ const (
 type App struct {
 	conf Config
 
-	apiClient *client.Client
+	apiClient teleport.Client
 	client    Client
 	mainJob   lib.ServiceJob
 
@@ -124,7 +125,7 @@ func (a *App) init(ctx context.Context) error {
 	defer cancel()
 
 	var err error
-	if a.apiClient, err = a.conf.Teleport.NewClient(ctx); err != nil {
+	if a.apiClient, err = common.GetTeleportClient(ctx, a.conf.Teleport); err != nil {
 		return trace.Wrap(err)
 	}
 
