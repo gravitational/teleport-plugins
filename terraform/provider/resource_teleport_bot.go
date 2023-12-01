@@ -20,13 +20,14 @@ import (
 	"context"
 	"time"
 
-	"github.com/gravitational/teleport/api/client/proto"
-	"github.com/gravitational/teleport/api/types/wrappers"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+
+	"github.com/gravitational/teleport/api/client/proto"
+	"github.com/gravitational/teleport/api/types/wrappers"
 
 	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 )
@@ -210,7 +211,7 @@ func (r resourceTeleportBot) Read(ctx context.Context, req tfsdk.ReadResourceReq
 		return
 	}
 
-	_, err := r.p.Client.GetUser(plan.UserName.Value, false)
+	_, err := r.p.Client.GetUser(ctx, plan.UserName.Value, false)
 	if trace.IsNotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return

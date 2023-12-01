@@ -62,8 +62,6 @@ type payload struct {
 	UpsertMethodArity int
 	// WithSecrets value for a withSecrets param of Get method (empty means no param used)
 	WithSecrets string
-	// GetWithoutContext indicates that get method has no context parameter (workaround for the User)
-	GetWithoutContext bool
 	// ID id value on create and import
 	ID string
 	// RandomMetadataName indicates that Metadata.Name must be generated (supported by plural resources only)
@@ -218,8 +216,9 @@ var (
 		TypeName:               "GithubConnectorV3",
 		VarName:                "githubConnector",
 		GetMethod:              "GetGithubConnector",
-		CreateMethod:           "UpsertGithubConnector",
+		CreateMethod:           "CreateGithubConnector",
 		UpdateMethod:           "UpsertGithubConnector",
+		UpsertMethodArity:      2,
 		DeleteMethod:           "DeleteGithubConnector",
 		WithSecrets:            "true",
 		ID:                     "githubConnector.Metadata.Name",
@@ -234,8 +233,9 @@ var (
 		TypeName:               "OIDCConnectorV3",
 		VarName:                "oidcConnector",
 		GetMethod:              "GetOIDCConnector",
-		CreateMethod:           "UpsertOIDCConnector",
+		CreateMethod:           "CreateOIDCConnector",
 		UpdateMethod:           "UpsertOIDCConnector",
+		UpsertMethodArity:      2,
 		DeleteMethod:           "DeleteOIDCConnector",
 		WithSecrets:            "true",
 		ID:                     "oidcConnector.Metadata.Name",
@@ -250,8 +250,9 @@ var (
 		TypeName:               "SAMLConnectorV2",
 		VarName:                "samlConnector",
 		GetMethod:              "GetSAMLConnector",
-		CreateMethod:           "UpsertSAMLConnector",
+		CreateMethod:           "CreateSAMLConnector",
 		UpdateMethod:           "UpsertSAMLConnector",
+		UpsertMethodArity:      2,
 		DeleteMethod:           "DeleteSAMLConnector",
 		WithSecrets:            "true",
 		ID:                     "samlConnector.Metadata.Name",
@@ -283,8 +284,9 @@ var (
 		TypeName:               "RoleV6",
 		VarName:                "role",
 		GetMethod:              "GetRole",
-		CreateMethod:           "UpsertRole",
+		CreateMethod:           "CreateRole",
 		UpdateMethod:           "UpsertRole",
+		UpsertMethodArity:      2,
 		DeleteMethod:           "DeleteRole",
 		ID:                     "role.Metadata.Name",
 		Kind:                   "role",
@@ -330,10 +332,10 @@ var (
 		VarName:                "user",
 		GetMethod:              "GetUser",
 		CreateMethod:           "CreateUser",
-		UpdateMethod:           "UpdateUser",
+		UpdateMethod:           "UpsertUser",
+		UpsertMethodArity:      2,
 		DeleteMethod:           "DeleteUser",
 		WithSecrets:            "false",
-		GetWithoutContext:      true,
 		ID:                     "user.Metadata.Name",
 		Kind:                   "user",
 		HasStaticID:            false,

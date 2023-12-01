@@ -60,7 +60,7 @@ func (r dataSourceTeleportUser) Read(ctx context.Context, req tfsdk.ReadDataSour
 		return
 	}
 
-	userI, err := r.p.Client.GetUser(id.Value, false)
+	userI, err := r.p.Client.GetUser(ctx, id.Value, false)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
 		return

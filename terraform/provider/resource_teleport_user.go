@@ -79,7 +79,7 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 
 	id := userResource.Metadata.Name
 
-	_, err = r.p.Client.GetUser(id, false)
+	_, err = r.p.Client.GetUser(ctx, id, false)
 	if !trace.IsNotFound(err) {
 		if err == nil {
 			existErr := fmt.Sprintf("User exists in Teleport. Either remove it (tctl rm user/%v)"+
@@ -99,7 +99,7 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 		return
 	}
 
-	err = r.p.Client.CreateUser(ctx, userResource)
+	_, err = r.p.Client.CreateUser(ctx, userResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating User", trace.Wrap(err), "user"))
 		return
@@ -111,7 +111,7 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
 		tries = tries + 1
-		userI, err = r.p.Client.GetUser(id, false)
+		userI, err = r.p.Client.GetUser(ctx, id, false)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
 				resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
@@ -170,7 +170,7 @@ func (r resourceTeleportUser) Read(ctx context.Context, req tfsdk.ReadResourceRe
 		return
 	}
 
-	userI, err := r.p.Client.GetUser(id.Value, false)
+	userI, err := r.p.Client.GetUser(ctx, id.Value, false)
 	if trace.IsNotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return
@@ -224,13 +224,13 @@ func (r resourceTeleportUser) Update(ctx context.Context, req tfsdk.UpdateResour
 	}
 	name := userResource.Metadata.Name
 
-	userBefore, err := r.p.Client.GetUser(name, false)
+	userBefore, err := r.p.Client.GetUser(ctx, name, false)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", err, "user"))
 		return
 	}
 
-	err = r.p.Client.UpdateUser(ctx, userResource)
+	_, err = r.p.Client.UpsertUser(ctx, userResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating User", err, "user"))
 		return
@@ -243,7 +243,7 @@ func (r resourceTeleportUser) Update(ctx context.Context, req tfsdk.UpdateResour
 	backoff := backoff.NewDecorr(r.p.RetryConfig.Base, r.p.RetryConfig.Cap, clockwork.NewRealClock())
 	for {
 		tries = tries + 1
-		userI, err = r.p.Client.GetUser(name, false)
+		userI, err = r.p.Client.GetUser(ctx, name, false)
 		if err != nil {
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", err, "user"))
 			return
@@ -301,7 +301,7 @@ func (r resourceTeleportUser) Delete(ctx context.Context, req tfsdk.DeleteResour
 
 // ImportState imports User state
 func (r resourceTeleportUser) ImportState(ctx context.Context, req tfsdk.ImportResourceStateRequest, resp *tfsdk.ImportResourceStateResponse) {
-	user, err := r.p.Client.GetUser(req.ID, false)
+	user, err := r.p.Client.GetUser(ctx, req.ID, false)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
 		return
