@@ -100,7 +100,7 @@ func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.C
 		return
 	}
 
-	err = r.p.Client.UpsertGithubConnector(ctx, githubConnectorResource)
+	_, err = r.p.Client.CreateGithubConnector(ctx, githubConnectorResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating GithubConnector", trace.Wrap(err), "github"))
 		return
@@ -231,7 +231,7 @@ func (r resourceTeleportGithubConnector) Update(ctx context.Context, req tfsdk.U
 		return
 	}
 
-	err = r.p.Client.UpsertGithubConnector(ctx, githubConnectorResource)
+	_, err = r.p.Client.UpsertGithubConnector(ctx, githubConnectorResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating GithubConnector", err, "github"))
 		return

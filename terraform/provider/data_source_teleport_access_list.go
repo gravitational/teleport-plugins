@@ -21,7 +21,6 @@ import (
 	"context"
 
 	convert "github.com/gravitational/teleport/api/types/accesslist/convert/v1"
-    
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"

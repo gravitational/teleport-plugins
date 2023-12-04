@@ -210,7 +210,7 @@ func (r resourceTeleportBot) Read(ctx context.Context, req tfsdk.ReadResourceReq
 		return
 	}
 
-	_, err := r.p.Client.GetUser(plan.UserName.Value, false)
+	_, err := r.p.Client.GetUser(ctx, plan.UserName.Value, false)
 	if trace.IsNotFound(err) {
 		resp.State.RemoveResource(ctx)
 		return

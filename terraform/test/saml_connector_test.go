@@ -87,7 +87,7 @@ func (s *TerraformSuite) TestImportSAMLConnector() {
 	rolexSpec, err := types.NewRole(roleName, types.RoleSpecV6{})
 	require.NoError(s.T(), err)
 
-	err = s.client.UpsertRole(s.Context(), rolexSpec)
+	_, err = s.client.UpsertRole(s.Context(), rolexSpec)
 	require.NoError(s.T(), err)
 
 	samlConnector := &types.SAMLConnectorV2{
@@ -125,7 +125,7 @@ func (s *TerraformSuite) TestImportSAMLConnector() {
 	err = samlConnector.CheckAndSetDefaults()
 	require.NoError(s.T(), err)
 
-	err = s.client.UpsertSAMLConnector(s.Context(), samlConnector)
+	_, err = s.client.UpsertSAMLConnector(s.Context(), samlConnector)
 	require.NoError(s.T(), err)
 
 	resource.Test(s.T(), resource.TestCase{
