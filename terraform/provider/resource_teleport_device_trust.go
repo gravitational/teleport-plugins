@@ -20,18 +20,19 @@ package provider
 import (
 	"context"
 	"fmt"
+
 	"github.com/google/uuid"
-
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/path"
-
 	apitypes "github.com/gravitational/teleport/api/types"
-	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema/devicetrust/v1"
+	
 	"github.com/gravitational/teleport/integrations/lib/backoff"
 	"github.com/gravitational/trace"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/jonboulle/clockwork"
+
+	schemav1 "github.com/gravitational/teleport-plugins/terraform/tfschema/devicetrust/v1"
 )
 
 // resourceTeleportDeviceV1Type is the resource metadata type
@@ -44,7 +45,7 @@ type resourceTeleportDeviceV1 struct {
 
 // GetSchema returns the resource schema
 func (r resourceTeleportDeviceV1Type) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfschema.GenSchemaDeviceV1(ctx)
+	return schemav1.GenSchemaDeviceV1(ctx)
 }
 
 // NewResource creates the empty resource
@@ -69,7 +70,7 @@ func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateRe
 	}
 
 	trustedDevice := &apitypes.DeviceV1{}
-	diags = tfschema.CopyDeviceV1FromTerraform(ctx, plan, trustedDevice)
+	diags = schemav1.CopyDeviceV1FromTerraform(ctx, plan, trustedDevice)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -134,7 +135,7 @@ func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateRe
 	
 	trustedDevice = trustedDeviceResource
 
-	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDevice, &plan)
+	diags = schemav1.CopyDeviceV1ToTerraform(ctx, trustedDevice, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -176,7 +177,7 @@ func (r resourceTeleportDeviceV1) Read(ctx context.Context, req tfsdk.ReadResour
 		return
 	}
 	trustedDevice := trustedDeviceI
-	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDevice, &state)
+	diags = schemav1.CopyDeviceV1ToTerraform(ctx, trustedDevice, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -204,7 +205,7 @@ func (r resourceTeleportDeviceV1) Update(ctx context.Context, req tfsdk.UpdateRe
 	}
 
 	trustedDevice := &apitypes.DeviceV1{}
-	diags = tfschema.CopyDeviceV1FromTerraform(ctx, plan, trustedDevice)
+	diags = schemav1.CopyDeviceV1FromTerraform(ctx, plan, trustedDevice)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -254,7 +255,7 @@ func (r resourceTeleportDeviceV1) Update(ctx context.Context, req tfsdk.UpdateRe
 
 	trustedDeviceResource = trustedDeviceI
 	
-	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDevice, &plan)
+	diags = schemav1.CopyDeviceV1ToTerraform(ctx, trustedDevice, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -304,7 +305,7 @@ func (r resourceTeleportDeviceV1) ImportState(ctx context.Context, req tfsdk.Imp
 		return
 	}
 
-	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDeviceResource, &state)
+	diags = schemav1.CopyDeviceV1ToTerraform(ctx, trustedDeviceResource, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

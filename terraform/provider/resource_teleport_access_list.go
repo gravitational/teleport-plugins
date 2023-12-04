@@ -21,17 +21,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/path"
-
 	accesslist "github.com/gravitational/teleport/api/gen/proto/go/teleport/accesslist/v1"
-	schemav1 "github.com/gravitational/teleport-plugins/terraform/tfschema/accesslist/v1"
 	convert "github.com/gravitational/teleport/api/types/accesslist/convert/v1"
 	"github.com/gravitational/teleport/integrations/lib/backoff"
 	"github.com/gravitational/trace"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/jonboulle/clockwork"
+
+	schemav1 "github.com/gravitational/teleport-plugins/terraform/tfschema/accesslist/v1"
 )
 
 // resourceTeleportAccessListType is the resource metadata type

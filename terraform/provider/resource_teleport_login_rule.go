@@ -21,16 +21,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/path"
-
 	loginrulev1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/loginrule/v1"
-	schemav1 "github.com/gravitational/teleport-plugins/terraform/tfschema/loginrule/v1"
+	
 	"github.com/gravitational/teleport/integrations/lib/backoff"
 	"github.com/gravitational/trace"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/jonboulle/clockwork"
+
+	schemav1 "github.com/gravitational/teleport-plugins/terraform/tfschema/loginrule/v1"
 )
 
 // resourceTeleportLoginRuleType is the resource metadata type

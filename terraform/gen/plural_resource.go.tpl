@@ -19,31 +19,30 @@ package provider
 
 import (
 	"context"
+{{- if .RandomMetadataName }}
+    "crypto/rand"
+    "encoding/hex"
+{{- end }}
 	"fmt"
-{{- if .RandomMetadataName}}
-	"crypto/rand"
-	"encoding/hex"
-{{- end}}
-{{- if .UUIDMetadataName}}
-	"github.com/google/uuid"
-{{- end}}
-{{- range $i, $a := .ExtraImports}}
+{{- range $i, $a := .ExtraImports }}
 	"{{$a}}"
-{{- end}}
-
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/path"
-
+{{- end }}
+{{ if .UUIDMetadataName }}
+	"github.com/google/uuid"
+{{- end }}
 	{{.ProtoPackage}} "{{.ProtoPackagePath}}"
-	{{.SchemaPackage}} "{{.SchemaPackagePath}}"
-{{- if .ConvertPackagePath}}
-	convert "{{.ConvertPackagePath}}"
-{{- end}}
+	{{ if .ConvertPackagePath -}}
+    convert "{{.ConvertPackagePath}}"
+    {{- end}}
 	"github.com/gravitational/teleport/integrations/lib/backoff"
 	"github.com/gravitational/trace"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/jonboulle/clockwork"
+
+	{{ schemaImport . }}
 )
 
 // resourceTeleport{{.Name}}Type is the resource metadata type

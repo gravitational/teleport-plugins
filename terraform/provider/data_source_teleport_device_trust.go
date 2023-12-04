@@ -20,13 +20,14 @@ package provider
 import (
 	"context"
 
+	
+	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 
-	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema/devicetrust/v1"
-	"github.com/gravitational/trace"
+	schemav1 "github.com/gravitational/teleport-plugins/terraform/tfschema/devicetrust/v1"
 )
 
 // dataSourceTeleportDeviceV1Type is the data source metadata type
@@ -39,7 +40,7 @@ type dataSourceTeleportDeviceV1 struct {
 
 // GetSchema returns the data source schema
 func (r dataSourceTeleportDeviceV1Type) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfschema.GenSchemaDeviceV1(ctx)
+	return schemav1.GenSchemaDeviceV1(ctx)
 }
 
 // NewDataSource creates the empty data source
@@ -67,7 +68,7 @@ func (r dataSourceTeleportDeviceV1) Read(ctx context.Context, req tfsdk.ReadData
     var state types.Object
 	trustedDevice := trustedDeviceI
 	
-	diags = tfschema.CopyDeviceV1ToTerraform(ctx, trustedDevice, &state)
+	diags = schemav1.CopyDeviceV1ToTerraform(ctx, trustedDevice, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

@@ -21,16 +21,17 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/hashicorp/terraform-plugin-framework/diag"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
-	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/path"
-
 	apitypes "github.com/gravitational/teleport/api/types"
-	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema"
+	
 	"github.com/gravitational/teleport/integrations/lib/backoff"
 	"github.com/gravitational/trace"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/jonboulle/clockwork"
+
+	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 )
 
 // resourceTeleportSAMLConnectorType is the resource metadata type

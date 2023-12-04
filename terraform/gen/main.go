@@ -373,6 +373,7 @@ var (
 		Kind:                  "device",
 		ID:                    "trustedDevice.Metadata.Name",
 		HasStaticID:           true,
+		SchemaPackage:         "schemav1",
 		SchemaPackagePath:     "github.com/gravitational/teleport-plugins/terraform/tfschema/devicetrust/v1",
 		IsPlainStruct:         true,
 		UUIDMetadataName:      true,
@@ -477,7 +478,24 @@ func generate(p payload, tpl, outFile string) {
 		log.Fatal(err)
 	}
 
-	t, err := template.ParseFiles(path.Join("gen", tpl))
+	funcs := template.FuncMap{
+		"schemaImport": func(p payload) string {
+			if p.SchemaPackage == "tfschema" {
+				return `"` + p.SchemaPackagePath + `"`
+			}
+
+			return p.SchemaPackage + ` "` + p.SchemaPackagePath + `"`
+		},
+		"protoImport": func(p payload) string {
+			if p.ConvertPackagePath != "" {
+				return "convert" + ` "` + p.ConvertPackagePath + `"`
+			}
+
+			return p.ProtoPackage + ` "` + p.ProtoPackagePath + `"`
+		},
+	}
+
+	t, err := template.New(p.Name).Funcs(funcs).ParseFiles(path.Join("gen", tpl))
 	if err != nil {
 		log.Fatal(err)
 	}
