@@ -24,7 +24,7 @@ steps:
       - make lint
 
   - name: Run tests
-    image: golang:1.21.4
+    image: golang:1.21.5
     environment:
       RUNNER_TEMP: /tmp
       TELEPORT_ENTERPRISE_LICENSE:
@@ -66,7 +66,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.21.4
+    image: golang:1.21.5
     commands:
       - make build-all
 
@@ -97,7 +97,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.21.4
+    image: golang:1.21.5
     commands:
       - mkdir -p build/
       - export PLUGIN_TYPE=$(echo ${DRONE_TAG} | cut -d- -f2)
@@ -311,7 +311,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.21.4
+    image: golang:1.21.5
     commands:
       - mkdir -p build/
       - go install github.com/konoui/lipo@latest
@@ -384,7 +384,7 @@ workspace:
 
 steps:
   - name: Build artifacts
-    image: golang:1.21.4
+    image: golang:1.21.5
     commands:
       - mkdir -p build/
       - make OS=linux ARCH=amd64 release/event-handler
@@ -927,7 +927,7 @@ concurrency:
 
 steps:
   - name: Upload terraform provider to staging registry
-    image: golang:1.21.4
+    image: golang:1.21.5
     commands:
       - cd tooling
       - |
@@ -985,7 +985,7 @@ concurrency:
 
 steps:
   - name: Upload terraform provider to staging registry
-    image: golang:1.21.4
+    image: golang:1.21.5
     commands:
       - cd tooling
       - |
@@ -1043,7 +1043,7 @@ concurrency:
 
 steps:
   - name: Promote terraform provider to public registry
-    image: golang:1.21.4
+    image: golang:1.21.5
     commands:
       - cd tooling
       - |
@@ -1081,6 +1081,6 @@ steps:
         from_secret: PRODUCTION_TERRAFORM_REGISTRY_SIGNING_KEY
 ---
 kind: signature
-hmac: 0c826745b4e302f17699d82532ddadb4005f75395648b99b74e989e0f01e7c33
+hmac: fd00ccbbe9d725d215d2802b16ae34a1ff2ed29b32e71ca1aa6d911f9baffdeb
 
 ...
