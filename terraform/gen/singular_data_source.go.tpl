@@ -20,15 +20,15 @@ package provider
 import (
 	"context"
 
+	{{ if not .IsPlainStruct }}
+    {{- protoImport . }}
+    {{- end }}
+	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	{{.SchemaPackage}} "{{.SchemaPackagePath}}"
-	{{if not .IsPlainStruct -}}
-	{{.ProtoPackage}} "{{.ProtoPackagePath}}"
-	{{end -}}
-	"github.com/gravitational/trace"
+	{{ schemaImport . }}
 )
 
 // dataSourceTeleport{{.Name}}Type is the data source metadata type

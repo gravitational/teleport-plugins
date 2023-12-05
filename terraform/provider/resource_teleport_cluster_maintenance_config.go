@@ -22,15 +22,15 @@ import (
 	"fmt"
 	 "math"
 
+	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/teleport/integrations/lib/backoff"
+	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	apitypes "github.com/gravitational/teleport/api/types"
-	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema"
-	"github.com/gravitational/teleport/integrations/lib/backoff"
-	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
+
+	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 )
 
 // resourceTeleportClusterMaintenanceConfigType is the resource metadata type

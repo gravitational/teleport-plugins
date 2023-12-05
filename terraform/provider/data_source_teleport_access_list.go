@@ -20,16 +20,15 @@ package provider
 import (
 	"context"
 
+	convert "github.com/gravitational/teleport/api/types/accesslist/convert/v1"
+    
+	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 
 	schemav1 "github.com/gravitational/teleport-plugins/terraform/tfschema/accesslist/v1"
-	
-	convert "github.com/gravitational/teleport/api/types/accesslist/convert/v1"
-	
-	"github.com/gravitational/trace"
 )
 
 // dataSourceTeleportAccessListType is the data source metadata type

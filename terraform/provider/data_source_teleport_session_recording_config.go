@@ -20,13 +20,13 @@ package provider
 import (
 	"context"
 
+	apitypes "github.com/gravitational/teleport/api/types"
+	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
-	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema"
-	apitypes "github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/trace"
+	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 )
 
 // dataSourceTeleportSessionRecordingConfigType is the data source metadata type

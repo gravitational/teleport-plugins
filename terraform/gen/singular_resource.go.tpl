@@ -24,15 +24,15 @@ import (
 	 "math"
 {{- end}}
 
+	{{.ProtoPackage}} "{{.ProtoPackagePath}}"
+	"github.com/gravitational/teleport/integrations/lib/backoff"
+	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-
-	{{.ProtoPackage}} "{{.ProtoPackagePath}}"
-	{{.SchemaPackage}} "{{.SchemaPackagePath}}"
-	"github.com/gravitational/teleport/integrations/lib/backoff"
-	"github.com/gravitational/trace"
 	"github.com/jonboulle/clockwork"
+
+	{{ schemaImport . }}
 )
 
 // resourceTeleport{{.Name}}Type is the resource metadata type

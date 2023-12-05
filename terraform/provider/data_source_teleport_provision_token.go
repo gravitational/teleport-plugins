@@ -20,15 +20,15 @@ package provider
 import (
 	"context"
 
+	apitypes "github.com/gravitational/teleport/api/types"
+    
+	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 
-	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema"
-	
-	apitypes "github.com/gravitational/teleport/api/types"
-	"github.com/gravitational/trace"
+	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 )
 
 // dataSourceTeleportProvisionTokenType is the data source metadata type

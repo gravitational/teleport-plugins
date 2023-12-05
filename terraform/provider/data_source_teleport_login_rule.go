@@ -20,13 +20,14 @@ package provider
 import (
 	"context"
 
+	
+	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	"github.com/hashicorp/terraform-plugin-framework/path"
 
 	schemav1 "github.com/gravitational/teleport-plugins/terraform/tfschema/loginrule/v1"
-	"github.com/gravitational/trace"
 )
 
 // dataSourceTeleportLoginRuleType is the data source metadata type
