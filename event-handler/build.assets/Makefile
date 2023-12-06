@@ -1,5 +1,5 @@
 VERSION=0.0.1
-GO_VERSION=1.21.4
+GO_VERSION=1.21.5
 LOCALDIR := $(dir $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
 TOP ?= $(abspath $(LOCALDIR)/../..)
 SRCDIR=/go/src/github.com/gravitational/teleport-plugins/event-handler
