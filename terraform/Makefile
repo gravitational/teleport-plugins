@@ -32,15 +32,16 @@ build: clean
 
 build-darwin-universal: $(addprefix $(BUILDDIR)/terraform-provider-teleport_,arm64 amd64)
 	lipo -create -output $(BUILDDIR)/terraform-provider-teleport $^
-	rm $^
+	rm -r $^ $(BUILDDIR)/$(OS)
 
 # Architecture-specific binaries for the universal binary are extracted from
 # the release tarball. make will not automatically build this; you will need
 # to run "make ARCH=amd64 release" and "make ARCH=arm64 release" first as is
-# done in ../.drone.yml
+# done in the build workflow.
 $(BUILDDIR)/terraform-provider-teleport_%: terraform-provider-teleport-v$(VERSION)-$(OS)-%-bin.tar.gz
-	tar -xzf $< -C $(BUILDDIR)
-	mv $(BUILDDIR)/terraform-provider-teleport $@
+	mkdir -p $(BUILDDIR)/$(OS)/$*
+	tar -xzf $< -C $(BUILDDIR)/$(OS)/$*
+	mv $(BUILDDIR)/$(OS)/$*/terraform-provider-teleport $@
 
 CUSTOM_IMPORTS_TMP_DIR ?= /tmp/protoc-gen-terraform/custom-imports
 PROTOC_GEN_TERRAFORM_VERSION ?= v2.1.0

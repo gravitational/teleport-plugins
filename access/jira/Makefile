@@ -1,4 +1,4 @@
-VERSION=14.2.1
+VERSION?=14.2.1
 GO_VERSION=1.21.5
 
 BUILDDIR ?= build
@@ -17,9 +17,11 @@ RELEASE=$(RELEASE_NAME)-$(GITTAG)-$(OS)-$(ARCH)-bin
 RELEASE_MESSAGE = "Building with GOOS=$(OS) GOARCH=$(ARCH)."
 
 DOCKER_NAME = teleport-plugin-jira
-DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/$(DOCKER_NAME):$(VERSION)
-DOCKER_IMAGE_ECR_PUBLIC = public.ecr.aws/gravitational/$(DOCKER_NAME):$(VERSION)
-DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg ACCESS_PLUGIN=jira --build-arg GITREF=$(GITREF)
+DOCKER_PRIVATE_REGISTRY = 146628656107.dkr.ecr.us-west-2.amazonaws.com
+DOCKER_IMAGE = $(DOCKER_PRIVATE_REGISTRY)/gravitational/$(DOCKER_NAME):$(VERSION)
+DOCKER_ECR_PUBLIC_REGISTRY = public.ecr.aws/gravitational
+DOCKER_IMAGE_ECR_PUBLIC = $(DOCKER_ECR_PUBLIC_REGISTRY)/$(DOCKER_NAME):$(VERSION)
+DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg ACCESS_PLUGIN=jira --build-arg GITREF=$(GITREF) --build-arg VERSION=$(VERSION)
 
 .PHONY: $(BINARY)
 $(BINARY):
@@ -33,7 +35,6 @@ test:
 clean:
 	@echo "---> Cleaning up build artifacts."
 	rm -rf $(BUILDDIR)
-	-go clean -cache
 	rm -rf $(RELEASE_NAME)
 	rm -rf *.gz
 	rm -f gitref.go

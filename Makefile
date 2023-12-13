@@ -1,9 +1,6 @@
 # Set up a system-agnostic in-place sed command
 IS_GNU_SED = $(shell sed --version 1>/dev/null 2>&1 && echo true || echo false)
 
-DRONE ?= drone
-DRONE_REPO ?= gravitational/teleport-plugins
-DRONE_PROMOTE_ENV ?= production
 PLUGINS ?= teleport-event-handler \
 			teleport-discord \
 			teleport-jira \
@@ -68,7 +65,27 @@ docker-build-access-plugins: docker-build-access-email \
 docker-push-access-%: docker-build-access-%
 	$(MAKE) -C access/$* docker-push
 
-# Pulls and pushes image from ECR to quay.
+# Push all access plugins with docker to ECR
+.PHONY: docker-push-access-all
+docker-push-access-all: docker-push-access-email \
+ docker-push-access-discord \
+ docker-push-access-jira \
+ docker-push-access-mattermost \
+ docker-push-access-msteams \
+ docker-push-access-pagerduty \
+ docker-push-access-slack
+
+# Pulls and pushes image from ECR to ECR-public.
+.PHONY: docker-promote
+docker-promote: docker-promote-event-handler \
+	docker-promote-access-discord \
+	docker-promote-access-jira \
+	docker-promote-access-mattermost \
+	docker-promote-access-msteams \
+	docker-promote-access-pagerduty \
+	docker-promote-access-slack \
+	docker-promote-access-email
+
 .PHONY: docker-promote-access-%
 docker-promote-access-%:
 	$(MAKE) -C access/$* docker-promote
@@ -139,39 +156,39 @@ test-event-handler:
 # Individual releases
 .PHONY: release/access-slack
 release/access-slack:
-	$(MAKE) -C access/slack clean release
+	$(MAKE) -C access/slack release
 
 .PHONY: release/access-discord
 release/access-discord:
-	$(MAKE) -C access/discord clean release
+	$(MAKE) -C access/discord release
 
 .PHONY: release/access-jira
 release/access-jira:
-	$(MAKE) -C access/jira clean release
+	$(MAKE) -C access/jira release
 
 .PHONY: release/access-mattermost
 release/access-mattermost:
-	$(MAKE) -C access/mattermost clean release
+	$(MAKE) -C access/mattermost release
 
 .PHONY: release/access-msteams
 release/access-msteams:
-	$(MAKE) -C access/msteams clean release
+	$(MAKE) -C access/msteams release
 
 .PHONY: release/access-pagerduty
 release/access-pagerduty:
-	$(MAKE) -C access/pagerduty clean release
+	$(MAKE) -C access/pagerduty release
 
 .PHONY: release/access-email
 release/access-email:
-	$(MAKE) -C access/email clean release
+	$(MAKE) -C access/email release
 
 .PHONY: release/terraform
 release/terraform:
-	$(MAKE) -C terraform clean release
+	$(MAKE) -C terraform release
 
 .PHONY: release/event-handler
 release/event-handler:
-	$(MAKE) -C event-handler clean release
+	$(MAKE) -C event-handler release
 
 # Run all releases
 .PHONY: releases
@@ -184,15 +201,15 @@ build-all: access-slack access-discord access-jira access-mattermost access-mste
 update-version:
 	# Make sure VERSION is set on the command line "make update-version VERSION=x.y.z".
 	@test $(VERSION)
-	$(SED) '1s/.*/VERSION=$(VERSION)/' event-handler/Makefile
-	$(SED) '1s/.*/VERSION=$(VERSION)/' access/discord/Makefile
-	$(SED) '1s/.*/VERSION=$(VERSION)/' access/jira/Makefile
-	$(SED) '1s/.*/VERSION=$(VERSION)/' access/mattermost/Makefile
-	$(SED) '1s/.*/VERSION=$(VERSION)/' access/msteams/Makefile
-	$(SED) '1s/.*/VERSION=$(VERSION)/' access/slack/Makefile
-	$(SED) '1s/.*/VERSION=$(VERSION)/' access/pagerduty/Makefile
-	$(SED) '1s/.*/VERSION=$(VERSION)/' access/email/Makefile
-	$(SED) '1s/.*/VERSION=$(VERSION)/' terraform/install.mk
+	$(SED) '1s/.*/VERSION?=$(VERSION)/' event-handler/Makefile
+	$(SED) '1s/.*/VERSION?=$(VERSION)/' access/discord/Makefile
+	$(SED) '1s/.*/VERSION?=$(VERSION)/' access/jira/Makefile
+	$(SED) '1s/.*/VERSION?=$(VERSION)/' access/mattermost/Makefile
+	$(SED) '1s/.*/VERSION?=$(VERSION)/' access/msteams/Makefile
+	$(SED) '1s/.*/VERSION?=$(VERSION)/' access/slack/Makefile
+	$(SED) '1s/.*/VERSION?=$(VERSION)/' access/pagerduty/Makefile
+	$(SED) '1s/.*/VERSION?=$(VERSION)/' access/email/Makefile
+	$(SED) '1s/.*/VERSION?=$(VERSION)/' terraform/install.mk
 	$(MAKE) update-helm-version
 	$(MAKE) update-teleport-dep-version
 	$(MAKE) terraform-gen-tfschema
@@ -221,57 +238,6 @@ update-helm-version-%:
 update-teleport-dep-version:
 	./update_teleport_dep_version.sh v$(VERSION)
 
-.PHONY: update-tag
-update-tag:
-	# Make sure VERSION is set on the command line "make update-tag VERSION=x.y.z".
-	@test $(VERSION)
-	# Tag all releases first locally.
-	git tag teleport-event-handler-v$(VERSION)
-	git tag teleport-discord-v$(VERSION)
-	git tag teleport-jira-v$(VERSION)
-	git tag teleport-mattermost-v$(VERSION)
-	git tag teleport-msteams-v$(VERSION)
-	git tag teleport-slack-v$(VERSION)
-	git tag teleport-pagerduty-v$(VERSION)
-	git tag teleport-email-v$(VERSION)
-	git tag terraform-provider-teleport-v$(VERSION)
-	git tag v$(VERSION)
-	# Push all releases to origin.
-	git push origin teleport-event-handler-v$(VERSION)
-	git push origin teleport-discord-v$(VERSION)
-	git push origin teleport-jira-v$(VERSION)
-	git push origin teleport-mattermost-v$(VERSION)
-	git push origin teleport-msteams-v$(VERSION)
-	git push origin teleport-slack-v$(VERSION)
-	git push origin teleport-pagerduty-v$(VERSION)
-	git push origin teleport-email-v$(VERSION)
-	git push origin terraform-provider-teleport-v$(VERSION)
-	git push origin v$(VERSION)
-
-# promote-tag executes Drone promotion pipeline for the plugins.
-#
-# It has to be run after tag builds triggered by the "update-tag" target have
-# been completed. Requires "drone" executable to be available and configured
-# to talk to our Drone cluster.
-#
-# To promote all plugins:
-#   VERSION=10.2.6 make promote-tag
-#
-# To promote a particular plugin:
-#   VERSION=10.2.6 PLUGINS=teleport-slack make promote-tag
-.PHONY: promote-tag
-promote-tag:
-	@test $(VERSION)
-	@for PLUGIN in $(PLUGINS); do \
-		BUILD=$$($(DRONE) build ls --status success --event tag --format "{{.Number}} {{.Ref}}" $(DRONE_REPO) | grep $${PLUGIN}-v$(VERSION) | cut -d ' ' -f1); \
-		if [ "$${BUILD}" = "" ]; then \
-			echo "Failed to find Drone build number for $${PLUGIN}-v$(VERSION)" && exit 1; \
-		else \
-			echo "\n\n --> Promoting build $${BUILD} for plugin $${PLUGIN}" to $(DRONE_PROMOTE_ENV); \
-			$(DRONE) build promote $(DRONE_REPO) $${BUILD} $(DRONE_PROMOTE_ENV); \
-		fi; \
-	done
-
 .PHONY: update-goversion
 update-goversion:
 	# Make sure GOVERSION is set on the command line "make update-goversion GOVERSION=x.y.z".
@@ -290,9 +256,6 @@ update-goversion:
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/Makefile
 	$(SED) '2s/.*/GO_VERSION=$(GOVERSION)/' event-handler/build.assets/Makefile
 	$(SED) 's/^RUNTIME ?= go.*/RUNTIME ?= go$(GOVERSION)/' docker/Makefile
-	$(SED) 's/image: golang:.*/image: golang:$(GOVERSION)/g' .drone.yml
-	$(SED) 's/GO_VERSION: go.*/GO_VERSION: go$(GOVERSION)/g' .drone.yml
-	@echo Please sign .drone.yml before staging and committing the changes
 
 # Lint the project
 # Currently lints the go files and license headers in most files.

@@ -6,6 +6,7 @@ FROM golang:${GO_VERSION}-bookworm as builder
 
 ARG ACCESS_PLUGIN
 ARG GITREF
+ARG VERSION
 
 WORKDIR /workspace
 
@@ -19,7 +20,7 @@ RUN --mount=type=cache,target=/go/pkg/mod go mod download
 COPY access/${ACCESS_PLUGIN} access/${ACCESS_PLUGIN}
 
 # Build
-RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build make -C access/${ACCESS_PLUGIN} GITREF=${GITREF}
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build make -C access/${ACCESS_PLUGIN} GITREF=${GITREF} VERSION=${VERSION}
 
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
