@@ -662,10 +662,10 @@ github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf h1:MQ4e8X
 github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXPKa29o=
 github.com/gravitational/roundtrip v1.0.2 h1:eOCY0NEKKaB0ksJmvhO6lPMFz1pIIef+vyPBTBROQ5c=
 github.com/gravitational/roundtrip v1.0.2/go.mod h1:fuI1booM2hLRA/B/m5MRAPOU6mBZNYcNycono2UuTw0=
-github.com/gravitational/teleport v0.0.0-20231201005414-e6737fe00510 h1:iLCgqlT7puZP9GBNqRBZQHkZ0pUSf2s5M8N2TKriHjk=
-github.com/gravitational/teleport v0.0.0-20231201005414-e6737fe00510/go.mod h1:3gkVPSzNuTWI0qQgzuk1l07L/bmhfDmxII2SOXVujQU=
-github.com/gravitational/teleport/api v0.0.0-20231201005414-e6737fe00510 h1:31GqK4u2g/QVftkMvSpol1CzB2XaJVbuWspaGjLKFEA=
-github.com/gravitational/teleport/api v0.0.0-20231201005414-e6737fe00510/go.mod h1:vs/WZu1KCOYAH1It/GS9yq2CYOt0lcB0HkwsyrvYyDk=
+github.com/gravitational/teleport v0.0.0-20231214223850-22e50b45420e h1:mr89PIiuMkyZ/frHZRUEZrNB7Mz9X+cuNi1u3Tu+oEs=
+github.com/gravitational/teleport v0.0.0-20231214223850-22e50b45420e/go.mod h1:Px4ETWszg5pLH3/g7Gk08rKbvr6oMTNpNGgmD60xcDQ=
+github.com/gravitational/teleport/api v0.0.0-20231214223850-22e50b45420e h1:70Ui1wzgnwrtcTvuYSkEnm1+BcZ6HiEaXOYM0A6THto=
+github.com/gravitational/teleport/api v0.0.0-20231214223850-22e50b45420e/go.mod h1:vs/WZu1KCOYAH1It/GS9yq2CYOt0lcB0HkwsyrvYyDk=
 github.com/gravitational/trace v1.3.1 h1:jwZEuRtCYpLhUtqHo+JH+lu2qM0LB98UagqHtvdKuLI=
 github.com/gravitational/trace v1.3.1/go.mod h1:E61mn73aro7Zg9gZheZaeUsK6gjUMbCLazY76xuYAVA=
 github.com/grpc-ecosystem/go-grpc-middleware v1.0.0/go.mod h1:FiyG127CGDf3tlThmgyCl78X/SZQqEOJBCDaAfeWzPs=
