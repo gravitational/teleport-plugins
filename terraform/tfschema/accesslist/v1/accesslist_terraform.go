@@ -172,7 +172,7 @@ func GenSchemaAccessList(ctx context.Context) (github_com_hashicorp_terraform_pl
 					Required:    true,
 				},
 				"membership": {
-					Description: "membership defines how list membership is applied. There are two possible values: `explicit` (default): To be considered ag member of the access list, a user must both meet the `membership_requires` conditions AND be explicitly added to the list. implicit: Any user meeting the `membership_requires` conditions will automatically be cosidered a member of this list.",
+					Description: "membership defines how list membership is applied. There are two possible values: `explicit` (default): To be considered ag member of the access list, a user must both meet the `membership_requires` conditions AND be explicitly added to the list. `implicit`: Any user meeting the `membership_requires` conditions will automatically be cosidered a member of this list.",
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
@@ -220,7 +220,7 @@ func GenSchemaAccessList(ctx context.Context) (github_com_hashicorp_terraform_pl
 					Required:    true,
 				},
 				"ownership": {
-					Description: "ownership defines how list ownership of this list is determined. There are two possible values: `explicit` (default): To be considered an owner of the access list, a user must both meet the `ownership_requires` conditions AND be explicitly added to the list. implicit: Any user meeting the `ownership_requires` conditions will automatically be considered an owner of this list.",
+					Description: "ownership defines how list ownership of this list is determined. There are two possible values: `explicit` (default): To be considered an owner of the access list, a user must both meet the `ownership_requires` conditions AND be explicitly added to the list. `implicit`: Any user meeting the `ownership_requires` conditions will automatically be considered an owner of this list.",
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
