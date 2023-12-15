@@ -8,7 +8,7 @@ data:
   teleport-mattermost.toml: |
     [teleport]
     addr = "{{ .Values.teleport.address }}"
-    identity = "/var/lib/teleport/plugins/mattermost/auth_id"
+    identity = "/var/lib/teleport/plugins/mattermost/teleport-identity/{{ .Values.teleport.identitySecretPath }}"
 
     [mattermost]
     url        = "{{ .Values.mattermost.url }}"

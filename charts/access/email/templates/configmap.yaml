@@ -8,7 +8,7 @@ data:
   teleport-email.toml: |
     [teleport]
     addr = "{{ .Values.teleport.address }}"
-    identity = "/var/lib/teleport/plugins/email/auth_id"
+    identity = "/var/lib/teleport/plugins/email/teleport-identity/{{ .Values.teleport.identitySecretPath }}"
 
     {{ if .Values.mailgun.enabled -}}
     [mailgun]

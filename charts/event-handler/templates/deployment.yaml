@@ -48,9 +48,8 @@ spec:
             - name: config
               mountPath: /etc/teleport-event-handler.toml
               subPath: teleport-event-handler.toml
-            - name: auth-id
-              mountPath: /var/lib/teleport/plugins/event-handler/auth_id
-              subPath: {{ .Values.teleport.identitySecretPath }}
+            - name: teleport-identity
+              mountPath: /var/lib/teleport/plugins/event-handler/teleport-identity
             - name: certificate
               mountPath: /var/lib/teleport/plugins/event-handler/ca.crt
               subPath: {{ .Values.fluentd.certificate.caPath }}
@@ -84,7 +83,7 @@ spec:
           configMap:
             name: {{ include "event-handler.fullname" . }}
             defaultMode: 0600
-        - name: auth-id
+        - name: teleport-identity
           secret:
             secretName: "{{ .Values.teleport.identitySecretName }}"
             defaultMode: 0600

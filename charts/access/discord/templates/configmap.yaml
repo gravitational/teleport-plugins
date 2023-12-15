@@ -8,7 +8,7 @@ data:
   teleport-discord.toml: |
     [teleport]
     addr = "{{ .Values.teleport.address }}"
-    identity = "/var/lib/teleport/plugins/discord/auth_id"
+    identity = "/var/lib/teleport/plugins/discord/teleport-identity/{{ .Values.teleport.identitySecretPath }}"
 
     [discord]
     token = "/var/lib/teleport/plugins/discord/discord-token"

@@ -10,7 +10,7 @@ data:
     
     [teleport]
     addr = "{{ .Values.teleport.address }}"
-    identity = "/var/lib/teleport/plugins/msteams/auth_id"
+    identity = "/var/lib/teleport/plugins/msteams/teleport-identity/{{ .Values.teleport.identitySecretPath }}"
 
     [msapi]
     app_id = "{{ .Values.msTeams.appID }}"
