@@ -49,7 +49,7 @@ spec:
               mountPath: /etc/teleport-mattermost.toml
               subPath: teleport-mattermost.toml
             - name: teleport-identity
-              mountPath: /var/lib/teleport/plugins/mattermost/teleport-identity"
+              mountPath: /var/lib/teleport/plugins/mattermost/teleport-identity
             - name: {{ .Values.secretVolumeName }}
               mountPath: /var/lib/teleport/plugins/mattermost/mattermost_token
               subPath: {{ .Values.mattermost.tokenSecretPath }}
