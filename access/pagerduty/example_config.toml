@@ -10,6 +10,7 @@ addr = "example.com:3025"
 #
 # When using --format=file:
 # identity = "/var/lib/teleport/plugins/pagerduty/auth_id"    # Identity file
+# refresh_identity = true                                   # Refresh identity file on a periodic basis.
 #
 # When using --format=tls:
 # client_key = "/var/lib/teleport/plugins/pagerduty/auth.key" # Teleport TLS secret key
