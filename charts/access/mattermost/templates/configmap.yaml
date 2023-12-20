@@ -9,6 +9,7 @@ data:
     [teleport]
     addr = "{{ .Values.teleport.address }}"
     identity = "/var/lib/teleport/plugins/mattermost/teleport-identity/{{ .Values.teleport.identitySecretPath }}"
+    refresh_identity = true
 
     [mattermost]
     url        = "{{ .Values.mattermost.url }}"

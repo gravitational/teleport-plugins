@@ -9,6 +9,7 @@ data:
     [teleport]
     addr = "{{ .Values.teleport.address }}"
     identity = "/var/lib/teleport/plugins/pagerduty/teleport-identity/{{ .Values.teleport.identitySecretPath }}"
+    refresh_identity = true
 
     [pagerduty]
     api_key    = "/var/lib/teleport/plugins/pagerduty/pagerduty_api_key"

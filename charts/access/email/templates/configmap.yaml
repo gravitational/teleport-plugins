@@ -9,6 +9,7 @@ data:
     [teleport]
     addr = "{{ .Values.teleport.address }}"
     identity = "/var/lib/teleport/plugins/email/teleport-identity/{{ .Values.teleport.identitySecretPath }}"
+    refresh_identity = true
 
     {{ if .Values.mailgun.enabled -}}
     [mailgun]

@@ -9,6 +9,7 @@ data:
     [teleport]
     addr = "{{ .Values.teleport.address }}"
     identity = "/var/lib/teleport/plugins/discord/teleport-identity/{{ .Values.teleport.identitySecretPath }}"
+    refresh_identity = true
 
     [discord]
     token = "/var/lib/teleport/plugins/discord/discord-token"
