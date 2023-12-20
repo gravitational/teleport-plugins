@@ -5,7 +5,8 @@ should match the snapshot:
       teleport-slack.toml: |
         [teleport]
         addr = "teleport.example.com:1234"
-        identity = "/var/lib/teleport/plugins/slack/auth_id"
+        identity = "/var/lib/teleport/plugins/slack/teleport-identity/auth_id"
+        refresh_identity = true
 
         [slack]
         token = "/var/lib/teleport/plugins/slack/slack-token"

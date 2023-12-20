@@ -44,9 +44,8 @@ should match the snapshot:
             - mountPath: /etc/teleport-jira.toml
               name: config
               subPath: teleport-jira.toml
-            - mountPath: /var/lib/teleport/plugins/jira/auth_id
-              name: auth-id
-              subPath: auth_id
+            - mountPath: /var/lib/teleport/plugins/jira/teleport-identity
+              name: teleport-identity
             - mountPath: /var/lib/teleport/plugins/jira/jira_api_token
               name: password-file
               subPath: jiraApiToken
@@ -62,7 +61,7 @@ should match the snapshot:
               defaultMode: 384
               name: RELEASE-NAME-teleport-plugin-jira
             name: config
-          - name: auth-id
+          - name: teleport-identity
             secret:
               defaultMode: 384
               secretName: ""

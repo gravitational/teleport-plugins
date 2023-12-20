@@ -7,7 +7,8 @@ should match the snapshot:
 
         [teleport]
         addr = "teleport.example.com:1234"
-        identity = "/var/lib/teleport/plugins/msteams/auth_id"
+        identity = "/var/lib/teleport/plugins/msteams/teleport-identity/auth_id"
+        refresh_identity = true
 
         [msapi]
         app_id = "my-app-id"

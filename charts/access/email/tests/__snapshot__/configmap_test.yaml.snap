@@ -5,7 +5,8 @@ should match the snapshot (mailgun on):
       teleport-email.toml: |
         [teleport]
         addr = "teleport.example.com:1234"
-        identity = "/var/lib/teleport/plugins/email/auth_id"
+        identity = "/var/lib/teleport/plugins/email/teleport-identity/auth_id"
+        refresh_identity = true
 
         [mailgun]
         domain           = "mymailgunsubdomain.mailgun.org"
@@ -35,7 +36,8 @@ should match the snapshot (smtp on):
       teleport-email.toml: |
         [teleport]
         addr = "teleport.example.com:1234"
-        identity = "/var/lib/teleport/plugins/email/auth_id"
+        identity = "/var/lib/teleport/plugins/email/teleport-identity/auth_id"
+        refresh_identity = true
 
         [smtp]
         host            = "smtp.example.com"
@@ -67,7 +69,8 @@ should match the snapshot (smtp on, no starttls):
       teleport-email.toml: |
         [teleport]
         addr = "teleport.example.com:1234"
-        identity = "/var/lib/teleport/plugins/email/auth_id"
+        identity = "/var/lib/teleport/plugins/email/teleport-identity/auth_id"
+        refresh_identity = true
 
         [smtp]
         host            = "smtp.example.com"
@@ -99,7 +102,8 @@ should match the snapshot (smtp on, password file):
       teleport-email.toml: |
         [teleport]
         addr = "teleport.example.com:1234"
-        identity = "/var/lib/teleport/plugins/email/auth_id"
+        identity = "/var/lib/teleport/plugins/email/teleport-identity/auth_id"
+        refresh_identity = true
 
         [smtp]
         host            = "smtp.example.com"
@@ -131,7 +135,8 @@ should match the snapshot (smtp on, roleToRecipients set):
       teleport-email.toml: |
         [teleport]
         addr = "teleport.example.com:1234"
-        identity = "/var/lib/teleport/plugins/email/auth_id"
+        identity = "/var/lib/teleport/plugins/email/teleport-identity/auth_id"
+        refresh_identity = true
 
         [smtp]
         host            = "smtp.example.com"
@@ -166,7 +171,8 @@ should match the snapshot (smtp on, starttls disabled):
       teleport-email.toml: |
         [teleport]
         addr = "teleport.example.com:1234"
-        identity = "/var/lib/teleport/plugins/email/auth_id"
+        identity = "/var/lib/teleport/plugins/email/teleport-identity/auth_id"
+        refresh_identity = true
 
         [smtp]
         host            = "smtp.example.com"

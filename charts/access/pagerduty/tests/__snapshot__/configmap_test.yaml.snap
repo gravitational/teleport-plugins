@@ -5,7 +5,8 @@ should match the snapshot (smtp on):
       teleport-pagerduty.toml: |
         [teleport]
         addr = "teleport.example.com:1234"
-        identity = "/var/lib/teleport/plugins/pagerduty/auth_id"
+        identity = "/var/lib/teleport/plugins/pagerduty/teleport-identity/auth_id"
+        refresh_identity = true
 
         [pagerduty]
         api_key    = "/var/lib/teleport/plugins/pagerduty/pagerduty_api_key"
