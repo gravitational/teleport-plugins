@@ -12,7 +12,8 @@ data:
 
     [teleport]
     addr = "{{ .Values.teleport.address }}"
-    identity = "/var/lib/teleport/plugins/event-handler/auth_id"
+    identity = "/var/lib/teleport/plugins/event-handler/teleport-identity/{{ .Values.teleport.identitySecretPath }}"
+    refresh.enabled = true
 
     [forward.fluentd]
     url = "{{ .Values.fluentd.url }}"

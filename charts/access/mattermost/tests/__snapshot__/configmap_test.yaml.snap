@@ -5,7 +5,8 @@ should match the snapshot:
       teleport-mattermost.toml: |
         [teleport]
         addr = "teleport.example.com:1234"
-        identity = "/var/lib/teleport/plugins/mattermost/auth_id"
+        identity = "/var/lib/teleport/plugins/mattermost/teleport-identity/auth_id"
+        refresh_identity = true
 
         [mattermost]
         url        = "https://my.mattermost.com"

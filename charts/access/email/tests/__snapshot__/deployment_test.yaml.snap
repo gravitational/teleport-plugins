@@ -44,9 +44,8 @@ should be possible to override volume name (smtp on):
             - mountPath: /etc/teleport-email.toml
               name: config
               subPath: teleport-email.toml
-            - mountPath: /var/lib/teleport/plugins/email/auth_id
-              name: auth-id
-              subPath: auth_id
+            - mountPath: /var/lib/teleport/plugins/email/teleport-identity
+              name: teleport-identity
             - mountPath: /var/lib/teleport/plugins/email/smtp_password
               name: secret-volume
               subPath: smtpPassword
@@ -56,7 +55,7 @@ should be possible to override volume name (smtp on):
               defaultMode: 384
               name: RELEASE-NAME-teleport-plugin-email
             name: config
-          - name: auth-id
+          - name: teleport-identity
             secret:
               defaultMode: 384
               secretName: ""
@@ -110,16 +109,15 @@ should match the snapshot:
             - mountPath: /etc/teleport-email.toml
               name: config
               subPath: teleport-email.toml
-            - mountPath: /var/lib/teleport/plugins/email/auth_id
-              name: auth-id
-              subPath: auth_id
+            - mountPath: /var/lib/teleport/plugins/email/teleport-identity
+              name: teleport-identity
           securityContext: {}
           volumes:
           - configMap:
               defaultMode: 384
               name: RELEASE-NAME-teleport-plugin-email
             name: config
-          - name: auth-id
+          - name: teleport-identity
             secret:
               defaultMode: 384
               secretName: ""
@@ -169,9 +167,8 @@ should match the snapshot (mailgun on):
             - mountPath: /etc/teleport-email.toml
               name: config
               subPath: teleport-email.toml
-            - mountPath: /var/lib/teleport/plugins/email/auth_id
-              name: auth-id
-              subPath: auth_id
+            - mountPath: /var/lib/teleport/plugins/email/teleport-identity
+              name: teleport-identity
             - mountPath: /var/lib/teleport/plugins/email/mailgun_private_key
               name: password-file
               subPath: mailgunPrivateKey
@@ -181,7 +178,7 @@ should match the snapshot (mailgun on):
               defaultMode: 384
               name: RELEASE-NAME-teleport-plugin-email
             name: config
-          - name: auth-id
+          - name: teleport-identity
             secret:
               defaultMode: 384
               secretName: ""
@@ -235,9 +232,8 @@ should match the snapshot (smtp on):
             - mountPath: /etc/teleport-email.toml
               name: config
               subPath: teleport-email.toml
-            - mountPath: /var/lib/teleport/plugins/email/auth_id
-              name: auth-id
-              subPath: auth_id
+            - mountPath: /var/lib/teleport/plugins/email/teleport-identity
+              name: teleport-identity
             - mountPath: /var/lib/teleport/plugins/email/smtp_password
               name: password-file
               subPath: smtpPassword
@@ -247,7 +243,7 @@ should match the snapshot (smtp on):
               defaultMode: 384
               name: RELEASE-NAME-teleport-plugin-email
             name: config
-          - name: auth-id
+          - name: teleport-identity
             secret:
               defaultMode: 384
               secretName: ""
@@ -301,9 +297,8 @@ should mount external secret (mailgun on):
             - mountPath: /etc/teleport-email.toml
               name: config
               subPath: teleport-email.toml
-            - mountPath: /var/lib/teleport/plugins/email/auth_id
-              name: auth-id
-              subPath: auth_id
+            - mountPath: /var/lib/teleport/plugins/email/teleport-identity
+              name: teleport-identity
             - mountPath: /var/lib/teleport/plugins/email/mailgun_private_key
               name: password-file
               subPath: my-path-in-secret
@@ -313,7 +308,7 @@ should mount external secret (mailgun on):
               defaultMode: 384
               name: RELEASE-NAME-teleport-plugin-email
             name: config
-          - name: auth-id
+          - name: teleport-identity
             secret:
               defaultMode: 384
               secretName: ""
@@ -367,9 +362,8 @@ should mount external secret (smtp on):
             - mountPath: /etc/teleport-email.toml
               name: config
               subPath: teleport-email.toml
-            - mountPath: /var/lib/teleport/plugins/email/auth_id
-              name: auth-id
-              subPath: auth_id
+            - mountPath: /var/lib/teleport/plugins/email/teleport-identity
+              name: teleport-identity
             - mountPath: /var/lib/teleport/plugins/email/smtp_password
               name: password-file
               subPath: my-path-in-secret
@@ -379,7 +373,7 @@ should mount external secret (smtp on):
               defaultMode: 384
               name: RELEASE-NAME-teleport-plugin-email
             name: config
-          - name: auth-id
+          - name: teleport-identity
             secret:
               defaultMode: 384
               secretName: ""

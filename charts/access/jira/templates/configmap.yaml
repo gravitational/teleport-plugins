@@ -8,7 +8,8 @@ data:
   teleport-jira.toml: |
     [teleport]
     addr = "{{ .Values.teleport.address }}"
-    identity = "/var/lib/teleport/plugins/jira/auth_id"
+    identity = "/var/lib/teleport/plugins/jira/teleport-identity/{{ .Values.teleport.identitySecretPath }}"
+    refresh_identity = true
 
     [jira]
     url = "{{ .Values.jira.url }}"

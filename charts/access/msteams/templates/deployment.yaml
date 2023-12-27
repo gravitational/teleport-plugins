@@ -44,9 +44,8 @@ spec:
             - name: config
               mountPath: /etc/teleport-msteams.toml
               subPath: teleport-msteams.toml
-            - name: auth-id
-              mountPath: /var/lib/teleport/plugins/msteams/auth_id
-              subPath: {{ .Values.teleport.identitySecretPath }}
+            - name: teleport-identity
+              mountPath: /var/lib/teleport/plugins/msteams/teleport-identity
             - name: {{ .Values.secretVolumeName }}
               mountPath: /var/lib/teleport/plugins/msteams/appSecret
               subPath: {{ .Values.msTeams.appSecretFromSecretKey }}
@@ -67,7 +66,7 @@ spec:
           configMap:
             name: {{ include "msteams.fullname" . }}
             defaultMode: 0600
-        - name: auth-id
+        - name: teleport-identity
           secret:
             secretName: "{{ .Values.teleport.identitySecretName }}"
             defaultMode: 0600

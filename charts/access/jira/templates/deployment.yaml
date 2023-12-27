@@ -48,9 +48,8 @@ spec:
             - name: config
               mountPath: /etc/teleport-jira.toml
               subPath: teleport-jira.toml
-            - name: auth-id
-              mountPath: /var/lib/teleport/plugins/jira/auth_id
-              subPath: {{ .Values.teleport.identitySecretPath }}
+            - name: teleport-identity
+              mountPath: /var/lib/teleport/plugins/jira/teleport-identity
             - name: {{ .Values.secretVolumeName }}
               mountPath: "/var/lib/teleport/plugins/jira/jira_api_token"
               subPath: {{ .Values.jira.apiTokenSecretPath }}
@@ -80,7 +79,7 @@ spec:
           configMap:
             name: {{ include "jira.fullname" . }}
             defaultMode: 0600
-        - name: auth-id
+        - name: teleport-identity
           secret:
             secretName: "{{ .Values.teleport.identityFromSecret }}"
             defaultMode: 0600

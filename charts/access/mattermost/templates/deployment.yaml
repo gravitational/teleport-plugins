@@ -48,9 +48,8 @@ spec:
             - name: config
               mountPath: /etc/teleport-mattermost.toml
               subPath: teleport-mattermost.toml
-            - name: auth-id
-              mountPath: /var/lib/teleport/plugins/mattermost/auth_id
-              subPath: {{ .Values.teleport.identitySecretPath }}
+            - name: teleport-identity
+              mountPath: /var/lib/teleport/plugins/mattermost/teleport-identity
             - name: {{ .Values.secretVolumeName }}
               mountPath: /var/lib/teleport/plugins/mattermost/mattermost_token
               subPath: {{ .Values.mattermost.tokenSecretPath }}
@@ -71,7 +70,7 @@ spec:
           configMap:
             name: {{ include "mattermost.fullname" . }}
             defaultMode: 0600
-        - name: auth-id
+        - name: teleport-identity
           secret:
             secretName: "{{ .Values.teleport.identitySecretName }}"
             defaultMode: 0600

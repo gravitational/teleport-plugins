@@ -5,7 +5,8 @@ should match the snapshot (smtp on):
       teleport-jira.toml: |
         [teleport]
         addr = "teleport.example.com:1234"
-        identity = "/var/lib/teleport/plugins/jira/auth_id"
+        identity = "/var/lib/teleport/plugins/jira/teleport-identity/auth_id"
+        refresh_identity = true
 
         [jira]
         url = "https://jira.example.com"

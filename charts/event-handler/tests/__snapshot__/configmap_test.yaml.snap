@@ -9,7 +9,8 @@ should match the snapshot:
 
         [teleport]
         addr = "teleport.example.com:1234"
-        identity = "/var/lib/teleport/plugins/event-handler/auth_id"
+        identity = "/var/lib/teleport/plugins/event-handler/teleport-identity/auth_id"
+        refresh.enabled = true
 
         [forward.fluentd]
         url = "https://fluentd:8888/test.log"

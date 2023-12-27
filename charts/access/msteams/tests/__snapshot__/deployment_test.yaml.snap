@@ -40,9 +40,8 @@ should match the snapshot:
             - mountPath: /etc/teleport-msteams.toml
               name: config
               subPath: teleport-msteams.toml
-            - mountPath: /var/lib/teleport/plugins/msteams/auth_id
-              name: auth-id
-              subPath: auth_id
+            - mountPath: /var/lib/teleport/plugins/msteams/teleport-identity
+              name: teleport-identity
             - mountPath: /var/lib/teleport/plugins/msteams/appSecret
               name: password-file
               subPath: appSecret
@@ -52,7 +51,7 @@ should match the snapshot:
               defaultMode: 384
               name: RELEASE-NAME-teleport-plugin-msteams
             name: config
-          - name: auth-id
+          - name: teleport-identity
             secret:
               defaultMode: 384
               secretName: ""

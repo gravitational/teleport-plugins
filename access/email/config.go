@@ -65,14 +65,14 @@ type Config struct {
 	Log              logger.Config           `toml:"log"`
 }
 
-// TODO: Replace auth_server with addr once it is merged
 const exampleConfig = `# Example email plugin configuration TOML file
 
 [teleport]
-auth_server = "0.0.0.0:3025"                              # Teleport Auth Server GRPC API address
+addr = "0.0.0.0:3025"                              # Teleport Auth Server GRPC API address
 
 # When using --format=file:
 # identity = "/var/lib/teleport/plugins/email/auth_id"    # Identity file
+# refresh_identity = true                                 # Refresh identity file on a periodic basis.
 #
 # When using --format=tls:
 # client_key = "/var/lib/teleport/plugins/email/auth.key" # Teleport TLS secret key
