@@ -358,6 +358,11 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 							Description: "SecretStore contains secret store configurations.",
 							Optional:    true,
 						},
+						"session_tags": {
+							Description: "SessionTags is a list of AWS STS session tags.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.MapType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+						},
 					}),
 					Description: "AWS contains AWS specific settings for RDS/Aurora/Redshift databases.",
 					Optional:    true,
@@ -901,6 +906,11 @@ func GenSchemaProvisionTokenV2(ctx context.Context) (github_com_hashicorp_terraf
 						},
 						"enterprise_server_host": {
 							Description: "EnterpriseServerHost allows joining from runners associated with a GitHub Enterprise Server instance. When unconfigured, tokens will be validated against github.com, but when configured to the host of a GHES instance, then the tokens will be validated against host.  This value should be the hostname of the GHES instance, and should not include the scheme or a path. The instance must be accessible over HTTPS at this hostname and the certificate must be trusted by the Auth Server.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
+						"enterprise_slug": {
+							Description: "EnterpriseSlug allows the slug of a GitHub Enterprise organisation to be included in the expected issuer of the OIDC tokens. This is for compatibility with the `include_enterprise_slug` option in GHE.  This field should be set to the slug of your enterprise if this is enabled. If this is not enabled, then this field must be left empty. This field cannot be specified if `enterprise_server_host` is specified.  See https://docs.github.com/en/enterprise-cloud@latest/actions/deployment/security-hardening-your-deployments/about-security-hardening-with-openid-connect#customizing-the-issuer-value-for-an-enterprise for more information about customised issuer values.",
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
@@ -4574,6 +4584,33 @@ func CopyDatabaseV3FromTerraform(_ context.Context, tf github_com_hashicorp_terr
 											}
 										}
 									}
+									{
+										a, ok := tf.Attrs["session_tags"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"DatabaseV3.Spec.AWS.SessionTags"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Map)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.AWS.SessionTags", "github.com/hashicorp/terraform-plugin-framework/types.Map"})
+											} else {
+												obj.SessionTags = make(map[string]string, len(v.Elems))
+												if !v.Null && !v.Unknown {
+													for k, a := range v.Elems {
+														v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															diags.Append(attrReadConversionFailureDiag{"DatabaseV3.Spec.AWS.SessionTags", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+														} else {
+															var t string
+															if !v.Null && !v.Unknown {
+																t = string(v.Value)
+															}
+															obj.SessionTags[k] = t
+														}
+													}
+												}
+											}
+										}
+									}
 								}
 							}
 						}
@@ -6594,6 +6631,56 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj *github_com_gravitationa
 											v.Value = int64(obj.IAMPolicyStatus)
 											v.Unknown = false
 											tf.Attrs["iam_policy_status"] = v
+										}
+									}
+									{
+										a, ok := tf.AttrTypes["session_tags"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"DatabaseV3.Spec.AWS.SessionTags"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.MapType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.SessionTags", "github.com/hashicorp/terraform-plugin-framework/types.MapType"})
+											} else {
+												c, ok := tf.Attrs["session_tags"].(github_com_hashicorp_terraform_plugin_framework_types.Map)
+												if !ok {
+													c = github_com_hashicorp_terraform_plugin_framework_types.Map{
+
+														ElemType: o.ElemType,
+														Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.SessionTags)),
+														Null:     true,
+													}
+												} else {
+													if c.Elems == nil {
+														c.Elems = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.SessionTags))
+													}
+												}
+												if obj.SessionTags != nil {
+													t := o.ElemType
+													for k, a := range obj.SessionTags {
+														v, ok := tf.Attrs["session_tags"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+															if err != nil {
+																diags.Append(attrWriteGeneralError{"DatabaseV3.Spec.AWS.SessionTags", err})
+															}
+															v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrWriteConversionFailureDiag{"DatabaseV3.Spec.AWS.SessionTags", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															}
+															v.Null = false
+														}
+														v.Value = string(a)
+														v.Unknown = false
+														c.Elems[k] = v
+													}
+													if len(obj.SessionTags) > 0 {
+														c.Null = false
+													}
+												}
+												c.Unknown = false
+												tf.Attrs["session_tags"] = c
+											}
 										}
 									}
 								}
@@ -9312,6 +9399,23 @@ func CopyProvisionTokenV2FromTerraform(_ context.Context, tf github_com_hashicor
 											}
 										}
 									}
+									{
+										a, ok := tf.Attrs["enterprise_slug"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"ProvisionTokenV2.Spec.GitHub.EnterpriseSlug"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"ProvisionTokenV2.Spec.GitHub.EnterpriseSlug", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.EnterpriseSlug = t
+											}
+										}
+									}
 								}
 							}
 						}
@@ -11089,6 +11193,28 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj *github_com_gravit
 											v.Value = string(obj.EnterpriseServerHost)
 											v.Unknown = false
 											tf.Attrs["enterprise_server_host"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["enterprise_slug"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"ProvisionTokenV2.Spec.GitHub.EnterpriseSlug"})
+										} else {
+											v, ok := tf.Attrs["enterprise_slug"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"ProvisionTokenV2.Spec.GitHub.EnterpriseSlug", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Spec.GitHub.EnterpriseSlug", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.EnterpriseSlug) == ""
+											}
+											v.Value = string(obj.EnterpriseSlug)
+											v.Unknown = false
+											tf.Attrs["enterprise_slug"] = v
 										}
 									}
 								}
