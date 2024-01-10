@@ -2,7 +2,7 @@ module github.com/gravitational/teleport-plugins
 
 go 1.21
 
-toolchain go1.21.5
+toolchain go1.21.6
 
 require (
 	github.com/DanielTitkov/go-adaptive-cards v0.2.2
