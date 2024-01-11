@@ -203,6 +203,33 @@ func GenSchemaAccessList(ctx context.Context) (github_com_hashicorp_terraform_pl
 					Description: "membership_requires describes the requirements for a user to be a member of the access list. For a membership to an access list to be effective, the user must meet the requirements of Membership_requires and must be in the members list.",
 					Optional:    true,
 				},
+				"owner_grants": {
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+						"roles": {
+							Description: "roles are the roles that are granted to users who are members of the access list.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+						},
+						"traits": {
+							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+								"key": {
+									Description: "key is the name of the trait.",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+								},
+								"values": {
+									Description: "values is the list of trait values.",
+									Optional:    true,
+									Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+								},
+							}),
+							Description: "traits are the traits that are granted to users who are members of the access list.",
+							Optional:    true,
+						},
+					}),
+					Description: "owner_grants describes the access granted by owners to this access list.",
+					Optional:    true,
+				},
 				"owners": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 						"description": {
@@ -1053,6 +1080,124 @@ func CopyAccessListFromTerraform(_ context.Context, tf github_com_hashicorp_terr
 									t = string(v.Value)
 								}
 								obj.Ownership = t
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["owner_grants"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"AccessList.spec.owner_grants"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"AccessList.spec.owner_grants", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+							} else {
+								obj.OwnerGrants = nil
+								if !v.Null && !v.Unknown {
+									tf := v
+									obj.OwnerGrants = &github_com_gravitational_teleport_api_gen_proto_go_teleport_accesslist_v1.AccessListGrants{}
+									obj := obj.OwnerGrants
+									{
+										a, ok := tf.Attrs["roles"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"AccessList.spec.owner_grants.roles"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"AccessList.spec.owner_grants.roles", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+											} else {
+												obj.Roles = make([]string, len(v.Elems))
+												if !v.Null && !v.Unknown {
+													for k, a := range v.Elems {
+														v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															diags.Append(attrReadConversionFailureDiag{"AccessList.spec.owner_grants.roles", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+														} else {
+															var t string
+															if !v.Null && !v.Unknown {
+																t = string(v.Value)
+															}
+															obj.Roles[k] = t
+														}
+													}
+												}
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["traits"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"AccessList.spec.owner_grants.traits"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"AccessList.spec.owner_grants.traits", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+											} else {
+												obj.Traits = make([]*github_com_gravitational_teleport_api_gen_proto_go_teleport_trait_v1.Trait, len(v.Elems))
+												if !v.Null && !v.Unknown {
+													for k, a := range v.Elems {
+														v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+														if !ok {
+															diags.Append(attrReadConversionFailureDiag{"AccessList.spec.owner_grants.traits", "github_com_hashicorp_terraform_plugin_framework_types.Object"})
+														} else {
+															var t *github_com_gravitational_teleport_api_gen_proto_go_teleport_trait_v1.Trait
+															if !v.Null && !v.Unknown {
+																tf := v
+																t = &github_com_gravitational_teleport_api_gen_proto_go_teleport_trait_v1.Trait{}
+																obj := t
+																{
+																	a, ok := tf.Attrs["key"]
+																	if !ok {
+																		diags.Append(attrReadMissingDiag{"AccessList.spec.owner_grants.traits.key"})
+																	} else {
+																		v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																		if !ok {
+																			diags.Append(attrReadConversionFailureDiag{"AccessList.spec.owner_grants.traits.key", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+																		} else {
+																			var t string
+																			if !v.Null && !v.Unknown {
+																				t = string(v.Value)
+																			}
+																			obj.Key = t
+																		}
+																	}
+																}
+																{
+																	a, ok := tf.Attrs["values"]
+																	if !ok {
+																		diags.Append(attrReadMissingDiag{"AccessList.spec.owner_grants.traits.values"})
+																	} else {
+																		v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+																		if !ok {
+																			diags.Append(attrReadConversionFailureDiag{"AccessList.spec.owner_grants.traits.values", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+																		} else {
+																			obj.Values = make([]string, len(v.Elems))
+																			if !v.Null && !v.Unknown {
+																				for k, a := range v.Elems {
+																					v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																					if !ok {
+																						diags.Append(attrReadConversionFailureDiag{"AccessList.spec.owner_grants.traits.values", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+																					} else {
+																						var t string
+																						if !v.Null && !v.Unknown {
+																							t = string(v.Value)
+																						}
+																						obj.Values[k] = t
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+															obj.Traits[k] = t
+														}
+													}
+												}
+											}
+										}
+									}
+								}
 							}
 						}
 					}
@@ -2374,6 +2519,224 @@ func CopyAccessListToTerraform(ctx context.Context, obj *github_com_gravitationa
 							v.Value = string(obj.Ownership)
 							v.Unknown = false
 							tf.Attrs["ownership"] = v
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["owner_grants"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"AccessList.spec.owner_grants"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"AccessList.spec.owner_grants", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+							} else {
+								v, ok := tf.Attrs["owner_grants"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+								if !ok {
+									v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+										AttrTypes: o.AttrTypes,
+										Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+									}
+								} else {
+									if v.Attrs == nil {
+										v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+									}
+								}
+								if obj.OwnerGrants == nil {
+									v.Null = true
+								} else {
+									obj := obj.OwnerGrants
+									tf := &v
+									{
+										a, ok := tf.AttrTypes["roles"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"AccessList.spec.owner_grants.roles"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"AccessList.spec.owner_grants.roles", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+											} else {
+												c, ok := tf.Attrs["roles"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+												if !ok {
+													c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+														ElemType: o.ElemType,
+														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles)),
+														Null:     true,
+													}
+												} else {
+													if c.Elems == nil {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles))
+													}
+												}
+												if obj.Roles != nil {
+													t := o.ElemType
+													if len(obj.Roles) != len(c.Elems) {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Roles))
+													}
+													for k, a := range obj.Roles {
+														v, ok := tf.Attrs["roles"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+														if !ok {
+															i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+															if err != nil {
+																diags.Append(attrWriteGeneralError{"AccessList.spec.owner_grants.roles", err})
+															}
+															v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrWriteConversionFailureDiag{"AccessList.spec.owner_grants.roles", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															}
+															v.Null = string(a) == ""
+														}
+														v.Value = string(a)
+														v.Unknown = false
+														c.Elems[k] = v
+													}
+													if len(obj.Roles) > 0 {
+														c.Null = false
+													}
+												}
+												c.Unknown = false
+												tf.Attrs["roles"] = c
+											}
+										}
+									}
+									{
+										a, ok := tf.AttrTypes["traits"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"AccessList.spec.owner_grants.traits"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"AccessList.spec.owner_grants.traits", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+											} else {
+												c, ok := tf.Attrs["traits"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+												if !ok {
+													c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+														ElemType: o.ElemType,
+														Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Traits)),
+														Null:     true,
+													}
+												} else {
+													if c.Elems == nil {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Traits))
+													}
+												}
+												if obj.Traits != nil {
+													o := o.ElemType.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+													if len(obj.Traits) != len(c.Elems) {
+														c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Traits))
+													}
+													for k, a := range obj.Traits {
+														v, ok := tf.Attrs["traits"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+														if !ok {
+															v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+																AttrTypes: o.AttrTypes,
+																Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+															}
+														} else {
+															if v.Attrs == nil {
+																v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+															}
+														}
+														if a == nil {
+															v.Null = true
+														} else {
+															obj := a
+															tf := &v
+															{
+																t, ok := tf.AttrTypes["key"]
+																if !ok {
+																	diags.Append(attrWriteMissingDiag{"AccessList.spec.owner_grants.traits.key"})
+																} else {
+																	v, ok := tf.Attrs["key"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+																	if !ok {
+																		i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																		if err != nil {
+																			diags.Append(attrWriteGeneralError{"AccessList.spec.owner_grants.traits.key", err})
+																		}
+																		v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																		if !ok {
+																			diags.Append(attrWriteConversionFailureDiag{"AccessList.spec.owner_grants.traits.key", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+																		}
+																		v.Null = string(obj.Key) == ""
+																	}
+																	v.Value = string(obj.Key)
+																	v.Unknown = false
+																	tf.Attrs["key"] = v
+																}
+															}
+															{
+																a, ok := tf.AttrTypes["values"]
+																if !ok {
+																	diags.Append(attrWriteMissingDiag{"AccessList.spec.owner_grants.traits.values"})
+																} else {
+																	o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+																	if !ok {
+																		diags.Append(attrWriteConversionFailureDiag{"AccessList.spec.owner_grants.traits.values", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+																	} else {
+																		c, ok := tf.Attrs["values"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+																		if !ok {
+																			c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+																				ElemType: o.ElemType,
+																				Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Values)),
+																				Null:     true,
+																			}
+																		} else {
+																			if c.Elems == nil {
+																				c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Values))
+																			}
+																		}
+																		if obj.Values != nil {
+																			t := o.ElemType
+																			if len(obj.Values) != len(c.Elems) {
+																				c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Values))
+																			}
+																			for k, a := range obj.Values {
+																				v, ok := tf.Attrs["values"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+																				if !ok {
+																					i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																					if err != nil {
+																						diags.Append(attrWriteGeneralError{"AccessList.spec.owner_grants.traits.values", err})
+																					}
+																					v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																					if !ok {
+																						diags.Append(attrWriteConversionFailureDiag{"AccessList.spec.owner_grants.traits.values", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+																					}
+																					v.Null = string(a) == ""
+																				}
+																				v.Value = string(a)
+																				v.Unknown = false
+																				c.Elems[k] = v
+																			}
+																			if len(obj.Values) > 0 {
+																				c.Null = false
+																			}
+																		}
+																		c.Unknown = false
+																		tf.Attrs["values"] = c
+																	}
+																}
+															}
+														}
+														v.Unknown = false
+														c.Elems[k] = v
+													}
+													if len(obj.Traits) > 0 {
+														c.Null = false
+													}
+												}
+												c.Unknown = false
+												tf.Attrs["traits"] = c
+											}
+										}
+									}
+								}
+								v.Unknown = false
+								tf.Attrs["owner_grants"] = v
+							}
 						}
 					}
 				}
