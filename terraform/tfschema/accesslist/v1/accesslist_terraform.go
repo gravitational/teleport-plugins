@@ -24,8 +24,6 @@ import (
 	math "math"
 
 	proto "github.com/gogo/protobuf/proto"
-	_ "github.com/golang/protobuf/ptypes/duration"
-	_ "github.com/golang/protobuf/ptypes/timestamp"
 	github_com_gravitational_teleport_api_gen_proto_go_teleport_accesslist_v1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/accesslist/v1"
 	_ "github.com/gravitational/teleport/api/gen/proto/go/teleport/header/v1"
 	github_com_gravitational_teleport_api_gen_proto_go_teleport_header_v1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/header/v1"
@@ -36,6 +34,8 @@ import (
 	github_com_hashicorp_terraform_plugin_framework_tfsdk "github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	github_com_hashicorp_terraform_plugin_framework_types "github.com/hashicorp/terraform-plugin-framework/types"
 	github_com_hashicorp_terraform_plugin_go_tftypes "github.com/hashicorp/terraform-plugin-go/tftypes"
+	_ "google.golang.org/protobuf/types/known/durationpb"
+	_ "google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -94,9 +94,10 @@ func GenSchemaAccessList(ctx context.Context) (github_com_hashicorp_terraform_pl
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
 				"version": {
-					Description: "version is version.",
-					Optional:    true,
-					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+					Description:   "version is version.",
+					PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
+					Required:      true,
+					Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
 			}),
 			Description: "header is the header for the resource.",
@@ -128,16 +129,16 @@ func GenSchemaAccessList(ctx context.Context) (github_com_hashicorp_terraform_pl
 								},
 								"frequency": {
 									Description: "frequency is the frequency of reviews.",
-									Optional:    true,
+									Required:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
 								},
 							}),
 							Description: "recurrence is the recurrence definition",
-							Optional:    true,
+							Required:    true,
 						},
 					}),
 					Description: "audit describes the frequency that this access list must be audited.",
-					Optional:    true,
+					Required:    true,
 				},
 				"description": {
 					Description: "description is an optional plaintext description of the access list.",

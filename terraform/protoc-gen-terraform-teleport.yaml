@@ -163,7 +163,6 @@ computed_fields:
     # App
     - "AppV3.Metadata.Labels"
     - "AppV3.Kind"    
-    - "AppV3.Version"
 
     # Auth preference
     - "AuthPreferenceV2.Spec.SecondFactor"
@@ -172,11 +171,9 @@ computed_fields:
     - "AuthPreferenceV2.Metadata.Namespace"
     - "AuthPreferenceV2.Metadata.Labels"
     - "AuthPreferenceV2.Kind"
-    - "AuthPreferenceV2.Version"
 
     # ClusterMaintenanceConfig
     - "ClusterMaintenanceConfigV1.Kind"
-    - "ClusterMaintenanceConfigV1.Version"
 
     # Cluster networking
     - "ClusterNetworkingConfigV2.Spec.KeepAliveCountMax"
@@ -186,25 +183,20 @@ computed_fields:
 
     # Database
     - "DatabaseV3.Kind"
-    - "DatabaseV3.Version"
 
     # Github connector
     - "GithubConnectorV3.Kind"
-    - "GithubConnectorV3.Version"
 
     # Provision token
     - "ProvisionTokenV2.Spec.AWSIIDTTL"
     - "ProvisionTokenV2.Kind"
     - "ProvisionTokenV2.Metadata.Name"    
-    - "ProvisionTokenV2.Version"    
 
     # OIDC connector
     - "OIDCConnectorV3.Kind"
-    - "OIDCConnectorV3.Version"
 
     # Okta import rule
     - "OktaImportRuleV1.Kind"
-    - "OktaImportRuleV1.Version"
 
     # Role
     - "RoleV6.Spec.Options.MaxSessionTTL"
@@ -235,7 +227,6 @@ computed_fields:
     - "RoleV6.Spec.Allow.KubernetesResources.Verbs"
     - "RoleV6.Spec.Options.BPF"
     - "RoleV6.Kind"
-    - "RoleV6.Version"
 
     # SAML connector
     - "SAMLConnectorV2.Spec.Audience"
@@ -249,25 +240,22 @@ computed_fields:
     - "SAMLConnectorV2.Spec.EncryptionKeyPair.PrivateKey"
     - "SAMLConnectorV2.Spec.EncryptionKeyPair.Cert"
     - "SAMLConnectorV2.Kind"
-    - "SAMLConnectorV2.Version"
 
     # Session recording
     - "SessionRecordingConfigV2.Spec.Mode"
     - "SessionRecordingConfigV2.Kind"
-    - "SessionRecordingConfigV2.Version"
 
     # Trusted cluster
     - "TrustedClusterV2.Kind"
-    - "TrustedClusterV2.Version"
 
     # User
     - "UserV2.Kind"
-    - "UserV2.Version"
 
 # These fields will be marked as Required: true 
 required_fields:
     # App
     - "AppV3.Metadata.Name"
+    - "AppV3.Version"
 
     # Auth preference
     - "AuthPreferenceV2.Spec"
@@ -277,42 +265,54 @@ required_fields:
     - "DatabaseV3.Spec.Protocol"    
     - "DatabaseV3.Spec.URI"        
     - "DatabaseV3.Metadata.Name"
+    - "DatabaseV3.Version"
 
     # Github connector
     - "GithubConnectorV3.Spec"
     - "GithubConnectorV3.Spec.ClientID"
     - "GithubConnectorV3.Spec.ClientSecret"
     - "GithubConnectorV3.Metadata.Name"
+    - "GithubConnectorV3.Version"
 
     # OIDC connector
     - "OIDCConnectorV3.Spec"
     - "OIDCConnectorV3.Metadata.Name"
+    - "OIDCConnectorV3.Version"
 
     # Okta import rule
     - "OktaImportRuleV1.Spec"
     - "OktaImportRuleV1.Metadata.Name"
+    - "OktaImportRuleV1.Version"
 
     # Provision token
     - "ProvisionTokenV2.Spec"
     - "ProvisionTokenV2.Spec.Options"
     - "ProvisionTokenV2.Spec.Roles"
+    - "ProvisionTokenV2.Version"
 
-    # Role
-    - "RoleV6.Metadata.Name"    
+  # Role
+    - "RoleV6.Metadata.Name"
+    - "RoleV6.Version"
 
     # SAML connector
     - "SAMLConnectorV2.Spec"
     - "SAMLConnectorV2.Spec.AssertionConsumerService"
     - "SAMLConnectorV2.Spec.AttributesToRoles"
-    - "SAMLConnectorV2.Metadata.Name"    
+    - "SAMLConnectorV2.Metadata.Name"
+    - "SAMLConnectorV2.Version"
 
     # Trusted cluster
-    - "TrustedClusterV2.Metadata.Name"        
+    - "TrustedClusterV2.Metadata.Name"
+    - "TrustedClusterV2.Version"
     - "TrustedClusterV2.Spec"
 
     # User
     - "UserV2.Metadata.Name"
-    
+    - "UserV2.Version"
+
+    - "SessionRecordingConfigV2.Version"
+    - "ClusterMaintenanceConfigV1.Version"
+    - "AuthPreferenceV2.Version"
 
 # These fields must be marked as sensitive
 sensitive_fields:
@@ -340,6 +340,51 @@ plan_modifiers:
     ProvisionTokenV2.Metadata.Name:
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+
+    # Version MUST NOT change. Due to the way Terraform imports back the resource
+    # in its state (the provider relies on `USeStateForUnknown`) and the fact
+    # Teleport mixes the injected defaults with the original resource, defaults
+    # are set only on resource creation. Upgrading an existing resource will
+    # create a hybrid: a resource with the new version but old defaults.
+    AppV3.Version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    DatabaseV3.Version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    GithubConnectorV3.Version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    OIDCConnectorV3.Version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    OktaImportRuleV1.Version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    ProvisionTokenV2.Version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    RoleV6.Version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    SAMLConnectorV2.Version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    TrustedClusterV2.Version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    UserV2.Version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    SessionRecordingConfigV2.Version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    ClusterMaintenanceConfigV1.Version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    AuthPreferenceV2.Version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
 
 validators:
   # Expires must be in the future
@@ -379,8 +424,8 @@ validators:
     - UseMapKeysPresentValidator("teleport.dev/origin")
   UserV2.Version:
     - UseVersionBetween(2,2)
-  ClsuterMaintenanceConfigV1.Version:
-    - UserVersionBetween(1,1)
+  ClusterMaintenanceConfigV1.Version:
+    - UseVersionBetween(1,1)
 
 time_type:
     type: "TimeType"

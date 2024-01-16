@@ -46,12 +46,25 @@ computed_fields:
 # These fields will be marked as Required: true
 required_fields:
     - "Metadata.name"
+    - "AccessList.header.version"
     - "AccessList.spec.owners"
     - "AccessList.spec.grants"
+    - "AccessList.spec.audit"
+    - "AccessList.spec.audit.recurrence"
+    - "AccessList.spec.audit.recurrence.frequency"
 
 plan_modifiers:
     # Force to recreate resource if it's name changes
     Metadata.name:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+
+    # Version MUST NOT change. Due to the way Terraform imports back the resource
+    # in its state (the provider relies on `USeStateForUnknown`) and the fact
+    # Teleport mixes the injected defaults with the original resource, defaults
+    # are set only on resource creation. Upgrading an existing resource will
+    # create a hybrid: a resource with the new version but old defaults.
+    AccessList.header.version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
 
 # This must be defined for the generator to be happy, but in reality all time

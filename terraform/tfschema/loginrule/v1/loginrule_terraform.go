@@ -73,8 +73,8 @@ func GenSchemaLoginRule(ctx context.Context) (github_com_hashicorp_terraform_plu
 				},
 				"name": {
 					Description:   "Name is an object name",
-					Optional:      true,
 					PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
+					Required:      true,
 					Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
 				"namespace": {
@@ -95,7 +95,7 @@ func GenSchemaLoginRule(ctx context.Context) (github_com_hashicorp_terraform_plu
 		},
 		"priority": {
 			Description: "Priority is the priority of the login rule relative to other login rules in the same cluster. Login rules with a lower numbered priority will be evaluated first.",
-			Optional:    true,
+			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
 		},
 		"traits_expression": {
@@ -113,9 +113,10 @@ func GenSchemaLoginRule(ctx context.Context) (github_com_hashicorp_terraform_plu
 			Optional:    true,
 		},
 		"version": {
-			Description: "Version is the resource version.",
-			Optional:    true,
-			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Description:   "Version is the resource version.",
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
+			Required:      true,
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 	}}, nil
 }

@@ -1,4 +1,5 @@
 resource "teleport_oidc_connector" "test_max_age" {
+  version = "v3"
   metadata = {
     name    = "test_max_age"
     expires = "2032-10-12T07:20:50Z"

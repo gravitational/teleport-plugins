@@ -6,6 +6,9 @@ resource "teleport_role" "upgrade" {
   spec = {
     allow = {
       logins = ["onev5"]
+      kubernetes_labels = {
+        env = ["dev", "prod"]
+      }
     }
   }
 

@@ -1,4 +1,5 @@
 resource "teleport_role" "admin" {
+  version = "v7"
   metadata = {
     name        = "admin"
     description = "admin role"
@@ -12,6 +13,7 @@ resource "teleport_role" "admin" {
 }
 
 resource "teleport_saml_connector" "test" {
+  version = "v2"
   metadata = {
     name    = "test"
     expires = "2032-10-12T07:20:50Z"
