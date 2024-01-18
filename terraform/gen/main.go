@@ -108,7 +108,7 @@ type payload struct {
 	ConvertPackagePath string
 	// PropagatedFields is a list of fields that must be copied from the
 	// existing resource when we're updating it. For example:
-	// "Spec.Audit.NextAuditDate"
+	// "Spec.Audit.NextAuditDate" in AccessList resource
 	PropagatedFields []string
 }
 
