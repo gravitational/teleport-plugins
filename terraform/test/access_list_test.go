@@ -18,11 +18,45 @@ package test
 
 import (
 	"context"
+	"time"
 
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/gravitational/teleport/integrations/lib/testing/integration"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/terraform"
 )
+
+type nextAuditDateComparer struct {
+	client        *integration.Client
+	nextAuditDate time.Time
+}
+
+func (c *nextAuditDateComparer) CaptureNextAuditDate(name string) resource.TestCheckFunc {
+	return func(state *terraform.State) error {
+		al, err := c.client.AccessListClient().GetAccessList(context.TODO(), name)
+		if err != nil {
+			return trace.Wrap(err)
+		}
+		c.nextAuditDate = al.Spec.Audit.NextAuditDate
+		return nil
+	}
+}
+
+func (c *nextAuditDateComparer) TestNextAuditDateUnchanged(name string) resource.TestCheckFunc {
+	return func(state *terraform.State) error {
+		al, err := c.client.AccessListClient().GetAccessList(context.TODO(), name)
+		if err != nil {
+			return trace.Wrap(err)
+		}
+		diff := cmp.Diff(c.nextAuditDate, al.Spec.Audit.NextAuditDate, cmpopts.EquateApproxTime(2*time.Millisecond))
+		if diff != "" {
+			return trace.CompareFailed("NextAuditDate should not have changed, was %s, is now %s", c.nextAuditDate, al.Spec.Audit.NextAuditDate)
+		}
+		return nil
+	}
+}
 
 func (s *TerraformSuite) TestAccessList() {
 	checkAccessListDestroyed := func(state *terraform.State) error {
@@ -35,6 +69,7 @@ func (s *TerraformSuite) TestAccessList() {
 	}
 
 	name := "teleport_access_list.test"
+	auditDateChecker := nextAuditDateComparer{client: s.client}
 
 	resource.Test(s.T(), resource.TestCase{
 		ProtoV6ProviderFactories: s.terraformProviders,
@@ -48,7 +83,8 @@ func (s *TerraformSuite) TestAccessList() {
 					resource.TestCheckResourceAttr(name, "spec.owners.0.name", "gru"),
 					resource.TestCheckResourceAttr(name, "spec.membership_requires.roles.0", "minion"),
 					resource.TestCheckResourceAttr(name, "spec.grants.roles.0", "crane-operator"),
-					resource.TestCheckResourceAttr(name, "spec.audit.recurrence.frequency", "6"),
+					resource.TestCheckResourceAttr(name, "spec.audit.recurrence.frequency", "3"),
+					auditDateChecker.CaptureNextAuditDate("test"),
 				),
 			},
 			{
@@ -61,6 +97,7 @@ func (s *TerraformSuite) TestAccessList() {
 					resource.TestCheckResourceAttr(name, "spec.grants.traits.0.key", "allowed-machines"),
 					resource.TestCheckResourceAttr(name, "spec.grants.traits.0.values.0", "crane"),
 					resource.TestCheckResourceAttr(name, "spec.grants.traits.0.values.1", "forklift"),
+					auditDateChecker.TestNextAuditDateUnchanged("test"),
 				),
 			},
 			{
@@ -71,6 +108,7 @@ func (s *TerraformSuite) TestAccessList() {
 				Config: s.getFixture("access_list_2_expiring.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "header.metadata.expires", "2038-01-01T00:00:00Z"),
+					auditDateChecker.TestNextAuditDateUnchanged("test"),
 				),
 			},
 			{
