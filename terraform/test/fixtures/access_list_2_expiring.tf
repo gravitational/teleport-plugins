@@ -32,7 +32,7 @@ resource "teleport_access_list" "test" {
     title = "Hello"
     audit = {
       recurrence = {
-        frequency = 3
+        frequency    = 3
         day_of_month = 15
       }
     }
