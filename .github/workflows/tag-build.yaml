@@ -22,39 +22,49 @@ on:
       - master
 
 concurrency:
-  group: "Limit to one build at a time for ref ${{ format('refs/tags/{0}', inputs.artifact-tag) || github.ref }}"
+  group: "Limit to one build at a time for ref ${{ format('refs/tags/{0}', inputs.artifact-tag) || github.head_ref }}"
   cancel-in-progress: true
-
-env:
-  TESTVAR: testval
 
 jobs:
   setup:
     runs-on: ubuntu-latest
     outputs:
+      gitref: ${{ steps.set-gitref.outputs.gitref }}
       environment: ${{ steps.set-variables.outputs.environment }}
       version: ${{ steps.set-variables.outputs.version }}
-      gitref: ${{ steps.set-variables.outputs.gitref }}
     steps:
       # TODO this really needs to move to shared workflows. This is the ~fourth place
       # that this logic has been used.
+      - name: Determine git ref
+        id: set-gitref
+        env:
+          EVENT_NAME: ${{ github.event_name}}
+          REF_TYPE: ${{ github.ref_type }}
+          REF_VALUE: ${{ inputs.artifact-tag || github.head_ref }}
+        run: |
+          # If value is a tag
+          if [ "$EVENT_NAME" == "workflow_dispatch" ] || [ "$REF_TYPE" == "tag" ]; then
+            echo "gitref=refs/tags/$REF_VALUE" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Otherwise, ref must be a branch
+          echo "gitref=refs/heads/$REF_VALUE" >> "$GITHUB_OUTPUT"
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ steps.set-gitref.outputs.gitref }}
       - name: Set environment output values
         id: set-variables
         env:
-          GITHUB_EVENT_REF: ${{ github.ref || github.action_ref }}
           GITHUB_EVENT_NAME: ${{ github.event_name}}
           INPUT_VERSION: ${{ inputs.artifact-tag }}
           SEMVER_REGEX: ^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?:[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
         run: |
           generate_version() {
-              GITREF=$1
-              VERSION_BASE=$(git describe --tags --match "v[[:digit:]]*.[[:digit:]]*.[[:digit:]]")
-              VERSION_METADATA=$(git show-ref --heads --tags --hash=8 "$GITREF" | head -n 1)
-              echo "$VERSION_BASE+$VERSION_METADATA"
+              # Example: v1.2.3-gen.4+g5678abcd
+              git describe --tags --match "v[[:digit:]]*.[[:digit:]]*.[[:digit:]]" | sed 's/\(.*\)-\(.*\)-\(.*\)/\1-gen.\2+\3/'
           }
           
           get_output_vars() {
@@ -63,38 +73,31 @@ jobs:
                       # Case: workflow dispatch event. Pull most vars from inputs.
                       echo "environment=build-stage"
                       echo "version=$INPUT_VERSION"
-                      echo "gitref=$GITHUB_EVENT_REF"
                       ;;
                   "pull_request")
                       echo "environment=build-stage"
-                      echo "version=$(generate_version "$GITHUB_EVENT_REF")"
-                      echo "gitref=$GITHUB_EVENT_REF"
+                      echo "version=$(generate_version "$GITHUB_EVENT_REF_NAME")"
                       ;;
                   "push")
                       REF_TYPE=$(echo "$GITHUB_EVENT_REF" | cut -d'/' -f2)
                       # Case: commit push event.
                       if [ "$REF_TYPE" != "tags" ]; then
                           echo "environment=build-stage"
-                          echo "version=$(generate_version "$GITHUB_EVENT_REF")"
-                          echo "gitref=$GITHUB_EVENT_REF"
+                          echo "version=$(generate_version "$GITHUB_EVENT_REF_NAME")"
                           return
                       fi
           
-                      VERSION_TAG=$(echo "$GITHUB_EVENT_REF" | cut -d'/' -f3)
-          
                       # Case: tag event with prerelease version.
-                      if [ "${VERSION_TAG#*-}" != "$VERSION_TAG" ]; then
+                      if [ "${GITHUB_EVENT_REF_NAME#*-}" != "$GITHUB_EVENT_REF_NAME" ]; then
                           echo "environment=build-stage"
-                          echo "version=$VERSION_TAG"
-                          echo "gitref=$GITHUB_EVENT_REF"
+                          echo "version=$GITHUB_EVENT_REF_NAME"
                           return
                       fi
           
                       # Case: tag event with release version. Only this
                       # should go to prod.
                       echo "environment=build-prod"
-                      echo "version=$VERSION_TAG"
-                      echo "gitref=$GITHUB_EVENT_REF"
+                      echo "version=$GITHUB_EVENT_REF_NAME"
                       ;;
                   *)
                       >&2 echo "Unknown GHA event $GITHUB_EVENT_NAME, failing" 
