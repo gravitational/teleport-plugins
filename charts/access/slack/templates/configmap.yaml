@@ -12,7 +12,8 @@ data:
   teleport-slack.toml: |
     [teleport]
     addr = "{{ .Values.teleport.address }}"
-    identity = "/var/lib/teleport/plugins/slack/auth_id"
+    identity = "/var/lib/teleport/plugins/slack/teleport-identity/{{ .Values.teleport.identitySecretPath }}"
+    refresh_identity = true
 
     [slack]
     token = "/var/lib/teleport/plugins/slack/slack-token"

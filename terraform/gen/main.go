@@ -106,6 +106,10 @@ type payload struct {
 	WithNonce bool
 	// ConvertPackagePath is the path of the package doing the conversion between protobuf and the go types.
 	ConvertPackagePath string
+	// PropagatedFields is a list of fields that must be copied from the
+	// existing resource when we're updating it. For example:
+	// "Spec.Audit.NextAuditDate" in AccessList resource
+	PropagatedFields []string
 }
 
 func (p *payload) CheckAndSetDefaults() error {
@@ -416,6 +420,7 @@ var (
 		TerraformResourceType:  "teleport_access_list",
 		ConvertPackagePath:     "github.com/gravitational/teleport/api/types/accesslist/convert/v1",
 		HasCheckAndSetDefaults: true,
+		PropagatedFields:       []string{"Spec.Audit.NextAuditDate"},
 	}
 )
 

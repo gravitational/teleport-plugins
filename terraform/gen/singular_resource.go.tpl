@@ -229,6 +229,10 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
+	{{- $VarName := .VarName }}
+	{{- range $field := .PropagatedFields }}
+	{{ $VarName }}.{{ $field }} = {{ $VarName }}Before.{{ $field }}
+	{{- end }}
 
 	{{- if .WithNonce}}
 	{{.VarName}} = {{.VarName}}.WithNonce(math.MaxUint64).(*{{.ProtoPackage}}.{{.TypeName}})

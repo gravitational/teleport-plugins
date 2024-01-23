@@ -7,8 +7,8 @@ should match the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-event-handler
-        app.kubernetes.io/version: 14.2.1
-        helm.sh/chart: teleport-plugin-event-handler-14.2.1
+        app.kubernetes.io/version: 14.3.3
+        helm.sh/chart: teleport-plugin-event-handler-14.3.3
       name: RELEASE-NAME-teleport-plugin-event-handler
     spec:
       replicas: 1
@@ -44,9 +44,8 @@ should match the snapshot:
             - mountPath: /etc/teleport-event-handler.toml
               name: config
               subPath: teleport-event-handler.toml
-            - mountPath: /var/lib/teleport/plugins/event-handler/auth_id
-              name: auth-id
-              subPath: auth_id
+            - mountPath: /var/lib/teleport/plugins/event-handler/teleport-identity
+              name: teleport-identity
             - mountPath: /var/lib/teleport/plugins/event-handler/ca.crt
               name: certificate
               subPath: ca.crt
@@ -62,7 +61,7 @@ should match the snapshot:
               defaultMode: 384
               name: RELEASE-NAME-teleport-plugin-event-handler
             name: config
-          - name: auth-id
+          - name: teleport-identity
             secret:
               defaultMode: 384
               secretName: ""

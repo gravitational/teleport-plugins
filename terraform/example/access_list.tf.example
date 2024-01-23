@@ -30,7 +30,10 @@ resource "teleport_access_list" "crane-operation" {
     }
     title = "Crane operation"
     audit = {
-      frequency = "3600h"  // 150 days
+      recurrence = {
+        frequency = 3 # audit every 3 months
+        day_of_month = 15 # audit happen 15's day of the month. Possible values are 1, 15, and 31.
+      }
     }
   }
 }

@@ -30,7 +30,12 @@ resource "teleport_access_list" "test" {
     }
     title = "Hello"
     audit = {
-      frequency = "7200h"
+      recurrence = {
+        frequency = 3
+        // changing day of the month should not change the next audit date
+        // it should take effect after the next review
+        day_of_month = 15
+      }
     }
   }
 }

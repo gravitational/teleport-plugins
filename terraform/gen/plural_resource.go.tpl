@@ -305,6 +305,10 @@ func (r resourceTeleport{{.Name}}) Update(ctx context.Context, req tfsdk.UpdateR
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", err, "{{.Kind}}"))
 		return
 	}
+	{{- $VarName := .VarName }}
+	{{- range $field := .PropagatedFields }}
+	{{ $VarName }}Resource.{{ $field }} = {{ $VarName }}Before.{{ $field }}
+	{{- end }}
 
 	{{if eq .UpsertMethodArity 2}}_, {{end}}err = r.p.Client.{{.UpdateMethod}}(ctx, {{.VarName}}Resource)
 	if err != nil {

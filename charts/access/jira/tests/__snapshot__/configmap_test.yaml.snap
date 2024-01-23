@@ -5,7 +5,8 @@ should match the snapshot (smtp on):
       teleport-jira.toml: |
         [teleport]
         addr = "teleport.example.com:1234"
-        identity = "/var/lib/teleport/plugins/jira/auth_id"
+        identity = "/var/lib/teleport/plugins/jira/teleport-identity/auth_id"
+        refresh_identity = true
 
         [jira]
         url = "https://jira.example.com"
@@ -31,6 +32,6 @@ should match the snapshot (smtp on):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-jira
-        app.kubernetes.io/version: 14.2.1
-        helm.sh/chart: teleport-plugin-jira-14.2.1
+        app.kubernetes.io/version: 14.3.3
+        helm.sh/chart: teleport-plugin-jira-14.3.3
       name: RELEASE-NAME-teleport-plugin-jira

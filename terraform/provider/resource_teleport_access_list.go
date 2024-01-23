@@ -231,6 +231,7 @@ func (r resourceTeleportAccessList) Update(ctx context.Context, req tfsdk.Update
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AccessList", err, "access_list"))
 		return
 	}
+	accessListResource.Spec.Audit.NextAuditDate = accessListBefore.Spec.Audit.NextAuditDate
 
 	_, err = r.p.Client.AccessListClient().UpsertAccessList(ctx, accessListResource)
 	if err != nil {

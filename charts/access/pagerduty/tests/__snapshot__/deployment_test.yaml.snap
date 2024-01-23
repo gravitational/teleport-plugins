@@ -7,8 +7,8 @@ should match the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-pagerduty
-        app.kubernetes.io/version: 14.2.1
-        helm.sh/chart: teleport-plugin-pagerduty-14.2.1
+        app.kubernetes.io/version: 14.3.3
+        helm.sh/chart: teleport-plugin-pagerduty-14.3.3
       name: RELEASE-NAME-teleport-plugin-pagerduty
     spec:
       replicas: 1
@@ -44,9 +44,8 @@ should match the snapshot:
             - mountPath: /etc/teleport-pagerduty.toml
               name: config
               subPath: teleport-pagerduty.toml
-            - mountPath: /var/lib/teleport/plugins/pagerduty/auth_id
-              name: auth-id
-              subPath: auth_id
+            - mountPath: /var/lib/teleport/plugins/pagerduty/teleport-identity
+              name: teleport-identity
             - mountPath: /var/lib/teleport/plugins/pagerduty/pagerduty_api_key
               name: password-file
               subPath: pagerdutyApiKey
@@ -56,7 +55,7 @@ should match the snapshot:
               defaultMode: 384
               name: RELEASE-NAME-teleport-plugin-pagerduty
             name: config
-          - name: auth-id
+          - name: teleport-identity
             secret:
               defaultMode: 384
               secretName: ""
