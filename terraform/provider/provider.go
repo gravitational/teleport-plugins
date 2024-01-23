@@ -299,7 +299,7 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		creds = append(creds, client.LoadIdentityFileFromString(string(decoded)))
 	}
 
-	if profileDir != "" {
+	if profileDir != "" || len(creds) == 0 {
 		log.WithField("dir", profileDir).WithField("name", profileName).Debug("Using profile as the default auth method")
 		creds = append(creds, client.LoadProfile(profileDir, profileName))
 	}
