@@ -300,7 +300,10 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 	}
 
 	if profileDir != "" || len(creds) == 0 {
-		log.WithField("dir", profileDir).WithField("name", profileName).Debug("Using profile as the default auth method")
+		log.WithFields(log.Fields{
+			"dir":  profileDir,
+			"name": profileName,
+		}).Debug("Using profile as the default auth method")
 		creds = append(creds, client.LoadProfile(profileDir, profileName))
 	}
 
