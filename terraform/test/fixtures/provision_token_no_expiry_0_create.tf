@@ -1,4 +1,5 @@
 resource "teleport_provision_token" "test" {
+  version = "v2"
   metadata = {
     name = "test"
     labels = {

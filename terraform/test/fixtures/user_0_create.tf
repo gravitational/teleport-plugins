@@ -1,4 +1,5 @@
 resource "teleport_user" "test" {
+  version = "v2"
   metadata = {
     name    = "test"
     expires = "2035-10-12T07:20:50Z"

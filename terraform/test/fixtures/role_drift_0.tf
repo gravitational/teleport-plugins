@@ -1,4 +1,5 @@
 resource "teleport_role" "splitbrain" {
+  version = "v7"
   metadata = {
     name = "splitbrain"
   }
@@ -8,6 +9,4 @@ resource "teleport_role" "splitbrain" {
       logins = ["one"]
     }
   }
-
-  version = "v6"
 }
