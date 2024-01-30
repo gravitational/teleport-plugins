@@ -299,8 +299,13 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		creds = append(creds, client.LoadIdentityFileFromString(string(decoded)))
 	}
 
-	log.WithField("dir", profileDir).WithField("name", profileName).Debug("Using profile as the default auth method")
-	creds = append(creds, client.LoadProfile(profileDir, profileName))
+	if profileDir != "" || len(creds) == 0 {
+		log.WithFields(log.Fields{
+			"dir":  profileDir,
+			"name": profileName,
+		}).Debug("Using profile as the default auth method")
+		creds = append(creds, client.LoadProfile(profileDir, profileName))
+	}
 
 	dialTimeoutDuration, err := time.ParseDuration(dialTimeoutDurationStr)
 	if err != nil {
