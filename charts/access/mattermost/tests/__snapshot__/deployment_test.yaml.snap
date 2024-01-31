@@ -20,7 +20,10 @@ should match the snapshot:
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-mattermost
+            app.kubernetes.io/version: 15.0.0-alpha.5
+            helm.sh/chart: teleport-plugin-mattermost-15.0.0-alpha.5
         spec:
           containers:
           - command:
@@ -85,7 +88,10 @@ should mount external secret:
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-mattermost
+            app.kubernetes.io/version: 15.0.0-alpha.5
+            helm.sh/chart: teleport-plugin-mattermost-15.0.0-alpha.5
         spec:
           containers:
           - command:
@@ -150,7 +156,10 @@ should override volume name:
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-mattermost
+            app.kubernetes.io/version: 15.0.0-alpha.5
+            helm.sh/chart: teleport-plugin-mattermost-15.0.0-alpha.5
         spec:
           containers:
           - command:

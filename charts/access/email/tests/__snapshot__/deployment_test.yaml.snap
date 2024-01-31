@@ -20,7 +20,10 @@ should be possible to override volume name (smtp on):
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-email
+            app.kubernetes.io/version: 15.0.0-alpha.5
+            helm.sh/chart: teleport-plugin-email-15.0.0-alpha.5
         spec:
           containers:
           - command:
@@ -85,7 +88,10 @@ should match the snapshot:
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-email
+            app.kubernetes.io/version: 15.0.0-alpha.5
+            helm.sh/chart: teleport-plugin-email-15.0.0-alpha.5
         spec:
           containers:
           - command:
@@ -143,7 +149,10 @@ should match the snapshot (mailgun on):
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-email
+            app.kubernetes.io/version: 15.0.0-alpha.5
+            helm.sh/chart: teleport-plugin-email-15.0.0-alpha.5
         spec:
           containers:
           - command:
@@ -208,7 +217,10 @@ should match the snapshot (smtp on):
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-email
+            app.kubernetes.io/version: 15.0.0-alpha.5
+            helm.sh/chart: teleport-plugin-email-15.0.0-alpha.5
         spec:
           containers:
           - command:
@@ -273,7 +285,10 @@ should mount external secret (mailgun on):
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-email
+            app.kubernetes.io/version: 15.0.0-alpha.5
+            helm.sh/chart: teleport-plugin-email-15.0.0-alpha.5
         spec:
           containers:
           - command:
@@ -338,7 +353,10 @@ should mount external secret (smtp on):
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-email
+            app.kubernetes.io/version: 15.0.0-alpha.5
+            helm.sh/chart: teleport-plugin-email-15.0.0-alpha.5
         spec:
           containers:
           - command:
