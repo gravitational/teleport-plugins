@@ -36,7 +36,7 @@ jobs:
       - name: Install Teleport
         uses: teleport-actions/setup@v1
         with:
-          version: 15.0.0-alpha.5
+          version: 15.0.0-rc.1
           enterprise: true
 
       - name: make test-terraform
