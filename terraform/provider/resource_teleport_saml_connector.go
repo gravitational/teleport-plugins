@@ -100,7 +100,7 @@ func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.Cre
 		return
 	}
 
-	err = r.p.Client.UpsertSAMLConnector(ctx, samlConnectorResource)
+	_, err = r.p.Client.CreateSAMLConnector(ctx, samlConnectorResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating SAMLConnector", trace.Wrap(err), "saml"))
 		return
@@ -231,7 +231,7 @@ func (r resourceTeleportSAMLConnector) Update(ctx context.Context, req tfsdk.Upd
 		return
 	}
 
-	err = r.p.Client.UpsertSAMLConnector(ctx, samlConnectorResource)
+	_, err = r.p.Client.UpsertSAMLConnector(ctx, samlConnectorResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating SAMLConnector", err, "saml"))
 		return

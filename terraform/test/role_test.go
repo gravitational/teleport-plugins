@@ -160,7 +160,7 @@ func (s *TerraformSuite) TestImportRole() {
 	err := role.CheckAndSetDefaults()
 	require.NoError(s.T(), err)
 
-	err = s.client.UpsertRole(s.Context(), role)
+	_, err = s.client.UpsertRole(s.Context(), role)
 	require.NoError(s.T(), err)
 
 	resource.Test(s.T(), resource.TestCase{
@@ -220,7 +220,8 @@ func (s *TerraformSuite) TestRoleLoginsSplitBrain() {
 					logins = append(logins, "extraOne")
 					currentRole.SetLogins(types.Allow, logins)
 
-					require.NoError(s.T(), s.client.UpsertRole(s.Context(), currentRole))
+					_, err = s.client.UpsertRole(s.Context(), currentRole)
+					require.NoError(s.T(), err)
 				},
 				Config: s.getFixture("role_drift_0.tf"),
 				Check: resource.ComposeTestCheckFunc(

@@ -100,7 +100,7 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 		return
 	}
 
-	err = r.p.Client.UpsertRole(ctx, roleResource)
+	_, err = r.p.Client.CreateRole(ctx, roleResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating Role", trace.Wrap(err), "role"))
 		return
@@ -231,7 +231,7 @@ func (r resourceTeleportRole) Update(ctx context.Context, req tfsdk.UpdateResour
 		return
 	}
 
-	err = r.p.Client.UpsertRole(ctx, roleResource)
+	_, err = r.p.Client.UpsertRole(ctx, roleResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating Role", err, "role"))
 		return

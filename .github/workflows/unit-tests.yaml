@@ -30,7 +30,7 @@ jobs:
       - name: Install Teleport
         uses: teleport-actions/setup@v1
         with:
-          version: 14.0.3
+          version: 15.0.0-alpha.5
           enterprise: true
 
       - name: Run unit tests

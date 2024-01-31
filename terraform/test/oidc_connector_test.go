@@ -106,7 +106,7 @@ func (s *TerraformSuite) TestImportOIDCConnector() {
 	err := oidcConnector.CheckAndSetDefaults()
 	require.NoError(s.T(), err)
 
-	err = s.client.UpsertOIDCConnector(s.Context(), oidcConnector)
+	_, err = s.client.UpsertOIDCConnector(s.Context(), oidcConnector)
 	require.NoError(s.T(), err)
 
 	resource.Test(s.T(), resource.TestCase{
@@ -196,7 +196,7 @@ func (s *TerraformSuite) TestImportOIDCConnectorWithoutMaxAge() {
 	err := oidcConnector.CheckAndSetDefaults()
 	require.NoError(s.T(), err)
 
-	err = s.client.UpsertOIDCConnector(s.Context(), oidcConnector)
+	_, err = s.client.UpsertOIDCConnector(s.Context(), oidcConnector)
 	require.NoError(s.T(), err)
 
 	resource.Test(s.T(), resource.TestCase{
