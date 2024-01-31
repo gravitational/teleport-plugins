@@ -447,10 +447,10 @@ github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf h1:MQ4e8X
 github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf/go.mod h1:SlYgWuQ5SjCEi6WLHjHCa1yvBfUnHcTbrrZtXPKa29o=
 github.com/gravitational/roundtrip v1.0.2 h1:eOCY0NEKKaB0ksJmvhO6lPMFz1pIIef+vyPBTBROQ5c=
 github.com/gravitational/roundtrip v1.0.2/go.mod h1:fuI1booM2hLRA/B/m5MRAPOU6mBZNYcNycono2UuTw0=
-github.com/gravitational/teleport v0.0.0-20240130200845-58bfa0d57357 h1:MHy/aFle5Dfht/FlONgN2dfd9+Zegv3TGOCKfH6Tr/0=
-github.com/gravitational/teleport v0.0.0-20240130200845-58bfa0d57357/go.mod h1:hxp6o7RnAGYmDm+4WzYCS7sn5NAPGmxwBhM/3uUq0UA=
-github.com/gravitational/teleport/api v0.0.0-20240130200845-58bfa0d57357 h1:Tqwne/BsfLX0qHyXPQDgc4quT6OpLL8hcIJmqg+d4T8=
-github.com/gravitational/teleport/api v0.0.0-20240130200845-58bfa0d57357/go.mod h1:NgSiXazdkct7YHQZfTTfZF93zlSqJyOr7/4R/KVuAVs=
+github.com/gravitational/teleport v0.0.0-20240131110507-ebca4997278b h1:AugAK05N27cLA/zIw7MRSHH30lkN6Hi+c6R7tWfEWwY=
+github.com/gravitational/teleport v0.0.0-20240131110507-ebca4997278b/go.mod h1:hxp6o7RnAGYmDm+4WzYCS7sn5NAPGmxwBhM/3uUq0UA=
+github.com/gravitational/teleport/api v0.0.0-20240131110507-ebca4997278b h1:PthquX3R6JyW3UpZiPIDL2CCnhW7lxfa4VwPiZ+OwAU=
+github.com/gravitational/teleport/api v0.0.0-20240131110507-ebca4997278b/go.mod h1:NgSiXazdkct7YHQZfTTfZF93zlSqJyOr7/4R/KVuAVs=
 github.com/gravitational/trace v1.3.1 h1:jwZEuRtCYpLhUtqHo+JH+lu2qM0LB98UagqHtvdKuLI=
 github.com/gravitational/trace v1.3.1/go.mod h1:E61mn73aro7Zg9gZheZaeUsK6gjUMbCLazY76xuYAVA=
 github.com/grpc-ecosystem/go-grpc-middleware v1.0.0 h1:Iju5GlWwrvL6UBg4zJJt3btmonfrMlCDdsejg4CZE7c=
