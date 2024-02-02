@@ -42,7 +42,7 @@ import (
 
 const (
 	// minServerVersion is the minimal teleport version the plugin supports.
-	minServerVersion = "6.1.0-beta.1"
+	minServerVersion = "15.0.0-0"
 )
 
 type RetryConfig struct {
