@@ -20,69 +20,56 @@ package provider
 import (
 	"context"
 
-	{{ if not .IsPlainStruct }}
-    {{- protoImport . }}
-    {{- end }}
+	apitypes "github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
-	{{- if .Namespaced }}
 	"github.com/gravitational/teleport/api/defaults"
-	{{- end }}
 
-	{{ schemaImport . }}
+	"github.com/gravitational/teleport-plugins/terraform/tfschema"
 )
 
-// dataSourceTeleport{{.Name}}Type is the data source metadata type
-type dataSourceTeleport{{.Name}}Type struct{}
+// dataSourceTeleportServerType is the data source metadata type
+type dataSourceTeleportServerType struct{}
 
-// dataSourceTeleport{{.Name}} is the resource
-type dataSourceTeleport{{.Name}} struct {
+// dataSourceTeleportServer is the resource
+type dataSourceTeleportServer struct {
 	p Provider
 }
 
 // GetSchema returns the data source schema
-func (r dataSourceTeleport{{.Name}}Type) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return {{.SchemaPackage}}.GenSchema{{.TypeName}}(ctx)
+func (r dataSourceTeleportServerType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
+	return tfschema.GenSchemaServerV2(ctx)
 }
 
 // NewDataSource creates the empty data source
-func (r dataSourceTeleport{{.Name}}Type) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
-	return dataSourceTeleport{{.Name}}{
+func (r dataSourceTeleportServerType) NewDataSource(_ context.Context, p tfsdk.Provider) (tfsdk.DataSource, diag.Diagnostics) {
+	return dataSourceTeleportServer{
 		p: *(p.(*Provider)),
 	}, nil
 }
 
-// Read reads teleport {{.Name}}
-func (r dataSourceTeleport{{.Name}}) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
+// Read reads teleport Server
+func (r dataSourceTeleportServer) Read(ctx context.Context, req tfsdk.ReadDataSourceRequest, resp *tfsdk.ReadDataSourceResponse) {
 	var id types.String
-	{{- if .ConvertPackagePath}}
-	diags := req.Config.GetAttribute(ctx, path.Root("header").AtName("metadata").AtName("name"), &id)
-	{{- else }}
 	diags := req.Config.GetAttribute(ctx, path.Root("metadata").AtName("name"), &id)
-	{{- end}}
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	{{.VarName}}I, err := r.p.Client.{{.GetMethod}}(ctx, {{if .Namespaced}}defaults.Namespace, {{end}}id.Value{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
+	serverI, err := r.p.Client.GetNode(ctx, defaults.Namespace, id.Value)
 	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
+		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Server", trace.Wrap(err), "node"))
 		return
 	}
 
     var state types.Object
-	{{if .IsPlainStruct -}}
-	{{.VarName}} := {{.VarName}}I
-	{{else if .ConvertPackagePath -}}
-	{{.VarName}} := convert.ToProto({{.VarName}}I)
-	{{else}}
-	{{.VarName}} := {{.VarName}}I.(*{{.ProtoPackage}}.{{.TypeName}})
-	{{- end}}
-	diags = {{.SchemaPackage}}.Copy{{.TypeName}}ToTerraform(ctx, {{.VarName}}, &state)
+	
+	server := serverI.(*apitypes.ServerV2)
+	diags = tfschema.CopyServerV2ToTerraform(ctx, server, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

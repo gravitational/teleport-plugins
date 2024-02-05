@@ -19,6 +19,7 @@ package tfschema
 import (
 	"context"
 	fmt "fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -227,4 +228,49 @@ func (v AnyOfValidator) Validate(ctx context.Context, req tfsdk.ValidateAttribut
 		"AnyOf keys validation error",
 		fmt.Sprintf("AnyOf '%s' keys must be present", strings.Join(v.Keys, ", ")),
 	)
+}
+
+// UseValueIn creates a StringValueValidator
+func UseValueIn(subkinds []string) tfsdk.AttributeValidator {
+	return StringValueValidator{subkinds}
+}
+
+// StringValueValidator validates that a resource string field is in a set of allowed values.
+type StringValueValidator struct {
+	AllowedValues []string
+}
+
+// Description returns validator description
+func (v StringValueValidator) Description(_ context.Context) string {
+	return fmt.Sprintf("Checks that string field is one of %v", v.AllowedValues)
+}
+
+// MarkdownDescription returns validator markdown description
+func (v StringValueValidator) MarkdownDescription(_ context.Context) string {
+	return fmt.Sprintf("Checks that string field is one of %v", v.AllowedValues)
+}
+
+// Validate performs the validation.
+func (v StringValueValidator) Validate(_ context.Context, req tfsdk.ValidateAttributeRequest, resp *tfsdk.ValidateAttributeResponse) {
+	if req.AttributeConfig == nil {
+		return
+	}
+
+	value, ok := req.AttributeConfig.(types.String)
+	if !ok {
+		resp.Diagnostics.AddError("Version validation error", fmt.Sprintf("Attribute %v can not be converted to StringValue", req.AttributePath.String()))
+		return
+	}
+
+	if value.Null || value.Unknown {
+		if !slices.Contains(v.AllowedValues, "") {
+			resp.Diagnostics.AddError("Field validation error", fmt.Sprintf("Attribute %v (%v) is unset but empty string is not a valid value. (vXX)", req.AttributePath.String(), value.Value))
+		}
+		return
+	}
+
+	if !slices.Contains(v.AllowedValues, value.Value) {
+		resp.Diagnostics.AddError("Field validation error", fmt.Sprintf("Attribute %v (%v) is not in the allowed set (%v).", req.AttributePath.String(), value.Value, v.AllowedValues))
+	}
+	return
 }
