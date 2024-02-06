@@ -16,9 +16,6 @@ on:
         description: "This field adds the provided value to a run step, allowing the calling actor to associate the started run with the GHA run ID."
         type: string
         required: false
-  release:
-    types:
-      - released  # This may need to be changed to "published"
 
 concurrency: "Limit to one build at a time for artifact tag ${{ inputs.artifact-tag || github.event.release.tag_name }}"
 
@@ -40,10 +37,10 @@ jobs:
         env:
           SEMVER_REGEX: ^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?:[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
         run: |
-          (echo "$ARTIFACT_TAG" | grep -qP "$SEMVER_REGEX") || (echo "The artifact tag $ARTIFACT_TAG is not a valid semver-coerced value"; exit 1)
+          echo "$ARTIFACT_TAG" | grep -qP "$SEMVER_REGEX" || { echo "The artifact tag $ARTIFACT_TAG is not a valid semver-coerced value"; exit 1; }
       - name: Validate environment
         run: |
-          (echo "$ENVIRONMENT_NAME" | grep -qP '^publish-(prod|stage)$') || (echo "This workflow may only be ran from publishing environments"; exit 1)
+          echo "$ENVIRONMENT_NAME" | grep -qP '^publish-(prod|stage)$' || { echo "This workflow may only be ran from publishing environments"; exit 1; }
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
@@ -61,12 +58,12 @@ jobs:
           role-skip-session-tagging: true
           aws-region: us-west-2
           role-to-assume: ${{ vars.ARTIFACT_DOWNLOAD_AWS_ROLE }}
-          role-session-name: "artifact-download-${{ github.run_number }}"
+          role-session-name: "tag-publish-artifact-download-${{ github.run_attempt }}"
           role-duration-seconds: 900
       - name: Download artifacts from S3
         env:
-          ARTIFACT_BUCKET: ${{ vars.ARTIFACT_SOURCE_BUCKET }}
-        run: aws s3 cp "s3://$ARTIFACT_BUCKET/teleport-plugins/tag/$ARTIFACT_TAG/" "$LOCAL_ARTIFACTS_PATH" --recursive
+          PENDING_BUCKET: ${{ vars.PENDING_BUCKET }}
+        run: aws s3 cp "s3://$PENDING_BUCKET/teleport-plugins/tag/$ARTIFACT_TAG/" "$LOCAL_ARTIFACTS_PATH" --recursive
       # Binary artifact promotion
       - name: Assume AWS role for uploading the artifacts
         # This step is only supported in production as there is no staging version of Houston
@@ -76,7 +73,7 @@ jobs:
           role-skip-session-tagging: true
           aws-region: us-west-2
           role-to-assume: ${{ vars.HOUSTON_UPLOAD_AWS_ROLE }}
-          role-session-name: "houston-upload-${{ github.run_number }}"
+          role-session-name: "tag-publish-houston-upload-${{ github.run_attempt }}"
           role-duration-seconds: 900
       - name: Upload artifacts to Houston
         # This step is only supported in production as there is no staging version of Houston
@@ -84,7 +81,7 @@ jobs:
         env:
           HOUSTON_BUCKET: ${{ vars.HOUSTON_BUCKET }}
         run: |
-          aws s3 sync --acl public-read "$LOCAL_ARTIFACTS_PATH" s3://$HOUSTON_BUCKET/teleport-plugins/${ARTIFACT_TAG##*-v}/ \
+          aws s3 sync --acl public-read "$LOCAL_ARTIFACTS_PATH" "s3://$HOUSTON_BUCKET/teleport-plugins/${ARTIFACT_TAG##v}/" \
             --include "*" \
             --exclude "*.tgz*"  # Exclude helm chart artifacts
       # Image promotion
@@ -94,7 +91,7 @@ jobs:
           role-skip-session-tagging: true
           aws-region: us-west-2
           role-to-assume: ${{ vars.CONTAINER_IMAGE_PUBLISHING_SYNC_AWS_ROLE }}
-          role-session-name: "container-image-publishing-sync-${{ github.run_number }}"
+          role-session-name: "tag-publish-container-image-publishing-sync-${{ github.run_attempt }}"
           role-duration-seconds: 900
       - name: Authenticate with ECR
         env:
@@ -105,7 +102,7 @@ jobs:
       - name: Publish access and event-handler images
         env:
           CONTAINER_IMAGE_PRIVATE_REGISTRY: ${{ vars.CONTAINER_IMAGE_PRIVATE_REGISTRY }}
-          CONTAINER_IMAGE_PUBLIC_REGISTRY: ${{ vars.CONTAINER_IMAGE_PUBLIC_REGISTRY}}
+          CONTAINER_IMAGE_PUBLIC_REGISTRY: ${{ vars.CONTAINER_IMAGE_PUBLIC_REGISTRY }}
           GITREF: ${{ env.ARTIFACT_TAG }}
         run: |
           export VERSION=${ARTIFACT_TAG##v}
@@ -118,7 +115,7 @@ jobs:
           role-skip-session-tagging: true
           aws-region: us-west-2
           role-to-assume: ${{ vars.HELM_PUBLISHING_SYNC_AWS_ROLE }}
-          role-session-name: "helm-publishing-sync-${{ github.run_number }}"
+          role-session-name: "tag-publish-helm-publishing-sync-${{ github.run_attempt }}"
           role-duration-seconds: 900
       - name: Download the Helm repo from S3
         env:
@@ -127,7 +124,7 @@ jobs:
       - name: Copy the Helm charts to the repo and regenerate the index
         working-directory: "${{ env.LOCAL_HELM_REPO_PATH }}"
         run: |
-          cp $(find "$LOCAL_ARTIFACTS_PATH" -name "teleport-plugin-*.tgz" -type f) .
+          find "$LOCAL_ARTIFACTS_PATH" -name 'teleport-plugin-*.tgz' -type f -exec cp {} "." \;
           helm repo index .
       - name: Upload the Helm repo to S3
         env:
@@ -140,7 +137,7 @@ jobs:
           role-skip-session-tagging: true
           aws-region: us-west-2
           role-to-assume: ${{ vars.TERRAFORM_PUBLISHING_SYNC_AWS_ROLE }}
-          role-session-name: "terraform-publishing-sync-${{ github.run_number }}"
+          role-session-name: "tag-publish-terraform-publishing-sync-${{ github.run_attempt }}"
           role-duration-seconds: 900
       - name: Download the Terraform repo from S3
         env:
