@@ -17,14 +17,12 @@ ARTIFACT_TAG="$1"
 ARTIFACT_BUCKET="$2"
 ARTIFACT_BUCKET_PROFILE="$3"
 ARTIFACT_BUCKET_PATH="s3://$ARTIFACT_BUCKET/teleport-plugins/tag/terraform-provider-teleport-$ARTIFACT_TAG/"
-# ARTIFACT_DIRECTORY=$(mktemp -d -t "terraform-promotion-artifacts")
-ARTIFACT_DIRECTORY="/var/folders/0c/lx19hczx3nqc6f_wh2rrmcp40000gn/T/terraform-promotion-artifacts.C5vvAsL8U9/" # TODO remove
+ARTIFACT_DIRECTORY=$(mktemp -d -t "terraform-promotion-artifacts")
 
 REGISTRY_BUCKET="$4"
 REGISTRY_BUCKET_PROFILE="$5"
 REGISTRY_BUCKET_PATH="s3://$REGISTRY_BUCKET/"
-# REGISTRY_DIRECTORY=$(mktemp -d -t "terraform-provider-registry")
-REGISTRY_DIRECTORY="/var/folders/0c/lx19hczx3nqc6f_wh2rrmcp40000gn/T/terraform-provider-registry.m1NA6ezAmm/" # TODO remove
+REGISTRY_DIRECTORY=$(mktemp -d -t "terraform-provider-registry")
 REGISTRY_URL="$6"
 
 echo "Downloading artifacts to $ARTIFACT_DIRECTORY from artifact storage bucket path $ARTIFACT_BUCKET_PATH with via $ARTIFACT_BUCKET_PROFILE profile"

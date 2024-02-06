@@ -22,7 +22,7 @@ on:
       - master
 
 concurrency:
-  group: "Limit to one build at a time for ref ${{ format('refs/tags/{0}', inputs.artifact-tag) || github.head_ref }}"
+  group: "Limit to one build at a time for ref ${{ inputs.artifact-tag || github.head_ref || github.ref }}"
   cancel-in-progress: true
 
 jobs:
@@ -38,12 +38,10 @@ jobs:
       - name: Determine git ref
         id: set-gitref
         env:
-          EVENT_NAME: ${{ github.event_name}}
-          REF_TYPE: ${{ github.ref_type }}
-          REF_VALUE: ${{ inputs.artifact-tag || github.head_ref }}
+          REF_VALUE: ${{ inputs.artifact-tag || github.head_ref || github.ref }}
         run: |
           # If value is a tag
-          if [ "$EVENT_NAME" == "workflow_dispatch" ] || [ "$REF_TYPE" == "tag" ]; then
+          if [ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ] || [ "$GITHUB_REF_TYPE" == "tag" ]; then
             echo "gitref=refs/tags/$REF_VALUE" >> "$GITHUB_OUTPUT"
             exit 0
           fi
@@ -58,7 +56,6 @@ jobs:
       - name: Set environment output values
         id: set-variables
         env:
-          GITHUB_EVENT_NAME: ${{ github.event_name}}
           INPUT_VERSION: ${{ inputs.artifact-tag }}
           SEMVER_REGEX: ^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?:[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
         run: |
@@ -110,7 +107,7 @@ jobs:
           
           # Validate the semver
           . "$GITHUB_OUTPUT"  # Load the variables into the current environment
-          (echo "$version" | grep -qP "$SEMVER_REGEX") || (echo "The artifact version $version is not a valid semver-coerced value"; exit 1)
+          echo "$version" | grep -qP "$SEMVER_REGEX" || {echo "The artifact version $version is not a valid semver-coerced value"; exit 1}
         
           # Log the build details
           echo "Built config:" | tee -a "$GITHUB_STEP_SUMMARY"
@@ -125,8 +122,7 @@ jobs:
   # This would improve the (already somewhat fast) performance a bit, but I'm not sure if it's worth the
   # tradeoff.
   build-plugins:
-    needs:
-      - setup
+    needs: setup
     runs-on: ubuntu-22.04-32core
     environment: ${{ needs.setup.outputs.environment }}
     permissions:
@@ -149,7 +145,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: "./go.mod"
-          cache-dependency-path: "./go.sum"
           check-latest: true
       - name: Set environment variables for Makefiles
         env:
@@ -163,6 +158,9 @@ jobs:
       # File artifacts
       - name: Build the release tarballs
         run: |
+          # Download Go dependencies
+          go mod download
+
           # Binaries and Helm charts
           make releases helm-package-charts
 
@@ -176,11 +174,14 @@ jobs:
       - name: Collect the build files
         run: |
           mkdir -pv "$ARTIFACT_DIRECTORY"
-          cp $(find . '(' -name "*.tar.gz" -o -name "*.tgz" ')' -type f) "$ARTIFACT_DIRECTORY/"
+          find . \( -name '*.tar.gz' -o -name '*.tgz' \) -type f -exec cp {} "$ARTIFACT_DIRECTORY" \;
       - name: Generate checksum files for built files
         working-directory: ${{ env.ARTIFACT_DIRECTORY }}
         run: |
-          find . '(' -name "*.tar.gz" -o -name "*.tgz" ')' -type f -exec sh -c 'sha256sum "$(basename {})" > "{}.sha256"' \;
+          shopt -s nullglob
+          for tarball in *.tar.gz *.tgz; do
+            sha256sum "$(basename "$tarball")" > "${tarball}.sha256"
+          done
           echo "Artifacts:"
           ls -lh
       - name: Assume AWS role for uploading the artifacts

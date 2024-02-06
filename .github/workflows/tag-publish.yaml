@@ -16,9 +16,6 @@ on:
         description: "This field adds the provided value to a run step, allowing the calling actor to associate the started run with the GHA run ID."
         type: string
         required: false
-  release:
-    types:
-      - released  # This may need to be changed to "published"
 
 concurrency: "Limit to one build at a time for artifact tag ${{ inputs.artifact-tag || github.event.release.tag_name }}"
 
@@ -40,10 +37,10 @@ jobs:
         env:
           SEMVER_REGEX: ^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?:[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
         run: |
-          (echo "$ARTIFACT_TAG" | grep -qP "$SEMVER_REGEX") || (echo "The artifact tag $ARTIFACT_TAG is not a valid semver-coerced value"; exit 1)
+          echo "$ARTIFACT_TAG" | grep -qP "$SEMVER_REGEX" || {echo "The artifact tag $ARTIFACT_TAG is not a valid semver-coerced value"; exit 1}
       - name: Validate environment
         run: |
-          (echo "$ENVIRONMENT_NAME" | grep -qP '^publish-(prod|stage)$') || (echo "This workflow may only be ran from publishing environments"; exit 1)
+          echo "$ENVIRONMENT_NAME" | grep -qP '^publish-(prod|stage)$' || {echo "This workflow may only be ran from publishing environments"; exit 1}
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
@@ -84,7 +81,7 @@ jobs:
         env:
           HOUSTON_BUCKET: ${{ vars.HOUSTON_BUCKET }}
         run: |
-          aws s3 sync --acl public-read "$LOCAL_ARTIFACTS_PATH" s3://$HOUSTON_BUCKET/teleport-plugins/${ARTIFACT_TAG##*-v}/ \
+          aws s3 sync --acl public-read "$LOCAL_ARTIFACTS_PATH" "s3://$HOUSTON_BUCKET/teleport-plugins/${ARTIFACT_TAG##v}/" \
             --include "*" \
             --exclude "*.tgz*"  # Exclude helm chart artifacts
       # Image promotion
@@ -105,7 +102,7 @@ jobs:
       - name: Publish access and event-handler images
         env:
           CONTAINER_IMAGE_PRIVATE_REGISTRY: ${{ vars.CONTAINER_IMAGE_PRIVATE_REGISTRY }}
-          CONTAINER_IMAGE_PUBLIC_REGISTRY: ${{ vars.CONTAINER_IMAGE_PUBLIC_REGISTRY}}
+          CONTAINER_IMAGE_PUBLIC_REGISTRY: ${{ vars.CONTAINER_IMAGE_PUBLIC_REGISTRY }}
           GITREF: ${{ env.ARTIFACT_TAG }}
         run: |
           export VERSION=${ARTIFACT_TAG##v}
@@ -127,7 +124,7 @@ jobs:
       - name: Copy the Helm charts to the repo and regenerate the index
         working-directory: "${{ env.LOCAL_HELM_REPO_PATH }}"
         run: |
-          cp $(find "$LOCAL_ARTIFACTS_PATH" -name "teleport-plugin-*.tgz" -type f) .
+          find "$LOCAL_ARTIFACTS_PATH" -name 'teleport-plugin-*.tgz' -type f -exec cp {} "." \;
           helm repo index .
       - name: Upload the Helm repo to S3
         env:
