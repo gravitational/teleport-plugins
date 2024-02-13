@@ -111,9 +111,9 @@ jobs:
         
           # Log the build details
           echo "Built config:" | tee -a "$GITHUB_STEP_SUMMARY"
-          cat "$GITHUB_OUTPUT" | while read line; do
+          while read -r line; do
             echo "* $line" | tee -a "$GITHUB_STEP_SUMMARY"
-          done
+          done < "$GITHUB_OUTPUT"
       - name: ${{ inputs.workflow-tag }}
         if: inputs.workflow-tag != ''
         run: |
