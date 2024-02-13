@@ -107,7 +107,7 @@ jobs:
           
           # Validate the semver
           . "$GITHUB_OUTPUT"  # Load the variables into the current environment
-          echo "$version" | grep -qP "$SEMVER_REGEX" || {echo "The artifact version $version is not a valid semver-coerced value"; exit 1}
+          echo "$version" | grep -qP "$SEMVER_REGEX" || { echo "The artifact version $version is not a valid semver-coerced value"; exit 1; }
         
           # Log the build details
           echo "Built config:" | tee -a "$GITHUB_STEP_SUMMARY"
@@ -152,7 +152,7 @@ jobs:
         run: |
           {
             echo "VERSION=${VERSION_TAG##v}"
-            echo "GITREF=$VERSION_TAG" >> "$GITHUB_ENV"
+            echo "GITREF=$VERSION_TAG"
             echo "GNUMAKEFLAGS=-j$(nproc)"
           } >> "$GITHUB_ENV"
       # File artifacts
@@ -195,9 +195,9 @@ jobs:
       - name: Upload artifacts to S3
         working-directory: ${{ env.ARTIFACT_DIRECTORY }}
         env:
-          ARTIFACT_BUCKET: ${{ vars.ARTIFACT_SOURCE_BUCKET }}
+          PENDING_BUCKET: ${{ vars.PENDING_BUCKET }}
           ARTIFACT_VERSION: ${{ needs.setup.outputs.version }}
-        run: aws s3 cp . "s3://$ARTIFACT_BUCKET/teleport-plugins/tag/$ARTIFACT_VERSION/" --recursive
+        run: aws s3 cp . "s3://$PENDING_BUCKET/teleport-plugins/tag/$ARTIFACT_VERSION/" --recursive
       # Container artifacts
       - name: Assume AWS role for pushing the container images
         uses: aws-actions/configure-aws-credentials@010d0da01d0b5a38af31e9c3470dbfdabdecca3a # v4.0.1

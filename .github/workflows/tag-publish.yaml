@@ -37,10 +37,10 @@ jobs:
         env:
           SEMVER_REGEX: ^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?:[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
         run: |
-          echo "$ARTIFACT_TAG" | grep -qP "$SEMVER_REGEX" || {echo "The artifact tag $ARTIFACT_TAG is not a valid semver-coerced value"; exit 1}
+          echo "$ARTIFACT_TAG" | grep -qP "$SEMVER_REGEX" || { echo "The artifact tag $ARTIFACT_TAG is not a valid semver-coerced value"; exit 1; }
       - name: Validate environment
         run: |
-          echo "$ENVIRONMENT_NAME" | grep -qP '^publish-(prod|stage)$' || {echo "This workflow may only be ran from publishing environments"; exit 1}
+          echo "$ENVIRONMENT_NAME" | grep -qP '^publish-(prod|stage)$' || { echo "This workflow may only be ran from publishing environments"; exit 1; }
       - name: Checkout repo
         uses: actions/checkout@v4
         with:
@@ -62,8 +62,8 @@ jobs:
           role-duration-seconds: 900
       - name: Download artifacts from S3
         env:
-          ARTIFACT_BUCKET: ${{ vars.ARTIFACT_SOURCE_BUCKET }}
-        run: aws s3 cp "s3://$ARTIFACT_BUCKET/teleport-plugins/tag/$ARTIFACT_TAG/" "$LOCAL_ARTIFACTS_PATH" --recursive
+          PENDING_BUCKET: ${{ vars.PENDING_BUCKET }}
+        run: aws s3 cp "s3://$PENDING_BUCKET/teleport-plugins/tag/$ARTIFACT_TAG/" "$LOCAL_ARTIFACTS_PATH" --recursive
       # Binary artifact promotion
       - name: Assume AWS role for uploading the artifacts
         # This step is only supported in production as there is no staging version of Houston
