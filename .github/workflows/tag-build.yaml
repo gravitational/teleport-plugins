@@ -190,7 +190,7 @@ jobs:
           role-skip-session-tagging: true
           aws-region: us-west-2
           role-to-assume: ${{ vars.ARTIFACT_UPLOAD_AWS_ROLE }}
-          role-session-name: "artifact-upload-${{ github.run_number }}"
+          role-session-name: "tag-build-artifact-upload-${{ github.run_attempt }}"
           role-duration-seconds: 900
       - name: Upload artifacts to S3
         working-directory: ${{ env.ARTIFACT_DIRECTORY }}
@@ -205,7 +205,7 @@ jobs:
           role-skip-session-tagging: true
           aws-region: us-west-2
           role-to-assume: ${{ vars.CONTAINER_IMAGE_UPLOAD_AWS_ROLE }}
-          role-session-name: "container-image-upload-${{ github.run_number }}"
+          role-session-name: "tag-build-container-image-upload-${{ github.run_attempt }}"
           role-duration-seconds: 900
       - name: Authenticate with ECR
         env:

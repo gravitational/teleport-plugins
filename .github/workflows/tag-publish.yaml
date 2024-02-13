@@ -58,7 +58,7 @@ jobs:
           role-skip-session-tagging: true
           aws-region: us-west-2
           role-to-assume: ${{ vars.ARTIFACT_DOWNLOAD_AWS_ROLE }}
-          role-session-name: "artifact-download-${{ github.run_number }}"
+          role-session-name: "tag-publish-artifact-download-${{ github.run_attempt }}"
           role-duration-seconds: 900
       - name: Download artifacts from S3
         env:
@@ -73,7 +73,7 @@ jobs:
           role-skip-session-tagging: true
           aws-region: us-west-2
           role-to-assume: ${{ vars.HOUSTON_UPLOAD_AWS_ROLE }}
-          role-session-name: "houston-upload-${{ github.run_number }}"
+          role-session-name: "tag-publish-houston-upload-${{ github.run_attempt }}"
           role-duration-seconds: 900
       - name: Upload artifacts to Houston
         # This step is only supported in production as there is no staging version of Houston
@@ -91,7 +91,7 @@ jobs:
           role-skip-session-tagging: true
           aws-region: us-west-2
           role-to-assume: ${{ vars.CONTAINER_IMAGE_PUBLISHING_SYNC_AWS_ROLE }}
-          role-session-name: "container-image-publishing-sync-${{ github.run_number }}"
+          role-session-name: "tag-publish-container-image-publishing-sync-${{ github.run_attempt }}"
           role-duration-seconds: 900
       - name: Authenticate with ECR
         env:
@@ -115,7 +115,7 @@ jobs:
           role-skip-session-tagging: true
           aws-region: us-west-2
           role-to-assume: ${{ vars.HELM_PUBLISHING_SYNC_AWS_ROLE }}
-          role-session-name: "helm-publishing-sync-${{ github.run_number }}"
+          role-session-name: "tag-publish-helm-publishing-sync-${{ github.run_attempt }}"
           role-duration-seconds: 900
       - name: Download the Helm repo from S3
         env:
@@ -137,7 +137,7 @@ jobs:
           role-skip-session-tagging: true
           aws-region: us-west-2
           role-to-assume: ${{ vars.TERRAFORM_PUBLISHING_SYNC_AWS_ROLE }}
-          role-session-name: "terraform-publishing-sync-${{ github.run_number }}"
+          role-session-name: "tag-publish-terraform-publishing-sync-${{ github.run_attempt }}"
           role-duration-seconds: 900
       - name: Download the Terraform repo from S3
         env:
