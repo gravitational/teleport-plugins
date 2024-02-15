@@ -104,6 +104,13 @@ jobs:
               esac
           }
           
+          # **********************************************
+          # WARNING: the $GITHUB_OUTPUT file is sourced
+          # by the shell below. Multiline comments will
+          # break parsing and cause a build failure. For
+          # details, see
+          # https://github.com/gravitational/teleport-plugins/pull/983#discussion_r1477745917
+          # **********************************************
           get_output_vars >> "$GITHUB_OUTPUT"
           
           # Validate the semver
