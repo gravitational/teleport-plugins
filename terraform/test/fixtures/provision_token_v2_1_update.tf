@@ -1,4 +1,5 @@
 resource "teleport_provision_token" "test2" {
+  version = "v2"
   metadata = {
     name    = "test2"
     expires = "2038-01-01T00:00:00Z"

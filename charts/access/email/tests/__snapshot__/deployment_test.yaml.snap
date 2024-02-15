@@ -7,8 +7,8 @@ should be possible to override volume name (smtp on):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 14.3.3
-        helm.sh/chart: teleport-plugin-email-14.3.3
+        app.kubernetes.io/version: 15.0.1
+        helm.sh/chart: teleport-plugin-email-15.0.1
       name: RELEASE-NAME-teleport-plugin-email
     spec:
       replicas: 1
@@ -20,7 +20,10 @@ should be possible to override volume name (smtp on):
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-email
+            app.kubernetes.io/version: 15.0.1
+            helm.sh/chart: teleport-plugin-email-15.0.1
         spec:
           containers:
           - command:
@@ -31,7 +34,7 @@ should be possible to override volume name (smtp on):
             env:
             - name: TELEPORT_PLUGIN_FAIL_FAST
               value: "true"
-            image: public.ecr.aws/gravitational/teleport-plugin-email:14.3.3
+            image: public.ecr.aws/gravitational/teleport-plugin-email:15.0.1
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:
@@ -72,8 +75,8 @@ should match the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 14.3.3
-        helm.sh/chart: teleport-plugin-email-14.3.3
+        app.kubernetes.io/version: 15.0.1
+        helm.sh/chart: teleport-plugin-email-15.0.1
       name: RELEASE-NAME-teleport-plugin-email
     spec:
       replicas: 1
@@ -85,7 +88,10 @@ should match the snapshot:
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-email
+            app.kubernetes.io/version: 15.0.1
+            helm.sh/chart: teleport-plugin-email-15.0.1
         spec:
           containers:
           - command:
@@ -130,8 +136,8 @@ should match the snapshot (mailgun on):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 14.3.3
-        helm.sh/chart: teleport-plugin-email-14.3.3
+        app.kubernetes.io/version: 15.0.1
+        helm.sh/chart: teleport-plugin-email-15.0.1
       name: RELEASE-NAME-teleport-plugin-email
     spec:
       replicas: 1
@@ -143,7 +149,10 @@ should match the snapshot (mailgun on):
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-email
+            app.kubernetes.io/version: 15.0.1
+            helm.sh/chart: teleport-plugin-email-15.0.1
         spec:
           containers:
           - command:
@@ -154,7 +163,7 @@ should match the snapshot (mailgun on):
             env:
             - name: TELEPORT_PLUGIN_FAIL_FAST
               value: "true"
-            image: public.ecr.aws/gravitational/teleport-plugin-email:14.3.3
+            image: public.ecr.aws/gravitational/teleport-plugin-email:15.0.1
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:
@@ -195,8 +204,8 @@ should match the snapshot (smtp on):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 14.3.3
-        helm.sh/chart: teleport-plugin-email-14.3.3
+        app.kubernetes.io/version: 15.0.1
+        helm.sh/chart: teleport-plugin-email-15.0.1
       name: RELEASE-NAME-teleport-plugin-email
     spec:
       replicas: 1
@@ -208,7 +217,10 @@ should match the snapshot (smtp on):
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-email
+            app.kubernetes.io/version: 15.0.1
+            helm.sh/chart: teleport-plugin-email-15.0.1
         spec:
           containers:
           - command:
@@ -219,7 +231,7 @@ should match the snapshot (smtp on):
             env:
             - name: TELEPORT_PLUGIN_FAIL_FAST
               value: "true"
-            image: public.ecr.aws/gravitational/teleport-plugin-email:14.3.3
+            image: public.ecr.aws/gravitational/teleport-plugin-email:15.0.1
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:
@@ -260,8 +272,8 @@ should mount external secret (mailgun on):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 14.3.3
-        helm.sh/chart: teleport-plugin-email-14.3.3
+        app.kubernetes.io/version: 15.0.1
+        helm.sh/chart: teleport-plugin-email-15.0.1
       name: RELEASE-NAME-teleport-plugin-email
     spec:
       replicas: 1
@@ -273,7 +285,10 @@ should mount external secret (mailgun on):
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-email
+            app.kubernetes.io/version: 15.0.1
+            helm.sh/chart: teleport-plugin-email-15.0.1
         spec:
           containers:
           - command:
@@ -284,7 +299,7 @@ should mount external secret (mailgun on):
             env:
             - name: TELEPORT_PLUGIN_FAIL_FAST
               value: "true"
-            image: public.ecr.aws/gravitational/teleport-plugin-email:14.3.3
+            image: public.ecr.aws/gravitational/teleport-plugin-email:15.0.1
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:
@@ -325,8 +340,8 @@ should mount external secret (smtp on):
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-email
-        app.kubernetes.io/version: 14.3.3
-        helm.sh/chart: teleport-plugin-email-14.3.3
+        app.kubernetes.io/version: 15.0.1
+        helm.sh/chart: teleport-plugin-email-15.0.1
       name: RELEASE-NAME-teleport-plugin-email
     spec:
       replicas: 1
@@ -338,7 +353,10 @@ should mount external secret (smtp on):
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-email
+            app.kubernetes.io/version: 15.0.1
+            helm.sh/chart: teleport-plugin-email-15.0.1
         spec:
           containers:
           - command:
@@ -349,7 +367,7 @@ should mount external secret (smtp on):
             env:
             - name: TELEPORT_PLUGIN_FAIL_FAST
               value: "true"
-            image: public.ecr.aws/gravitational/teleport-plugin-email:14.3.3
+            image: public.ecr.aws/gravitational/teleport-plugin-email:15.0.1
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-email
             ports:

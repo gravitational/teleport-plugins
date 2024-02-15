@@ -1,4 +1,5 @@
 resource "teleport_okta_import_rule" "test" {
+  version = "v1"
   metadata = {
     name        = "example"
     description = "Test Okta Import Rule"

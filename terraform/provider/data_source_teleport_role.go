@@ -21,7 +21,6 @@ import (
 	"context"
 
 	apitypes "github.com/gravitational/teleport/api/types"
-    
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"

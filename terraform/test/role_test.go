@@ -17,6 +17,10 @@ limitations under the License.
 package test
 
 import (
+	"regexp"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -45,7 +49,7 @@ func (s *TerraformSuite) TestRole() {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "role"),
 					resource.TestCheckNoResourceAttr(name, "spec.options"),
-					resource.TestCheckResourceAttr(name, "version", "v6"),
+					resource.TestCheckResourceAttr(name, "version", "v7"),
 					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "anonymous"),
 				),
 			},
@@ -68,7 +72,7 @@ func (s *TerraformSuite) TestRole() {
 					resource.TestCheckResourceAttr(name, "spec.allow.node_labels.example.0", "yes"),
 					resource.TestCheckResourceAttr(name, "spec.allow.node_labels.example.1", "no"),
 
-					resource.TestCheckResourceAttr(name, "version", "v6"),
+					resource.TestCheckResourceAttr(name, "version", "v7"),
 				),
 			},
 			{
@@ -156,7 +160,7 @@ func (s *TerraformSuite) TestImportRole() {
 	err := role.CheckAndSetDefaults()
 	require.NoError(s.T(), err)
 
-	err = s.client.UpsertRole(s.Context(), role)
+	_, err = s.client.UpsertRole(s.Context(), role)
 	require.NoError(s.T(), err)
 
 	resource.Test(s.T(), resource.TestCase{
@@ -198,7 +202,7 @@ func (s *TerraformSuite) TestRoleLoginsSplitBrain() {
 				Config: s.getFixture("role_drift_0.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "role"),
-					resource.TestCheckResourceAttr(name, "version", "v6"),
+					resource.TestCheckResourceAttr(name, "version", "v7"),
 					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "one"),
 				),
 			},
@@ -216,12 +220,13 @@ func (s *TerraformSuite) TestRoleLoginsSplitBrain() {
 					logins = append(logins, "extraOne")
 					currentRole.SetLogins(types.Allow, logins)
 
-					require.NoError(s.T(), s.client.UpsertRole(s.Context(), currentRole))
+					_, err = s.client.UpsertRole(s.Context(), currentRole)
+					require.NoError(s.T(), err)
 				},
 				Config: s.getFixture("role_drift_0.tf"),
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr(name, "kind", "role"),
-					resource.TestCheckResourceAttr(name, "version", "v6"),
+					resource.TestCheckResourceAttr(name, "version", "v7"),
 					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "one"),
 				),
 			},
@@ -239,6 +244,59 @@ func (s *TerraformSuite) TestRoleVersionUpgrade() {
 		return err
 	}
 
+	var noAccess []types.KubernetesResource
+
+	defaultV5Wildcard := []types.KubernetesResource{
+		{
+			Kind:      "pod",
+			Namespace: types.Wildcard,
+			Name:      types.Wildcard,
+			Verbs:     []string{types.Wildcard},
+		},
+	}
+
+	defaultV7Wildcard := []types.KubernetesResource{
+		{
+			Kind:      types.Wildcard,
+			Namespace: types.Wildcard,
+			Name:      types.Wildcard,
+			Verbs:     []string{types.Wildcard},
+		},
+	}
+
+	customWildcard := []types.KubernetesResource{
+		{
+			Kind:      types.KindKubePod,
+			Namespace: "myns",
+			Name:      types.Wildcard,
+			Verbs:     []string{types.Wildcard},
+		},
+	}
+
+	checkRoleResource := func(version string, expected []types.KubernetesResource) resource.TestCheckFunc {
+		return func(state *terraform.State) error {
+			role, err := s.client.GetRole(s.Context(), "upgrade")
+			if err != nil {
+				return trace.Wrap(err)
+			}
+
+			if role.GetVersion() != version {
+				return trace.CompareFailed("wrong role version, was expecting %q, got %q", version, role.GetVersion())
+			}
+
+			rolev6, ok := (role).(*types.RoleV6)
+			if !ok {
+				return trace.CompareFailed("failed to convert role to rolve6")
+			}
+
+			diff := cmp.Diff(expected, rolev6.Spec.Allow.KubernetesResources, cmpopts.EquateEmpty())
+			if diff != "" {
+				return trace.CompareFailed("kube resources allow rules differs from expected result: %s", diff)
+			}
+			return nil
+		}
+	}
+
 	name := "teleport_role.upgrade"
 
 	resource.Test(s.T(), resource.TestCase{
@@ -251,6 +309,7 @@ func (s *TerraformSuite) TestRoleVersionUpgrade() {
 					resource.TestCheckResourceAttr(name, "kind", "role"),
 					resource.TestCheckResourceAttr(name, "version", "v4"),
 					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "onev4"),
+					checkRoleResource(types.V4, defaultV5Wildcard),
 				),
 			},
 			{
@@ -263,6 +322,7 @@ func (s *TerraformSuite) TestRoleVersionUpgrade() {
 					resource.TestCheckResourceAttr(name, "kind", "role"),
 					resource.TestCheckResourceAttr(name, "version", "v5"),
 					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "onev5"),
+					checkRoleResource(types.V5, defaultV5Wildcard),
 				),
 			},
 			{
@@ -275,6 +335,7 @@ func (s *TerraformSuite) TestRoleVersionUpgrade() {
 					resource.TestCheckResourceAttr(name, "kind", "role"),
 					resource.TestCheckResourceAttr(name, "version", "v6"),
 					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "onev6"),
+					checkRoleResource(types.V6, noAccess),
 				),
 			},
 			{
@@ -290,10 +351,24 @@ func (s *TerraformSuite) TestRoleVersionUpgrade() {
 					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.kind", "pod"),
 					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.name", "*"),
 					resource.TestCheckResourceAttr(name, "spec.allow.kubernetes_resources.0.namespace", "myns"),
+					checkRoleResource(types.V6, customWildcard),
 				),
 			},
 			{
 				Config:   s.getFixture("role_with_kube_resources.tf"),
+				PlanOnly: true,
+			},
+			{
+				Config: s.getFixture("role_upgrade_v7.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "role"),
+					resource.TestCheckResourceAttr(name, "version", "v7"),
+					resource.TestCheckResourceAttr(name, "spec.allow.logins.0", "onev7"),
+					checkRoleResource(types.V7, defaultV7Wildcard),
+				),
+			},
+			{
+				Config:   s.getFixture("role_upgrade_v7.tf"),
 				PlanOnly: true,
 			},
 		},
@@ -369,6 +444,20 @@ func (s *TerraformSuite) TestRoleWithKubernetesVerbs() {
 			{
 				Config:   s.getFixture("role_with_kube_verbs.tf"),
 				PlanOnly: true,
+			},
+		},
+	})
+}
+
+func (s *TerraformSuite) TestRoleNoVersion() {
+	re, err := regexp.Compile(".*The argument \"version\" is required, but no definition was found.*")
+	require.NoError(s.T(), err)
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      s.getFixture("role_no_version.tf"),
+				ExpectError: re,
 			},
 		},
 	})

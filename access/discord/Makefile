@@ -1,5 +1,5 @@
-VERSION?=14.3.3
-GO_VERSION=1.21.6
+VERSION?=15.0.1
+GO_VERSION=1.21.7
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-discord

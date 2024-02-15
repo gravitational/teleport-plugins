@@ -24,7 +24,7 @@ import (
 
 func (s *TerraformSuite) TestUser() {
 	checkUserDestroyed := func(state *terraform.State) error {
-		_, err := s.client.GetUser("test", false)
+		_, err := s.client.GetUser(s.Context(), "test", false)
 		if trace.IsNotFound(err) {
 			return nil
 		}

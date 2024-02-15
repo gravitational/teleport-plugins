@@ -1,4 +1,5 @@
 resource "teleport_session_recording_config" "test" {
+  version = "v2"
   metadata = {
     labels = {
       "example"             = "yes"

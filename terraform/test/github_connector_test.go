@@ -101,7 +101,7 @@ func (s *TerraformSuite) TestImportGithubConnector() {
 	err := githubConnector.CheckAndSetDefaults()
 	require.NoError(s.T(), err)
 
-	err = s.client.UpsertGithubConnector(s.Context(), githubConnector)
+	_, err = s.client.UpsertGithubConnector(s.Context(), githubConnector)
 	require.NoError(s.T(), err)
 
 	resource.Test(s.T(), resource.TestCase{

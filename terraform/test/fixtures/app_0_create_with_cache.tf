@@ -1,4 +1,5 @@
 resource "teleport_app" "test_with_cache" {
+  version = "v3"
   metadata = {
     name        = "example"
     description = "Test app"

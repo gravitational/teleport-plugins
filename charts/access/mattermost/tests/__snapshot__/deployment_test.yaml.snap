@@ -7,8 +7,8 @@ should match the snapshot:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-mattermost
-        app.kubernetes.io/version: 14.3.3
-        helm.sh/chart: teleport-plugin-mattermost-14.3.3
+        app.kubernetes.io/version: 15.0.1
+        helm.sh/chart: teleport-plugin-mattermost-15.0.1
       name: RELEASE-NAME-teleport-plugin-mattermost
     spec:
       replicas: 1
@@ -20,7 +20,10 @@ should match the snapshot:
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-mattermost
+            app.kubernetes.io/version: 15.0.1
+            helm.sh/chart: teleport-plugin-mattermost-15.0.1
         spec:
           containers:
           - command:
@@ -72,8 +75,8 @@ should mount external secret:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-mattermost
-        app.kubernetes.io/version: 14.3.3
-        helm.sh/chart: teleport-plugin-mattermost-14.3.3
+        app.kubernetes.io/version: 15.0.1
+        helm.sh/chart: teleport-plugin-mattermost-15.0.1
       name: RELEASE-NAME-teleport-plugin-mattermost
     spec:
       replicas: 1
@@ -85,7 +88,10 @@ should mount external secret:
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-mattermost
+            app.kubernetes.io/version: 15.0.1
+            helm.sh/chart: teleport-plugin-mattermost-15.0.1
         spec:
           containers:
           - command:
@@ -96,7 +102,7 @@ should mount external secret:
             env:
             - name: TELEPORT_PLUGIN_FAIL_FAST
               value: "true"
-            image: public.ecr.aws/gravitational/teleport-plugin-mattermost:14.3.3
+            image: public.ecr.aws/gravitational/teleport-plugin-mattermost:15.0.1
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-mattermost
             ports:
@@ -137,8 +143,8 @@ should override volume name:
         app.kubernetes.io/instance: RELEASE-NAME
         app.kubernetes.io/managed-by: Helm
         app.kubernetes.io/name: teleport-plugin-mattermost
-        app.kubernetes.io/version: 14.3.3
-        helm.sh/chart: teleport-plugin-mattermost-14.3.3
+        app.kubernetes.io/version: 15.0.1
+        helm.sh/chart: teleport-plugin-mattermost-15.0.1
       name: RELEASE-NAME-teleport-plugin-mattermost
     spec:
       replicas: 1
@@ -150,7 +156,10 @@ should override volume name:
         metadata:
           labels:
             app.kubernetes.io/instance: RELEASE-NAME
+            app.kubernetes.io/managed-by: Helm
             app.kubernetes.io/name: teleport-plugin-mattermost
+            app.kubernetes.io/version: 15.0.1
+            helm.sh/chart: teleport-plugin-mattermost-15.0.1
         spec:
           containers:
           - command:
@@ -161,7 +170,7 @@ should override volume name:
             env:
             - name: TELEPORT_PLUGIN_FAIL_FAST
               value: "true"
-            image: public.ecr.aws/gravitational/teleport-plugin-mattermost:14.3.3
+            image: public.ecr.aws/gravitational/teleport-plugin-mattermost:15.0.1
             imagePullPolicy: IfNotPresent
             name: teleport-plugin-mattermost
             ports:

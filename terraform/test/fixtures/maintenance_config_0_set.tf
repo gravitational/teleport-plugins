@@ -1,4 +1,5 @@
 resource "teleport_cluster_maintenance_config" "test" {
+  version = "v1"
   metadata = {
     description = "Maintenance config"
   }

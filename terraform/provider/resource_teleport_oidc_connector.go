@@ -100,7 +100,7 @@ func (r resourceTeleportOIDCConnector) Create(ctx context.Context, req tfsdk.Cre
 		return
 	}
 
-	err = r.p.Client.UpsertOIDCConnector(ctx, oidcConnectorResource)
+	_, err = r.p.Client.CreateOIDCConnector(ctx, oidcConnectorResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating OIDCConnector", trace.Wrap(err), "oidc"))
 		return
@@ -231,7 +231,7 @@ func (r resourceTeleportOIDCConnector) Update(ctx context.Context, req tfsdk.Upd
 		return
 	}
 
-	err = r.p.Client.UpsertOIDCConnector(ctx, oidcConnectorResource)
+	_, err = r.p.Client.UpsertOIDCConnector(ctx, oidcConnectorResource)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating OIDCConnector", err, "oidc"))
 		return

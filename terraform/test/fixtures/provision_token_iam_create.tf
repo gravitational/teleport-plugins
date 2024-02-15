@@ -1,4 +1,5 @@
 resource "teleport_provision_token" "iam-token" {
+  version = "v2"
   metadata = {
     name = "iam-token"
   }

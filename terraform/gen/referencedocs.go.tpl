@@ -67,6 +67,45 @@ provider "teleport" {
   root_ca_path = "tf.ca"
 }
 ```
+
+## Provider resource versioning
+
+Since Teleport 15, you must set the version on each resource, and version cannot
+be changed in-place. Terraform will delete the resource and create a new one if
+a version change is required.
+
+This is not enforced on previous Teleport provider versions, but we recommend doing
+so. When the version is not specified, Terraform will pick the latest one by default.
+However, version upgrades don't re-apply the resource defaults. This could lead
+to different results if you create a new resource or upgrade an existing one.
+To mitigate this, you should explicitly set the resource version.
+
+<Admonition type="warning">
+  Upgrading the Terraform Provider to a new version with `teleport_role`
+  resources without a specified version can change the role behavior and access
+  rules. You must set the role version before upgrading to ensure the role
+  access rules don't change.
+
+  The default role version is the highest supported:
+
+  - v12 default role version is `v5`
+  - v13 default role version is `v6`
+  - v14 default role version is `v7`
+
+  For example, before upgrading from v12 to v13, edit every unversioned role
+  to pin the `v5` version:
+
+  ```hcl
+  resource "teleport_role" "test" {
+    version = "v5"
+    metadata = {
+      name = "my-role"
+    }
+    // ...
+  }
+  ```
+</Admonition>
+
 {{range $_, $resource := .resourcesDoc}}
 ## {{$resource.Name}}
 

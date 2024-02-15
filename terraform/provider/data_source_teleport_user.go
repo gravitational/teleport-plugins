@@ -21,7 +21,6 @@ import (
 	"context"
 
 	apitypes "github.com/gravitational/teleport/api/types"
-    
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -60,7 +59,7 @@ func (r dataSourceTeleportUser) Read(ctx context.Context, req tfsdk.ReadDataSour
 		return
 	}
 
-	userI, err := r.p.Client.GetUser(id.Value, false)
+	userI, err := r.p.Client.GetUser(ctx, id.Value, false)
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
 		return

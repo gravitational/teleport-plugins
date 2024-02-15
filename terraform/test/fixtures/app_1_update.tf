@@ -1,4 +1,5 @@
 resource "teleport_app" "test" {
+  version = "v3"
   metadata = {
     name        = "test"
     description = "Test app"

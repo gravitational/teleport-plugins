@@ -42,7 +42,7 @@ import (
 
 const (
 	// minServerVersion is the minimal teleport version the plugin supports.
-	minServerVersion = "6.1.0-beta.1"
+	minServerVersion = "15.0.0-0"
 )
 
 type RetryConfig struct {
@@ -299,8 +299,13 @@ func (p *Provider) Configure(ctx context.Context, req tfsdk.ConfigureProviderReq
 		creds = append(creds, client.LoadIdentityFileFromString(string(decoded)))
 	}
 
-	log.WithField("dir", profileDir).WithField("name", profileName).Debug("Using profile as the default auth method")
-	creds = append(creds, client.LoadProfile(profileDir, profileName))
+	if profileDir != "" || len(creds) == 0 {
+		log.WithFields(log.Fields{
+			"dir":  profileDir,
+			"name": profileName,
+		}).Debug("Using profile as the default auth method")
+		creds = append(creds, client.LoadProfile(profileDir, profileName))
+	}
 
 	dialTimeoutDuration, err := time.ParseDuration(dialTimeoutDurationStr)
 	if err != nil {

@@ -1,4 +1,5 @@
 resource "teleport_trusted_device" "TESTDEVICE1" {
+  version = "v1"
   spec = {
     asset_tag     = "TESTDEVICE1"
     os_type       = "macos"
@@ -7,6 +8,7 @@ resource "teleport_trusted_device" "TESTDEVICE1" {
 }
 
 resource "teleport_trusted_device" "TESTDEVICE2" {
+  version = "v1"
   spec = {
     asset_tag     = "TESTDEVICE2"
     os_type       = "linux"

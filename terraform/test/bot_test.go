@@ -31,7 +31,7 @@ func (s *TerraformSuite) TestBot() {
 			}
 		}
 
-		if _, err := s.client.GetUser("bot-test", false); err != nil {
+		if _, err := s.client.GetUser(s.Context(), "bot-test", false); err != nil {
 			if !trace.IsNotFound(err) {
 				errs = append(errs, err)
 			}
