@@ -139,7 +139,7 @@ jobs:
     steps:
       # Setup
       - name: Enable performance telemetry/metrics
-        uses: catchpoint/workflow-telemetry-action@v1
+        uses: catchpoint/workflow-telemetry-action@v2
         with:
           comment_on_pr: false
       - name: Checkout repo
