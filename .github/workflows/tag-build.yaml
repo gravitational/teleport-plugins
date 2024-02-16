@@ -168,7 +168,7 @@ jobs:
           {
             echo "VERSION=${VERSION_TAG##v}"
             echo "GITREF=$VERSION_TAG"
-            echo "GNUMAKEFLAGS=-j$(nproc)"
+            # echo "GNUMAKEFLAGS=-j$(nproc)"
           } >> "$GITHUB_ENV"
       # File artifacts
       - name: Build the release tarballs
