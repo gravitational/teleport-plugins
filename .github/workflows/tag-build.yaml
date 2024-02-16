@@ -40,13 +40,22 @@ jobs:
         env:
           REF_VALUE: ${{ inputs.artifact-tag || github.head_ref || github.ref }}
         run: |
-          # If value is a tag
-          if [ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ] || [ "$GITHUB_REF_TYPE" == "tag" ]; then
+          # If a workflow dispatche triggered the run
+          if [ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]; then
+            # REF_VALUE = inputs.artifact-tag, tag name
             echo "gitref=refs/tags/$REF_VALUE" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
+          # If a push triggered the run
+          if [ "$GITHUB_EVENT_NAME" == "push" ]; then
+            # REF_VALUE = github.ref (fully formed)
+            echo "gitref=$REF_VALUE" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           # Otherwise, ref must be a branch
+          # REF_VALUE = github.head_ref, branch name
           echo "gitref=refs/heads/$REF_VALUE" >> "$GITHUB_OUTPUT"
       - name: Checkout repo
         uses: actions/checkout@v4
