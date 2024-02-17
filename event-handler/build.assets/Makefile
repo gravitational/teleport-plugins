@@ -9,7 +9,7 @@ OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
 
 HOSTNAME=buildbox
-BUILDBOX ?= teleport-plugins-event-handler:$(VERSION)
+BUILDBOX ?= teleport-plugins-event-handler:$(DOCKER_VERSION)
 GOCACHE ?= $(HOME)/.cache/go-build
 DOCKERFLAGS := --rm \
 	-v "$(TOP)":$(SRCDIR) \

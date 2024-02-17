@@ -38,7 +38,7 @@ type FileNames struct {
 	Sig string
 }
 
-// IsProviderTarball tests if  a given string is a Hudson-compatible filename
+// IsProviderTarball tests if  a given string is a Houston-compatible filename
 // indicating a terraform-provider plugin type
 func IsProviderTarball(fn string) bool {
 	info, err := filename.Parse(fn)

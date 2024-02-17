@@ -1,4 +1,4 @@
-VERSION=15.0.2
+VERSION?=15.0.2
 GO_VERSION=1.21.7
 
 GITTAG=v$(VERSION)
@@ -25,10 +25,13 @@ KEYLEN = 1024
 CLOUD_ADDR=evilmartians.teleport.sh:443
 IDENTITY_FILE=example/keys/identity
 
+DOCKER_VERSION = $(subst +,_,$(VERSION))
 DOCKER_NAME=teleport-plugin-event-handler
-DOCKER_IMAGE = 146628656107.dkr.ecr.us-west-2.amazonaws.com/gravitational/$(DOCKER_NAME):$(VERSION)
-DOCKER_IMAGE_ECR_PUBLIC = public.ecr.aws/gravitational/$(DOCKER_NAME):$(VERSION)
-DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg GITREF=$(GITREF)
+DOCKER_PRIVATE_REGISTRY = 146628656107.dkr.ecr.us-west-2.amazonaws.com
+DOCKER_IMAGE = $(DOCKER_PRIVATE_REGISTRY)/gravitational/$(DOCKER_NAME):$(DOCKER_VERSION)
+DOCKER_ECR_PUBLIC_REGISTRY = public.ecr.aws/gravitational
+DOCKER_IMAGE_ECR_PUBLIC = $(DOCKER_ECR_PUBLIC_REGISTRY)/$(DOCKER_NAME):$(DOCKER_VERSION)
+DOCKER_BUILD_ARGS = --build-arg GO_VERSION=${GO_VERSION} --build-arg GITREF=$(GITREF) --build-arg VERSION=$(VERSION)
 
 RELEASE_NAME = teleport-event-handler
 RELEASE = $(RELEASE_NAME)-v$(VERSION)-$(OS)-$(ARCH)-bin
