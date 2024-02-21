@@ -17,10 +17,10 @@ types:
     - "ProvisionTokenV2"
     - "RoleV6"
     - "SAMLConnectorV2"
+    - "ServerV2"
     - "SessionRecordingConfigV2"
     - "TrustedClusterV2"
     - "UserV2"
-    - "ServerV2"
 
 # id field is required for integration tests. It is not used by provider. 
 # We have to add it manually (might be removed in the future versions).
@@ -102,6 +102,13 @@ injected_fields:
       computed: true
       plan_modifiers:
         - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+  ServerV2:
+    -
+      name: id
+      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
+      computed: true
+      plan_modifiers:
+        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   SessionRecordingConfigV2:
     -
       name: id
@@ -117,13 +124,6 @@ injected_fields:
       plan_modifiers:
         - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
   UserV2:
-    -
-      name: id
-      type: github.com/hashicorp/terraform-plugin-framework/types.StringType
-      computed: true
-      plan_modifiers:
-        - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
-  ServerV2:
     -
       name: id
       type: github.com/hashicorp/terraform-plugin-framework/types.StringType
@@ -152,6 +152,9 @@ exclude_fields:
     - "RoleV6.Spec.Allow.Namespaces" # These fields are not settable via API
     - "RoleV6.Spec.Deny.Namespaces"
 
+    # Server
+    - "ServerSpecV2.CmdLabels"
+
     # SessionRecordingConfig
     - "SessionRecordingConfigV2.Metadata.Name" # It's a singleton resource
 
@@ -160,9 +163,6 @@ exclude_fields:
     - "UserSpecV2.Expires"   # Those fields are Teleport side meta, we do not need to change them via Terraform
     - "UserSpecV2.CreatedBy"
     - "UserSpecV2.Status"
-
-    # Server
-    - "ServerSpecV2.CmdLabels"
 
 name_overrides:
 
@@ -252,6 +252,9 @@ computed_fields:
     - "SAMLConnectorV2.Spec.EncryptionKeyPair.Cert"
     - "SAMLConnectorV2.Kind"
 
+    # Server
+    - "ServerV2.Kind"
+
     # Session recording
     - "SessionRecordingConfigV2.Spec.Mode"
     - "SessionRecordingConfigV2.Kind"
@@ -261,9 +264,6 @@ computed_fields:
 
     # User
     - "UserV2.Kind"
-
-    # Server
-    - "ServerV2.Kind"
 
 # These fields will be marked as Required: true 
 required_fields:
@@ -304,7 +304,7 @@ required_fields:
     - "ProvisionTokenV2.Spec.Roles"
     - "ProvisionTokenV2.Version"
 
-  # Role
+    # Role
     - "RoleV6.Metadata.Name"
     - "RoleV6.Version"
 
@@ -315,6 +315,11 @@ required_fields:
     - "SAMLConnectorV2.Metadata.Name"
     - "SAMLConnectorV2.Version"
 
+    # Server
+    - "ServerV2.Metadata.Name"
+    - "ServerV2.Version"
+    - "ServerV2.SubKind"
+
     # Trusted cluster
     - "TrustedClusterV2.Metadata.Name"
     - "TrustedClusterV2.Version"
@@ -323,11 +328,6 @@ required_fields:
     # User
     - "UserV2.Metadata.Name"
     - "UserV2.Version"
-
-    # Server
-    - "ServerV2.Metadata.Name"
-    - "ServerV2.Version"
-    - "ServerV2.SubKind"
 
     - "SessionRecordingConfigV2.Version"
     - "ClusterMaintenanceConfigV1.Version"
@@ -395,6 +395,9 @@ plan_modifiers:
     UserV2.Version:
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
+    ServerV2.Version:
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
     SessionRecordingConfigV2.Version:
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
@@ -402,9 +405,6 @@ plan_modifiers:
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
     AuthPreferenceV2.Version:
-      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
-      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
-    ServerV2.Version:
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
 
@@ -440,6 +440,10 @@ validators:
     - UseVersionBetween(2,2)
   SAMLConnectorV2.Spec:
     - UseAnyOfValidator("entity_descriptor", "entity_descriptor_url")
+  ServerV2.Version:
+    - UseVersionBetween(2,2)
+  ServerV2.SubKind:
+    - UseValueIn([]string{"openssh", "openssh-ec2-ice"})
   SessionRecordingConfigV2.Version:
     - UseVersionBetween(2,2)
   SessionRecordingConfigV2.Metadata.Labels:
@@ -448,10 +452,6 @@ validators:
     - UseVersionBetween(2,2)
   ClusterMaintenanceConfigV1.Version:
     - UseVersionBetween(1,1)
-  ServerV2.Version:
-    - UseVersionBetween(2,2)
-  ServerV2.SubKind:
-    - UseValueIn([]string{"openssh", "openssh-ec2-ice"})
 
 time_type:
     type: "TimeType"
