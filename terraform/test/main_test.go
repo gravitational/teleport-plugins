@@ -112,8 +112,8 @@ func (s *TerraformBaseSuite) SetupSuite() {
 	unrestricted := []string{"list", "create", "read", "update", "delete"}
 	role, err := bootstrap.AddRole("terraform", types.RoleSpecV6{
 		Allow: types.RoleConditions{
-			DatabaseLabels: types.Labels(map[string]utils.Strings{"*": []string{"*"}}),
-			AppLabels:      types.Labels(map[string]utils.Strings{"*": []string{"*"}}),
+			DatabaseLabels: map[string]utils.Strings{"*": []string{"*"}},
+			AppLabels:      map[string]utils.Strings{"*": []string{"*"}},
 			NodeLabels:     map[string]utils.Strings{"*": []string{"*"}},
 			Rules: []types.Rule{
 				types.NewRule("token", unrestricted),
