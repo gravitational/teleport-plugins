@@ -258,13 +258,13 @@ func (v StringValueValidator) Validate(_ context.Context, req tfsdk.ValidateAttr
 
 	value, ok := req.AttributeConfig.(types.String)
 	if !ok {
-		resp.Diagnostics.AddError("Version validation error", fmt.Sprintf("Attribute %v can not be converted to StringValue", req.AttributePath.String()))
+		resp.Diagnostics.AddError("Field validation error", fmt.Sprintf("Attribute %v can not be converted to StringValue", req.AttributePath.String()))
 		return
 	}
 
 	if value.Null || value.Unknown {
 		if !slices.Contains(v.AllowedValues, "") {
-			resp.Diagnostics.AddError("Field validation error", fmt.Sprintf("Attribute %v (%v) is unset but empty string is not a valid value. (vXX)", req.AttributePath.String(), value.Value))
+			resp.Diagnostics.AddError("Field validation error", fmt.Sprintf("Attribute %v (%v) is unset but empty string is not a valid value.", req.AttributePath.String(), value.Value))
 		}
 		return
 	}
