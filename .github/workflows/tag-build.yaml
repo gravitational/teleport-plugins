@@ -86,9 +86,8 @@ jobs:
                       echo "version=$(generate_version)"
                       ;;
                   "push")
-                      REF_TYPE=$(echo "$GITHUB_EVENT_REF" | cut -d'/' -f2)
                       # Case: commit push event.
-                      if [ "$REF_TYPE" != "tags" ]; then
+                      if [ "$GITHUB_REF_TYPE" != "tag" ]; then
                           echo "environment=build-stage"
                           echo "version=$(generate_version)"
                           return
