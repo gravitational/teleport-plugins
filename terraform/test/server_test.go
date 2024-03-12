@@ -74,6 +74,55 @@ func (s *TerraformSuite) TestOpenSSHServer() {
 	})
 }
 
+func (s *TerraformSuite) TestOpenSSHServerNameless() {
+	checkServerDestroyed := func(state *terraform.State) error {
+		// The name is a UUID but we can lookup by hostname as well.
+		_, err := s.client.GetNode(s.Context(), defaults.Namespace, "test.local")
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := "teleport_server.test"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkServerDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("server_openssh_nameless_0_create.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", types.KindNode),
+					resource.TestCheckResourceAttr(name, "sub_kind", types.SubKindOpenSSHNode),
+					resource.TestCheckResourceAttr(name, "version", "v2"),
+					resource.TestCheckResourceAttr(name, "spec.addr", "127.0.0.1:22"),
+					resource.TestCheckResourceAttr(name, "spec.hostname", "test.local"),
+				),
+			},
+			{
+				Config:   s.getFixture("server_openssh_nameless_0_create.tf"),
+				PlanOnly: true,
+			},
+			{
+				Config: s.getFixture("server_openssh_nameless_1_update.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", types.KindNode),
+					resource.TestCheckResourceAttr(name, "sub_kind", types.SubKindOpenSSHNode),
+					resource.TestCheckResourceAttr(name, "version", "v2"),
+					resource.TestCheckResourceAttr(name, "spec.addr", "127.0.0.1:23"),
+					resource.TestCheckResourceAttr(name, "spec.hostname", "test.local"),
+				),
+			},
+			{
+				Config:   s.getFixture("server_openssh_nameless_1_update.tf"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
+
 func (s *TerraformSuite) TestImportOpenSSHServer() {
 	r := "teleport_server"
 	id := "test_import"

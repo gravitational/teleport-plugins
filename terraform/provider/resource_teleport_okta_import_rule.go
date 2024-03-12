@@ -78,6 +78,13 @@ func (r resourceTeleportOktaImportRule) Create(ctx context.Context, req tfsdk.Cr
 	
 	oktaImportRuleResource := oktaImportRule
 
+
+err = oktaImportRuleResource.CheckAndSetDefaults()
+	if err != nil {
+	resp.Diagnostics.Append(diagFromWrappedErr("Error setting OktaImportRule defaults", trace.Wrap(err), "okta_import_rule"))
+	return
+	}
+
 	id := oktaImportRuleResource.Metadata.Name
 
 	_, err = r.p.Client.OktaClient().GetOktaImportRule(ctx, id)
@@ -91,12 +98,6 @@ func (r resourceTeleportOktaImportRule) Create(ctx context.Context, req tfsdk.Cr
 		}
 
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading OktaImportRule", trace.Wrap(err), "okta_import_rule"))
-		return
-	}
-
-	err = oktaImportRuleResource.CheckAndSetDefaults()
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error setting OktaImportRule defaults", trace.Wrap(err), "okta_import_rule"))
 		return
 	}
 

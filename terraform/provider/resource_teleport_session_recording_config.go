@@ -52,7 +52,7 @@ func (r resourceTeleportSessionRecordingConfigType) NewResource(_ context.Contex
 	}, nil
 }
 
-// Create creates the provision token
+// Create creates the SessionRecordingConfig
 func (r resourceTeleportSessionRecordingConfig) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return

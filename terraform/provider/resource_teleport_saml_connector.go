@@ -78,6 +78,13 @@ func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.Cre
 	
 	samlConnectorResource := samlConnector
 
+
+err = samlConnectorResource.CheckAndSetDefaults()
+	if err != nil {
+	resp.Diagnostics.Append(diagFromWrappedErr("Error setting SAMLConnector defaults", trace.Wrap(err), "saml"))
+	return
+	}
+
 	id := samlConnectorResource.Metadata.Name
 
 	_, err = r.p.Client.GetSAMLConnector(ctx, id, true)
@@ -91,12 +98,6 @@ func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.Cre
 		}
 
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading SAMLConnector", trace.Wrap(err), "saml"))
-		return
-	}
-
-	err = samlConnectorResource.CheckAndSetDefaults()
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error setting SAMLConnector defaults", trace.Wrap(err), "saml"))
 		return
 	}
 

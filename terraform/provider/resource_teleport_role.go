@@ -78,6 +78,13 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 	
 	roleResource := role
 
+
+err = roleResource.CheckAndSetDefaults()
+	if err != nil {
+	resp.Diagnostics.Append(diagFromWrappedErr("Error setting Role defaults", trace.Wrap(err), "role"))
+	return
+	}
+
 	id := roleResource.Metadata.Name
 
 	_, err = r.p.Client.GetRole(ctx, id)
@@ -91,12 +98,6 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 		}
 
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
-		return
-	}
-
-	err = roleResource.CheckAndSetDefaults()
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error setting Role defaults", trace.Wrap(err), "role"))
 		return
 	}
 

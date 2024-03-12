@@ -78,6 +78,13 @@ func (r resourceTeleportApp) Create(ctx context.Context, req tfsdk.CreateResourc
 	
 	appResource := app
 
+
+err = appResource.CheckAndSetDefaults()
+	if err != nil {
+	resp.Diagnostics.Append(diagFromWrappedErr("Error setting App defaults", trace.Wrap(err), "app"))
+	return
+	}
+
 	id := appResource.Metadata.Name
 
 	_, err = r.p.Client.GetApp(ctx, id)
@@ -91,12 +98,6 @@ func (r resourceTeleportApp) Create(ctx context.Context, req tfsdk.CreateResourc
 		}
 
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(err), "app"))
-		return
-	}
-
-	err = appResource.CheckAndSetDefaults()
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error setting App defaults", trace.Wrap(err), "app"))
 		return
 	}
 

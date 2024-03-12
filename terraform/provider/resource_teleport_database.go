@@ -78,6 +78,13 @@ func (r resourceTeleportDatabase) Create(ctx context.Context, req tfsdk.CreateRe
 	
 	databaseResource := database
 
+
+err = databaseResource.CheckAndSetDefaults()
+	if err != nil {
+	resp.Diagnostics.Append(diagFromWrappedErr("Error setting Database defaults", trace.Wrap(err), "db"))
+	return
+	}
+
 	id := databaseResource.Metadata.Name
 
 	_, err = r.p.Client.GetDatabase(ctx, id)
@@ -91,12 +98,6 @@ func (r resourceTeleportDatabase) Create(ctx context.Context, req tfsdk.CreateRe
 		}
 
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
-		return
-	}
-
-	err = databaseResource.CheckAndSetDefaults()
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error setting Database defaults", trace.Wrap(err), "db"))
 		return
 	}
 

@@ -119,6 +119,19 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 {{- else }}
 	{{.VarName}}Resource := {{.VarName}}
 {{end}}
+
+{{- if .ForceSetKind }}
+	{{.VarName}}Resource.Kind = {{.ForceSetKind}}
+{{- end}}
+
+{{if .HasCheckAndSetDefaults -}}
+	err = {{.VarName}}Resource.CheckAndSetDefaults()
+	if err != nil {
+	resp.Diagnostics.Append(diagFromWrappedErr("Error setting {{.Name}} defaults", trace.Wrap(err), "{{.Kind}}"))
+	return
+	}
+{{- end}}
+
 	id := {{.VarName}}Resource.Metadata.Name
 
 	_, err = r.p.Client.{{.GetMethod}}(ctx, {{if .Namespaced}}defaults.Namespace, {{end}}id{{if ne .WithSecrets ""}}, {{.WithSecrets}}{{end}})
@@ -134,18 +147,6 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading {{.Name}}", trace.Wrap(err), "{{.Kind}}"))
 		return
 	}
-
-	{{- if .ForceSetKind }}
-	{{.VarName}}Resource.Kind = {{.ForceSetKind}}
-	{{- end}}
-
-	{{if .HasCheckAndSetDefaults -}}
-	err = {{.VarName}}Resource.CheckAndSetDefaults()
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error setting {{.Name}} defaults", trace.Wrap(err), "{{.Kind}}"))
-		return
-	}
-	{{- end}}
 
 	{{if eq .UpsertMethodArity 2}}_, {{end}}err = r.p.Client.{{.CreateMethod}}(ctx, {{.VarName}}Resource)
 	if err != nil {

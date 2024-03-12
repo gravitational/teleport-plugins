@@ -52,7 +52,7 @@ func (r resourceTeleportAuthPreferenceType) NewResource(_ context.Context, p tfs
 	}, nil
 }
 
-// Create creates the provision token
+// Create creates the AuthPreference
 func (r resourceTeleportAuthPreference) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return

@@ -78,6 +78,13 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 	
 	userResource := user
 
+
+err = userResource.CheckAndSetDefaults()
+	if err != nil {
+	resp.Diagnostics.Append(diagFromWrappedErr("Error setting User defaults", trace.Wrap(err), "user"))
+	return
+	}
+
 	id := userResource.Metadata.Name
 
 	_, err = r.p.Client.GetUser(ctx, id, false)
@@ -91,12 +98,6 @@ func (r resourceTeleportUser) Create(ctx context.Context, req tfsdk.CreateResour
 		}
 
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading User", trace.Wrap(err), "user"))
-		return
-	}
-
-	err = userResource.CheckAndSetDefaults()
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error setting User defaults", trace.Wrap(err), "user"))
 		return
 	}
 

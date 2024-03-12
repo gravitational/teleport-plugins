@@ -78,6 +78,13 @@ func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.C
 	
 	githubConnectorResource := githubConnector
 
+
+err = githubConnectorResource.CheckAndSetDefaults()
+	if err != nil {
+	resp.Diagnostics.Append(diagFromWrappedErr("Error setting GithubConnector defaults", trace.Wrap(err), "github"))
+	return
+	}
+
 	id := githubConnectorResource.Metadata.Name
 
 	_, err = r.p.Client.GetGithubConnector(ctx, id, true)
@@ -91,12 +98,6 @@ func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.C
 		}
 
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))
-		return
-	}
-
-	err = githubConnectorResource.CheckAndSetDefaults()
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error setting GithubConnector defaults", trace.Wrap(err), "github"))
 		return
 	}
 

@@ -78,6 +78,13 @@ func (r resourceTeleportTrustedCluster) Create(ctx context.Context, req tfsdk.Cr
 	
 	trustedClusterResource := trustedCluster
 
+
+err = trustedClusterResource.CheckAndSetDefaults()
+	if err != nil {
+	resp.Diagnostics.Append(diagFromWrappedErr("Error setting TrustedCluster defaults", trace.Wrap(err), "trusted_cluster"))
+	return
+	}
+
 	id := trustedClusterResource.Metadata.Name
 
 	_, err = r.p.Client.GetTrustedCluster(ctx, id)
@@ -91,12 +98,6 @@ func (r resourceTeleportTrustedCluster) Create(ctx context.Context, req tfsdk.Cr
 		}
 
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))
-		return
-	}
-
-	err = trustedClusterResource.CheckAndSetDefaults()
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error setting TrustedCluster defaults", trace.Wrap(err), "trusted_cluster"))
 		return
 	}
 
