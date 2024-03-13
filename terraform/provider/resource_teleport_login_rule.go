@@ -79,8 +79,6 @@ func (r resourceTeleportLoginRule) Create(ctx context.Context, req tfsdk.CreateR
 	loginRuleResource := loginRule
 
 
-
-
 	id := loginRuleResource.Metadata.Name
 
 	_, err = r.p.Client.GetLoginRule(ctx, id)

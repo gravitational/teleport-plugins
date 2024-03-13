@@ -112,8 +112,8 @@ type payload struct {
 	// deprecated namespace parameter (always the default namespace).
 	Namespaced bool
 	// ForceSetKind indicates that the resource kind must be forcefully set by the provider.
-	// This is required for weird resources (ServerV2) that support multiple kinds.
-	// For those resource, we must set the kind, and don't want to have the user do it.
+	// This is required for some special resources (ServerV2) that support multiple kinds.
+	// For those resources, we must set the kind, and don't want to have the user do it.
 	ForceSetKind string
 }
 

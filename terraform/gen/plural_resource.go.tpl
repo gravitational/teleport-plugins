@@ -124,11 +124,11 @@ func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateR
 	{{.VarName}}Resource.Kind = {{.ForceSetKind}}
 {{- end}}
 
-{{if .HasCheckAndSetDefaults -}}
+{{- if .HasCheckAndSetDefaults }}
 	err = {{.VarName}}Resource.CheckAndSetDefaults()
 	if err != nil {
-	resp.Diagnostics.Append(diagFromWrappedErr("Error setting {{.Name}} defaults", trace.Wrap(err), "{{.Kind}}"))
-	return
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting {{.Name}} defaults", trace.Wrap(err), "{{.Kind}}"))
+		return
 	}
 {{- end}}
 

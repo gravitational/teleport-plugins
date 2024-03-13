@@ -78,11 +78,10 @@ func (r resourceTeleportDatabase) Create(ctx context.Context, req tfsdk.CreateRe
 	
 	databaseResource := database
 
-
-err = databaseResource.CheckAndSetDefaults()
+	err = databaseResource.CheckAndSetDefaults()
 	if err != nil {
-	resp.Diagnostics.Append(diagFromWrappedErr("Error setting Database defaults", trace.Wrap(err), "db"))
-	return
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting Database defaults", trace.Wrap(err), "db"))
+		return
 	}
 
 	id := databaseResource.Metadata.Name

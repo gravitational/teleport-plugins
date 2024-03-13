@@ -78,11 +78,10 @@ func (r resourceTeleportApp) Create(ctx context.Context, req tfsdk.CreateResourc
 	
 	appResource := app
 
-
-err = appResource.CheckAndSetDefaults()
+	err = appResource.CheckAndSetDefaults()
 	if err != nil {
-	resp.Diagnostics.Append(diagFromWrappedErr("Error setting App defaults", trace.Wrap(err), "app"))
-	return
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting App defaults", trace.Wrap(err), "app"))
+		return
 	}
 
 	id := appResource.Metadata.Name

@@ -231,8 +231,8 @@ func (v AnyOfValidator) Validate(ctx context.Context, req tfsdk.ValidateAttribut
 }
 
 // UseValueIn creates a StringValueValidator
-func UseValueIn(subkinds []string) tfsdk.AttributeValidator {
-	return StringValueValidator{subkinds}
+func UseValueIn(allowed ...string) tfsdk.AttributeValidator {
+	return StringValueValidator{allowed}
 }
 
 // StringValueValidator validates that a resource string field is in a set of allowed values.
@@ -272,5 +272,4 @@ func (v StringValueValidator) Validate(_ context.Context, req tfsdk.ValidateAttr
 	if !slices.Contains(v.AllowedValues, value.Value) {
 		resp.Diagnostics.AddError("Field validation error", fmt.Sprintf("Attribute %v (%v) is not in the allowed set (%v).", req.AttributePath.String(), value.Value, v.AllowedValues))
 	}
-	return
 }

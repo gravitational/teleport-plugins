@@ -723,7 +723,7 @@ func GenSchemaServerV2(ctx context.Context) (github_com_hashicorp_terraform_plug
 			Description: "SubKind is an optional resource sub kind, used in some resources",
 			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseValueIn([]string{"openssh", "openssh-ec2-ice"})},
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseValueIn("openssh", "openssh-ec2-ice")},
 		},
 		"version": {
 			Description:   "Version is version",

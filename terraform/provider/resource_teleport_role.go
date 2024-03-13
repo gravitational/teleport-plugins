@@ -78,11 +78,10 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 	
 	roleResource := role
 
-
-err = roleResource.CheckAndSetDefaults()
+	err = roleResource.CheckAndSetDefaults()
 	if err != nil {
-	resp.Diagnostics.Append(diagFromWrappedErr("Error setting Role defaults", trace.Wrap(err), "role"))
-	return
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting Role defaults", trace.Wrap(err), "role"))
+		return
 	}
 
 	id := roleResource.Metadata.Name

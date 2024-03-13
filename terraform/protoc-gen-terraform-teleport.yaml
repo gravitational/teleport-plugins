@@ -458,7 +458,7 @@ validators:
   ServerV2.Version:
     - UseVersionBetween(2,2)
   ServerV2.SubKind:
-    - UseValueIn([]string{"openssh", "openssh-ec2-ice"})
+    - UseValueIn("openssh", "openssh-ec2-ice")
   SessionRecordingConfigV2.Version:
     - UseVersionBetween(2,2)
   SessionRecordingConfigV2.Metadata.Labels:

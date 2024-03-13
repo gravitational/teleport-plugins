@@ -78,11 +78,10 @@ func (r resourceTeleportOIDCConnector) Create(ctx context.Context, req tfsdk.Cre
 	
 	oidcConnectorResource := oidcConnector
 
-
-err = oidcConnectorResource.CheckAndSetDefaults()
+	err = oidcConnectorResource.CheckAndSetDefaults()
 	if err != nil {
-	resp.Diagnostics.Append(diagFromWrappedErr("Error setting OIDCConnector defaults", trace.Wrap(err), "oidc"))
-	return
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting OIDCConnector defaults", trace.Wrap(err), "oidc"))
+		return
 	}
 
 	id := oidcConnectorResource.Metadata.Name

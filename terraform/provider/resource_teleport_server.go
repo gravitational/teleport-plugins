@@ -80,11 +80,10 @@ func (r resourceTeleportServer) Create(ctx context.Context, req tfsdk.CreateReso
 	serverResource := server
 
 	serverResource.Kind = apitypes.KindNode
-
-err = serverResource.CheckAndSetDefaults()
+	err = serverResource.CheckAndSetDefaults()
 	if err != nil {
-	resp.Diagnostics.Append(diagFromWrappedErr("Error setting Server defaults", trace.Wrap(err), "node"))
-	return
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting Server defaults", trace.Wrap(err), "node"))
+		return
 	}
 
 	id := serverResource.Metadata.Name

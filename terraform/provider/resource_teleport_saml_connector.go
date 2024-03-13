@@ -78,11 +78,10 @@ func (r resourceTeleportSAMLConnector) Create(ctx context.Context, req tfsdk.Cre
 	
 	samlConnectorResource := samlConnector
 
-
-err = samlConnectorResource.CheckAndSetDefaults()
+	err = samlConnectorResource.CheckAndSetDefaults()
 	if err != nil {
-	resp.Diagnostics.Append(diagFromWrappedErr("Error setting SAMLConnector defaults", trace.Wrap(err), "saml"))
-	return
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting SAMLConnector defaults", trace.Wrap(err), "saml"))
+		return
 	}
 
 	id := samlConnectorResource.Metadata.Name
