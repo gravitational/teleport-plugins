@@ -22,25 +22,16 @@ import (
 	"github.com/gravitational/kingpin"
 )
 
-type bucketConfig struct {
-	region          string
-	bucketName      string
-	accessKeyID     string
-	secretAccessKey string
-	roleARN         string
-}
-
 type args struct {
-	providerTag       string
-	workingDir        string
-	registryURL       string
-	staging           bucketConfig
-	production        bucketConfig
-	signingKeyText    string
-	protocolVersions  []string
-	providerNamespace string
-	providerName      string
-	verbosity         int
+	providerTag           string
+	registryURL           string
+	artifactDirectoryPath string
+	registryDirectoryPath string
+	signingKeyText        string
+	protocolVersions      []string
+	providerNamespace     string
+	providerName          string
+	verbosity             int
 }
 
 func parseCommandLine() *args {
@@ -51,59 +42,13 @@ func parseCommandLine() *args {
 		Required().
 		StringVar(&result.providerTag)
 
-	app.Flag("staging-bucket", "S3 Staging bucket url (where to fetch tarballs for promotion)").
-		Envar("STAGING_BUCKET").
+	app.Flag("artifact-directory-path", "The path to a directory that contains the Terraform provider artifacts").
 		Required().
-		StringVar(&result.staging.bucketName)
+		ExistingDirVar(&result.artifactDirectoryPath)
 
-	app.Flag("staging-region", "AWS region the staging bucket is in").
-		Envar("STAGING_REGION").
-		Default("us-west-2").
-		StringVar(&result.staging.region)
-
-	app.Flag("staging-access-key-id", "AWS access key id for staging bucket").
-		Envar("STAGING_ACCESS_KEY_ID").
+	app.Flag("registry-directory-path", "The path to a local copy of the registry").
 		Required().
-		StringVar(&result.staging.accessKeyID)
-
-	app.Flag("staging-secret-access-key", "AWS secret access key for staging bucket").
-		Envar("STAGING_SECRET_ACCESS_KEY").
-		Required().
-		StringVar(&result.staging.secretAccessKey)
-
-	app.Flag("staging-role", "AWS role to use when interacting with the staging bucket.").
-		Required().
-		PlaceHolder("ARN").
-		StringVar(&result.staging.roleARN)
-
-	app.Flag("prod-bucket", "S3 production bucket url (where to push the resulting registry)").
-		Envar("PROD_BUCKET").
-		StringVar(&result.production.bucketName)
-
-	app.Flag("prod-region", "AWS region the production bucket is in").
-		Envar("PROD_REGION").
-		Default("us-west-2").
-		StringVar(&result.production.region)
-
-	app.Flag("deployment-role", "AWS role to use when interacting with the deployment bucket.").
-		Required().
-		PlaceHolder("ARN").
-		StringVar(&result.production.roleARN)
-
-	app.Flag("prod-access-key-id", "AWS access key id for production bucket").
-		Envar("PROD_ACCESS_KEY_ID").
-		Required().
-		StringVar(&result.production.accessKeyID)
-
-	app.Flag("prod-secret-access-key", "AWS secret access key for production bucket").
-		Envar("PROD_SECRET_ACCESS_KEY").
-		Required().
-		StringVar(&result.production.secretAccessKey)
-
-	app.Flag("working-dir", "Working directory to store generated files").
-		Short('d').
-		Default("./workspace").
-		StringVar(&result.workingDir)
+		ExistingDirVar(&result.registryDirectoryPath)
 
 	app.Flag("signing-key", "GPG signing key in ASCII armor format").
 		Short('k').

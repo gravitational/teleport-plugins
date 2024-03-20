@@ -19,42 +19,27 @@ package main
 import (
 	"context"
 	"errors"
-	"net/http"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
 	"github.com/ProtonMail/go-crypto/openpgp/packet"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
-	"github.com/aws/aws-sdk-go-v2/credentials/stscreds"
-	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/coreos/go-semver/semver"
 	"github.com/gravitational/trace"
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/exp/maps"
 
-	"github.com/gravitational/teleport-plugins/tooling/internal/staging"
 	"github.com/gravitational/teleport-plugins/tooling/internal/terraform/registry"
-)
-
-const (
-	objectStoreKeyPrefix = "store"
-	registryKeyPrefix    = "registry"
 )
 
 func main() {
 	args := parseCommandLine()
 
-	workspace, err := ensureWorkspaceExists(args.workingDir)
+	localRegistry, err := setupRegistryDirectory(args.registryDirectoryPath)
 	if err != nil {
-		log.WithError(err).Fatalf("Failed setting up workspace")
+		log.WithError(err).Fatalf("Failed setting up registry file tree")
 	}
 
 	log.StandardLogger().SetLevel(logLevel(args))
@@ -64,19 +49,19 @@ func main() {
 		log.WithError(err).Fatalf("Failed decoding signing key")
 	}
 
-	files, err := downloadStagedArtifacts(context.Background(), args.providerTag, workspace.stagingDir, &args.staging)
+	files, err := getArtifactFiles(args.artifactDirectoryPath)
 	if err != nil {
-		log.WithError(err).Fatalf("Failed fetching artifacts")
+		log.WithError(err).Fatalf("failed to list artifacts in %q", args.artifactDirectoryPath)
 	}
 
 	objectStoreUrl := args.registryURL + "store/"
 
-	versionRecord, newFiles, err := repackProviders(files, workspace, objectStoreUrl, signingEntity, args.protocolVersions, args.providerNamespace, args.providerName)
+	versionRecord, newFiles, err := repackProviders(files, localRegistry, objectStoreUrl, signingEntity, args.protocolVersions, args.providerNamespace, args.providerName)
 	if err != nil {
 		log.WithError(err).Fatalf("Failed repacking artifacts")
 	}
 
-	err = updateRegistry(context.Background(), &args.production, workspace, args.providerNamespace, args.providerName, versionRecord, newFiles)
+	err = updateRegistry(context.Background(), localRegistry, args.providerNamespace, args.providerName, versionRecord, newFiles)
 	if err != nil {
 		log.WithError(err).Fatal("Failed updating registry")
 	}
@@ -101,34 +86,32 @@ func logLevel(args *args) log.Level {
 // us a nice way to prevent this simply with S3.
 //
 // We could layer a locking mechanism on top of another AWS service, but for
-// now we are relying on drone to honour its concurrency limits (i.e. 1) to
+// now we are relying on GHA to honour its concurrency limits (i.e. 1) to
 // serialise access to the live `versions` file.
-func updateRegistry(ctx context.Context, prodBucket *bucketConfig, workspace *workspacePaths, namespace, provider string, newVersion registry.Version, files []string) error {
-	s3client, err := newS3ClientFromBucketConfig(ctx, prodBucket)
-	if err != nil {
-		return trace.Wrap(err)
-	}
+func updateRegistry(ctx context.Context, workspace *registryPaths, namespace, provider string, newVersion registry.Version, files []string) error {
+	versionsFilePath := getVersionsFilePath(workspace.registryDir, namespace, provider)
 
-	versionsFileKey, versionsFilePath := makeVersionsFilePaths(workspace.registryDir, namespace, provider)
-	log.Infof("Downloading version index for %s/%s from %s", namespace, provider, versionsFileKey)
-
-	// Try downloading the versions file. This may not exist in an empty/new
-	// registry, so if the download fails with a NotFound error we ignore it
-	// and use an empty index.
+	// Check if the versions file path exists. If not, warn and treat this as a
+	// new registry with an empty index.
 	versions := registry.Versions{}
-	err = download(ctx, s3client, versionsFilePath, prodBucket.bucketName, versionsFileKey)
-	switch {
-	case err == nil:
-		versions, err = registry.LoadVersionsFile(versionsFilePath)
-		if err != nil {
-			return trace.Wrap(err)
+	versionsFileStat, err := os.Stat(versionsFilePath)
+	if err != nil {
+		if !errors.Is(err, os.ErrNotExist) {
+			return trace.Wrap(err, "failed to stat the version file at %q")
 		}
 
-	case isNotFound(err):
-		log.Info("No index found. Using empty index.")
+		log.Warnf("No index found at %q. Using empty index.", versionsFilePath)
+	} else {
+		if !versionsFileStat.Mode().Type().IsRegular() {
+			return trace.Errorf("the versions fs object at %q is not a regular file", versionsFilePath)
+		}
 
-	default:
-		return trace.Wrap(err, "failed downloading index")
+		versions, err = registry.LoadVersionsFile(versionsFilePath)
+		if err != nil {
+			return trace.Wrap(err, "failed to load versions file from %q", versionsFilePath)
+		}
+
+		log.Infof("Loaded versions file from %q.", versionsFilePath)
 	}
 
 	// Index the available version by their semver version, so that we can find the
@@ -145,101 +128,48 @@ func updateRegistry(ctx context.Context, prodBucket *bucketConfig, workspace *wo
 	if err = versions.Save(versionsFilePath); err != nil {
 		return trace.Wrap(err, "failed saving index file")
 	}
-	files = append(files, versionsFilePath)
-
-	// Finally, push the new index files to the production bucket
-	err = uploadRegistry(ctx, s3client, prodBucket.bucketName, workspace.productionDir, files)
-	if err != nil {
-		return trace.Wrap(err, "failed uploading new files")
-	}
-
-	return nil
-}
-
-func uploadRegistry(ctx context.Context, s3Client *s3.Client, bucketName string, productionDir string, files []string) error {
-	uploader := manager.NewUploader(s3Client)
-	log.Infof("Production dir: %s", productionDir)
-	for _, f := range files {
-		log.Infof("Uploading %s", f)
-
-		if !strings.HasPrefix(f, productionDir) {
-			return trace.Errorf("file outside of registry dir")
-		}
-
-		key, err := filepath.Rel(productionDir, f)
-		if err != nil {
-			return trace.Wrap(err, "failed to extract key")
-		}
-
-		log.Tracef("... to %s", key)
-
-		doUpload := func() error {
-			f, err := os.Open(f)
-			if err != nil {
-				return trace.Wrap(err)
-			}
-			defer f.Close()
-
-			_, err = uploader.Upload(ctx, &s3.PutObjectInput{
-				Bucket: aws.String(bucketName),
-				Key:    aws.String(key),
-				Body:   f,
-			})
-
-			return trace.Wrap(err)
-		}
-
-		if err = doUpload(); err != nil {
-			return trace.Wrap(err, "failed uploading registry file")
-		}
-	}
 
 	return nil
 }
 
 func flattenVersionIndex(versionIndex map[semver.Version]registry.Version) []registry.Version {
+	// We want to output a list of semvers with semver ordering, so first we
+	// generate a sorted list of semvers
+	semvers := maps.Keys(versionIndex)
+	semverPtrs := make([]*semver.Version, 0, len(semvers)) // Pointer array is required by the sort function
 
-	// We want to output a list of versions with semver ordering, so first we
-	// generate a sorted list of keys
-	keys := make([]semver.Version, 0, len(versionIndex))
-	for k, _ := range versionIndex {
-		keys = append(keys, k)
+	for i := range semvers {
+		semverPtrs = append(semverPtrs, &semvers[i])
 	}
-	sort.Slice(keys, func(i, j int) bool { return keys[i].LessThan(keys[j]) })
+	semver.Sort(semverPtrs)
 
 	// Now we can simply walk the index using the sorted key list and we have
 	// our sorted output list
-	result := make([]registry.Version, 0, len(keys))
-	for _, k := range keys {
-		result = append(result, versionIndex[k])
+	providerVersions := make([]registry.Version, 0, len(semvers))
+	for _, semverPtr := range semverPtrs {
+		providerVersions = append(providerVersions, versionIndex[*semverPtr])
 	}
 
-	return result
+	return providerVersions
 }
 
-func repackProviders(candidateFilenames []string, workspace *workspacePaths, objectStoreUrl string, signingEntity *openpgp.Entity, protocolVersions []string, providerNamespace, providerName string) (registry.Version, []string, error) {
-
+func repackProviders(providerArtifacts []string, localRegistry *registryPaths, objectStoreUrl string, signingEntity *openpgp.Entity, protocolVersions []string, providerNamespace, providerName string) (registry.Version, []string, error) {
 	versionRecord := registry.Version{
 		Protocols: protocolVersions,
 	}
 
 	newFiles := []string{}
-
 	unsetVersion := semver.Version{}
 
-	for _, fn := range candidateFilenames {
-		if !registry.IsProviderTarball(fn) {
-			continue
-		}
+	for _, providerArtifact := range providerArtifacts {
+		log.Infof("Found provider tarball %s", providerArtifact)
 
-		log.Infof("Found provider tarball %s", fn)
-
-		registryInfo, err := registry.RepackProvider(workspace.objectStoreDir, fn, signingEntity)
+		registryInfo, err := registry.RepackProvider(localRegistry.objectStoreDir, providerArtifact, signingEntity)
 		if err != nil {
 			return registry.Version{}, nil, trace.Wrap(err, "failed repacking provider")
 		}
 
-		log.Infof("Provider repacked to %s/%s", workspace.objectStoreDir, registryInfo.Zip)
+		log.Infof("Provider repacked to %s", registryInfo.Zip)
 		newFiles = append(newFiles, registryInfo.Zip, registryInfo.Sum, registryInfo.Sig)
 
 		if versionRecord.Version == unsetVersion {
@@ -253,7 +183,7 @@ func repackProviders(candidateFilenames []string, workspace *workspacePaths, obj
 			return registry.Version{}, nil, trace.Wrap(err, "failed creating download info record")
 		}
 
-		filename, err := downloadInfo.Save(workspace.registryDir, providerNamespace, providerName, registryInfo.Version)
+		filename, err := downloadInfo.Save(localRegistry.registryDir, providerNamespace, providerName, registryInfo.Version)
 		if err != nil {
 			return registry.Version{}, nil, trace.Wrap(err, "Failed saving download info record")
 		}
@@ -268,120 +198,65 @@ func repackProviders(candidateFilenames []string, workspace *workspacePaths, obj
 	return versionRecord, newFiles, nil
 }
 
-func download(ctx context.Context, client *s3.Client, dstFileName, bucket, key string) error {
-
-	err := os.MkdirAll(filepath.Dir(dstFileName), 0700)
-	if err != nil {
-		return trace.Wrap(err, "failed creating destination dir for download")
-	}
-
-	dst, err := os.Create(dstFileName)
-	if err != nil {
-		return trace.Wrap(err, "failed creating destination file download")
-	}
-	defer dst.Close()
-
-	downloader := manager.NewDownloader(client)
-
-	_, err = downloader.Download(ctx, dst, &s3.GetObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-	})
-
-	return trace.Wrap(err, "failed downloading object")
+func getVersionsFilePath(registryDir, namespace, provider string) string {
+	return registry.VersionsFilePath(registryDir, namespace, provider)
 }
 
-func isNotFound(err error) bool {
-	var responseError *awshttp.ResponseError
-	if !errors.As(err, &responseError) {
-		return false
-	}
-	return responseError.ResponseError.HTTPStatusCode() == http.StatusNotFound
-}
-
-func makeVersionsFilePaths(registryDir, namespace, provider string) (string, string) {
-	key := registry.VersionsFilePath(registryKeyPrefix, namespace, provider)
-	path := registry.VersionsFilePath(registryDir, namespace, provider)
-	return key, path
-}
-
-type workspacePaths struct {
-	stagingDir     string
-	productionDir  string
+type registryPaths struct {
 	registryDir    string
 	objectStoreDir string
 }
 
-func ensureWorkspaceExists(workspaceDir string) (*workspacePaths, error) {
+func setupRegistryDirectory(registryDirectoryPath string) (*registryPaths, error) {
 	// Ensure that the working dir and so on exist
-	stagingDir := filepath.Join(workspaceDir, "staging")
+	stagingDir := filepath.Join(registryDirectoryPath, "staging")
 	err := os.MkdirAll(stagingDir, 0700)
 	if err != nil {
 		return nil, trace.Wrap(err, "failed ensuring staging dir %s exists", stagingDir)
 	}
 
-	productionDir := filepath.Join(workspaceDir, "production")
-
-	registryDir := filepath.Join(productionDir, "registry")
+	registryDir := filepath.Join(registryDirectoryPath, "registry")
 	err = os.MkdirAll(registryDir, 0700)
 	if err != nil {
 		return nil, trace.Wrap(err, "failed ensuring registry output dir %s exists", registryDir)
 	}
 
-	objectStoreDir := filepath.Join(productionDir, "store")
+	objectStoreDir := filepath.Join(registryDirectoryPath, "store")
 	err = os.MkdirAll(objectStoreDir, 0700)
 	if err != nil {
 		return nil, trace.Wrap(err, "failed ensuring registry output dir %s exists", objectStoreDir)
 	}
 
-	return &workspacePaths{
-		stagingDir:     stagingDir,
-		productionDir:  productionDir,
+	return &registryPaths{
 		registryDir:    registryDir,
 		objectStoreDir: objectStoreDir,
 	}, nil
 }
 
-func downloadStagedArtifacts(ctx context.Context, tag string, dstDir string, stagingBucket *bucketConfig) ([]string, error) {
-	log.Debugf("listing plugins in %s %s", stagingBucket.region, stagingBucket.bucketName)
-	log.Debugf("listing plugins as %s", stagingBucket.accessKeyID)
-	client, err := newS3ClientFromBucketConfig(ctx, stagingBucket)
+// Gets all the files in the provided path that are Terraform provider artifacts.
+func getArtifactFiles(artifactDirectoryPath string) ([]string, error) {
+	fsObjects, err := os.ReadDir(artifactDirectoryPath)
 	if err != nil {
-		return nil, trace.Wrap(err)
+		return nil, trace.Wrap(err, "failed to list file in artifact directory %q", artifactDirectoryPath)
 	}
 
-	return staging.FetchByTag(ctx, client, dstDir, stagingBucket.bucketName, tag)
-}
+	filePaths := make([]string, 0, len(fsObjects))
+	for _, fsObject := range fsObjects {
+		fsObjectPath := filepath.Join(artifactDirectoryPath, fsObject.Name())
+		if !fsObject.Type().IsRegular() {
+			log.Debugf("Skipping non-regular file fs object %q", fsObjectPath)
+			continue
+		}
 
-func newS3ClientFromBucketConfig(ctx context.Context, bucket *bucketConfig) (*s3.Client, error) {
+		if !registry.IsProviderTarball(fsObjectPath) {
+			log.Debugf("Skipping Terraform provider file %q", fsObjectPath)
+			continue
+		}
 
-	creds := credentials.NewStaticCredentialsProvider(
-		bucket.accessKeyID, bucket.secretAccessKey, "")
-
-	cfg, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion(bucket.region),
-		config.WithCredentialsProvider(creds))
-	if err != nil {
-		return nil, trace.Wrap(err)
+		filePaths = append(filePaths, fsObjectPath)
 	}
 
-	if bucket.roleARN == "" {
-		return s3.NewFromConfig(cfg), nil
-	}
-
-	log.Debugf("Configuring deployment role %q", bucket.roleARN)
-
-	stsClient := sts.NewFromConfig(cfg)
-	stsCreds := stscreds.NewAssumeRoleProvider(stsClient, bucket.roleARN)
-	stsAwareCfg, err := config.LoadDefaultConfig(ctx,
-		config.WithRegion(bucket.region),
-		config.WithCredentialsProvider(stsCreds))
-
-	if err != nil {
-		return nil, trace.Wrap(err)
-	}
-
-	return s3.NewFromConfig(stsAwareCfg), nil
+	return filePaths, nil
 }
 
 func loadSigningEntity(keyText string) (*openpgp.Entity, error) {

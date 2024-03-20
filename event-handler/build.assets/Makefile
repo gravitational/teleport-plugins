@@ -1,5 +1,5 @@
 VERSION=0.0.1
-GO_VERSION=1.21.6
+GO_VERSION=1.21.8
 LOCALDIR := $(dir $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST)))
 TOP ?= $(abspath $(LOCALDIR)/../..)
 SRCDIR=/go/src/github.com/gravitational/teleport-plugins/event-handler
@@ -9,7 +9,7 @@ OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
 
 HOSTNAME=buildbox
-BUILDBOX ?= teleport-plugins-event-handler:$(VERSION)
+BUILDBOX ?= teleport-plugins-event-handler:$(DOCKER_VERSION)
 GOCACHE ?= $(HOME)/.cache/go-build
 DOCKERFLAGS := --rm \
 	-v "$(TOP)":$(SRCDIR) \

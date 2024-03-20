@@ -36,6 +36,7 @@ exclude_fields:
     - "AccessList.header.metadata.id"
     # Read only field
     - "AccessList.spec.owners.ineligible_status"
+    - "AccessList.status"
 
 # These fields will be marked as Computed: true
 computed_fields:

@@ -1,6 +1,6 @@
 # Teleport Plugins Release Process
 
-The Teleport plugins release process is controlled by Drone, and is described in detail by [RFD003](./rfd0003-teleport-plugins-versioning.md).
+The Teleport plugins release process is controlled by GitHub Actions.
 
 ## Authenticating to Amazon ECR
 Plugin maintainers can push to both the staging and public Amazon Elastic Container Registries by assuming the `release-engineer-plugin-admin` role in AWS. To assume this administrative role the engineer must first login to AWS using `Plugin-Release-Engineers` permission set. This permission set can be found under the `teleport-prod` AWS Account. To request access to this account please contact the IT team. 
@@ -21,7 +21,7 @@ and
 $ aws ecr-public get-login-password --region us-east-1 | docker login -u="AWS" --password-stdin public.ecr.aws
 ```
 
-Whenever possible, the plugin maintainers should prefer to push to these registries by tagging a new version and promoting it in drone. However, in case of emergency the above method may be used to push an image. 
+Whenever possible, the plugin maintainers should prefer to push to these registries by tagging a new version and promoting it in GHA. However, in case of emergency the above method may be used to push an image. 
 
 ### Pull an image in staging
 Teleport engineers can gain read-only access to the internal plugin images by authenticating to AWS using the `Teleport-Team-Prod-ReadOnly` permission set found under the `teleport-prod` AWS Account. 

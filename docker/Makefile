@@ -10,7 +10,7 @@ MKFILE_PATH := $(abspath $(lastword $(MAKEFILE_LIST)))
 # enterprise version, but has to be available on cdn.teleport.dev
 RELEASE ?= teleport-ent-v14.0.0-linux-amd64-bin
 
-RUNTIME ?= go1.21.6
+RUNTIME ?= go1.21.8
 BBOX ?= public.ecr.aws/gravitational/teleport-buildbox:$(RUNTIME)
 
 # Teleport CLI and plugins CLI flags to pass to them on start
