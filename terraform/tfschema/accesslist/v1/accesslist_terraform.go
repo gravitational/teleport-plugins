@@ -94,10 +94,9 @@ func GenSchemaAccessList(ctx context.Context) (github_com_hashicorp_terraform_pl
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
 				"version": {
-					Description:   "Version is the API version used to create the resource. It must be specified. Based on this version, Teleport will apply different defaults on resource creation or deletion. It must be an integer prefixed by \"v\". For example: `v1`",
-					PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-					Required:      true,
-					Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+					Description: "Version is the API version used to create the resource. It must be specified. Based on this version, Teleport will apply different defaults on resource creation or deletion. It must be an integer prefixed by \"v\". For example: `v1`",
+					Required:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
 			}),
 			Description: "header is the header for the resource.",
