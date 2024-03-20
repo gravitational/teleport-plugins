@@ -113,10 +113,9 @@ func GenSchemaLoginRule(ctx context.Context) (github_com_hashicorp_terraform_plu
 			Optional:    true,
 		},
 		"version": {
-			Description:   "Version is the resource version.",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Description: "Version is the resource version.",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 	}}, nil
 }

@@ -507,11 +507,10 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"version": {
-			Description:   "Version is the resource version. It must be specified. Supported values are: `v3`.",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(3, 3)},
+			Description: "Version is the resource version. It must be specified. Supported values are: `v3`.",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(3, 3)},
 		},
 	}}, nil
 }
@@ -674,11 +673,10 @@ func GenSchemaAppV3(ctx context.Context) (github_com_hashicorp_terraform_plugin_
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"version": {
-			Description:   "Version is the resource version. It must be specified. Supported values are:`v3`.",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(3, 3)},
+			Description: "Version is the resource version. It must be specified. Supported values are:`v3`.",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(3, 3)},
 		},
 	}}, nil
 }
@@ -1093,11 +1091,10 @@ func GenSchemaProvisionTokenV2(ctx context.Context) (github_com_hashicorp_terraf
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"version": {
-			Description:   "Version is the resource version. It must be specified. Supported values are:`v2`.",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
+			Description: "Version is the resource version. It must be specified. Supported values are:`v2`.",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
 		},
 	}}, nil
 }
@@ -1332,11 +1329,10 @@ func GenSchemaSessionRecordingConfigV2(ctx context.Context) (github_com_hashicor
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"version": {
-			Description:   "Version is the resource version. It must be specified. Supported values are:`v2`.",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
+			Description: "Version is the resource version. It must be specified. Supported values are:`v2`.",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
 		},
 	}}, nil
 }
@@ -1565,11 +1561,10 @@ func GenSchemaAuthPreferenceV2(ctx context.Context) (github_com_hashicorp_terraf
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"version": {
-			Description:   "Version is the resource version. It must be specified. Supported values are: `v2`.",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
+			Description: "Version is the resource version. It must be specified. Supported values are: `v2`.",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
 		},
 	}}, nil
 }
@@ -2614,11 +2609,10 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"version": {
-			Description:   "Version is the resource version. It must be specified. Supported values are: `v3`, `v4`, `v5`, `v6`, `v7`.",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(3, 7)},
+			Description: "Version is the resource version. It must be specified. Supported values are: `v3`, `v4`, `v5`, `v6`, `v7`.",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(3, 7)},
 		},
 	}}, nil
 }
@@ -2751,11 +2745,10 @@ func GenSchemaUserV2(ctx context.Context) (github_com_hashicorp_terraform_plugin
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"version": {
-			Description:   "Version is the resource version. It must be specified. Supported values are: `v2`.",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
+			Description: "Version is the resource version. It must be specified. Supported values are: `v2`.",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
 		},
 	}}, nil
 }
@@ -2923,11 +2916,10 @@ func GenSchemaOIDCConnectorV3(ctx context.Context) (github_com_hashicorp_terrafo
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"version": {
-			Description:   "Version is the resource version. It must be specified. Supported values are: `v3`.",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(3, 3)},
+			Description: "Version is the resource version. It must be specified. Supported values are: `v3`.",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(3, 3)},
 		},
 	}}, nil
 }
@@ -3132,11 +3124,10 @@ func GenSchemaSAMLConnectorV2(ctx context.Context) (github_com_hashicorp_terrafo
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"version": {
-			Description:   "Version is the resource version. It must be specified. Supported values are: `v2`.",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
+			Description: "Version is the resource version. It must be specified. Supported values are: `v2`.",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
 		},
 	}}, nil
 }
@@ -3293,11 +3284,10 @@ func GenSchemaGithubConnectorV3(ctx context.Context) (github_com_hashicorp_terra
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"version": {
-			Description:   "Version is the resource version. It must be specified. Supported values are: `v3`.",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(3, 3)},
+			Description: "Version is the resource version. It must be specified. Supported values are: `v3`.",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(3, 3)},
 		},
 	}}, nil
 }
@@ -3413,10 +3403,9 @@ func GenSchemaTrustedClusterV2(ctx context.Context) (github_com_hashicorp_terraf
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"version": {
-			Description:   "Version is the resource version. It must be specified. Supported values are: `v2`.",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Description: "Version is the resource version. It must be specified. Supported values are: `v2`.",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 	}}, nil
 }
@@ -3503,11 +3492,10 @@ func GenSchemaClusterMaintenanceConfigV1(ctx context.Context) (github_com_hashic
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"version": {
-			Description:   "Version is the API version used to create the resource. It must be specified. Based on this version, Teleport will apply different defaults on resource creation or deletion. It must be an integer prefixed by \"v\". For example: `v1`",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(1, 1)},
+			Description: "Version is the API version used to create the resource. It must be specified. Based on this version, Teleport will apply different defaults on resource creation or deletion. It must be an integer prefixed by \"v\". For example: `v1`",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(1, 1)},
 		},
 	}}, nil
 }
@@ -3623,11 +3611,10 @@ func GenSchemaOktaImportRuleV1(ctx context.Context) (github_com_hashicorp_terraf
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 		},
 		"version": {
-			Description:   "Version is the API version used to create the resource. It must be specified. Based on this version, Teleport will apply different defaults on resource creation or deletion. It must be an integer prefixed by \"v\". For example: `v1`",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(1, 1)},
+			Description: "Version is the API version used to create the resource. It must be specified. Based on this version, Teleport will apply different defaults on resource creation or deletion. It must be an integer prefixed by \"v\". For example: `v1`",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(1, 1)},
 		},
 	}}, nil
 }
