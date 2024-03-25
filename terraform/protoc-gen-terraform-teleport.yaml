@@ -340,6 +340,8 @@ plan_modifiers:
     ProvisionTokenV2.Metadata.Name:
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
+    RoleV6.Spec.Allow.KubernetesResources:
+      - "DefaultRoleKubeResources()"
 
 validators:
   # Expires must be in the future
