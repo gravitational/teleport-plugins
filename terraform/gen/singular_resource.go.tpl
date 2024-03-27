@@ -55,7 +55,7 @@ func (r resourceTeleport{{.Name}}Type) NewResource(_ context.Context, p tfsdk.Pr
 	}, nil
 }
 
-// Create creates the provision token
+// Create creates the {{.Name}}
 func (r resourceTeleport{{.Name}}) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return

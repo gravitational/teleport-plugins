@@ -82,6 +82,7 @@ func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateRe
 	
 	trustedDeviceResource := trustedDevice
 
+
 	id := trustedDeviceResource.Metadata.Name
 
 	_, err = r.p.Client.GetDeviceResource(ctx, id)
@@ -97,8 +98,6 @@ func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateRe
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading DeviceV1", trace.Wrap(err), "device"))
 		return
 	}
-
-	
 
 	_, err = r.p.Client.UpsertDeviceResource(ctx, trustedDeviceResource)
 	if err != nil {

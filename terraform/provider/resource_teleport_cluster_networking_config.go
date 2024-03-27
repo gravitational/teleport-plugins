@@ -52,7 +52,7 @@ func (r resourceTeleportClusterNetworkingConfigType) NewResource(_ context.Conte
 	}, nil
 }
 
-// Create creates the provision token
+// Create creates the ClusterNetworkingConfig
 func (r resourceTeleportClusterNetworkingConfig) Create(ctx context.Context, req tfsdk.CreateResourceRequest, resp *tfsdk.CreateResourceResponse) {
 	if !r.p.IsConfigured(resp.Diagnostics) {
 		return

@@ -78,6 +78,7 @@ func (r resourceTeleportLoginRule) Create(ctx context.Context, req tfsdk.CreateR
 	
 	loginRuleResource := loginRule
 
+
 	id := loginRuleResource.Metadata.Name
 
 	_, err = r.p.Client.GetLoginRule(ctx, id)
@@ -93,8 +94,6 @@ func (r resourceTeleportLoginRule) Create(ctx context.Context, req tfsdk.CreateR
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading LoginRule", trace.Wrap(err), "login_rule"))
 		return
 	}
-
-	
 
 	_, err = r.p.Client.UpsertLoginRule(ctx, loginRuleResource)
 	if err != nil {

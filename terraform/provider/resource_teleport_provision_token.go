@@ -90,6 +90,12 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 	
 	provisionTokenResource := provisionToken
 
+	err = provisionTokenResource.CheckAndSetDefaults()
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting ProvisionToken defaults", trace.Wrap(err), "token"))
+		return
+	}
+
 	id := provisionTokenResource.Metadata.Name
 
 	_, err = r.p.Client.GetToken(ctx, id)
@@ -103,12 +109,6 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 		}
 
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))
-		return
-	}
-
-	err = provisionTokenResource.CheckAndSetDefaults()
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error setting ProvisionToken defaults", trace.Wrap(err), "token"))
 		return
 	}
 

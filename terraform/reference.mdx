@@ -21,6 +21,7 @@ Supported resources:
 - [teleport_provision_token](#teleport_provision_token)
 - [teleport_role](#teleport_role)
 - [teleport_saml_connector](#teleport_saml_connector)
+- [teleport_server](#teleport_server)
 - [teleport_session_recording_config](#teleport_session_recording_config)
 - [teleport_trusted_cluster](#teleport_trusted_cluster)
 - [teleport_trusted_device](#teleport_trusted_device)
@@ -2248,6 +2249,139 @@ resource "teleport_saml_connector" "example" {
     entity_descriptor = ""
   }
 }
+```
+
+## teleport_server
+
+|   Name   |  Type  | Required |                           Description                            |
+|----------|--------|----------|------------------------------------------------------------------|
+| metadata | object |          | Metadata is resource metadata                                    |
+| spec     | object |          | Spec is a server spec                                            |
+| sub_kind | string | *        | SubKind is an optional resource sub kind, used in some resources |
+| version  | string | *        | Version is version                                               |
+
+### metadata
+
+Metadata is resource metadata
+
+|    Name     |      Type      | Required |                                                                                         Description                                                                                          |
+|-------------|----------------|----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| description | string         |          | Description is object description                                                                                                                                                            |
+| expires     | RFC3339 time   |          | Expires is a global expiry time header can be set on any resource in the system.                                                                                                             |
+| labels      | map of strings |          | Labels is a set of labels                                                                                                                                                                    |
+| name        | string         |          | Name is an object name                                                                                                                                                                       |
+| namespace   | string         |          | Namespace is object namespace. The field should be called "namespace" when it returns in Teleport 2.4.                                                                                       |
+| revision    | string         |          | Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource. |
+
+### spec
+
+Spec is a server spec
+
+|      Name      |       Type       | Required |                                       Description                                       |
+|----------------|------------------|----------|-----------------------------------------------------------------------------------------|
+| addr           | string           |          | Addr is a host:port address where this server can be reached.                           |
+| cloud_metadata | object           |          | CloudMetadata contains info about the cloud instance the server is running on, if any.  |
+| hostname       | string           |          | Hostname is server hostname                                                             |
+| peer_addr      | string           |          | PeerAddr is the address a proxy server is reachable at by its peer proxies.             |
+| proxy_ids      | array of strings |          | ProxyIDs is a list of proxy IDs this server is expected to be connected to.             |
+| public_addrs   | array of strings |          | PublicAddrs is a list of public addresses where this server can be reached.             |
+| rotation       | object           |          | Rotation specifies server rotation                                                      |
+| use_tunnel     | bool             |          | UseTunnel indicates that connections to this server should occur over a reverse tunnel. |
+| version        | string           |          | TeleportVersion is the teleport version that the server is running on                   |
+
+#### spec.cloud_metadata
+
+CloudMetadata contains info about the cloud instance the server is running on, if any.
+
+| Name |  Type  | Required |                       Description                        |
+|------|--------|----------|----------------------------------------------------------|
+| aws  | object |          | AWSInfo contains attributes to match to an EC2 instance. |
+
+##### spec.cloud_metadata.aws
+
+AWSInfo contains attributes to match to an EC2 instance.
+
+|    Name     |  Type  | Required |                                                                                                                                            Description                                                                                                                                            |
+|-------------|--------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| account_id  | string |          | AccountID is an AWS account ID.                                                                                                                                                                                                                                                                   |
+| instance_id | string |          | InstanceID is an EC2 instance ID.                                                                                                                                                                                                                                                                 |
+| integration | string |          | Integration is the integration name that added this Node. When connecting to it, it will use this integration to issue AWS API calls in order to set up the connection. This includes sending an SSH Key and then opening a tunnel (EC2 Instance Connect Endpoint) so Teleport can connect to it. |
+| region      | string |          | Region is the AWS EC2 Instance Region.                                                                                                                                                                                                                                                            |
+| subnet_id   | string |          | SubnetID is the Subnet ID in use by the instance.                                                                                                                                                                                                                                                 |
+| vpc_id      | string |          | VPCID is the AWS VPC ID where the Instance is running.                                                                                                                                                                                                                                            |
+
+#### spec.rotation
+
+Rotation specifies server rotation
+
+|     Name     |     Type     | Required |                                                          Description                                                          |
+|--------------|--------------|----------|-------------------------------------------------------------------------------------------------------------------------------|
+| current_id   | string       |          | CurrentID is the ID of the rotation operation to differentiate between rotation attempts.                                     |
+| grace_period | duration     |          | GracePeriod is a period during which old and new CA are valid for checking purposes, but only new CA is issuing certificates. |
+| last_rotated | RFC3339 time |          | LastRotated specifies the last time of the completed rotation.                                                                |
+| mode         | string       |          | Mode sets manual or automatic rotation mode.                                                                                  |
+| phase        | string       |          | Phase is the current rotation phase.                                                                                          |
+| schedule     | object       |          | Schedule is a rotation schedule - used in automatic mode to switch between phases.                                            |
+| started      | RFC3339 time |          | Started is set to the time when rotation has been started in case if the state of the rotation is "in_progress".              |
+| state        | string       |          | State could be one of "init" or "in_progress".                                                                                |
+
+##### spec.rotation.schedule
+
+Schedule is a rotation schedule - used in automatic mode to switch between phases.
+
+|      Name      |     Type     | Required |                              Description                              |
+|----------------|--------------|----------|-----------------------------------------------------------------------|
+| standby        | RFC3339 time |          | Standby specifies time to switch to the "Standby" phase.              |
+| update_clients | RFC3339 time |          | UpdateClients specifies time to switch to the "Update clients" phase  |
+| update_servers | RFC3339 time |          | UpdateServers specifies time to switch to the "Update servers" phase. |
+
+Example:
+
+```
+resource "teleport_server" "ssh_agentless" {
+  version = "v2"
+  sub_kind = "openssh"
+  // Name is not required for servers, this is a special case.
+  // When a name is not set, an UUID will be generated by Teleport and
+  // imported back into Terraform.
+  // Giving unique IDs to servers allows UUID-based dialing (as opposed to
+  // host-based dialing and IP-based dialing) which is more robust than its
+  // counterparts as it can point to a specific server if multiple servers
+  // share the same hostname/ip.
+  spec = {
+    addr = "127.0.0.1:22"
+    hostname = "test.local"
+  }
+}
+
+resource "teleport_server" "ssh_agentless_eice" {
+  version = "v2"
+  sub_kind = "openssh-ec2-ice"
+  metadata = {
+    // It is recommended to put the instance ID as a name for EC2 Instance Connect
+    // When dialing to this instance, teleport will detect that this is an
+    // AWS instance ID an will contact this specific instance. This is more
+    // robust than host-based and IP-based dialing (because several server
+    // can have similar hostnames).
+    name = "i-0123456789abcdef"
+  }
+  spec = {
+    addr = "127.0.0.1:22"
+    hostname = "test.local"
+
+    cloud_metadata = {
+      aws = {
+        account_id  = "123"
+        instance_id = "123"
+        region      = "us-east-1"
+        vpc_id      = "123"
+        integration = "foo"
+        subnet_id   = "123"
+      }
+    }
+  }
+}
+
 ```
 
 ## teleport_session_recording_config

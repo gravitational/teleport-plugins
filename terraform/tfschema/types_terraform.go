@@ -516,6 +516,225 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 	}}, nil
 }
 
+// GenSchemaServerV2 returns tfsdk.Schema definition for ServerV2
+func GenSchemaServerV2(ctx context.Context) (github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema, github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics) {
+	return github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema{Attributes: map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+		"id": {
+			Computed:      true,
+			Optional:      false,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Required:      false,
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+		},
+		"kind": {
+			Computed:      true,
+			Description:   "Kind is a resource kind",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+		},
+		"metadata": {
+			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+				"description": {
+					Description: "Description is object description",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+				},
+				"expires": {
+					Description: "Expires is a global expiry time header can be set on any resource in the system.",
+					Optional:    true,
+					Type:        UseRFC3339Time(),
+					Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{MustTimeBeInFuture()},
+				},
+				"labels": {
+					Description: "Labels is a set of labels",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.MapType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+				},
+				"name": {
+					Computed:      true,
+					Description:   "Name is an object name",
+					Optional:      true,
+					PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
+					Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+				},
+				"namespace": {
+					Computed:      true,
+					Description:   "Namespace is object namespace. The field should be called \"namespace\" when it returns in Teleport 2.4.",
+					Optional:      true,
+					PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+					Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+				},
+				"revision": {
+					Description: "Revision is an opaque identifier which tracks the versions of a resource over time. Clients should ignore and not alter its value but must return the revision in any updates of a resource.",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+				},
+			}),
+			Computed:      true,
+			Description:   "Metadata is resource metadata",
+			Optional:      true,
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
+		},
+		"spec": {
+			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+				"addr": {
+					Description: "Addr is a host:port address where this server can be reached.",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+				},
+				"cloud_metadata": {
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"aws": {
+						Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+							"account_id": {
+								Description: "AccountID is an AWS account ID.",
+								Optional:    true,
+								Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+							},
+							"instance_id": {
+								Description: "InstanceID is an EC2 instance ID.",
+								Optional:    true,
+								Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+							},
+							"integration": {
+								Description: "Integration is the integration name that added this Node. When connecting to it, it will use this integration to issue AWS API calls in order to set up the connection. This includes sending an SSH Key and then opening a tunnel (EC2 Instance Connect Endpoint) so Teleport can connect to it.",
+								Optional:    true,
+								Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+							},
+							"region": {
+								Description: "Region is the AWS EC2 Instance Region.",
+								Optional:    true,
+								Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+							},
+							"subnet_id": {
+								Description: "SubnetID is the Subnet ID in use by the instance.",
+								Optional:    true,
+								Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+							},
+							"vpc_id": {
+								Description: "VPCID is the AWS VPC ID where the Instance is running.",
+								Optional:    true,
+								Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+							},
+						}),
+						Description: "AWSInfo contains attributes to match to an EC2 instance.",
+						Optional:    true,
+					}}),
+					Description: "CloudMetadata contains info about the cloud instance the server is running on, if any.",
+					Optional:    true,
+				},
+				"hostname": {
+					Description: "Hostname is server hostname",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+				},
+				"peer_addr": {
+					Description: "PeerAddr is the address a proxy server is reachable at by its peer proxies.",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+				},
+				"proxy_ids": {
+					Description: "ProxyIDs is a list of proxy IDs this server is expected to be connected to.",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+				},
+				"public_addrs": {
+					Description: "PublicAddrs is a list of public addresses where this server can be reached.",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.ListType{ElemType: github_com_hashicorp_terraform_plugin_framework_types.StringType},
+				},
+				"rotation": {
+					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+						"current_id": {
+							Description: "CurrentID is the ID of the rotation operation to differentiate between rotation attempts.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
+						"grace_period": {
+							Description: "GracePeriod is a period during which old and new CA are valid for checking purposes, but only new CA is issuing certificates.",
+							Optional:    true,
+							Type:        DurationType{},
+						},
+						"last_rotated": {
+							Description: "LastRotated specifies the last time of the completed rotation.",
+							Optional:    true,
+							Type:        UseRFC3339Time(),
+						},
+						"mode": {
+							Description: "Mode sets manual or automatic rotation mode.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
+						"phase": {
+							Description: "Phase is the current rotation phase.",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
+						"schedule": {
+							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
+								"standby": {
+									Description: "Standby specifies time to switch to the \"Standby\" phase.",
+									Optional:    true,
+									Type:        UseRFC3339Time(),
+								},
+								"update_clients": {
+									Description: "UpdateClients specifies time to switch to the \"Update clients\" phase",
+									Optional:    true,
+									Type:        UseRFC3339Time(),
+								},
+								"update_servers": {
+									Description: "UpdateServers specifies time to switch to the \"Update servers\" phase.",
+									Optional:    true,
+									Type:        UseRFC3339Time(),
+								},
+							}),
+							Description: "Schedule is a rotation schedule - used in automatic mode to switch between phases.",
+							Optional:    true,
+						},
+						"started": {
+							Description: "Started is set to the time when rotation has been started in case if the state of the rotation is \"in_progress\".",
+							Optional:    true,
+							Type:        UseRFC3339Time(),
+						},
+						"state": {
+							Description: "State could be one of \"init\" or \"in_progress\".",
+							Optional:    true,
+							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+						},
+					}),
+					Description: "Rotation specifies server rotation",
+					Optional:    true,
+				},
+				"use_tunnel": {
+					Description: "UseTunnel indicates that connections to this server should occur over a reverse tunnel.",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.BoolType,
+				},
+				"version": {
+					Description: "TeleportVersion is the teleport version that the server is running on",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+				},
+			}),
+			Description: "Spec is a server spec",
+			Optional:    true,
+		},
+		"sub_kind": {
+			Description: "SubKind is an optional resource sub kind, used in some resources",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseValueIn("openssh", "openssh-ec2-ice")},
+		},
+		"version": {
+			Description:   "Version is version",
+			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
+			Required:      true,
+			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
+		},
+	}}, nil
+}
+
 // GenSchemaAppV3 returns tfsdk.Schema definition for AppV3
 func GenSchemaAppV3(ctx context.Context) (github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema, github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics) {
 	return github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema{Attributes: map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
@@ -7479,6 +7698,1685 @@ func CopyDatabaseV3ToTerraform(ctx context.Context, obj *github_com_gravitationa
 								}
 								v.Unknown = false
 								tf.Attrs["oracle"] = v
+							}
+						}
+					}
+				}
+				v.Unknown = false
+				tf.Attrs["spec"] = v
+			}
+		}
+	}
+	return diags
+}
+
+// CopyServerV2FromTerraform copies contents of the source Terraform object into a target struct
+func CopyServerV2FromTerraform(_ context.Context, tf github_com_hashicorp_terraform_plugin_framework_types.Object, obj *github_com_gravitational_teleport_api_types.ServerV2) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
+	{
+		a, ok := tf.Attrs["kind"]
+		if !ok {
+			diags.Append(attrReadMissingDiag{"ServerV2.Kind"})
+		} else {
+			v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+			if !ok {
+				diags.Append(attrReadConversionFailureDiag{"ServerV2.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+			} else {
+				var t string
+				if !v.Null && !v.Unknown {
+					t = string(v.Value)
+				}
+				obj.Kind = t
+			}
+		}
+	}
+	{
+		a, ok := tf.Attrs["sub_kind"]
+		if !ok {
+			diags.Append(attrReadMissingDiag{"ServerV2.SubKind"})
+		} else {
+			v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+			if !ok {
+				diags.Append(attrReadConversionFailureDiag{"ServerV2.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+			} else {
+				var t string
+				if !v.Null && !v.Unknown {
+					t = string(v.Value)
+				}
+				obj.SubKind = t
+			}
+		}
+	}
+	{
+		a, ok := tf.Attrs["version"]
+		if !ok {
+			diags.Append(attrReadMissingDiag{"ServerV2.Version"})
+		} else {
+			v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+			if !ok {
+				diags.Append(attrReadConversionFailureDiag{"ServerV2.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+			} else {
+				var t string
+				if !v.Null && !v.Unknown {
+					t = string(v.Value)
+				}
+				obj.Version = t
+			}
+		}
+	}
+	{
+		a, ok := tf.Attrs["metadata"]
+		if !ok {
+			diags.Append(attrReadMissingDiag{"ServerV2.Metadata"})
+		} else {
+			v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+			if !ok {
+				diags.Append(attrReadConversionFailureDiag{"ServerV2.Metadata", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+			} else {
+				obj.Metadata = github_com_gravitational_teleport_api_types.Metadata{}
+				if !v.Null && !v.Unknown {
+					tf := v
+					obj := &obj.Metadata
+					{
+						a, ok := tf.Attrs["name"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Metadata.Name"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Metadata.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+							} else {
+								var t string
+								if !v.Null && !v.Unknown {
+									t = string(v.Value)
+								}
+								obj.Name = t
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["namespace"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Metadata.Namespace"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+							} else {
+								var t string
+								if !v.Null && !v.Unknown {
+									t = string(v.Value)
+								}
+								obj.Namespace = t
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["description"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Metadata.Description"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+							} else {
+								var t string
+								if !v.Null && !v.Unknown {
+									t = string(v.Value)
+								}
+								obj.Description = t
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["labels"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Metadata.Labels"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Map)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Metadata.Labels", "github.com/hashicorp/terraform-plugin-framework/types.Map"})
+							} else {
+								obj.Labels = make(map[string]string, len(v.Elems))
+								if !v.Null && !v.Unknown {
+									for k, a := range v.Elems {
+										v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+										if !ok {
+											diags.Append(attrReadConversionFailureDiag{"ServerV2.Metadata.Labels", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+										} else {
+											var t string
+											if !v.Null && !v.Unknown {
+												t = string(v.Value)
+											}
+											obj.Labels[k] = t
+										}
+									}
+								}
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["expires"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Metadata.Expires"})
+						} else {
+							v, ok := a.(TimeValue)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Metadata.Expires", "TimeValue"})
+							} else {
+								var t *time.Time
+								if !v.Null && !v.Unknown {
+									c := time.Time(v.Value)
+									t = &c
+								}
+								obj.Expires = t
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["revision"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Metadata.Revision"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Metadata.Revision", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+							} else {
+								var t string
+								if !v.Null && !v.Unknown {
+									t = string(v.Value)
+								}
+								obj.Revision = t
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	{
+		a, ok := tf.Attrs["spec"]
+		if !ok {
+			diags.Append(attrReadMissingDiag{"ServerV2.Spec"})
+		} else {
+			v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+			if !ok {
+				diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+			} else {
+				obj.Spec = github_com_gravitational_teleport_api_types.ServerSpecV2{}
+				if !v.Null && !v.Unknown {
+					tf := v
+					obj := &obj.Spec
+					{
+						a, ok := tf.Attrs["addr"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Spec.Addr"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Addr", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+							} else {
+								var t string
+								if !v.Null && !v.Unknown {
+									t = string(v.Value)
+								}
+								obj.Addr = t
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["hostname"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Spec.Hostname"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Hostname", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+							} else {
+								var t string
+								if !v.Null && !v.Unknown {
+									t = string(v.Value)
+								}
+								obj.Hostname = t
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["rotation"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Spec.Rotation"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Rotation", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+							} else {
+								obj.Rotation = github_com_gravitational_teleport_api_types.Rotation{}
+								if !v.Null && !v.Unknown {
+									tf := v
+									obj := &obj.Rotation
+									{
+										a, ok := tf.Attrs["state"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"ServerV2.Spec.Rotation.State"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Rotation.State", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.State = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["phase"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"ServerV2.Spec.Rotation.Phase"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Rotation.Phase", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.Phase = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["mode"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"ServerV2.Spec.Rotation.Mode"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Rotation.Mode", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.Mode = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["current_id"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"ServerV2.Spec.Rotation.CurrentID"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Rotation.CurrentID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											} else {
+												var t string
+												if !v.Null && !v.Unknown {
+													t = string(v.Value)
+												}
+												obj.CurrentID = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["started"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"ServerV2.Spec.Rotation.Started"})
+										} else {
+											v, ok := a.(TimeValue)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Rotation.Started", "TimeValue"})
+											} else {
+												var t time.Time
+												if !v.Null && !v.Unknown {
+													t = time.Time(v.Value)
+												}
+												obj.Started = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["grace_period"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"ServerV2.Spec.Rotation.GracePeriod"})
+										} else {
+											v, ok := a.(DurationValue)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Rotation.GracePeriod", "DurationValue"})
+											} else {
+												var t github_com_gravitational_teleport_api_types.Duration
+												if !v.Null && !v.Unknown {
+													t = github_com_gravitational_teleport_api_types.Duration(v.Value)
+												}
+												obj.GracePeriod = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["last_rotated"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"ServerV2.Spec.Rotation.LastRotated"})
+										} else {
+											v, ok := a.(TimeValue)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Rotation.LastRotated", "TimeValue"})
+											} else {
+												var t time.Time
+												if !v.Null && !v.Unknown {
+													t = time.Time(v.Value)
+												}
+												obj.LastRotated = t
+											}
+										}
+									}
+									{
+										a, ok := tf.Attrs["schedule"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"ServerV2.Spec.Rotation.Schedule"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Rotation.Schedule", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+											} else {
+												obj.Schedule = github_com_gravitational_teleport_api_types.RotationSchedule{}
+												if !v.Null && !v.Unknown {
+													tf := v
+													obj := &obj.Schedule
+													{
+														a, ok := tf.Attrs["update_clients"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"ServerV2.Spec.Rotation.Schedule.UpdateClients"})
+														} else {
+															v, ok := a.(TimeValue)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Rotation.Schedule.UpdateClients", "TimeValue"})
+															} else {
+																var t time.Time
+																if !v.Null && !v.Unknown {
+																	t = time.Time(v.Value)
+																}
+																obj.UpdateClients = t
+															}
+														}
+													}
+													{
+														a, ok := tf.Attrs["update_servers"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"ServerV2.Spec.Rotation.Schedule.UpdateServers"})
+														} else {
+															v, ok := a.(TimeValue)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Rotation.Schedule.UpdateServers", "TimeValue"})
+															} else {
+																var t time.Time
+																if !v.Null && !v.Unknown {
+																	t = time.Time(v.Value)
+																}
+																obj.UpdateServers = t
+															}
+														}
+													}
+													{
+														a, ok := tf.Attrs["standby"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"ServerV2.Spec.Rotation.Schedule.Standby"})
+														} else {
+															v, ok := a.(TimeValue)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Rotation.Schedule.Standby", "TimeValue"})
+															} else {
+																var t time.Time
+																if !v.Null && !v.Unknown {
+																	t = time.Time(v.Value)
+																}
+																obj.Standby = t
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["use_tunnel"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Spec.UseTunnel"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Bool)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.UseTunnel", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
+							} else {
+								var t bool
+								if !v.Null && !v.Unknown {
+									t = bool(v.Value)
+								}
+								obj.UseTunnel = t
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["version"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Spec.Version"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+							} else {
+								var t string
+								if !v.Null && !v.Unknown {
+									t = string(v.Value)
+								}
+								obj.Version = t
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["peer_addr"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Spec.PeerAddr"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.PeerAddr", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+							} else {
+								var t string
+								if !v.Null && !v.Unknown {
+									t = string(v.Value)
+								}
+								obj.PeerAddr = t
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["proxy_ids"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Spec.ProxyIDs"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.ProxyIDs", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+							} else {
+								obj.ProxyIDs = make([]string, len(v.Elems))
+								if !v.Null && !v.Unknown {
+									for k, a := range v.Elems {
+										v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+										if !ok {
+											diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.ProxyIDs", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+										} else {
+											var t string
+											if !v.Null && !v.Unknown {
+												t = string(v.Value)
+											}
+											obj.ProxyIDs[k] = t
+										}
+									}
+								}
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["public_addrs"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Spec.public_addrs"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.List)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.public_addrs", "github.com/hashicorp/terraform-plugin-framework/types.List"})
+							} else {
+								obj.PublicAddrs = make([]string, len(v.Elems))
+								if !v.Null && !v.Unknown {
+									for k, a := range v.Elems {
+										v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+										if !ok {
+											diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.public_addrs", "github_com_hashicorp_terraform_plugin_framework_types.String"})
+										} else {
+											var t string
+											if !v.Null && !v.Unknown {
+												t = string(v.Value)
+											}
+											obj.PublicAddrs[k] = t
+										}
+									}
+								}
+							}
+						}
+					}
+					{
+						a, ok := tf.Attrs["cloud_metadata"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"ServerV2.Spec.CloudMetadata"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.CloudMetadata", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+							} else {
+								obj.CloudMetadata = nil
+								if !v.Null && !v.Unknown {
+									tf := v
+									obj.CloudMetadata = &github_com_gravitational_teleport_api_types.CloudMetadata{}
+									obj := obj.CloudMetadata
+									{
+										a, ok := tf.Attrs["aws"]
+										if !ok {
+											diags.Append(attrReadMissingDiag{"ServerV2.Spec.CloudMetadata.AWS"})
+										} else {
+											v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+											if !ok {
+												diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.CloudMetadata.AWS", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+											} else {
+												obj.AWS = nil
+												if !v.Null && !v.Unknown {
+													tf := v
+													obj.AWS = &github_com_gravitational_teleport_api_types.AWSInfo{}
+													obj := obj.AWS
+													{
+														a, ok := tf.Attrs["account_id"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"ServerV2.Spec.CloudMetadata.AWS.AccountID"})
+														} else {
+															v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.CloudMetadata.AWS.AccountID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															} else {
+																var t string
+																if !v.Null && !v.Unknown {
+																	t = string(v.Value)
+																}
+																obj.AccountID = t
+															}
+														}
+													}
+													{
+														a, ok := tf.Attrs["instance_id"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"ServerV2.Spec.CloudMetadata.AWS.InstanceID"})
+														} else {
+															v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.CloudMetadata.AWS.InstanceID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															} else {
+																var t string
+																if !v.Null && !v.Unknown {
+																	t = string(v.Value)
+																}
+																obj.InstanceID = t
+															}
+														}
+													}
+													{
+														a, ok := tf.Attrs["region"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"ServerV2.Spec.CloudMetadata.AWS.Region"})
+														} else {
+															v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.CloudMetadata.AWS.Region", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															} else {
+																var t string
+																if !v.Null && !v.Unknown {
+																	t = string(v.Value)
+																}
+																obj.Region = t
+															}
+														}
+													}
+													{
+														a, ok := tf.Attrs["vpc_id"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"ServerV2.Spec.CloudMetadata.AWS.VPCID"})
+														} else {
+															v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.CloudMetadata.AWS.VPCID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															} else {
+																var t string
+																if !v.Null && !v.Unknown {
+																	t = string(v.Value)
+																}
+																obj.VPCID = t
+															}
+														}
+													}
+													{
+														a, ok := tf.Attrs["integration"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"ServerV2.Spec.CloudMetadata.AWS.Integration"})
+														} else {
+															v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.CloudMetadata.AWS.Integration", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															} else {
+																var t string
+																if !v.Null && !v.Unknown {
+																	t = string(v.Value)
+																}
+																obj.Integration = t
+															}
+														}
+													}
+													{
+														a, ok := tf.Attrs["subnet_id"]
+														if !ok {
+															diags.Append(attrReadMissingDiag{"ServerV2.Spec.CloudMetadata.AWS.SubnetID"})
+														} else {
+															v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																diags.Append(attrReadConversionFailureDiag{"ServerV2.Spec.CloudMetadata.AWS.SubnetID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+															} else {
+																var t string
+																if !v.Null && !v.Unknown {
+																	t = string(v.Value)
+																}
+																obj.SubnetID = t
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return diags
+}
+
+// CopyServerV2ToTerraform copies contents of the source Terraform object into a target struct
+func CopyServerV2ToTerraform(ctx context.Context, obj *github_com_gravitational_teleport_api_types.ServerV2, tf *github_com_hashicorp_terraform_plugin_framework_types.Object) github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics {
+	var diags github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics
+	tf.Null = false
+	tf.Unknown = false
+	if tf.Attrs == nil {
+		tf.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value)
+	}
+	{
+		t, ok := tf.AttrTypes["kind"]
+		if !ok {
+			diags.Append(attrWriteMissingDiag{"ServerV2.Kind"})
+		} else {
+			v, ok := tf.Attrs["kind"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+			if !ok {
+				i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+				if err != nil {
+					diags.Append(attrWriteGeneralError{"ServerV2.Kind", err})
+				}
+				v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+				if !ok {
+					diags.Append(attrWriteConversionFailureDiag{"ServerV2.Kind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+				}
+				v.Null = string(obj.Kind) == ""
+			}
+			v.Value = string(obj.Kind)
+			v.Unknown = false
+			tf.Attrs["kind"] = v
+		}
+	}
+	{
+		t, ok := tf.AttrTypes["sub_kind"]
+		if !ok {
+			diags.Append(attrWriteMissingDiag{"ServerV2.SubKind"})
+		} else {
+			v, ok := tf.Attrs["sub_kind"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+			if !ok {
+				i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+				if err != nil {
+					diags.Append(attrWriteGeneralError{"ServerV2.SubKind", err})
+				}
+				v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+				if !ok {
+					diags.Append(attrWriteConversionFailureDiag{"ServerV2.SubKind", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+				}
+				v.Null = string(obj.SubKind) == ""
+			}
+			v.Value = string(obj.SubKind)
+			v.Unknown = false
+			tf.Attrs["sub_kind"] = v
+		}
+	}
+	{
+		t, ok := tf.AttrTypes["version"]
+		if !ok {
+			diags.Append(attrWriteMissingDiag{"ServerV2.Version"})
+		} else {
+			v, ok := tf.Attrs["version"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+			if !ok {
+				i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+				if err != nil {
+					diags.Append(attrWriteGeneralError{"ServerV2.Version", err})
+				}
+				v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+				if !ok {
+					diags.Append(attrWriteConversionFailureDiag{"ServerV2.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+				}
+				v.Null = string(obj.Version) == ""
+			}
+			v.Value = string(obj.Version)
+			v.Unknown = false
+			tf.Attrs["version"] = v
+		}
+	}
+	{
+		a, ok := tf.AttrTypes["metadata"]
+		if !ok {
+			diags.Append(attrWriteMissingDiag{"ServerV2.Metadata"})
+		} else {
+			o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+			if !ok {
+				diags.Append(attrWriteConversionFailureDiag{"ServerV2.Metadata", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+			} else {
+				v, ok := tf.Attrs["metadata"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+				if !ok {
+					v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+						AttrTypes: o.AttrTypes,
+						Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+					}
+				} else {
+					if v.Attrs == nil {
+						v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+					}
+				}
+				{
+					obj := obj.Metadata
+					tf := &v
+					{
+						t, ok := tf.AttrTypes["name"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Metadata.Name"})
+						} else {
+							v, ok := tf.Attrs["name"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"ServerV2.Metadata.Name", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"ServerV2.Metadata.Name", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+								}
+								v.Null = string(obj.Name) == ""
+							}
+							v.Value = string(obj.Name)
+							v.Unknown = false
+							tf.Attrs["name"] = v
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["namespace"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Metadata.Namespace"})
+						} else {
+							v, ok := tf.Attrs["namespace"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"ServerV2.Metadata.Namespace", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"ServerV2.Metadata.Namespace", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+								}
+								v.Null = string(obj.Namespace) == ""
+							}
+							v.Value = string(obj.Namespace)
+							v.Unknown = false
+							tf.Attrs["namespace"] = v
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["description"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Metadata.Description"})
+						} else {
+							v, ok := tf.Attrs["description"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"ServerV2.Metadata.Description", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"ServerV2.Metadata.Description", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+								}
+								v.Null = string(obj.Description) == ""
+							}
+							v.Value = string(obj.Description)
+							v.Unknown = false
+							tf.Attrs["description"] = v
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["labels"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Metadata.Labels"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.MapType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"ServerV2.Metadata.Labels", "github.com/hashicorp/terraform-plugin-framework/types.MapType"})
+							} else {
+								c, ok := tf.Attrs["labels"].(github_com_hashicorp_terraform_plugin_framework_types.Map)
+								if !ok {
+									c = github_com_hashicorp_terraform_plugin_framework_types.Map{
+
+										ElemType: o.ElemType,
+										Elems:    make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels)),
+										Null:     true,
+									}
+								} else {
+									if c.Elems == nil {
+										c.Elems = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.Labels))
+									}
+								}
+								if obj.Labels != nil {
+									t := o.ElemType
+									for k, a := range obj.Labels {
+										v, ok := tf.Attrs["labels"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+										if !ok {
+											i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+											if err != nil {
+												diags.Append(attrWriteGeneralError{"ServerV2.Metadata.Labels", err})
+											}
+											v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"ServerV2.Metadata.Labels", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											}
+											v.Null = false
+										}
+										v.Value = string(a)
+										v.Unknown = false
+										c.Elems[k] = v
+									}
+									if len(obj.Labels) > 0 {
+										c.Null = false
+									}
+								}
+								c.Unknown = false
+								tf.Attrs["labels"] = c
+							}
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["expires"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Metadata.Expires"})
+						} else {
+							v, ok := tf.Attrs["expires"].(TimeValue)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"ServerV2.Metadata.Expires", err})
+								}
+								v, ok = i.(TimeValue)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"ServerV2.Metadata.Expires", "TimeValue"})
+								}
+								v.Null = false
+							}
+							if obj.Expires == nil {
+								v.Null = true
+							} else {
+								v.Null = false
+								v.Value = time.Time(*obj.Expires)
+							}
+							v.Unknown = false
+							tf.Attrs["expires"] = v
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["revision"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Metadata.Revision"})
+						} else {
+							v, ok := tf.Attrs["revision"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"ServerV2.Metadata.Revision", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"ServerV2.Metadata.Revision", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+								}
+								v.Null = string(obj.Revision) == ""
+							}
+							v.Value = string(obj.Revision)
+							v.Unknown = false
+							tf.Attrs["revision"] = v
+						}
+					}
+				}
+				v.Unknown = false
+				tf.Attrs["metadata"] = v
+			}
+		}
+	}
+	{
+		a, ok := tf.AttrTypes["spec"]
+		if !ok {
+			diags.Append(attrWriteMissingDiag{"ServerV2.Spec"})
+		} else {
+			o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+			if !ok {
+				diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+			} else {
+				v, ok := tf.Attrs["spec"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+				if !ok {
+					v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+						AttrTypes: o.AttrTypes,
+						Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+					}
+				} else {
+					if v.Attrs == nil {
+						v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+					}
+				}
+				{
+					obj := obj.Spec
+					tf := &v
+					{
+						t, ok := tf.AttrTypes["addr"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Addr"})
+						} else {
+							v, ok := tf.Attrs["addr"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"ServerV2.Spec.Addr", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Addr", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+								}
+								v.Null = string(obj.Addr) == ""
+							}
+							v.Value = string(obj.Addr)
+							v.Unknown = false
+							tf.Attrs["addr"] = v
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["hostname"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Hostname"})
+						} else {
+							v, ok := tf.Attrs["hostname"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"ServerV2.Spec.Hostname", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Hostname", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+								}
+								v.Null = string(obj.Hostname) == ""
+							}
+							v.Value = string(obj.Hostname)
+							v.Unknown = false
+							tf.Attrs["hostname"] = v
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["rotation"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Rotation"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Rotation", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+							} else {
+								v, ok := tf.Attrs["rotation"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+								if !ok {
+									v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+										AttrTypes: o.AttrTypes,
+										Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+									}
+								} else {
+									if v.Attrs == nil {
+										v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+									}
+								}
+								{
+									obj := obj.Rotation
+									tf := &v
+									{
+										t, ok := tf.AttrTypes["state"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Rotation.State"})
+										} else {
+											v, ok := tf.Attrs["state"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"ServerV2.Spec.Rotation.State", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Rotation.State", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.State) == ""
+											}
+											v.Value = string(obj.State)
+											v.Unknown = false
+											tf.Attrs["state"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["phase"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Rotation.Phase"})
+										} else {
+											v, ok := tf.Attrs["phase"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"ServerV2.Spec.Rotation.Phase", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Rotation.Phase", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.Phase) == ""
+											}
+											v.Value = string(obj.Phase)
+											v.Unknown = false
+											tf.Attrs["phase"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["mode"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Rotation.Mode"})
+										} else {
+											v, ok := tf.Attrs["mode"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"ServerV2.Spec.Rotation.Mode", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Rotation.Mode", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.Mode) == ""
+											}
+											v.Value = string(obj.Mode)
+											v.Unknown = false
+											tf.Attrs["mode"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["current_id"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Rotation.CurrentID"})
+										} else {
+											v, ok := tf.Attrs["current_id"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"ServerV2.Spec.Rotation.CurrentID", err})
+												}
+												v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Rotation.CurrentID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+												}
+												v.Null = string(obj.CurrentID) == ""
+											}
+											v.Value = string(obj.CurrentID)
+											v.Unknown = false
+											tf.Attrs["current_id"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["started"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Rotation.Started"})
+										} else {
+											v, ok := tf.Attrs["started"].(TimeValue)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"ServerV2.Spec.Rotation.Started", err})
+												}
+												v, ok = i.(TimeValue)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Rotation.Started", "TimeValue"})
+												}
+												v.Null = false
+											}
+											v.Value = time.Time(obj.Started)
+											v.Unknown = false
+											tf.Attrs["started"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["grace_period"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Rotation.GracePeriod"})
+										} else {
+											v, ok := tf.Attrs["grace_period"].(DurationValue)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"ServerV2.Spec.Rotation.GracePeriod", err})
+												}
+												v, ok = i.(DurationValue)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Rotation.GracePeriod", "DurationValue"})
+												}
+												v.Null = false
+											}
+											v.Value = time.Duration(obj.GracePeriod)
+											v.Unknown = false
+											tf.Attrs["grace_period"] = v
+										}
+									}
+									{
+										t, ok := tf.AttrTypes["last_rotated"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Rotation.LastRotated"})
+										} else {
+											v, ok := tf.Attrs["last_rotated"].(TimeValue)
+											if !ok {
+												i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+												if err != nil {
+													diags.Append(attrWriteGeneralError{"ServerV2.Spec.Rotation.LastRotated", err})
+												}
+												v, ok = i.(TimeValue)
+												if !ok {
+													diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Rotation.LastRotated", "TimeValue"})
+												}
+												v.Null = false
+											}
+											v.Value = time.Time(obj.LastRotated)
+											v.Unknown = false
+											tf.Attrs["last_rotated"] = v
+										}
+									}
+									{
+										a, ok := tf.AttrTypes["schedule"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Rotation.Schedule"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Rotation.Schedule", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+											} else {
+												v, ok := tf.Attrs["schedule"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+												if !ok {
+													v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+														AttrTypes: o.AttrTypes,
+														Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+													}
+												} else {
+													if v.Attrs == nil {
+														v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+													}
+												}
+												{
+													obj := obj.Schedule
+													tf := &v
+													{
+														t, ok := tf.AttrTypes["update_clients"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Rotation.Schedule.UpdateClients"})
+														} else {
+															v, ok := tf.Attrs["update_clients"].(TimeValue)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"ServerV2.Spec.Rotation.Schedule.UpdateClients", err})
+																}
+																v, ok = i.(TimeValue)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Rotation.Schedule.UpdateClients", "TimeValue"})
+																}
+																v.Null = false
+															}
+															v.Value = time.Time(obj.UpdateClients)
+															v.Unknown = false
+															tf.Attrs["update_clients"] = v
+														}
+													}
+													{
+														t, ok := tf.AttrTypes["update_servers"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Rotation.Schedule.UpdateServers"})
+														} else {
+															v, ok := tf.Attrs["update_servers"].(TimeValue)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"ServerV2.Spec.Rotation.Schedule.UpdateServers", err})
+																}
+																v, ok = i.(TimeValue)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Rotation.Schedule.UpdateServers", "TimeValue"})
+																}
+																v.Null = false
+															}
+															v.Value = time.Time(obj.UpdateServers)
+															v.Unknown = false
+															tf.Attrs["update_servers"] = v
+														}
+													}
+													{
+														t, ok := tf.AttrTypes["standby"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Rotation.Schedule.Standby"})
+														} else {
+															v, ok := tf.Attrs["standby"].(TimeValue)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"ServerV2.Spec.Rotation.Schedule.Standby", err})
+																}
+																v, ok = i.(TimeValue)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Rotation.Schedule.Standby", "TimeValue"})
+																}
+																v.Null = false
+															}
+															v.Value = time.Time(obj.Standby)
+															v.Unknown = false
+															tf.Attrs["standby"] = v
+														}
+													}
+												}
+												v.Unknown = false
+												tf.Attrs["schedule"] = v
+											}
+										}
+									}
+								}
+								v.Unknown = false
+								tf.Attrs["rotation"] = v
+							}
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["use_tunnel"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Spec.UseTunnel"})
+						} else {
+							v, ok := tf.Attrs["use_tunnel"].(github_com_hashicorp_terraform_plugin_framework_types.Bool)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"ServerV2.Spec.UseTunnel", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.Bool)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.UseTunnel", "github.com/hashicorp/terraform-plugin-framework/types.Bool"})
+								}
+								v.Null = bool(obj.UseTunnel) == false
+							}
+							v.Value = bool(obj.UseTunnel)
+							v.Unknown = false
+							tf.Attrs["use_tunnel"] = v
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["version"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Spec.Version"})
+						} else {
+							v, ok := tf.Attrs["version"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"ServerV2.Spec.Version", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.Version", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+								}
+								v.Null = string(obj.Version) == ""
+							}
+							v.Value = string(obj.Version)
+							v.Unknown = false
+							tf.Attrs["version"] = v
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["peer_addr"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Spec.PeerAddr"})
+						} else {
+							v, ok := tf.Attrs["peer_addr"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"ServerV2.Spec.PeerAddr", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.PeerAddr", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+								}
+								v.Null = string(obj.PeerAddr) == ""
+							}
+							v.Value = string(obj.PeerAddr)
+							v.Unknown = false
+							tf.Attrs["peer_addr"] = v
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["proxy_ids"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Spec.ProxyIDs"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.ProxyIDs", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+							} else {
+								c, ok := tf.Attrs["proxy_ids"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+								if !ok {
+									c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+										ElemType: o.ElemType,
+										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.ProxyIDs)),
+										Null:     true,
+									}
+								} else {
+									if c.Elems == nil {
+										c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.ProxyIDs))
+									}
+								}
+								if obj.ProxyIDs != nil {
+									t := o.ElemType
+									if len(obj.ProxyIDs) != len(c.Elems) {
+										c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.ProxyIDs))
+									}
+									for k, a := range obj.ProxyIDs {
+										v, ok := tf.Attrs["proxy_ids"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+										if !ok {
+											i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+											if err != nil {
+												diags.Append(attrWriteGeneralError{"ServerV2.Spec.ProxyIDs", err})
+											}
+											v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.ProxyIDs", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											}
+											v.Null = string(a) == ""
+										}
+										v.Value = string(a)
+										v.Unknown = false
+										c.Elems[k] = v
+									}
+									if len(obj.ProxyIDs) > 0 {
+										c.Null = false
+									}
+								}
+								c.Unknown = false
+								tf.Attrs["proxy_ids"] = c
+							}
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["public_addrs"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Spec.public_addrs"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ListType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.public_addrs", "github.com/hashicorp/terraform-plugin-framework/types.ListType"})
+							} else {
+								c, ok := tf.Attrs["public_addrs"].(github_com_hashicorp_terraform_plugin_framework_types.List)
+								if !ok {
+									c = github_com_hashicorp_terraform_plugin_framework_types.List{
+
+										ElemType: o.ElemType,
+										Elems:    make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.PublicAddrs)),
+										Null:     true,
+									}
+								} else {
+									if c.Elems == nil {
+										c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.PublicAddrs))
+									}
+								}
+								if obj.PublicAddrs != nil {
+									t := o.ElemType
+									if len(obj.PublicAddrs) != len(c.Elems) {
+										c.Elems = make([]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(obj.PublicAddrs))
+									}
+									for k, a := range obj.PublicAddrs {
+										v, ok := tf.Attrs["public_addrs"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+										if !ok {
+											i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+											if err != nil {
+												diags.Append(attrWriteGeneralError{"ServerV2.Spec.public_addrs", err})
+											}
+											v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.public_addrs", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+											}
+											v.Null = string(a) == ""
+										}
+										v.Value = string(a)
+										v.Unknown = false
+										c.Elems[k] = v
+									}
+									if len(obj.PublicAddrs) > 0 {
+										c.Null = false
+									}
+								}
+								c.Unknown = false
+								tf.Attrs["public_addrs"] = c
+							}
+						}
+					}
+					{
+						a, ok := tf.AttrTypes["cloud_metadata"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"ServerV2.Spec.CloudMetadata"})
+						} else {
+							o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+							if !ok {
+								diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.CloudMetadata", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+							} else {
+								v, ok := tf.Attrs["cloud_metadata"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+								if !ok {
+									v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+										AttrTypes: o.AttrTypes,
+										Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+									}
+								} else {
+									if v.Attrs == nil {
+										v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+									}
+								}
+								if obj.CloudMetadata == nil {
+									v.Null = true
+								} else {
+									obj := obj.CloudMetadata
+									tf := &v
+									{
+										a, ok := tf.AttrTypes["aws"]
+										if !ok {
+											diags.Append(attrWriteMissingDiag{"ServerV2.Spec.CloudMetadata.AWS"})
+										} else {
+											o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+											if !ok {
+												diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.CloudMetadata.AWS", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+											} else {
+												v, ok := tf.Attrs["aws"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+												if !ok {
+													v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+														AttrTypes: o.AttrTypes,
+														Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+													}
+												} else {
+													if v.Attrs == nil {
+														v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+													}
+												}
+												if obj.AWS == nil {
+													v.Null = true
+												} else {
+													obj := obj.AWS
+													tf := &v
+													{
+														t, ok := tf.AttrTypes["account_id"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"ServerV2.Spec.CloudMetadata.AWS.AccountID"})
+														} else {
+															v, ok := tf.Attrs["account_id"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"ServerV2.Spec.CloudMetadata.AWS.AccountID", err})
+																}
+																v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.CloudMetadata.AWS.AccountID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+																}
+																v.Null = string(obj.AccountID) == ""
+															}
+															v.Value = string(obj.AccountID)
+															v.Unknown = false
+															tf.Attrs["account_id"] = v
+														}
+													}
+													{
+														t, ok := tf.AttrTypes["instance_id"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"ServerV2.Spec.CloudMetadata.AWS.InstanceID"})
+														} else {
+															v, ok := tf.Attrs["instance_id"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"ServerV2.Spec.CloudMetadata.AWS.InstanceID", err})
+																}
+																v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.CloudMetadata.AWS.InstanceID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+																}
+																v.Null = string(obj.InstanceID) == ""
+															}
+															v.Value = string(obj.InstanceID)
+															v.Unknown = false
+															tf.Attrs["instance_id"] = v
+														}
+													}
+													{
+														t, ok := tf.AttrTypes["region"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"ServerV2.Spec.CloudMetadata.AWS.Region"})
+														} else {
+															v, ok := tf.Attrs["region"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"ServerV2.Spec.CloudMetadata.AWS.Region", err})
+																}
+																v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.CloudMetadata.AWS.Region", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+																}
+																v.Null = string(obj.Region) == ""
+															}
+															v.Value = string(obj.Region)
+															v.Unknown = false
+															tf.Attrs["region"] = v
+														}
+													}
+													{
+														t, ok := tf.AttrTypes["vpc_id"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"ServerV2.Spec.CloudMetadata.AWS.VPCID"})
+														} else {
+															v, ok := tf.Attrs["vpc_id"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"ServerV2.Spec.CloudMetadata.AWS.VPCID", err})
+																}
+																v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.CloudMetadata.AWS.VPCID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+																}
+																v.Null = string(obj.VPCID) == ""
+															}
+															v.Value = string(obj.VPCID)
+															v.Unknown = false
+															tf.Attrs["vpc_id"] = v
+														}
+													}
+													{
+														t, ok := tf.AttrTypes["integration"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"ServerV2.Spec.CloudMetadata.AWS.Integration"})
+														} else {
+															v, ok := tf.Attrs["integration"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"ServerV2.Spec.CloudMetadata.AWS.Integration", err})
+																}
+																v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.CloudMetadata.AWS.Integration", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+																}
+																v.Null = string(obj.Integration) == ""
+															}
+															v.Value = string(obj.Integration)
+															v.Unknown = false
+															tf.Attrs["integration"] = v
+														}
+													}
+													{
+														t, ok := tf.AttrTypes["subnet_id"]
+														if !ok {
+															diags.Append(attrWriteMissingDiag{"ServerV2.Spec.CloudMetadata.AWS.SubnetID"})
+														} else {
+															v, ok := tf.Attrs["subnet_id"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+															if !ok {
+																i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+																if err != nil {
+																	diags.Append(attrWriteGeneralError{"ServerV2.Spec.CloudMetadata.AWS.SubnetID", err})
+																}
+																v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+																if !ok {
+																	diags.Append(attrWriteConversionFailureDiag{"ServerV2.Spec.CloudMetadata.AWS.SubnetID", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+																}
+																v.Null = string(obj.SubnetID) == ""
+															}
+															v.Value = string(obj.SubnetID)
+															v.Unknown = false
+															tf.Attrs["subnet_id"] = v
+														}
+													}
+												}
+												v.Unknown = false
+												tf.Attrs["aws"] = v
+											}
+										}
+									}
+								}
+								v.Unknown = false
+								tf.Attrs["cloud_metadata"] = v
 							}
 						}
 					}

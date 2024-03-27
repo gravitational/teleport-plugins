@@ -108,6 +108,13 @@ type payload struct {
 	// existing resource when we're updating it. For example:
 	// "Spec.Audit.NextAuditDate" in AccessList resource
 	PropagatedFields []string
+	// Namespaced indicates that the resource get and delete methods need the
+	// deprecated namespace parameter (always the default namespace).
+	Namespaced bool
+	// ForceSetKind indicates that the resource kind must be forcefully set by the provider.
+	// This is required for some special resources (ServerV2) that support multiple kinds.
+	// For those resources, we must set the kind, and don't want to have the user do it.
+	ForceSetKind string
 }
 
 func (p *payload) CheckAndSetDefaults() error {
@@ -424,6 +431,24 @@ var (
 		HasCheckAndSetDefaults: true,
 		PropagatedFields:       []string{"Spec.Audit.NextAuditDate"},
 	}
+
+	server = payload{
+		Name:                   "Server",
+		TypeName:               "ServerV2",
+		VarName:                "server",
+		GetMethod:              "GetNode",
+		CreateMethod:           "UpsertNode",
+		UpdateMethod:           "UpsertNode",
+		UpsertMethodArity:      2,
+		DeleteMethod:           "DeleteNode",
+		ID:                     "server.Metadata.Name",
+		Kind:                   "node",
+		HasStaticID:            false,
+		TerraformResourceType:  "teleport_server",
+		HasCheckAndSetDefaults: true,
+		Namespaced:             true,
+		ForceSetKind:           "apitypes.KindNode",
+	}
 )
 
 func main() {
@@ -469,6 +494,8 @@ func genTFSchema() {
 	generateDataSource(oktaImportRule, pluralDataSource)
 	generateResource(accessList, pluralResource)
 	generateDataSource(accessList, pluralDataSource)
+	generateResource(server, pluralResource)
+	generateDataSource(server, pluralDataSource)
 }
 
 func generateResource(p payload, tpl string) {
@@ -540,6 +567,7 @@ var (
 		"session_recording_config":   tfschema.GenSchemaSessionRecordingConfigV2,
 		"trusted_cluster":            tfschema.GenSchemaTrustedClusterV2,
 		"user":                       tfschema.GenSchemaUserV2,
+		"server":                     tfschema.GenSchemaServerV2,
 	}
 
 	// hiddenFields are fields that are not outputted to the reference doc.

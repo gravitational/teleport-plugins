@@ -581,6 +581,7 @@ func (p *Provider) GetResources(_ context.Context) (map[string]tfsdk.ResourceTyp
 		"teleport_trusted_device":             resourceTeleportDeviceV1Type{},
 		"teleport_okta_import_rule":           resourceTeleportOktaImportRuleType{},
 		"teleport_access_list":                resourceTeleportAccessListType{},
+		"teleport_server":                     resourceTeleportServerType{},
 	}, nil
 }
 

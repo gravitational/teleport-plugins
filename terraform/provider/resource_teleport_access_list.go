@@ -81,6 +81,12 @@ func (r resourceTeleportAccessList) Create(ctx context.Context, req tfsdk.Create
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AccessList", trace.Errorf("Can not convert %T to AccessList: %s", accessListResource, err), "access_list"))
 		return
 	}
+	err = accessListResource.CheckAndSetDefaults()
+	if err != nil {
+		resp.Diagnostics.Append(diagFromWrappedErr("Error setting AccessList defaults", trace.Wrap(err), "access_list"))
+		return
+	}
+
 	id := accessListResource.Metadata.Name
 
 	_, err = r.p.Client.AccessListClient().GetAccessList(ctx, id)
@@ -94,12 +100,6 @@ func (r resourceTeleportAccessList) Create(ctx context.Context, req tfsdk.Create
 		}
 
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading AccessList", trace.Wrap(err), "access_list"))
-		return
-	}
-
-	err = accessListResource.CheckAndSetDefaults()
-	if err != nil {
-		resp.Diagnostics.Append(diagFromWrappedErr("Error setting AccessList defaults", trace.Wrap(err), "access_list"))
 		return
 	}
 
