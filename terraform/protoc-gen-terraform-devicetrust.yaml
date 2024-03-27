@@ -60,14 +60,6 @@ plan_modifiers:
     # Force to recreate resource if asset tag changes
     "DeviceV1.spec.asset_tag":
       - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
-    # Version MUST NOT change. Due to the way Terraform imports back the resource
-    # in its state (the provider relies on `USeStateForUnknown`) and the fact
-    # Teleport mixes the injected defaults with the original resource, defaults
-    # are set only on resource creation. Upgrading an existing resource will
-    # create a hybrid: a resource with the new version but old defaults.
-    DeviceV1.Version:
-      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.UseStateForUnknown()"
-      - "github.com/hashicorp/terraform-plugin-framework/tfsdk.RequiresReplace()"
 
 
 time_type:
