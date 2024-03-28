@@ -479,7 +479,7 @@ func GenSchemaDatabaseV3(ctx context.Context) (github_com_hashicorp_terraform_pl
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
 						"mode": {
-							Description: "Mode is a TLS connection mode. See DatabaseTLSMode for details.",
+							Description: "Mode is a TLS connection mode. 0 is \"verify-full\"; 1 is \"verify-ca\", 2 is \"insecure\".",
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
 						},
@@ -725,11 +725,10 @@ func GenSchemaServerV2(ctx context.Context) (github_com_hashicorp_terraform_plug
 			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseValueIn("openssh", "openssh-ec2-ice")},
 		},
 		"version": {
-			Description:   "Version is version",
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown(), github_com_hashicorp_terraform_plugin_framework_tfsdk.RequiresReplace()},
-			Required:      true,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:    []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
+			Description: "Version is version",
+			Required:    true,
+			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{UseVersionBetween(2, 2)},
 		},
 	}}, nil
 }
@@ -834,6 +833,11 @@ func GenSchemaAppV3(ctx context.Context) (github_com_hashicorp_terraform_plugin_
 					Description: "InsecureSkipVerify disables app's TLS certificate verification.",
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.BoolType,
+				},
+				"integration": {
+					Description: "Integration is the integration name that must be used to access this Application. Only applicable to AWS App Access. If present, the Application must use the Integration's credentials instead of ambient credentials to access Cloud APIs.",
+					Optional:    true,
+					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
 				"public_addr": {
 					Description: "PublicAddr is the public address the application is accessible at.",
@@ -1407,7 +1411,7 @@ func GenSchemaClusterNetworkingConfigV2(ctx context.Context) (github_com_hashico
 					Type:          DurationType{},
 				},
 				"proxy_listener_mode": {
-					Description: "ProxyListenerMode is proxy listener mode used by Teleport Proxies.",
+					Description: "ProxyListenerMode is proxy listener mode used by Teleport Proxies. 0 is \"separate\"; 1 is \"multiplex\".",
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
 				},
@@ -1417,7 +1421,7 @@ func GenSchemaClusterNetworkingConfigV2(ctx context.Context) (github_com_hashico
 					Type:        DurationType{},
 				},
 				"routing_strategy": {
-					Description: "RoutingStrategy determines the strategy used to route to nodes.",
+					Description: "RoutingStrategy determines the strategy used to route to nodes. 0 is \"unambiguous_match\"; 1 is \"most_recent\".",
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
 				},
@@ -1710,7 +1714,7 @@ func GenSchemaAuthPreferenceV2(ctx context.Context) (github_com_hashicorp_terraf
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 				},
 				"require_session_mfa": {
-					Description: "RequireMFAType is the type of MFA requirement enforced for this cluster.",
+					Description: "RequireMFAType is the type of MFA requirement enforced for this cluster. 0 is \"OFF\", 1 is \"SESSION\", 2 is \"SESSION_AND_HARDWARE_KEY\", 3 is \"HARDWARE_KEY_TOUCH\", 4 is \"HARDWARE_KEY_PIN\", 5 is \"HARDWARE_KEY_TOUCH_AND_PIN\".",
 					Optional:    true,
 					Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
 				},
@@ -2662,7 +2666,7 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 						"cert_extensions": {
 							Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.ListNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
 								"mode": {
-									Description: "Mode is the type of extension to be used -- currently critical-option is not supported",
+									Description: "Mode is the type of extension to be used -- currently critical-option is not supported. 0 is \"extension\".",
 									Optional:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
 								},
@@ -2672,7 +2676,7 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 								},
 								"type": {
-									Description: "Type represents the certificate type being extended, only ssh is supported at this time.",
+									Description: "Type represents the certificate type being extended, only ssh is supported at this time. 0 is \"ssh\".",
 									Optional:    true,
 									Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
 								},
@@ -2699,14 +2703,14 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 						},
 						"create_db_user": GenSchemaBoolOption(ctx),
 						"create_db_user_mode": {
-							Description: "CreateDatabaseUserMode allows users to be automatically created on a database when not set to off.",
+							Description: "CreateDatabaseUserMode allows users to be automatically created on a database when not set to off. 0 is \"unspecified\", 1 is \"off\", 2 is \"keep\", 3 is \"best_effort_drop\".",
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
 						},
 						"create_desktop_user": GenSchemaBoolOption(ctx),
 						"create_host_user":    GenSchemaBoolOption(ctx),
 						"create_host_user_mode": {
-							Description: "CreateHostUserMode allows users to be automatically created on a host when not set to off",
+							Description: "CreateHostUserMode allows users to be automatically created on a host when not set to off. 0 is \"unspecified\"; 1 is \"off\"; 2 is \"drop\" (removed for v15 and above), 3 is \"keep\"; 4 is \"insecure-drop\".",
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
 						},
@@ -2809,7 +2813,7 @@ func GenSchemaRoleV6(ctx context.Context) (github_com_hashicorp_terraform_plugin
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
 						},
 						"require_session_mfa": {
-							Description: "RequireMFAType is the type of MFA requirement enforced for this user.",
+							Description: "RequireMFAType is the type of MFA requirement enforced for this user. 0 is \"OFF\", 1 is \"SESSION\", 2 is \"SESSION_AND_HARDWARE_KEY\", 3 is \"HARDWARE_KEY_TOUCH\", 4 is \"HARDWARE_KEY_PIN\", 5 is \"HARDWARE_KEY_TOUCH_AND_PIN\".",
 							Optional:    true,
 							Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
 						},
@@ -9917,6 +9921,23 @@ func CopyAppV3FromTerraform(_ context.Context, tf github_com_hashicorp_terraform
 							}
 						}
 					}
+					{
+						a, ok := tf.Attrs["integration"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"AppV3.Spec.Integration"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"AppV3.Spec.Integration", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+							} else {
+								var t string
+								if !v.Null && !v.Unknown {
+									t = string(v.Value)
+								}
+								obj.Integration = t
+							}
+						}
+					}
 				}
 			}
 		}
@@ -10769,6 +10790,28 @@ func CopyAppV3ToTerraform(ctx context.Context, obj *github_com_gravitational_tel
 								c.Unknown = false
 								tf.Attrs["user_groups"] = c
 							}
+						}
+					}
+					{
+						t, ok := tf.AttrTypes["integration"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"AppV3.Spec.Integration"})
+						} else {
+							v, ok := tf.Attrs["integration"].(github_com_hashicorp_terraform_plugin_framework_types.String)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"AppV3.Spec.Integration", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.String)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"AppV3.Spec.Integration", "github.com/hashicorp/terraform-plugin-framework/types.String"})
+								}
+								v.Null = string(obj.Integration) == ""
+							}
+							v.Value = string(obj.Integration)
+							v.Unknown = false
+							tf.Attrs["integration"] = v
 						}
 					}
 				}
