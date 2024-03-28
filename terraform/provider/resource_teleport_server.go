@@ -117,13 +117,12 @@ func (r resourceTeleportServer) Create(ctx context.Context, req tfsdk.CreateReso
 		serverI, err = r.p.Client.GetNode(ctx, defaults.Namespace, id)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading Server", trace.Wrap(err), "node"))
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading Server", trace.Wrap(bErr), "node"))
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
 				diagMessage := fmt.Sprintf("Error reading Server (tried %d times) - state outdated, please import resource", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "node"))
-				return
+				resp.Diagnostics.AddError(diagMessage, "node")
 			}
 			continue
 		}
@@ -251,7 +250,7 @@ func (r resourceTeleportServer) Update(ctx context.Context, req tfsdk.UpdateReso
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Server", err, "node"))
 			return
 		}
-		if serverBefore.GetMetadata().ID != serverI.GetMetadata().ID || false {
+		if serverBefore.GetMetadata().Revision != serverI.GetMetadata().Revision || false {
 			break
 		}
 

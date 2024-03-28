@@ -115,13 +115,12 @@ func (r resourceTeleportRole) Create(ctx context.Context, req tfsdk.CreateResour
 		roleI, err = r.p.Client.GetRole(ctx, id)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(err), "role"))
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", trace.Wrap(bErr), "role"))
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
 				diagMessage := fmt.Sprintf("Error reading Role (tried %d times) - state outdated, please import resource", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "role"))
-				return
+				resp.Diagnostics.AddError(diagMessage, "role")
 			}
 			continue
 		}
@@ -249,7 +248,7 @@ func (r resourceTeleportRole) Update(ctx context.Context, req tfsdk.UpdateResour
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Role", err, "role"))
 			return
 		}
-		if roleBefore.GetMetadata().ID != roleI.GetMetadata().ID || false {
+		if roleBefore.GetMetadata().Revision != roleI.GetMetadata().Revision || false {
 			break
 		}
 

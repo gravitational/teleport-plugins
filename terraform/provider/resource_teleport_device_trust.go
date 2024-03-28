@@ -112,13 +112,12 @@ func (r resourceTeleportDeviceV1) Create(ctx context.Context, req tfsdk.CreateRe
 		trustedDeviceI, err = r.p.Client.GetDeviceResource(ctx, id)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading DeviceV1", trace.Wrap(err), "device"))
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading DeviceV1", trace.Wrap(bErr), "device"))
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
 				diagMessage := fmt.Sprintf("Error reading DeviceV1 (tried %d times) - state outdated, please import resource", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "device"))
-				return
+				resp.Diagnostics.AddError(diagMessage, "device")
 			}
 			continue
 		}
@@ -237,7 +236,7 @@ func (r resourceTeleportDeviceV1) Update(ctx context.Context, req tfsdk.UpdateRe
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading DeviceV1", err, "device"))
 			return
 		}
-		if trustedDeviceBefore.GetMetadata().ID != trustedDeviceI.GetMetadata().ID || true {
+		if trustedDeviceBefore.GetMetadata().Revision != trustedDeviceI.GetMetadata().Revision || true {
 			break
 		}
 

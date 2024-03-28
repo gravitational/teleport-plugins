@@ -115,13 +115,12 @@ func (r resourceTeleportOIDCConnector) Create(ctx context.Context, req tfsdk.Cre
 		oidcConnectorI, err = r.p.Client.GetOIDCConnector(ctx, id, true)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(err), "oidc"))
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", trace.Wrap(bErr), "oidc"))
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
 				diagMessage := fmt.Sprintf("Error reading OIDCConnector (tried %d times) - state outdated, please import resource", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "oidc"))
-				return
+				resp.Diagnostics.AddError(diagMessage, "oidc")
 			}
 			continue
 		}
@@ -249,7 +248,7 @@ func (r resourceTeleportOIDCConnector) Update(ctx context.Context, req tfsdk.Upd
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading OIDCConnector", err, "oidc"))
 			return
 		}
-		if oidcConnectorBefore.GetMetadata().ID != oidcConnectorI.GetMetadata().ID || true {
+		if oidcConnectorBefore.GetMetadata().Revision != oidcConnectorI.GetMetadata().Revision || true {
 			break
 		}
 

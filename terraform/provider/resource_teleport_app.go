@@ -115,13 +115,12 @@ func (r resourceTeleportApp) Create(ctx context.Context, req tfsdk.CreateResourc
 		appI, err = r.p.Client.GetApp(ctx, id)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(err), "app"))
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", trace.Wrap(bErr), "app"))
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
 				diagMessage := fmt.Sprintf("Error reading App (tried %d times) - state outdated, please import resource", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "app"))
-				return
+				resp.Diagnostics.AddError(diagMessage, "app")
 			}
 			continue
 		}
@@ -249,7 +248,7 @@ func (r resourceTeleportApp) Update(ctx context.Context, req tfsdk.UpdateResourc
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading App", err, "app"))
 			return
 		}
-		if appBefore.GetMetadata().ID != appI.GetMetadata().ID || false {
+		if appBefore.GetMetadata().Revision != appI.GetMetadata().Revision || false {
 			break
 		}
 
