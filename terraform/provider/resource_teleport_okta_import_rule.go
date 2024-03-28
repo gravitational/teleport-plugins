@@ -115,13 +115,12 @@ func (r resourceTeleportOktaImportRule) Create(ctx context.Context, req tfsdk.Cr
 		oktaImportRuleI, err = r.p.Client.OktaClient().GetOktaImportRule(ctx, id)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading OktaImportRule", trace.Wrap(err), "okta_import_rule"))
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading OktaImportRule", trace.Wrap(bErr), "okta_import_rule"))
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
 				diagMessage := fmt.Sprintf("Error reading OktaImportRule (tried %d times) - state outdated, please import resource", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "okta_import_rule"))
-				return
+				resp.Diagnostics.AddError(diagMessage, "okta_import_rule")
 			}
 			continue
 		}
@@ -249,7 +248,7 @@ func (r resourceTeleportOktaImportRule) Update(ctx context.Context, req tfsdk.Up
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading OktaImportRule", err, "okta_import_rule"))
 			return
 		}
-		if oktaImportRuleBefore.GetMetadata().ID != oktaImportRuleI.GetMetadata().ID || false {
+		if oktaImportRuleBefore.GetMetadata().Revision != oktaImportRuleI.GetMetadata().Revision || false {
 			break
 		}
 

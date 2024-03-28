@@ -107,16 +107,16 @@ func (r resourceTeleportClusterNetworkingConfig) Create(ctx context.Context, req
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
 			return
 		}
-		if clusterNetworkingConfigBefore.GetMetadata().ID != clusterNetworkingConfigI.GetMetadata().ID || false {
+		if clusterNetworkingConfigBefore.GetMetadata().Revision != clusterNetworkingConfigI.GetMetadata().Revision || false {
 			break
 		}
 		if bErr := backoff.Do(ctx); bErr != nil {
-			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(bErr), "cluster_networking_config"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading ClusterNetworkingConfig (tried %d times) - state outdated, please import resource", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "cluster_networking_config"))
+			resp.Diagnostics.AddError(diagMessage, "cluster_networking_config")
 			return
 		}
 	}
@@ -227,11 +227,11 @@ func (r resourceTeleportClusterNetworkingConfig) Update(ctx context.Context, req
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
 			return
 		}
-		if clusterNetworkingConfigBefore.GetMetadata().ID != clusterNetworkingConfigI.GetMetadata().ID || false {
+		if clusterNetworkingConfigBefore.GetMetadata().Revision != clusterNetworkingConfigI.GetMetadata().Revision || false {
 			break
 		}
 		if bErr := backoff.Do(ctx); bErr != nil {
-			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(err), "cluster_networking_config"))
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterNetworkingConfig", trace.Wrap(bErr), "cluster_networking_config"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {

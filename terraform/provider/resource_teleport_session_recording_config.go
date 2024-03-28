@@ -107,16 +107,16 @@ func (r resourceTeleportSessionRecordingConfig) Create(ctx context.Context, req 
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
 			return
 		}
-		if sessionRecordingConfigBefore.GetMetadata().ID != sessionRecordingConfigI.GetMetadata().ID || false {
+		if sessionRecordingConfigBefore.GetMetadata().Revision != sessionRecordingConfigI.GetMetadata().Revision || false {
 			break
 		}
 		if bErr := backoff.Do(ctx); bErr != nil {
-			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(bErr), "session_recording_config"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading SessionRecordingConfig (tried %d times) - state outdated, please import resource", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "session_recording_config"))
+			resp.Diagnostics.AddError(diagMessage, "session_recording_config")
 			return
 		}
 	}
@@ -227,11 +227,11 @@ func (r resourceTeleportSessionRecordingConfig) Update(ctx context.Context, req 
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
 			return
 		}
-		if sessionRecordingConfigBefore.GetMetadata().ID != sessionRecordingConfigI.GetMetadata().ID || false {
+		if sessionRecordingConfigBefore.GetMetadata().Revision != sessionRecordingConfigI.GetMetadata().Revision || false {
 			break
 		}
 		if bErr := backoff.Do(ctx); bErr != nil {
-			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(err), "session_recording_config"))
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading SessionRecordingConfig", trace.Wrap(bErr), "session_recording_config"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
