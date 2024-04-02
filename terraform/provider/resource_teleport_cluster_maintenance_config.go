@@ -109,16 +109,16 @@ func (r resourceTeleportClusterMaintenanceConfig) Create(ctx context.Context, re
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterMaintenanceConfig", trace.Wrap(err), "cluster_maintenance_config"))
 			return
 		}
-		if clusterMaintenanceConfigBefore.GetMetadata().ID != clusterMaintenanceConfigI.GetMetadata().ID || true {
+		if clusterMaintenanceConfigBefore.GetMetadata().Revision != clusterMaintenanceConfigI.GetMetadata().Revision || true {
 			break
 		}
 		if bErr := backoff.Do(ctx); bErr != nil {
-			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterMaintenanceConfig", trace.Wrap(err), "cluster_maintenance_config"))
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterMaintenanceConfig", trace.Wrap(bErr), "cluster_maintenance_config"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {
 			diagMessage := fmt.Sprintf("Error reading ClusterMaintenanceConfig (tried %d times) - state outdated, please import resource", tries)
-			resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "cluster_maintenance_config"))
+			resp.Diagnostics.AddError(diagMessage, "cluster_maintenance_config")
 			return
 		}
 	}
@@ -230,11 +230,11 @@ func (r resourceTeleportClusterMaintenanceConfig) Update(ctx context.Context, re
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterMaintenanceConfig", trace.Wrap(err), "cluster_maintenance_config"))
 			return
 		}
-		if clusterMaintenanceConfigBefore.GetMetadata().ID != clusterMaintenanceConfigI.GetMetadata().ID || true {
+		if clusterMaintenanceConfigBefore.GetMetadata().Revision != clusterMaintenanceConfigI.GetMetadata().Revision || true {
 			break
 		}
 		if bErr := backoff.Do(ctx); bErr != nil {
-			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterMaintenanceConfig", trace.Wrap(err), "cluster_maintenance_config"))
+			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ClusterMaintenanceConfig", trace.Wrap(bErr), "cluster_maintenance_config"))
 			return
 		}
 		if tries >= r.p.RetryConfig.MaxTries {

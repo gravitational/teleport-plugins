@@ -108,13 +108,12 @@ func (r resourceTeleportLoginRule) Create(ctx context.Context, req tfsdk.CreateR
 		loginRuleI, err = r.p.Client.GetLoginRule(ctx, id)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading LoginRule", trace.Wrap(err), "login_rule"))
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading LoginRule", trace.Wrap(bErr), "login_rule"))
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
 				diagMessage := fmt.Sprintf("Error reading LoginRule (tried %d times) - state outdated, please import resource", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "login_rule"))
-				return
+				resp.Diagnostics.AddError(diagMessage, "login_rule")
 			}
 			continue
 		}
@@ -233,7 +232,7 @@ func (r resourceTeleportLoginRule) Update(ctx context.Context, req tfsdk.UpdateR
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading LoginRule", err, "login_rule"))
 			return
 		}
-		if loginRuleBefore.GetMetadata().ID != loginRuleI.GetMetadata().ID || false {
+		if loginRuleBefore.GetMetadata().Revision != loginRuleI.GetMetadata().Revision || true {
 			break
 		}
 

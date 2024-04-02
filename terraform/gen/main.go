@@ -115,6 +115,8 @@ type payload struct {
 	// This is required for some special resources (ServerV2) that support multiple kinds.
 	// For those resources, we must set the kind, and don't want to have the user do it.
 	ForceSetKind string
+	// GetCanReturnNil is used to check for nil returned value when doing a Get<Resource>.
+	GetCanReturnNil bool
 }
 
 func (p *payload) CheckAndSetDefaults() error {
@@ -189,6 +191,7 @@ var (
 		HasStaticID:            true,
 		TerraformResourceType:  "teleport_cluster_maintenance_config",
 		WithNonce:              true,
+		GetCanReturnNil:        true,
 		HasCheckAndSetDefaults: true,
 	}
 
@@ -365,7 +368,7 @@ var (
 		DeleteMethod:          "DeleteLoginRule",
 		ID:                    "loginRule.Metadata.Name",
 		Kind:                  "login_rule",
-		HasStaticID:           false,
+		HasStaticID:           true,
 		ProtoPackage:          "loginrulev1",
 		ProtoPackagePath:      "github.com/gravitational/teleport/api/gen/proto/go/teleport/loginrule/v1",
 		SchemaPackage:         "schemav1",
