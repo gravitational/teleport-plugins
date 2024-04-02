@@ -115,13 +115,12 @@ func (r resourceTeleportDatabase) Create(ctx context.Context, req tfsdk.CreateRe
 		databaseI, err = r.p.Client.GetDatabase(ctx, id)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(err), "db"))
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", trace.Wrap(bErr), "db"))
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
 				diagMessage := fmt.Sprintf("Error reading Database (tried %d times) - state outdated, please import resource", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "db"))
-				return
+				resp.Diagnostics.AddError(diagMessage, "db")
 			}
 			continue
 		}
@@ -249,7 +248,7 @@ func (r resourceTeleportDatabase) Update(ctx context.Context, req tfsdk.UpdateRe
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading Database", err, "db"))
 			return
 		}
-		if databaseBefore.GetMetadata().ID != databaseI.GetMetadata().ID || false {
+		if databaseBefore.GetMetadata().Revision != databaseI.GetMetadata().Revision || false {
 			break
 		}
 

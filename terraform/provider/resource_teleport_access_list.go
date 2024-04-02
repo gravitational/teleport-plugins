@@ -116,13 +116,12 @@ func (r resourceTeleportAccessList) Create(ctx context.Context, req tfsdk.Create
 		accessListI, err = r.p.Client.AccessListClient().GetAccessList(ctx, id)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading AccessList", trace.Wrap(err), "access_list"))
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading AccessList", trace.Wrap(bErr), "access_list"))
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
 				diagMessage := fmt.Sprintf("Error reading AccessList (tried %d times) - state outdated, please import resource", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "access_list"))
-				return
+				resp.Diagnostics.AddError(diagMessage, "access_list")
 			}
 			continue
 		}
@@ -249,7 +248,7 @@ func (r resourceTeleportAccessList) Update(ctx context.Context, req tfsdk.Update
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading AccessList", err, "access_list"))
 			return
 		}
-		if accessListBefore.GetMetadata().ID != accessListI.GetMetadata().ID || false {
+		if accessListBefore.GetMetadata().Revision != accessListI.GetMetadata().Revision || false {
 			break
 		}
 

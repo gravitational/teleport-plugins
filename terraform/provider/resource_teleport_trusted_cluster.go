@@ -115,13 +115,12 @@ func (r resourceTeleportTrustedCluster) Create(ctx context.Context, req tfsdk.Cr
 		trustedClusterI, err = r.p.Client.GetTrustedCluster(ctx, id)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(err), "trusted_cluster"))
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", trace.Wrap(bErr), "trusted_cluster"))
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
 				diagMessage := fmt.Sprintf("Error reading TrustedCluster (tried %d times) - state outdated, please import resource", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "trusted_cluster"))
-				return
+				resp.Diagnostics.AddError(diagMessage, "trusted_cluster")
 			}
 			continue
 		}
@@ -249,7 +248,7 @@ func (r resourceTeleportTrustedCluster) Update(ctx context.Context, req tfsdk.Up
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading TrustedCluster", err, "trusted_cluster"))
 			return
 		}
-		if trustedClusterBefore.GetMetadata().ID != trustedClusterI.GetMetadata().ID || false {
+		if trustedClusterBefore.GetMetadata().Revision != trustedClusterI.GetMetadata().Revision || false {
 			break
 		}
 

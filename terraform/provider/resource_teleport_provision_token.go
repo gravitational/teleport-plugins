@@ -127,13 +127,12 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 		provisionTokenI, err = r.p.Client.GetToken(ctx, id)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(bErr), "token"))
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
 				diagMessage := fmt.Sprintf("Error reading ProvisionToken (tried %d times) - state outdated, please import resource", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "token"))
-				return
+				resp.Diagnostics.AddError(diagMessage, "token")
 			}
 			continue
 		}
@@ -261,7 +260,7 @@ func (r resourceTeleportProvisionToken) Update(ctx context.Context, req tfsdk.Up
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", err, "token"))
 			return
 		}
-		if provisionTokenBefore.GetMetadata().ID != provisionTokenI.GetMetadata().ID || false {
+		if provisionTokenBefore.GetMetadata().Revision != provisionTokenI.GetMetadata().Revision || false {
 			break
 		}
 

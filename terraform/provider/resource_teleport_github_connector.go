@@ -115,13 +115,12 @@ func (r resourceTeleportGithubConnector) Create(ctx context.Context, req tfsdk.C
 		githubConnectorI, err = r.p.Client.GetGithubConnector(ctx, id, true)
 		if trace.IsNotFound(err) {
 			if bErr := backoff.Do(ctx); bErr != nil {
-				resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(err), "github"))
+				resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", trace.Wrap(bErr), "github"))
 				return
 			}
 			if tries >= r.p.RetryConfig.MaxTries {
 				diagMessage := fmt.Sprintf("Error reading GithubConnector (tried %d times) - state outdated, please import resource", tries)
-				resp.Diagnostics.Append(diagFromWrappedErr(diagMessage, trace.Wrap(err), "github"))
-				return
+				resp.Diagnostics.AddError(diagMessage, "github")
 			}
 			continue
 		}
@@ -249,7 +248,7 @@ func (r resourceTeleportGithubConnector) Update(ctx context.Context, req tfsdk.U
 			resp.Diagnostics.Append(diagFromWrappedErr("Error reading GithubConnector", err, "github"))
 			return
 		}
-		if githubConnectorBefore.GetMetadata().ID != githubConnectorI.GetMetadata().ID || true {
+		if githubConnectorBefore.GetMetadata().Revision != githubConnectorI.GetMetadata().Revision || true {
 			break
 		}
 
