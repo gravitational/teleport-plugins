@@ -1,5 +1,5 @@
 VERSION?=15.2.0
-GO_VERSION=1.21.8
+GO_VERSION=1.21.9
 
 BUILDDIR ?= build
 BINARY = $(BUILDDIR)/teleport-jira
