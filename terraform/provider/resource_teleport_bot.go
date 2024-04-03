@@ -18,10 +18,10 @@ package provider
 
 import (
 	"context"
-	"time"
-
-	"github.com/gravitational/teleport/api/client/proto"
-	"github.com/gravitational/teleport/api/types/wrappers"
+	"fmt"
+	headerv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/header/v1"
+	machineidv1 "github.com/gravitational/teleport/api/gen/proto/go/teleport/machineid/v1"
+	"github.com/gravitational/teleport/api/utils"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -60,30 +60,15 @@ func GenSchemaBot(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
 				Type:        types.StringType,
 				Optional:    true,
 				Computed:    true,
-				Description: "The desired TTL for the token if one is created. If unset, a server default is used",
+				Description: "Deprecated. This field is not required anymore and has no effect.",
 			},
 			"token_id": {
 				Type: types.StringType,
-				// Implementation note: the Terraform provider differs from the
-				// actual API here. `token_id` is technically optional and when
-				// unset, a new random token is created automatically. This
-				// behavior doesn't play nicely with Terraform's resource
-				// management, so we'll instead make it required. Users can use
-				// a `random_password` resource with `teleport_provision_token`
-				// to achieve a similar result. See also:
-				// `example/bot.tf.example`
-				Required:    true,
+				// Implementation note: this is not used anymore, we can skip this
+				// This will go away eventually when we'll generate the bot provider instead
+				Optional:    true,
 				Sensitive:   true,
-				Description: "The bot joining token. If unset, a new random token is created and its name returned, otherwise a preexisting Bot token may be provided for IAM/OIDC joining.",
-
-				// TODO: Consider dropping RequiresReplace() in the future if a
-				// ResetBot() API becomes available to reset a bot's generation
-				// counter.
-				// See also:
-				// https://github.com/gravitational/teleport/issues/13091
-				PlanModifiers: []tfsdk.AttributePlanModifier{
-					tfsdk.RequiresReplace(),
-				},
+				Description: "Deprecated. This field is not required anymore and has no effect.",
 			},
 			"roles": {
 				Type: types.ListType{
@@ -160,34 +145,50 @@ func (r resourceTeleportBot) Create(ctx context.Context, req tfsdk.CreateResourc
 		roles = append(roles, role.Value)
 	}
 
-	var traits wrappers.Traits = make(wrappers.Traits)
-	tfschema.CopyFromTraits(diags, plan.Traits, &traits)
-
-	ttl := time.Duration(0)
-	if plan.TTL.Value != "" {
-		var err error
-		ttl, err = time.ParseDuration(plan.TTL.Value)
-		if err != nil {
-			resp.Diagnostics.Append(diagFromWrappedErr("Error parsing TTL", trace.Wrap(err), "bot"))
+	traits := make([]*machineidv1.Trait, 0, len(plan.Traits.Elems))
+	for name, e := range plan.Traits.Elems {
+		l, ok := e.(types.List)
+		if !ok {
+			diags.AddError("Error reading from Terraform object", fmt.Sprintf("Can not convert %T to types.List", l))
 			return
 		}
+
+		values := make(utils.Strings, len(l.Elems))
+
+		for i, v := range l.Elems {
+			s, ok := v.(types.String)
+			if !ok {
+				diags.AddError("Error reading from Terraform object", fmt.Sprintf("Can not convert %T to types.String", s))
+				return
+			}
+
+			values[i] = s.Value
+		}
+		traits = append(traits, &machineidv1.Trait{
+			Name:   name,
+			Values: values,
+		})
 	}
 
-	response, err := r.p.Client.CreateBot(ctx, &proto.CreateBotRequest{
-		Name:    plan.Name.Value,
-		TTL:     proto.Duration(ttl),
-		Roles:   roles,
-		TokenID: plan.TokenID.Value,
-		Traits:  traits,
-	})
+	// This is a temporary workaround to fix the provider compilation in v16 (the legacy RPC got removed).
+	// We must do a breaking change in v16 and rely on the new bot schema and the tf code generator.
+	response, err := r.p.Client.BotServiceClient().CreateBot(ctx, &machineidv1.CreateBotRequest{Bot: &machineidv1.Bot{
+		Metadata: &headerv1.Metadata{
+			Name: plan.Name.Value,
+		},
+		Spec: &machineidv1.BotSpec{
+			Roles:  roles,
+			Traits: traits,
+		},
+	}})
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating Bot", trace.Wrap(err), "bot"))
 		return
 	}
 
-	plan.TTL = types.String{Value: response.TokenTTL.Get().String()}
-	plan.UserName = types.String{Value: response.UserName}
-	plan.RoleName = types.String{Value: response.RoleName}
+	plan.TTL = types.String{Value: ""}
+	plan.UserName = types.String{Value: response.Status.UserName}
+	plan.RoleName = types.String{Value: response.Status.RoleName}
 
 	// ID is for terraform-plugin-framework's acctests
 	plan.ID = types.String{Value: plan.Name.Value}
@@ -243,7 +244,7 @@ func (r resourceTeleportBot) Delete(ctx context.Context, req tfsdk.DeleteResourc
 		return
 	}
 
-	err := r.p.Client.DeleteBot(ctx, name.Value)
+	_, err := r.p.Client.BotServiceClient().DeleteBot(ctx, &machineidv1.DeleteBotRequest{BotName: name.Value})
 	if err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error deleting Bot", trace.Wrap(err), "bot"))
 		return
