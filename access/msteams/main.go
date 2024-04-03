@@ -16,11 +16,11 @@ package main
 
 import (
 	"context"
-	"github.com/gravitational/teleport/integrations/access/msteams"
 	"os"
 	"time"
 
 	"github.com/gravitational/kingpin"
+	"github.com/gravitational/teleport/integrations/access/msteams"
 	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/trace"
