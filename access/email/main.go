@@ -19,11 +19,11 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/gravitational/teleport/integrations/access/email"
 	"os"
 	"time"
 
 	"github.com/gravitational/kingpin"
+	"github.com/gravitational/teleport/integrations/access/email"
 	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/trace"
