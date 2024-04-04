@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/gravitational/kingpin"
+	"github.com/gravitational/teleport/integrations/access/email"
 	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/trace"
@@ -51,7 +52,7 @@ func main() {
 
 	switch selectedCmd {
 	case "configure":
-		fmt.Print(exampleConfig)
+		fmt.Print(email.ExampleConfig)
 	case "version":
 		lib.PrintVersion(app.Name, Version, Gitref)
 	case "start":
@@ -64,7 +65,7 @@ func main() {
 }
 
 func run(configPath string, debug bool) error {
-	conf, err := LoadConfig(configPath)
+	conf, err := email.LoadConfig(configPath)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -84,7 +85,7 @@ func run(configPath string, debug bool) error {
 		logger.Standard().Warn("The delivery.recipients config option is deprecated, set role_to_recipients[\"*\"] instead for the same functionality")
 	}
 
-	app, err := NewApp(*conf)
+	app, err := email.NewApp(*conf)
 	if err != nil {
 		return trace.Wrap(err)
 	}
