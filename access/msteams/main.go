@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/gravitational/kingpin"
+	"github.com/gravitational/teleport/integrations/access/msteams"
 	"github.com/gravitational/teleport/integrations/lib"
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/trace"
@@ -73,19 +74,19 @@ func main() {
 
 	switch selectedCmd {
 	case "configure":
-		err := configure(*targetDir, *appID, *appSecret, *tenantID)
+		err := msteams.Configure(*targetDir, *appID, *appSecret, *tenantID)
 		if err != nil {
 			lib.Bail(err)
 		}
 
 	case "uninstall":
-		err := uninstall(context.Background(), *uninstallConfigPath)
+		err := msteams.Uninstall(context.Background(), *uninstallConfigPath)
 		if err != nil {
 			lib.Bail(err)
 		}
 
 	case "validate":
-		err := validate(*validateConfigPath, *validateRecipientID)
+		err := msteams.Validate(*validateConfigPath, *validateRecipientID)
 		if err != nil {
 			lib.Bail(err)
 		}
@@ -103,7 +104,7 @@ func main() {
 }
 
 func run(configPath string, debug bool) error {
-	conf, err := LoadConfig(configPath)
+	conf, err := msteams.LoadConfig(configPath)
 	if err != nil {
 		return trace.Wrap(err)
 	}
@@ -119,7 +120,7 @@ func run(configPath string, debug bool) error {
 		logger.Standard().Debugf("DEBUG logging enabled")
 	}
 
-	app, err := NewApp(*conf)
+	app, err := msteams.NewApp(*conf)
 	if err != nil {
 		return trace.Wrap(err)
 	}
