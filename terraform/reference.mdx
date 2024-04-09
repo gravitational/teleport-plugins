@@ -559,15 +559,15 @@ resource "teleport_auth_preference" "example" {
 
 ## teleport_bot
 
-|   Name    |         Type         | Required |                                                                          Description                                                                          |
-|-----------|----------------------|----------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| name      | string               | *        | The name of the bot, i.e. the unprefixed User name                                                                                                            |
-| role_name | string               |          | The name of the generated bot role                                                                                                                            |
-| roles     | array of strings     | *        | A list of roles the created bot should be allowed to assume via role impersonation.                                                                           |
-| token_id  | string               | *        | The bot joining token. If unset, a new random token is created and its name returned, otherwise a preexisting Bot token may be provided for IAM/OIDC joining. |
-| token_ttl | string               |          | The desired TTL for the token if one is created. If unset, a server default is used                                                                           |
-| traits    | map of string arrays |          |                                                                                                                                                               |
-| user_name | string               |          | The name of the generated bot user                                                                                                                            |
+|   Name    |         Type         | Required |                                     Description                                     |
+|-----------|----------------------|----------|-------------------------------------------------------------------------------------|
+| name      | string               | *        | The name of the bot, i.e. the unprefixed User name                                  |
+| role_name | string               |          | The name of the generated bot role                                                  |
+| roles     | array of strings     | *        | A list of roles the created bot should be allowed to assume via role impersonation. |
+| token_id  | string               |          | Deprecated. This field is not required anymore and has no effect.                   |
+| token_ttl | string               |          | Deprecated. This field is not required anymore and has no effect.                   |
+| traits    | map of string arrays |          |                                                                                     |
+| user_name | string               |          | The name of the generated bot user                                                  |
 
 Example:
 
