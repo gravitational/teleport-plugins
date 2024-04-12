@@ -164,6 +164,9 @@ exclude_fields:
     - "UserSpecV2.CreatedBy"
     - "UserSpecV2.Status"
 
+    # Temporary fix to release 15.2.2
+    - "ProvisionTokenV2.Spec.TPM"
+
 name_overrides:
 
 # These fields will be marked as Computed: true
