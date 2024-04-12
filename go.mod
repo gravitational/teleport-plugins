@@ -172,7 +172,7 @@ require (
 	github.com/google/go-attestation v0.5.1 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/go-tpm v0.9.0 // indirect
-	github.com/google/go-tpm-tools v0.4.2 // indirect
+	github.com/google/go-tpm-tools v0.4.4 // indirect
 	github.com/google/go-tspi v0.3.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
@@ -361,8 +361,8 @@ replace (
 	github.com/alecthomas/kingpin/v2 => github.com/gravitational/kingpin/v2 v2.1.11-0.20230515143221-4ec6b70ecd33
 	github.com/coreos/go-oidc => github.com/gravitational/go-oidc v0.1.1
 	github.com/gogo/protobuf => github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf
-	github.com/gravitational/teleport => github.com/gravitational/teleport v0.0.0-20240405184926-6e72fc78b8fb // ref: tags/v15.2.1
-	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20240405184926-6e72fc78b8fb // ref: tags/v15.2.1
+	github.com/gravitational/teleport => github.com/gravitational/teleport v0.0.0-20240411202847-a4cffd5b7fb8 // ref: tags/v15.2.2
+	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20240411202847-a4cffd5b7fb8 // ref: tags/v15.2.2
 	github.com/julienschmidt/httprouter => github.com/gravitational/httprouter v1.3.1-0.20220408074523-c876c5e705a5
 	github.com/microsoft/go-mssqldb => github.com/gravitational/go-mssqldb v0.11.1-0.20230331180905-0f76f1751cd3
 	github.com/vulcand/predicate => github.com/gravitational/predicate v1.3.1
