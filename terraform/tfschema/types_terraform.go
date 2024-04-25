@@ -2962,6 +2962,15 @@ func GenSchemaUserV2(ctx context.Context) (github_com_hashicorp_terraform_plugin
 			Description: "Spec is a user specification",
 			Optional:    true,
 		},
+		"status": {
+			Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"password_state": {
+				Description: "password_state reflects what the system knows about the user's password. Note that this is a \"best effort\" property, in that it can be UNSPECIFIED for users who were created before this property was introduced and didn't perform any password-related activity since then. See RFD 0159 for details. Do NOT use this value for authentication purposes!",
+				Optional:    true,
+				Type:        github_com_hashicorp_terraform_plugin_framework_types.Int64Type,
+			}}),
+			Description: "",
+			Optional:    true,
+		},
 		"sub_kind": {
 			Description: "SubKind is an optional resource sub kind, used in some resources",
 			Optional:    true,
@@ -30556,6 +30565,40 @@ func CopyUserV2FromTerraform(_ context.Context, tf github_com_hashicorp_terrafor
 			}
 		}
 	}
+	{
+		a, ok := tf.Attrs["status"]
+		if !ok {
+			diags.Append(attrReadMissingDiag{"UserV2.Status"})
+		} else {
+			v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Object)
+			if !ok {
+				diags.Append(attrReadConversionFailureDiag{"UserV2.Status", "github.com/hashicorp/terraform-plugin-framework/types.Object"})
+			} else {
+				obj.Status = github_com_gravitational_teleport_api_types.UserStatusV2{}
+				if !v.Null && !v.Unknown {
+					tf := v
+					obj := &obj.Status
+					{
+						a, ok := tf.Attrs["password_state"]
+						if !ok {
+							diags.Append(attrReadMissingDiag{"UserV2.Status.password_state"})
+						} else {
+							v, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+							if !ok {
+								diags.Append(attrReadConversionFailureDiag{"UserV2.Status.password_state", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
+							} else {
+								var t github_com_gravitational_teleport_api_types.PasswordState
+								if !v.Null && !v.Unknown {
+									t = github_com_gravitational_teleport_api_types.PasswordState(v.Value)
+								}
+								obj.PasswordState = t
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 	return diags
 }
 
@@ -31270,6 +31313,58 @@ func CopyUserV2ToTerraform(ctx context.Context, obj *github_com_gravitational_te
 				}
 				v.Unknown = false
 				tf.Attrs["spec"] = v
+			}
+		}
+	}
+	{
+		a, ok := tf.AttrTypes["status"]
+		if !ok {
+			diags.Append(attrWriteMissingDiag{"UserV2.Status"})
+		} else {
+			o, ok := a.(github_com_hashicorp_terraform_plugin_framework_types.ObjectType)
+			if !ok {
+				diags.Append(attrWriteConversionFailureDiag{"UserV2.Status", "github.com/hashicorp/terraform-plugin-framework/types.ObjectType"})
+			} else {
+				v, ok := tf.Attrs["status"].(github_com_hashicorp_terraform_plugin_framework_types.Object)
+				if !ok {
+					v = github_com_hashicorp_terraform_plugin_framework_types.Object{
+
+						AttrTypes: o.AttrTypes,
+						Attrs:     make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(o.AttrTypes)),
+					}
+				} else {
+					if v.Attrs == nil {
+						v.Attrs = make(map[string]github_com_hashicorp_terraform_plugin_framework_attr.Value, len(tf.AttrTypes))
+					}
+				}
+				{
+					obj := obj.Status
+					tf := &v
+					{
+						t, ok := tf.AttrTypes["password_state"]
+						if !ok {
+							diags.Append(attrWriteMissingDiag{"UserV2.Status.password_state"})
+						} else {
+							v, ok := tf.Attrs["password_state"].(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+							if !ok {
+								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
+								if err != nil {
+									diags.Append(attrWriteGeneralError{"UserV2.Status.password_state", err})
+								}
+								v, ok = i.(github_com_hashicorp_terraform_plugin_framework_types.Int64)
+								if !ok {
+									diags.Append(attrWriteConversionFailureDiag{"UserV2.Status.password_state", "github.com/hashicorp/terraform-plugin-framework/types.Int64"})
+								}
+								v.Null = int64(obj.PasswordState) == 0
+							}
+							v.Value = int64(obj.PasswordState)
+							v.Unknown = false
+							tf.Attrs["password_state"] = v
+						}
+					}
+				}
+				v.Unknown = false
+				tf.Attrs["status"] = v
 			}
 		}
 	}
