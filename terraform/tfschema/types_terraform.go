@@ -907,13 +907,6 @@ func GenSchemaAppV3(ctx context.Context) (github_com_hashicorp_terraform_plugin_
 // GenSchemaProvisionTokenV2 returns tfsdk.Schema definition for ProvisionTokenV2
 func GenSchemaProvisionTokenV2(ctx context.Context) (github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema, github_com_hashicorp_terraform_plugin_framework_diag.Diagnostics) {
 	return github_com_hashicorp_terraform_plugin_framework_tfsdk.Schema{Attributes: map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{
-		"id": {
-			Computed:      true,
-			Optional:      false,
-			PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
-			Required:      false,
-			Type:          github_com_hashicorp_terraform_plugin_framework_types.StringType,
-		},
 		"kind": {
 			Computed:      true,
 			Description:   "Kind is a resource kind",
