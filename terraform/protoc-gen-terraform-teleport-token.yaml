@@ -11,7 +11,7 @@ types:
 # These import paths were not being automatically picked up by
 # protoc-gen-terraform without these overrides
 import_path_overrides:
-  github_com_gravitational_teleport_integrations_terraform_tfschema: "github.com/gravitational/teleport-plugins/terraform/tfschema"
+  github_com_gravitational_teleport_plugins_terraform_tfschema: "github.com/gravitational/teleport-plugins/terraform/tfschema"
 
 # id field is required for integration tests. It is not used by provider.
 # We have to add it manually (might be removed in the future versions).
@@ -71,9 +71,9 @@ plan_modifiers:
 validators:
   # Expires must be in the future
   Metadata.Expires:
-    - github_com_gravitational_teleport_integrations_terraform_tfschema.MustTimeBeInFuture()
+    - github_com_gravitational_teleport_plugins_terraform_tfschema.MustTimeBeInFuture()
   ProvisionTokenV2.Version:
-    - github_com_gravitational_teleport_integrations_terraform_tfschema.UseVersionBetween(2,2)
+    - github_com_gravitational_teleport_plugins_terraform_tfschema.UseVersionBetween(2,2)
 
 time_type:
   type: "github.com/gravitational/teleport-plugins/terraform/tfschema.TimeType"

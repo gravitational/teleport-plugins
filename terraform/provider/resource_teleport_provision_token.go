@@ -19,13 +19,13 @@ package provider
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
+    "crypto/rand"
+    "encoding/hex"
 	"fmt"
 	"strconv"
 
 	apitypes "github.com/gravitational/teleport/api/types"
-
+	
 	"github.com/gravitational/teleport/integrations/lib/backoff"
 	"github.com/gravitational/trace"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -34,7 +34,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/jonboulle/clockwork"
 
-	tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema/token"
+	token "github.com/gravitational/teleport-plugins/terraform/tfschema/token"
 )
 
 // resourceTeleportProvisionTokenType is the resource metadata type
@@ -47,7 +47,7 @@ type resourceTeleportProvisionToken struct {
 
 // GetSchema returns the resource schema
 func (r resourceTeleportProvisionTokenType) GetSchema(ctx context.Context) (tfsdk.Schema, diag.Diagnostics) {
-	return tfschema.GenSchemaProvisionTokenV2(ctx)
+	return token.GenSchemaProvisionTokenV2(ctx)
 }
 
 // NewResource creates the empty resource
@@ -72,7 +72,7 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 	}
 
 	provisionToken := &apitypes.ProvisionTokenV2{}
-	diags = tfschema.CopyProvisionTokenV2FromTerraform(ctx, plan, provisionToken)
+	diags = token.CopyProvisionTokenV2FromTerraform(ctx, plan, provisionToken)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -87,7 +87,7 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 		}
 		provisionToken.Metadata.Name = hex.EncodeToString(b)
 	}
-
+	
 	provisionTokenResource := provisionToken
 
 	err = provisionTokenResource.CheckAndSetDefaults()
@@ -117,7 +117,7 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 		resp.Diagnostics.Append(diagFromWrappedErr("Error creating ProvisionToken", trace.Wrap(err), "token"))
 		return
 	}
-
+		
 	// Not really an inferface, just using the same name for easier templating.
 	var provisionTokenI apitypes.ProvisionToken
 	tries := 0
@@ -151,7 +151,7 @@ func (r resourceTeleportProvisionToken) Create(ctx context.Context, req tfsdk.Cr
 	}
 	provisionToken = provisionTokenResource
 
-	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, provisionToken, &plan)
+	diags = token.CopyProvisionTokenV2ToTerraform(ctx, provisionToken, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -192,9 +192,9 @@ func (r resourceTeleportProvisionToken) Read(ctx context.Context, req tfsdk.Read
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Wrap(err), "token"))
 		return
 	}
-
+	
 	provisionToken := provisionTokenI.(*apitypes.ProvisionTokenV2)
-	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, provisionToken, &state)
+	diags = token.CopyProvisionTokenV2ToTerraform(ctx, provisionToken, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -222,12 +222,13 @@ func (r resourceTeleportProvisionToken) Update(ctx context.Context, req tfsdk.Up
 	}
 
 	provisionToken := &apitypes.ProvisionTokenV2{}
-	diags = tfschema.CopyProvisionTokenV2FromTerraform(ctx, plan, provisionToken)
+	diags = token.CopyProvisionTokenV2FromTerraform(ctx, plan, provisionToken)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 	provisionTokenResource := provisionToken
+
 
 	if err := provisionTokenResource.CheckAndSetDefaults(); err != nil {
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating ProvisionToken", err, "token"))
@@ -246,7 +247,7 @@ func (r resourceTeleportProvisionToken) Update(ctx context.Context, req tfsdk.Up
 		resp.Diagnostics.Append(diagFromWrappedErr("Error updating ProvisionToken", err, "token"))
 		return
 	}
-
+		
 	// Not really an inferface, just using the same name for easier templating.
 	var provisionTokenI apitypes.ProvisionToken
 
@@ -279,7 +280,7 @@ func (r resourceTeleportProvisionToken) Update(ctx context.Context, req tfsdk.Up
 		resp.Diagnostics.Append(diagFromWrappedErr("Error reading ProvisionToken", trace.Errorf("Can not convert %T to ProvisionTokenV2", provisionTokenI), "token"))
 		return
 	}
-	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, provisionToken, &plan)
+	diags = token.CopyProvisionTokenV2ToTerraform(ctx, provisionToken, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -318,6 +319,7 @@ func (r resourceTeleportProvisionToken) ImportState(ctx context.Context, req tfs
 		return
 	}
 
+	
 	provisionTokenResource := provisionToken.(*apitypes.ProvisionTokenV2)
 
 	var state types.Object
@@ -328,7 +330,7 @@ func (r resourceTeleportProvisionToken) ImportState(ctx context.Context, req tfs
 		return
 	}
 
-	diags = tfschema.CopyProvisionTokenV2ToTerraform(ctx, provisionTokenResource, &state)
+	diags = token.CopyProvisionTokenV2ToTerraform(ctx, provisionTokenResource, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
