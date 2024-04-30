@@ -18,7 +18,9 @@ func GenSchemaLabels(ctx context.Context) tfsdk.Attribute {
 	return tfschema.GenSchemaLabels(ctx)
 }
 
-// GenSchemaBoolOptionsFixed returns Terraform schema for BoolOption type
+// GenSchemaBoolOptionFixed returns Terraform schema for BoolOption type.
+// This differs from the original GenSchemaBoolOption in that it is fixed
+// to handle the case where the value is not set.
 func GenSchemaBoolOptionFixed(_ context.Context) tfsdk.Attribute {
 	return tfsdk.Attribute{
 		Optional: true,
@@ -26,6 +28,8 @@ func GenSchemaBoolOptionFixed(_ context.Context) tfsdk.Attribute {
 	}
 }
 
+// CopyFromBoolOptionFixed converts the tfschema Bool value to a Teleport
+// BoolOption value.
 func CopyFromBoolOptionFixed(diags diag.Diagnostics, tf attr.Value, o **apitypes.BoolOption) {
 	v, ok := tf.(types.Bool)
 	if !ok {
@@ -39,6 +43,8 @@ func CopyFromBoolOptionFixed(diags diag.Diagnostics, tf attr.Value, o **apitypes
 	}
 }
 
+// CopyToBoolOptionFixed converts the Teleport BoolOption value to a tfschema
+// Bool value.
 func CopyToBoolOptionFixed(diags diag.Diagnostics, o *apitypes.BoolOption, t attr.Type, v attr.Value) attr.Value {
 	value, ok := v.(types.Bool)
 	if !ok {
@@ -50,6 +56,7 @@ func CopyToBoolOptionFixed(diags diag.Diagnostics, o *apitypes.BoolOption, t att
 		return value
 	}
 
+	value.Null = false
 	value.Value = o.Value
 
 	return value
