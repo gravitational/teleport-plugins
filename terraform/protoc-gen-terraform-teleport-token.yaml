@@ -11,7 +11,7 @@ types:
 # These import paths were not being automatically picked up by
 # protoc-gen-terraform without these overrides
 import_path_overrides:
-  github_com_gravitational_teleport_integrations_terraform_tfschema: "github.com/gravitational/teleport/integrations/terraform/tfschema"
+  github_com_gravitational_teleport_integrations_terraform_tfschema: "github.com/gravitational/teleport-plugins/terraform/tfschema"
 
 # id field is required for integration tests. It is not used by provider.
 # We have to add it manually (might be removed in the future versions).
@@ -76,14 +76,14 @@ validators:
     - github_com_gravitational_teleport_integrations_terraform_tfschema.UseVersionBetween(2,2)
 
 time_type:
-  type: "github.com/gravitational/teleport/integrations/terraform/tfschema.TimeType"
-  value_type: "github.com/gravitational/teleport/integrations/terraform/tfschema.TimeValue"
+  type: "github.com/gravitational/teleport-plugins/terraform/tfschema.TimeType"
+  value_type: "github.com/gravitational/teleport-plugins/terraform/tfschema.TimeValue"
   cast_to_type: "time.Time"
   cast_from_type: "time.Time"
-  type_constructor: "github.com/gravitational/teleport/integrations/terraform/tfschema.UseRFC3339Time()"
+  type_constructor: "github.com/gravitational/teleport-plugins/terraform/tfschema.UseRFC3339Time()"
 
 duration_type:
-  type: "github.com/gravitational/teleport/integrations/terraform/tfschema.DurationType"
-  value_type: "github.com/gravitational/teleport/integrations/terraform/tfschema.DurationValue"
+  type: "github.com/gravitational/teleport-plugins/terraform/tfschema.DurationType"
+  value_type: "github.com/gravitational/teleport-plugins/terraform/tfschema.DurationValue"
   cast_to_type: "time.Duration"
   cast_from_type: "time.Duration"

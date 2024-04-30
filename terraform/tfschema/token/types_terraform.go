@@ -26,9 +26,9 @@ import (
 
 	_ "github.com/gogo/protobuf/gogoproto"
 	proto "github.com/gogo/protobuf/proto"
+	github_com_gravitational_teleport_plugins_terraform_tfschema "github.com/gravitational/teleport-plugins/terraform/tfschema"
 	_ "github.com/gravitational/teleport/api/gen/proto/go/attestation/v1"
 	github_com_gravitational_teleport_api_types "github.com/gravitational/teleport/api/types"
-	github_com_gravitational_teleport_integrations_terraform_tfschema "github.com/gravitational/teleport/integrations/terraform/tfschema"
 	github_com_hashicorp_terraform_plugin_framework_attr "github.com/hashicorp/terraform-plugin-framework/attr"
 	github_com_hashicorp_terraform_plugin_framework_diag "github.com/hashicorp/terraform-plugin-framework/diag"
 	github_com_hashicorp_terraform_plugin_framework_tfsdk "github.com/hashicorp/terraform-plugin-framework/tfsdk"
@@ -70,8 +70,8 @@ func GenSchemaProvisionTokenV2(ctx context.Context) (github_com_hashicorp_terraf
 				"expires": {
 					Description: "Expires is a global expiry time header can be set on any resource in the system.",
 					Optional:    true,
-					Type:        github_com_gravitational_teleport_integrations_terraform_tfschema.UseRFC3339Time(),
-					Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{github_com_gravitational_teleport_integrations_terraform_tfschema.MustTimeBeInFuture()},
+					Type:        github_com_gravitational_teleport_plugins_terraform_tfschema.UseRFC3339Time(),
+					Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{github_com_gravitational_teleport_plugins_terraform_tfschema.MustTimeBeInFuture()},
 				},
 				"labels": {
 					Description: "Labels is a set of labels",
@@ -135,7 +135,7 @@ func GenSchemaProvisionTokenV2(ctx context.Context) (github_com_hashicorp_terraf
 					Description:   "AWSIIDTTL is the TTL to use for AWS EC2 Instance Identity Documents used to join the cluster with this token.",
 					Optional:      true,
 					PlanModifiers: []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributePlanModifier{github_com_hashicorp_terraform_plugin_framework_tfsdk.UseStateForUnknown()},
-					Type:          github_com_gravitational_teleport_integrations_terraform_tfschema.DurationType{},
+					Type:          github_com_gravitational_teleport_plugins_terraform_tfschema.DurationType{},
 				},
 				"azure": {
 					Attributes: github_com_hashicorp_terraform_plugin_framework_tfsdk.SingleNestedAttributes(map[string]github_com_hashicorp_terraform_plugin_framework_tfsdk.Attribute{"allow": {
@@ -488,7 +488,7 @@ func GenSchemaProvisionTokenV2(ctx context.Context) (github_com_hashicorp_terraf
 			Description: "Version is the resource version. It must be specified. Supported values are:`v2`.",
 			Required:    true,
 			Type:        github_com_hashicorp_terraform_plugin_framework_types.StringType,
-			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{github_com_gravitational_teleport_integrations_terraform_tfschema.UseVersionBetween(2, 2)},
+			Validators:  []github_com_hashicorp_terraform_plugin_framework_tfsdk.AttributeValidator{github_com_gravitational_teleport_plugins_terraform_tfschema.UseVersionBetween(2, 2)},
 		},
 	}}, nil
 }
@@ -643,9 +643,9 @@ func CopyProvisionTokenV2FromTerraform(_ context.Context, tf github_com_hashicor
 						if !ok {
 							diags.Append(attrReadMissingDiag{"ProvisionTokenV2.Metadata.Expires"})
 						} else {
-							v, ok := a.(github_com_gravitational_teleport_integrations_terraform_tfschema.TimeValue)
+							v, ok := a.(github_com_gravitational_teleport_plugins_terraform_tfschema.TimeValue)
 							if !ok {
-								diags.Append(attrReadConversionFailureDiag{"ProvisionTokenV2.Metadata.Expires", "github.com/gravitational/teleport/integrations/terraform/tfschema.TimeValue"})
+								diags.Append(attrReadConversionFailureDiag{"ProvisionTokenV2.Metadata.Expires", "github.com/gravitational/teleport-plugins/terraform/tfschema.TimeValue"})
 							} else {
 								var t *time.Time
 								if !v.Null && !v.Unknown {
@@ -829,9 +829,9 @@ func CopyProvisionTokenV2FromTerraform(_ context.Context, tf github_com_hashicor
 						if !ok {
 							diags.Append(attrReadMissingDiag{"ProvisionTokenV2.Spec.AWSIIDTTL"})
 						} else {
-							v, ok := a.(github_com_gravitational_teleport_integrations_terraform_tfschema.DurationValue)
+							v, ok := a.(github_com_gravitational_teleport_plugins_terraform_tfschema.DurationValue)
 							if !ok {
-								diags.Append(attrReadConversionFailureDiag{"ProvisionTokenV2.Spec.AWSIIDTTL", "github.com/gravitational/teleport/integrations/terraform/tfschema.DurationValue"})
+								diags.Append(attrReadConversionFailureDiag{"ProvisionTokenV2.Spec.AWSIIDTTL", "github.com/gravitational/teleport-plugins/terraform/tfschema.DurationValue"})
 							} else {
 								var t github_com_gravitational_teleport_api_types.Duration
 								if !v.Null && !v.Unknown {
@@ -2338,15 +2338,15 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj *github_com_gravit
 						if !ok {
 							diags.Append(attrWriteMissingDiag{"ProvisionTokenV2.Metadata.Expires"})
 						} else {
-							v, ok := tf.Attrs["expires"].(github_com_gravitational_teleport_integrations_terraform_tfschema.TimeValue)
+							v, ok := tf.Attrs["expires"].(github_com_gravitational_teleport_plugins_terraform_tfschema.TimeValue)
 							if !ok {
 								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
 								if err != nil {
 									diags.Append(attrWriteGeneralError{"ProvisionTokenV2.Metadata.Expires", err})
 								}
-								v, ok = i.(github_com_gravitational_teleport_integrations_terraform_tfschema.TimeValue)
+								v, ok = i.(github_com_gravitational_teleport_plugins_terraform_tfschema.TimeValue)
 								if !ok {
-									diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Metadata.Expires", "github.com/gravitational/teleport/integrations/terraform/tfschema.TimeValue"})
+									diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Metadata.Expires", "github.com/gravitational/teleport-plugins/terraform/tfschema.TimeValue"})
 								}
 								v.Null = false
 							}
@@ -2647,15 +2647,15 @@ func CopyProvisionTokenV2ToTerraform(ctx context.Context, obj *github_com_gravit
 						if !ok {
 							diags.Append(attrWriteMissingDiag{"ProvisionTokenV2.Spec.AWSIIDTTL"})
 						} else {
-							v, ok := tf.Attrs["aws_iid_ttl"].(github_com_gravitational_teleport_integrations_terraform_tfschema.DurationValue)
+							v, ok := tf.Attrs["aws_iid_ttl"].(github_com_gravitational_teleport_plugins_terraform_tfschema.DurationValue)
 							if !ok {
 								i, err := t.ValueFromTerraform(ctx, github_com_hashicorp_terraform_plugin_go_tftypes.NewValue(t.TerraformType(ctx), nil))
 								if err != nil {
 									diags.Append(attrWriteGeneralError{"ProvisionTokenV2.Spec.AWSIIDTTL", err})
 								}
-								v, ok = i.(github_com_gravitational_teleport_integrations_terraform_tfschema.DurationValue)
+								v, ok = i.(github_com_gravitational_teleport_plugins_terraform_tfschema.DurationValue)
 								if !ok {
-									diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Spec.AWSIIDTTL", "github.com/gravitational/teleport/integrations/terraform/tfschema.DurationValue"})
+									diags.Append(attrWriteConversionFailureDiag{"ProvisionTokenV2.Spec.AWSIIDTTL", "github.com/gravitational/teleport-plugins/terraform/tfschema.DurationValue"})
 								}
 								v.Null = false
 							}
