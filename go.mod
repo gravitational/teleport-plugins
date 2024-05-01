@@ -361,8 +361,8 @@ replace (
 	github.com/alecthomas/kingpin/v2 => github.com/gravitational/kingpin/v2 v2.1.11-0.20230515143221-4ec6b70ecd33
 	github.com/coreos/go-oidc => github.com/gravitational/go-oidc v0.1.1
 	github.com/gogo/protobuf => github.com/gravitational/protobuf v1.3.2-0.20201123192827-2b9fcfaffcbf
-	github.com/gravitational/teleport => github.com/gravitational/teleport v0.0.0-20240424012721-e103ec47ce8f // ref: tags/v15.2.4
-	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20240424012721-e103ec47ce8f // ref: tags/v15.2.4
+	github.com/gravitational/teleport => github.com/gravitational/teleport v0.0.0-20240501011405-0a192a42c3d1 // ref: tags/v15.3.0
+	github.com/gravitational/teleport/api => github.com/gravitational/teleport/api v0.0.0-20240501011405-0a192a42c3d1 // ref: tags/v15.3.0
 	github.com/julienschmidt/httprouter => github.com/gravitational/httprouter v1.3.1-0.20220408074523-c876c5e705a5
 	github.com/microsoft/go-mssqldb => github.com/gravitational/go-mssqldb v0.11.1-0.20230331180905-0f76f1751cd3
 	github.com/vulcand/predicate => github.com/gravitational/predicate v1.3.1
