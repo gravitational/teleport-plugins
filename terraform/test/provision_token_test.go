@@ -293,3 +293,37 @@ func (s *TerraformSuite) TestProvisionTokenIAMToken() {
 		},
 	})
 }
+
+func (s *TerraformSuite) TestProvisionTokenV2Gitlab() {
+	checkRoleDestroyed := func(state *terraform.State) error {
+		_, err := s.client.GetToken(s.Context(), "test")
+		if trace.IsNotFound(err) {
+			return nil
+		}
+
+		return err
+	}
+
+	name := "teleport_provision_token.token"
+
+	resource.Test(s.T(), resource.TestCase{
+		ProtoV6ProviderFactories: s.terraformProviders,
+		CheckDestroy:             checkRoleDestroyed,
+		Steps: []resource.TestStep{
+			{
+				Config: s.getFixture("provision_token_v2_gitlab_create.tf"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr(name, "kind", "token"),
+					resource.TestCheckResourceAttr(name, "metadata.name", "gitlab-test-terraform"),
+					resource.TestCheckResourceAttr(name, "spec.roles.0", "Bot"),
+					resource.TestCheckResourceAttr(name, "spec.join_method", "gitlab"),
+					resource.TestCheckNoResourceAttr(name, "spec.gitlab.allow.0.environment_protected"),
+				),
+			},
+			{
+				Config:   s.getFixture("provision_token_v2_gitlab_create.tf"),
+				PlanOnly: true,
+			},
+		},
+	})
+}
