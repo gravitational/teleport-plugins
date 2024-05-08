@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"os"
 	"time"
@@ -28,6 +29,9 @@ import (
 	"github.com/gravitational/teleport/integrations/lib/logger"
 	"github.com/gravitational/trace"
 )
+
+//go:embed example_config.toml
+var exampleConfig string
 
 func main() {
 	logger.Init()
@@ -52,7 +56,7 @@ func main() {
 
 	switch selectedCmd {
 	case "configure":
-		fmt.Print(email.ExampleConfig)
+		fmt.Print(exampleConfig)
 	case "version":
 		lib.PrintVersion(app.Name, Version, Gitref)
 	case "start":
