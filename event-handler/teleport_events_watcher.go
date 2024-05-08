@@ -151,31 +151,12 @@ func (t *TeleportEventsWatcher) flipPage() bool {
 func (t *TeleportEventsWatcher) fetch(ctx context.Context) error {
 	log := logger.Get(ctx)
 	b, nextCursor, err := t.getEvents(ctx)
-	// When a trace.BadParameter error is returned, it means that the Teleport event handler
-	// protobuf version is incompatible with the Teleport Auth protobuf version.
-	// This is a fatal error and the event handler should exit because it won't be able to parse the
-	// event that is supported by the newer version of Teleport Auth but not by the
-	// older version of Teleport event handler.
-	// Teleport event handler compatibility is strictly tied to the Teleport Auth version
-	// and it should be updated to the latest version when the Teleport Auth
-	// version is updated. Event handler breaks our compatibility promise of supporting
-	// clients 1 major version behind Auth. We don't support older versions of event handler
-	// with newer versions of Teleport Auth even if they are in the same major version
-	// because we can not guarantee that the handler will be able to parse the events
-	// introduced between minor or patch versions of Teleport Auth.
-	// This is a temporary solution until we have a better way to handle this.
-	if trace.IsBadParameter(err) {
-		return trace.BadParameter(
-			"Teleport event handler version is incompatible with the Teleport Auth version. " +
-				"Please update Teleport event handler to the same version as the Teleport Auth server to resume operations. \n" +
-				authServerVersionMessage(ctx, t.client),
-		)
-	} else if err != nil {
+	if err != nil {
 		return trace.Wrap(err)
 	}
 
 	// Zero batch
-	t.batch = make([]*TeleportEvent, len(b))
+	t.batch = make([]*TeleportEvent, 0, len(b))
 
 	// Save next cursor
 	t.nextCursor = nextCursor
@@ -193,13 +174,17 @@ func (t *TeleportEventsWatcher) fetch(ctx context.Context) error {
 	pos := 0
 
 	// Convert batch to TeleportEvent
-	for i, e := range b {
+	for _, e := range b {
+		if _, ok := t.config.SkipEventTypes[e.Type]; ok {
+			log.WithField("event", e).Debug("Skipping event")
+			continue
+		}
 		evt, err := NewTeleportEvent(e, t.cursor)
 		if err != nil {
 			return trace.Wrap(err)
 		}
 
-		t.batch[i] = evt
+		t.batch = append(t.batch, evt)
 	}
 
 	// If last known id is not empty, let's try to find it's pos
@@ -359,16 +344,4 @@ func (t *TeleportEventsWatcher) UpsertLock(ctx context.Context, user string, log
 	}
 
 	return t.client.UpsertLock(ctx, lock)
-}
-
-// authServerVersionMessage returns a message to be printed with the auth server
-// and plugin versions if the auth server version is incompatible with the plugin.
-// It returns an empty string if the auth version cannot be determined.
-func authServerVersionMessage(ctx context.Context, client TeleportSearchEventsClient) string {
-	rsp, err := client.Ping(ctx)
-	if err != nil {
-		log.WithError(err).Warn("unable to get auth server version")
-		return ""
-	}
-	return fmt.Sprintf("Auth server version %v; Teleport event handler version %v", rsp.ServerVersion, Version)
 }

@@ -2564,6 +2564,7 @@ resource "teleport_trusted_device" "TESTDEVICE1" {
 |----------|--------|----------|------------------------------------------------------------------------------------|
 | metadata | object |          | Metadata is resource metadata                                                      |
 | spec     | object |          | Spec is a user specification                                                       |
+| status   | object |          |                                                                                    |
 | sub_kind | string |          | SubKind is an optional resource sub kind, used in some resources                   |
 | version  | string | *        | Version is the resource version. It must be specified. Supported values are: `v2`. |
 
@@ -2619,6 +2620,14 @@ SAMLIdentities lists associated SAML identities that let user log in using exter
 |--------------|--------|----------|---------------------------------------------------------------------------|
 | connector_id | string |          | ConnectorID is id of registered OIDC connector, e.g. 'google-example.com' |
 | username     | string |          | Username is username supplied by external identity provider               |
+
+### status
+
+
+
+|      Name      |  Type  | Required |                                                                                                                                                                         Description                                                                                                                                                                         |
+|----------------|--------|----------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| password_state | number |          | password_state reflects what the system knows about the user's password. Note that this is a "best effort" property, in that it can be UNSPECIFIED for users who were created before this property was introduced and didn't perform any password-related activity since then. See RFD 0159 for details. Do NOT use this value for authentication purposes! |
 
 Example:
 
