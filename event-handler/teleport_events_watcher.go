@@ -208,23 +208,17 @@ func (t *TeleportEventsWatcher) fetch(ctx context.Context) error {
 	return nil
 }
 
-// getEvents calls Teleport client and loads events
+// getEvents iterates over the range of days between the last windowStartTime and now.
+// It returns a slice of events, a cursor for the next page and an error.
+// If the cursor is out of the range, it advances the windowStartTime to the next day.
+// It only advances the windowStartTime if no events are found until the last complete day.
 func (t *TeleportEventsWatcher) getEvents(ctx context.Context) ([]*auditlogpb.EventUnstructured, string, error) {
 	rangeSplitByDay := splitRangeByDay(t.getWindowStartTime(), time.Now().UTC())
 	for i := 1; i < len(rangeSplitByDay); i++ {
 		startTime := rangeSplitByDay[i-1]
 		endTime := rangeSplitByDay[i]
 		log.Debugf("Fetching events from %v to %v", startTime, endTime)
-		evts, cursor, err := t.client.SearchUnstructuredEvents(
-			ctx,
-			startTime,
-			endTime,
-			"default",
-			t.config.Types,
-			t.config.BatchSize,
-			types.EventOrderAscending,
-			t.cursor,
-		)
+		evts, cursor, err := t.getEventsInWindow(ctx, startTime, endTime)
 		if err != nil {
 			return nil, "", trace.Wrap(err)
 		}
@@ -240,6 +234,22 @@ func (t *TeleportEventsWatcher) getEvents(ctx context.Context) ([]*auditlogpb.Ev
 		return evts, cursor, nil
 	}
 	return nil, t.cursor, nil
+}
+
+// getEvents calls Teleport client and loads events from the audit log.
+// It returns a slice of events, a cursor for the next page and an error.
+func (t *TeleportEventsWatcher) getEventsInWindow(ctx context.Context, from, to time.Time) ([]*auditlogpb.EventUnstructured, string, error) {
+	evts, cursor, err := t.client.SearchUnstructuredEvents(
+		ctx,
+		from,
+		to,
+		"default",
+		t.config.Types,
+		t.config.BatchSize,
+		types.EventOrderAscending,
+		t.cursor,
+	)
+	return evts, cursor, trace.Wrap(err)
 }
 
 func splitRangeByDay(from, to time.Time) []time.Time {
