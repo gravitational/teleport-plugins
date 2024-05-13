@@ -38,6 +38,9 @@ const (
 	// startTimeName is the start time variable name
 	startTimeName = "start_time"
 
+	// windowTimeName is the start time of the last window.
+	windowTimeName = "window_time"
+
 	// cursorName is the cursor variable name
 	cursorName = "cursor"
 
@@ -120,11 +123,25 @@ func createStorageDir(c *StartCmdConfig) (string, error) {
 
 // GetStartTime gets current start time
 func (s *State) GetStartTime() (*time.Time, error) {
-	if !s.dv.Has(startTimeName) {
+	return s.getTimeKey(startTimeName)
+}
+
+// SetStartTime sets current start time
+func (s *State) SetStartTime(t *time.Time) error {
+	return s.setTimeKey(startTimeName, t)
+}
+
+// GetLastWindowTime gets current start time
+func (s *State) GetLastWindowTime() (*time.Time, error) {
+	return s.getTimeKey(windowTimeName)
+}
+
+func (s *State) getTimeKey(keyName string) (*time.Time, error) {
+	if !s.dv.Has(keyName) {
 		return nil, nil
 	}
 
-	b, err := s.dv.Read(startTimeName)
+	b, err := s.dv.Read(keyName)
 	if err != nil {
 		return nil, trace.Wrap(err)
 	}
@@ -144,14 +161,18 @@ func (s *State) GetStartTime() (*time.Time, error) {
 	return &t, nil
 }
 
-// SetStartTime sets current start time
-func (s *State) SetStartTime(t *time.Time) error {
+func (s *State) setTimeKey(keyName string, t *time.Time) error {
 	if t == nil {
-		return s.dv.Write(startTimeName, []byte(""))
+		return s.dv.Write(keyName, []byte(""))
 	}
 
 	v := t.Truncate(time.Second).Format(time.RFC3339)
-	return s.dv.Write(startTimeName, []byte(v))
+	return s.dv.Write(keyName, []byte(v))
+}
+
+// SetLastWindowTime sets current start time of the last window used.
+func (s *State) SetLastWindowTime(t *time.Time) error {
+	return s.setTimeKey(windowTimeName, t)
 }
 
 // GetCursor gets current cursor value

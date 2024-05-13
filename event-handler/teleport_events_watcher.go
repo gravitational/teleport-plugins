@@ -19,6 +19,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/gravitational/teleport/api/client"
@@ -69,15 +70,17 @@ type TeleportEventsWatcher struct {
 	batch []*TeleportEvent
 	// config is teleport config
 	config *StartCmdConfig
-	// startTime is event time frame start
-	startTime time.Time
+
+	// windowStartTime is event time frame start
+	windowStartTime   time.Time
+	windowStartTimeMu sync.Mutex
 }
 
 // NewTeleportEventsWatcher builds Teleport client instance
 func NewTeleportEventsWatcher(
 	ctx context.Context,
 	c *StartCmdConfig,
-	startTime time.Time,
+	windowStartTime time.Time,
 	cursor string,
 	id string,
 ) (*TeleportEventsWatcher, error) {
@@ -118,12 +121,12 @@ func NewTeleportEventsWatcher(
 	}
 
 	tc := TeleportEventsWatcher{
-		client:    teleportClient,
-		pos:       -1,
-		cursor:    cursor,
-		config:    c,
-		id:        id,
-		startTime: startTime,
+		client:          teleportClient,
+		pos:             -1,
+		cursor:          cursor,
+		config:          c,
+		id:              id,
+		windowStartTime: windowStartTime,
 	}
 
 	return &tc, nil
@@ -207,16 +210,45 @@ func (t *TeleportEventsWatcher) fetch(ctx context.Context) error {
 
 // getEvents calls Teleport client and loads events
 func (t *TeleportEventsWatcher) getEvents(ctx context.Context) ([]*auditlogpb.EventUnstructured, string, error) {
-	return t.client.SearchUnstructuredEvents(
-		ctx,
-		t.startTime,
-		time.Now().UTC(),
-		"default",
-		t.config.Types,
-		t.config.BatchSize,
-		types.EventOrderAscending,
-		t.cursor,
-	)
+	rangeSplitByDay := splitRangeByDay(t.getWindowStartTime(), time.Now().UTC())
+	for i := 1; i < len(rangeSplitByDay); i++ {
+		startTime := rangeSplitByDay[i-1]
+		endTime := rangeSplitByDay[i]
+		log.Debugf("Fetching events from %v to %v", startTime, endTime)
+		evts, cursor, err := t.client.SearchUnstructuredEvents(
+			ctx,
+			startTime,
+			endTime,
+			"default",
+			t.config.Types,
+			t.config.BatchSize,
+			types.EventOrderAscending,
+			t.cursor,
+		)
+		if err != nil {
+			return nil, "", trace.Wrap(err)
+		}
+
+		// if no events are found, the cursor is out of the range [startTime, endTime]
+		// and it's the last complete day, update start time to the next day.
+		if len(evts) == 0 && i < len(rangeSplitByDay)-1 {
+			log.Infof("No events found for the range %v to %v", startTime, endTime)
+			t.setWindowStartTime(endTime)
+			continue
+		}
+		// if any events are found, return them
+		return evts, cursor, nil
+	}
+	return nil, t.cursor, nil
+}
+
+func splitRangeByDay(from, to time.Time) []time.Time {
+	// splitRangeByDay splits the range into days
+	var days []time.Time
+	for d := from; d.Before(to); d = d.AddDate(0, 0, 1) {
+		days = append(days, d)
+	}
+	return append(days, to) // add the last date
 }
 
 // pause sleeps for timeout seconds
@@ -344,4 +376,16 @@ func (t *TeleportEventsWatcher) UpsertLock(ctx context.Context, user string, log
 	}
 
 	return t.client.UpsertLock(ctx, lock)
+}
+
+func (t *TeleportEventsWatcher) getWindowStartTime() time.Time {
+	t.windowStartTimeMu.Lock()
+	defer t.windowStartTimeMu.Unlock()
+	return t.windowStartTime
+}
+
+func (t *TeleportEventsWatcher) setWindowStartTime(time time.Time) {
+	t.windowStartTimeMu.Lock()
+	defer t.windowStartTimeMu.Unlock()
+	t.windowStartTime = time
 }

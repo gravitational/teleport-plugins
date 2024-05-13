@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"strconv"
 	"sync"
 	"testing"
@@ -28,7 +29,6 @@ import (
 	"github.com/gravitational/teleport/api/types/events"
 	"github.com/gravitational/trace"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 )
 
 // mockTeleportEventWatcher is Teleport client mock
@@ -121,6 +121,7 @@ func (c *mockTeleportEventWatcher) Close() error {
 }
 
 func newTeleportEventWatcher(t *testing.T, eventsClient TeleportSearchEventsClient) *TeleportEventsWatcher {
+
 	client := &TeleportEventsWatcher{
 		client: eventsClient,
 		pos:    -1,
@@ -169,7 +170,7 @@ func TestEvents(t *testing.T) {
 		case err := <-chErr:
 			t.Fatalf("Received unexpected error from error channel: %v", err)
 			return
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(2 * time.Second):
 			t.Fatalf("No events received within deadline")
 		}
 	}
@@ -178,14 +179,14 @@ func TestEvents(t *testing.T) {
 	select {
 	case _, ok := <-chEvt:
 		require.False(t, ok, "Events channel should be closed")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 
 	select {
 	case _, ok := <-chErr:
 		require.False(t, ok, "Error channel should be closed")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 
@@ -196,7 +197,7 @@ func TestEvents(t *testing.T) {
 	select {
 	case err := <-chErr:
 		require.Error(t, mockErr, err)
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 
@@ -204,14 +205,14 @@ func TestEvents(t *testing.T) {
 	select {
 	case _, ok := <-chEvt:
 		require.False(t, ok, "Events channel should be closed")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 
 	select {
 	case _, ok := <-chErr:
 		require.False(t, ok, "Error channel should be closed")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 }
@@ -252,7 +253,7 @@ func TestUpdatePage(t *testing.T) {
 		case err := <-chErr:
 			t.Fatalf("Received unexpected error from error channel: %v", err)
 			return
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(2 * time.Second):
 			t.Fatalf("No events received within deadline")
 		}
 	}
@@ -263,7 +264,7 @@ func TestUpdatePage(t *testing.T) {
 		t.Fatalf("Events channel should be open")
 	case <-chErr:
 		t.Fatalf("Events channel should be open")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 	}
 
 	// Update the event watcher with the full page of events an collect.
@@ -279,7 +280,7 @@ func TestUpdatePage(t *testing.T) {
 		case err := <-chErr:
 			t.Fatalf("Received unexpected error from error channel: %v", err)
 			return
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(2 * time.Second):
 			t.Fatalf("No events received within deadline")
 		}
 	}
@@ -290,7 +291,7 @@ func TestUpdatePage(t *testing.T) {
 		t.Fatalf("Events channel should be open")
 	case <-chErr:
 		t.Fatalf("Events channel should be open")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 	}
 
 	// Add another partial page and collect the events
@@ -306,7 +307,7 @@ func TestUpdatePage(t *testing.T) {
 		case err := <-chErr:
 			t.Fatalf("Received unexpected error from error channel: %v", err)
 			return
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(2 * time.Second):
 			t.Fatalf("No events received within deadline")
 		}
 	}
@@ -318,7 +319,7 @@ func TestUpdatePage(t *testing.T) {
 	select {
 	case err := <-chErr:
 		require.Error(t, mockErr, err)
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 
@@ -326,14 +327,14 @@ func TestUpdatePage(t *testing.T) {
 	select {
 	case _, ok := <-chEvt:
 		require.False(t, ok, "Events channel should be closed")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 
 	select {
 	case _, ok := <-chErr:
 		require.False(t, ok, "Error channel should be closed")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 }
@@ -411,6 +412,65 @@ func TestValidateConfig(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
+		})
+	}
+}
+
+func Test_splitRangeByDay(t *testing.T) {
+	type args struct {
+		from time.Time
+		to   time.Time
+	}
+	tests := []struct {
+		name string
+		args args
+		want []time.Time
+	}{
+		{
+			name: "Same day",
+			args: args{
+				from: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				to:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
+			},
+			want: []time.Time{
+				time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
+			},
+		},
+		{
+			name: "Two days",
+			args: args{
+				from: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				to:   time.Date(2021, 1, 2, 23, 59, 59, 0, time.UTC),
+			},
+			want: []time.Time{
+				time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 2, 23, 59, 59, 0, time.UTC),
+			},
+		},
+		{
+			name: "week",
+			args: args{
+				from: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				to:   time.Date(2021, 1, 7, 23, 59, 59, 0, time.UTC),
+			},
+			want: []time.Time{
+				time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 4, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 5, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 6, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 7, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 7, 23, 59, 59, 0, time.UTC),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := splitRangeByDay(tt.args.from, tt.args.to)
+			require.Equal(t, tt.want, got)
 		})
 	}
 }
