@@ -1,4 +1,4 @@
-VERSION?=15.3.1
+VERSION?=15.3.1-dev.tiago.1
 GO_VERSION=1.21.9
 
 BUILDDIR ?= build

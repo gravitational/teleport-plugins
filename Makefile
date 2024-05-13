@@ -236,7 +236,7 @@ update-helm-version-%:
 
 .PHONY: update-teleport-dep-version
 update-teleport-dep-version:
-	./update_teleport_dep_version.sh v$(VERSION)
+#	./update_teleport_dep_version.sh v$(VERSION)
 
 .PHONY: update-goversion
 update-goversion:
