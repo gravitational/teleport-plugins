@@ -352,7 +352,7 @@ func (t *TeleportEventsWatcher) Events(ctx context.Context) (chan *TeleportEvent
 
 				// If there is still nothing new on current page, sleep
 				if t.pos >= len(t.batch) {
-					if t.config.ExitOnLastEvent {
+					if t.config.ExitOnLastEvent && t.nextCursor == "" {
 						log.Info("All events are processed, exiting...")
 						break
 					}
