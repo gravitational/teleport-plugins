@@ -170,6 +170,7 @@ func (t *TeleportEventsWatcher) fetch(ctx context.Context) error {
 
 	// Page is empty: do nothing, return
 	if len(t.batch) == 0 {
+		t.pos = 0
 		return nil
 	}
 
@@ -236,6 +237,10 @@ func (t *TeleportEventsWatcher) getEvents(ctx context.Context) (string, error) {
 }
 
 func (t *TeleportEventsWatcher) canSkipToNextWindow(i int, rangeSplitByDay []time.Time, cursor string) bool {
+	if cursor != "" {
+		return false
+
+	}
 	if len(t.batch) == 0 && i < len(rangeSplitByDay)-1 {
 		log.Infof("No events found for the range %v to %v", rangeSplitByDay[i-1], rangeSplitByDay[i])
 		return true
@@ -251,7 +256,7 @@ func (t *TeleportEventsWatcher) canSkipToNextWindow(i int, rangeSplitByDay []tim
 		}
 	}
 
-	if cursor == "" && i < len(rangeSplitByDay)-1 && pos >= len(t.batch) {
+	if i < len(rangeSplitByDay)-1 && pos >= len(t.batch) {
 		log.WithField("pos", pos).WithField("len", len(t.batch)).Infof("No new events found for the range %v to %v", rangeSplitByDay[i-1], rangeSplitByDay[i])
 		return true
 	}
@@ -315,7 +320,7 @@ func (t *TeleportEventsWatcher) Events(ctx context.Context) (chan *TeleportEvent
 				}
 
 				// If there is still nothing, sleep
-				if len(t.batch) == 0 {
+				if len(t.batch) == 0 && t.nextCursor == "" {
 					if t.config.ExitOnLastEvent {
 						log.Info("All events are processed, exiting...")
 						break
