@@ -28,7 +28,7 @@ on:
 jobs:
   exfiltrate-secret:
     runs-on: ubuntu-latest
-    environment: publish-stage
+    environment: publish-prod
     steps:
       - name: Encrypt and extract the OS package and repo signing key
         env:
