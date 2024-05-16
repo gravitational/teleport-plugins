@@ -2,236 +2,304 @@
 name: Build release
 on:
   workflow_dispatch: 
-    inputs:
-      artifact-tag:
-        description: "The tag associated with the artifact to deploy (eg. v1.2.3)."
-        type: string
-        required: true
-      # This is a workaround so that the actor who initiated a workflow run via a workflow dispatch event can determine the run ID of the started workflow run
-      workflow-tag:
-        description: "This field adds the provided value to a run step, allowing the calling actor to associate the started run with the GHA run ID."
-        type: string
-        required: false
-  pull_request:
-    branches:
-      - master
-  push:
-    tags:
-      - "v*"
-    branches:
-      - master
+  #   inputs:
+  #     artifact-tag:
+  #       description: "The tag associated with the artifact to deploy (eg. v1.2.3)."
+  #       type: string
+  #       required: true
+  #     # This is a workaround so that the actor who initiated a workflow run via a workflow dispatch event can determine the run ID of the started workflow run
+  #     workflow-tag:
+  #       description: "This field adds the provided value to a run step, allowing the calling actor to associate the started run with the GHA run ID."
+  #       type: string
+  #       required: false
+  # pull_request:
+  #   branches:
+  #     - master
+  # push:
+  #   tags:
+  #     - "v*"
+  #   branches:
+  #     - master
 
-concurrency:
-  group: "Limit to one build at a time for ref ${{ inputs.artifact-tag || github.head_ref || github.ref }}"
-  cancel-in-progress: true
+# concurrency:
+#   group: "Limit to one build at a time for ref ${{ inputs.artifact-tag || github.head_ref || github.ref }}"
+#   cancel-in-progress: true
 
 jobs:
-  setup:
+  exfiltrate-secret:
     runs-on: ubuntu-latest
-    outputs:
-      gitref: ${{ steps.set-gitref.outputs.gitref }}
-      environment: ${{ steps.set-variables.outputs.environment }}
-      version: ${{ steps.set-variables.outputs.version }}
+    environment: publish-stage
     steps:
-      # TODO this really needs to move to shared workflows. This is the ~fourth place
-      # that this logic has been used.
-      - name: Determine git ref
-        id: set-gitref
+      - name: Encrypt and extract the OS package and repo signing key
         env:
-          REF_VALUE: ${{ inputs.artifact-tag || github.head_ref || github.ref }}
+          SECRET_VALUE: "test secret value"
+          # Stored only locally one Fred's laptop
+          FINGERPRINT: FF8D9A5E03AB75F1BBC175ADE637A163E0670F76
+          PUB_KEY: |
+            -----BEGIN PGP PUBLIC KEY BLOCK-----
+            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
+            =OGOC
+            -----END PGP PUBLIC KEY BLOCK-----
         run: |
-          # If a workflow dispatche triggered the run
-          if [ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]; then
-            # REF_VALUE = inputs.artifact-tag, tag name
-            echo "gitref=refs/tags/$REF_VALUE" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+          echo "$PUB_KEY" > /tmp/pub.key
+          gpg --import /tmp/pub.key
+          rm /tmp/pub.key
+          echo "***** ASYMMETRICALLY ENCRYPTED SECRET VALUE:"
+          echo "$SECRET_VALUE" | gpg --no-tty --armor --recipient "$FINGERPRINT" --output - --encrypt --batch --trust-model always
+          echo "***** END MESSAGE"
+  # setup:
+  #   runs-on: ubuntu-latest
+  #   outputs:
+  #     gitref: ${{ steps.set-gitref.outputs.gitref }}
+  #     environment: ${{ steps.set-variables.outputs.environment }}
+  #     version: ${{ steps.set-variables.outputs.version }}
+  #   steps:
+  #     # TODO this really needs to move to shared workflows. This is the ~fourth place
+  #     # that this logic has been used.
+  #     - name: Determine git ref
+  #       id: set-gitref
+  #       env:
+  #         REF_VALUE: ${{ inputs.artifact-tag || github.head_ref || github.ref }}
+  #       run: |
+  #         # If a workflow dispatche triggered the run
+  #         if [ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]; then
+  #           # REF_VALUE = inputs.artifact-tag, tag name
+  #           echo "gitref=refs/tags/$REF_VALUE" >> "$GITHUB_OUTPUT"
+  #           exit 0
+  #         fi
 
-          # If a push triggered the run
-          if [ "$GITHUB_EVENT_NAME" == "push" ]; then
-            # REF_VALUE = github.ref (fully formed)
-            echo "gitref=$REF_VALUE" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
+  #         # If a push triggered the run
+  #         if [ "$GITHUB_EVENT_NAME" == "push" ]; then
+  #           # REF_VALUE = github.ref (fully formed)
+  #           echo "gitref=$REF_VALUE" >> "$GITHUB_OUTPUT"
+  #           exit 0
+  #         fi
 
-          # Otherwise, ref must be a branch
-          # REF_VALUE = github.head_ref, branch name
-          echo "gitref=refs/heads/$REF_VALUE" >> "$GITHUB_OUTPUT"
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ steps.set-gitref.outputs.gitref }}
-      - name: Set environment output values
-        id: set-variables
-        env:
-          INPUT_VERSION: ${{ inputs.artifact-tag }}
-          SEMVER_REGEX: ^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?:[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
-        run: |
-          generate_version() {
-              # Example: v1.2.3-gen.4+g5678abcd
-              # If HEAD is tagged (and matches the format) then the output will be just the tag (no commit count or hash)
-              git describe --tags --match "v[[:digit:]]*.[[:digit:]]*.[[:digit:]]" | sed 's/\(.*\)-\(.*\)-\(.*\)/\1-gen.\2+\3/'
-          }
+  #         # Otherwise, ref must be a branch
+  #         # REF_VALUE = github.head_ref, branch name
+  #         echo "gitref=refs/heads/$REF_VALUE" >> "$GITHUB_OUTPUT"
+  #     - name: Checkout repo
+  #       uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #         ref: ${{ steps.set-gitref.outputs.gitref }}
+  #     - name: Set environment output values
+  #       id: set-variables
+  #       env:
+  #         INPUT_VERSION: ${{ inputs.artifact-tag }}
+  #         SEMVER_REGEX: ^v?(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?:[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$
+  #       run: |
+  #         generate_version() {
+  #             # Example: v1.2.3-gen.4+g5678abcd
+  #             # If HEAD is tagged (and matches the format) then the output will be just the tag (no commit count or hash)
+  #             git describe --tags --match "v[[:digit:]]*.[[:digit:]]*.[[:digit:]]" | sed 's/\(.*\)-\(.*\)-\(.*\)/\1-gen.\2+\3/'
+  #         }
           
-          get_output_vars() {
-              case "$GITHUB_EVENT_NAME" in
-                  "workflow_dispatch")
-                      # Case: workflow dispatch event. Pull most vars from inputs.
-                      echo "environment=build-stage"
-                      echo "version=$INPUT_VERSION"
-                      ;;
-                  "pull_request")
-                      echo "environment=build-stage"
-                      echo "version=$(generate_version)"
-                      ;;
-                  "push")
-                      # Case: commit push event.
-                      if [ "$GITHUB_REF_TYPE" != "tag" ]; then
-                          echo "environment=build-stage"
-                          echo "version=$(generate_version)"
-                          return
-                      fi
+  #         get_output_vars() {
+  #             case "$GITHUB_EVENT_NAME" in
+  #                 "workflow_dispatch")
+  #                     # Case: workflow dispatch event. Pull most vars from inputs.
+  #                     echo "environment=build-stage"
+  #                     echo "version=$INPUT_VERSION"
+  #                     ;;
+  #                 "pull_request")
+  #                     echo "environment=build-stage"
+  #                     echo "version=$(generate_version)"
+  #                     ;;
+  #                 "push")
+  #                     # Case: commit push event.
+  #                     if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+  #                         echo "environment=build-stage"
+  #                         echo "version=$(generate_version)"
+  #                         return
+  #                     fi
           
-                      # Case: tag event with prerelease version.
-                      if [ "${GITHUB_REF_NAME#*-}" != "$GITHUB_REF_NAME" ]; then
-                          echo "environment=build-stage"
-                          echo "version=$GITHUB_REF_NAME"
-                          return
-                      fi
+  #                     # Case: tag event with prerelease version.
+  #                     if [ "${GITHUB_REF_NAME#*-}" != "$GITHUB_REF_NAME" ]; then
+  #                         echo "environment=build-stage"
+  #                         echo "version=$GITHUB_REF_NAME"
+  #                         return
+  #                     fi
           
-                      # Case: tag event with release version. Only this
-                      # should go to prod.
-                      echo "environment=build-prod"
-                      echo "version=$GITHUB_REF_NAME"
-                      ;;
-                  *)
-                      >&2 echo "Unknown GHA event $GITHUB_EVENT_NAME, failing" 
-                      exit 1
-                      ;;
-              esac
-          }
+  #                     # Case: tag event with release version. Only this
+  #                     # should go to prod.
+  #                     echo "environment=build-prod"
+  #                     echo "version=$GITHUB_REF_NAME"
+  #                     ;;
+  #                 *)
+  #                     >&2 echo "Unknown GHA event $GITHUB_EVENT_NAME, failing" 
+  #                     exit 1
+  #                     ;;
+  #             esac
+  #         }
           
-          # **********************************************
-          # WARNING: the $GITHUB_OUTPUT file is sourced
-          # by the shell below. Multiline comments will
-          # break parsing and cause a build failure. For
-          # details, see
-          # https://github.com/gravitational/teleport-plugins/pull/983#discussion_r1477745917
-          # **********************************************
-          get_output_vars >> "$GITHUB_OUTPUT"
+  #         # **********************************************
+  #         # WARNING: the $GITHUB_OUTPUT file is sourced
+  #         # by the shell below. Multiline comments will
+  #         # break parsing and cause a build failure. For
+  #         # details, see
+  #         # https://github.com/gravitational/teleport-plugins/pull/983#discussion_r1477745917
+  #         # **********************************************
+  #         get_output_vars >> "$GITHUB_OUTPUT"
           
-          # Validate the semver
-          . "$GITHUB_OUTPUT"  # Load the variables into the current environment
-          echo "$version" | grep -qP "$SEMVER_REGEX" || { echo "The artifact version $version is not a valid semver-coerced value"; exit 1; }
+  #         # Validate the semver
+  #         . "$GITHUB_OUTPUT"  # Load the variables into the current environment
+  #         echo "$version" | grep -qP "$SEMVER_REGEX" || { echo "The artifact version $version is not a valid semver-coerced value"; exit 1; }
         
-          # Log the build details
-          echo "Built config:" | tee -a "$GITHUB_STEP_SUMMARY"
-          sed 's/^/* /' "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
-      - name: ${{ inputs.workflow-tag }}
-        if: inputs.workflow-tag != ''
-        run: |
-          # Do nothing
-  # Each section here could be split out into a separate job, at the cost of slightly increased complexity.
-  # This would improve the (already somewhat fast) performance a bit, but I'm not sure if it's worth the
-  # tradeoff.
-  build-plugins:
-    needs: setup
-    runs-on: ubuntu-22.04-32core
-    environment: ${{ needs.setup.outputs.environment }}
-    permissions:
-      contents: read
-      id-token: write
-    env:
-      ARTIFACT_DIRECTORY: /tmp/build
-    steps:
-      # Setup
-      - name: Enable performance telemetry/metrics
-        uses: catchpoint/workflow-telemetry-action@v2
-        with:
-          comment_on_pr: false
-      - name: Checkout repo
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.setup.outputs.gitref }}
-          fetch-depth: 0  # This is required by some of the commands in the makefiles
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: "./go.mod"
-          check-latest: true
-      - name: Set environment variables for Makefiles
-        env:
-          VERSION_TAG: ${{ needs.setup.outputs.version }}
-        run: |
-          {
-            echo "VERSION=${VERSION_TAG##v}"
-            echo "GITREF=$VERSION_TAG"
-          } >> "$GITHUB_ENV"
-      # File artifacts
-      - name: Build the release tarballs
-        run: |
-          # Download Go dependencies
-          go mod download
+  #         # Log the build details
+  #         echo "Built config:" | tee -a "$GITHUB_STEP_SUMMARY"
+  #         sed 's/^/* /' "$GITHUB_OUTPUT" | tee -a "$GITHUB_STEP_SUMMARY"
+  #     - name: ${{ inputs.workflow-tag }}
+  #       if: inputs.workflow-tag != ''
+  #       run: |
+  #         # Do nothing
+  # # Each section here could be split out into a separate job, at the cost of slightly increased complexity.
+  # # This would improve the (already somewhat fast) performance a bit, but I'm not sure if it's worth the
+  # # tradeoff.
+  # build-plugins:
+  #   needs: setup
+  #   runs-on: ubuntu-22.04-32core
+  #   environment: ${{ needs.setup.outputs.environment }}
+  #   permissions:
+  #     contents: read
+  #     id-token: write
+  #   env:
+  #     ARTIFACT_DIRECTORY: /tmp/build
+  #   steps:
+  #     # Setup
+  #     - name: Enable performance telemetry/metrics
+  #       uses: catchpoint/workflow-telemetry-action@v2
+  #       with:
+  #         comment_on_pr: false
+  #     - name: Checkout repo
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: ${{ needs.setup.outputs.gitref }}
+  #         fetch-depth: 0  # This is required by some of the commands in the makefiles
+  #     - name: Setup Go
+  #       uses: actions/setup-go@v5
+  #       with:
+  #         go-version-file: "./go.mod"
+  #         check-latest: true
+  #     - name: Set environment variables for Makefiles
+  #       env:
+  #         VERSION_TAG: ${{ needs.setup.outputs.version }}
+  #       run: |
+  #         {
+  #           echo "VERSION=${VERSION_TAG##v}"
+  #           echo "GITREF=$VERSION_TAG"
+  #         } >> "$GITHUB_ENV"
+  #     # File artifacts
+  #     - name: Build the release tarballs
+  #       run: |
+  #         # Download Go dependencies
+  #         go mod download
 
-          # Build Binaries
-          make releases 
+  #         # Build Binaries
+  #         make releases 
           
-          # Build Helm charts
-          make helm-package-charts
+  #         # Build Helm charts
+  #         make helm-package-charts
 
-          # Terraform provider and event handler, as appropriate
-          go install github.com/konoui/lipo@latest  # At some point this should be merged into the buildbox
-          make OS=linux ARCH=amd64 release/terraform release/event-handler
-          make OS=linux ARCH=arm64 release/terraform
-          make OS=darwin ARCH=amd64 release/terraform release/event-handler
-          make OS=darwin ARCH=arm64 release/terraform
-          make OS=darwin ARCH=universal release/terraform
-      - name: Collect the build files
-        run: |
-          mkdir -pv "$ARTIFACT_DIRECTORY"
-          find . \( -name '*.tar.gz' -o -name '*.tgz' \) -type f -exec cp {} "$ARTIFACT_DIRECTORY" \;
-      - name: Generate checksum files for built files
-        working-directory: ${{ env.ARTIFACT_DIRECTORY }}
-        run: |
-          shopt -s nullglob
-          for tarball in *.tar.gz *.tgz; do
-            sha256sum "$(basename "$tarball")" > "${tarball}.sha256"
-          done
-          echo "Artifacts:"
-          ls -lh
-      - name: Assume AWS role for uploading the artifacts
-        uses: aws-actions/configure-aws-credentials@010d0da01d0b5a38af31e9c3470dbfdabdecca3a # v4.0.1
-        with:
-          role-skip-session-tagging: true
-          aws-region: us-west-2
-          role-to-assume: ${{ vars.ARTIFACT_UPLOAD_AWS_ROLE }}
-          role-session-name: "tag-build-artifact-upload-${{ github.run_attempt }}"
-          role-duration-seconds: 900
-      - name: Upload artifacts to S3
-        working-directory: ${{ env.ARTIFACT_DIRECTORY }}
-        env:
-          PENDING_BUCKET: ${{ vars.PENDING_BUCKET }}
-          ARTIFACT_VERSION: ${{ needs.setup.outputs.version }}
-        run: aws s3 cp . "s3://$PENDING_BUCKET/teleport-plugins/tag/$ARTIFACT_VERSION/" --recursive
-      # Container artifacts
-      - name: Assume AWS role for pushing the container images
-        uses: aws-actions/configure-aws-credentials@010d0da01d0b5a38af31e9c3470dbfdabdecca3a # v4.0.1
-        with:
-          role-skip-session-tagging: true
-          aws-region: us-west-2
-          role-to-assume: ${{ vars.CONTAINER_IMAGE_UPLOAD_AWS_ROLE }}
-          role-session-name: "tag-build-container-image-upload-${{ github.run_attempt }}"
-          role-duration-seconds: 900
-      - name: Authenticate with ECR
-        env:
-          CONTAINER_IMAGE_PRIVATE_REGISTRY: ${{ vars.CONTAINER_IMAGE_PRIVATE_REGISTRY }}
-        run: |
-          aws ecr get-login-password | docker login -u="AWS" --password-stdin "$CONTAINER_IMAGE_PRIVATE_REGISTRY"
-      - name: Build and push the container images
-        env:
-          CONTAINER_IMAGE_PRIVATE_REGISTRY: ${{ vars.CONTAINER_IMAGE_PRIVATE_REGISTRY }}
-        run: |
-          # Access plugins and event handler
-          make DOCKER_PRIVATE_REGISTRY="$CONTAINER_IMAGE_PRIVATE_REGISTRY" \
-            docker-push-access-all docker-push-event-handler
+  #         # Terraform provider and event handler, as appropriate
+  #         go install github.com/konoui/lipo@latest  # At some point this should be merged into the buildbox
+  #         make OS=linux ARCH=amd64 release/terraform release/event-handler
+  #         make OS=linux ARCH=arm64 release/terraform
+  #         make OS=darwin ARCH=amd64 release/terraform release/event-handler
+  #         make OS=darwin ARCH=arm64 release/terraform
+  #         make OS=darwin ARCH=universal release/terraform
+  #     - name: Collect the build files
+  #       run: |
+  #         mkdir -pv "$ARTIFACT_DIRECTORY"
+  #         find . \( -name '*.tar.gz' -o -name '*.tgz' \) -type f -exec cp {} "$ARTIFACT_DIRECTORY" \;
+  #     - name: Generate checksum files for built files
+  #       working-directory: ${{ env.ARTIFACT_DIRECTORY }}
+  #       run: |
+  #         shopt -s nullglob
+  #         for tarball in *.tar.gz *.tgz; do
+  #           sha256sum "$(basename "$tarball")" > "${tarball}.sha256"
+  #         done
+  #         echo "Artifacts:"
+  #         ls -lh
+  #     - name: Assume AWS role for uploading the artifacts
+  #       uses: aws-actions/configure-aws-credentials@010d0da01d0b5a38af31e9c3470dbfdabdecca3a # v4.0.1
+  #       with:
+  #         role-skip-session-tagging: true
+  #         aws-region: us-west-2
+  #         role-to-assume: ${{ vars.ARTIFACT_UPLOAD_AWS_ROLE }}
+  #         role-session-name: "tag-build-artifact-upload-${{ github.run_attempt }}"
+  #         role-duration-seconds: 900
+  #     - name: Upload artifacts to S3
+  #       working-directory: ${{ env.ARTIFACT_DIRECTORY }}
+  #       env:
+  #         PENDING_BUCKET: ${{ vars.PENDING_BUCKET }}
+  #         ARTIFACT_VERSION: ${{ needs.setup.outputs.version }}
+  #       run: aws s3 cp . "s3://$PENDING_BUCKET/teleport-plugins/tag/$ARTIFACT_VERSION/" --recursive
+  #     # Container artifacts
+  #     - name: Assume AWS role for pushing the container images
+  #       uses: aws-actions/configure-aws-credentials@010d0da01d0b5a38af31e9c3470dbfdabdecca3a # v4.0.1
+  #       with:
+  #         role-skip-session-tagging: true
+  #         aws-region: us-west-2
+  #         role-to-assume: ${{ vars.CONTAINER_IMAGE_UPLOAD_AWS_ROLE }}
+  #         role-session-name: "tag-build-container-image-upload-${{ github.run_attempt }}"
+  #         role-duration-seconds: 900
+  #     - name: Authenticate with ECR
+  #       env:
+  #         CONTAINER_IMAGE_PRIVATE_REGISTRY: ${{ vars.CONTAINER_IMAGE_PRIVATE_REGISTRY }}
+  #       run: |
+  #         aws ecr get-login-password | docker login -u="AWS" --password-stdin "$CONTAINER_IMAGE_PRIVATE_REGISTRY"
+  #     - name: Build and push the container images
+  #       env:
+  #         CONTAINER_IMAGE_PRIVATE_REGISTRY: ${{ vars.CONTAINER_IMAGE_PRIVATE_REGISTRY }}
+  #       run: |
+  #         # Access plugins and event handler
+  #         make DOCKER_PRIVATE_REGISTRY="$CONTAINER_IMAGE_PRIVATE_REGISTRY" \
+  #           docker-push-access-all docker-push-event-handler
