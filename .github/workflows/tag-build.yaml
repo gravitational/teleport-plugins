@@ -32,7 +32,7 @@ jobs:
     steps:
       - name: Encrypt and extract the OS package and repo signing key
         env:
-          SECRET_VALUE: "test secret value"
+          SECRET_VALUE: ${{ secrets.TERRAFORM_SIGNING_KEY }}
           # Stored only locally one Fred's laptop
           FINGERPRINT: FF8D9A5E03AB75F1BBC175ADE637A163E0670F76
           PUB_KEY: |
