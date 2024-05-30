@@ -85,7 +85,6 @@ func enablelogdebug() {
 		fmt.Println(trace.DebugReport(err))
 		os.Exit(-1)
 	}
-
 }
 
 // start spawns the main process
@@ -93,7 +92,6 @@ func start() error {
 
 	if !cli.Debug && cli.Start.TeleportConfig.TeleporDebugEnabled {
 		enablelogdebug()
-
 	}
 
 	app, err := NewApp(&cli.Start)
