@@ -55,11 +55,7 @@ func main() {
 	)
 
 	if cli.Debug {
-		err := logger.Setup(logger.Config{Severity: "debug", Output: "stderr"})
-		if err != nil {
-			fmt.Println(trace.DebugReport(err))
-			os.Exit(-1)
-		}
+		enablelogdebug()
 	}
 
 	switch {
@@ -82,8 +78,24 @@ func main() {
 	}
 }
 
+// turn on log debugging
+func enablelogdebug() {
+	err := logger.Setup(logger.Config{Severity: "debug", Output: "stderr"})
+	if err != nil {
+		fmt.Println(trace.DebugReport(err))
+		os.Exit(-1)
+	}
+
+}
+
 // start spawns the main process
 func start() error {
+
+	if !cli.Debug && cli.Start.TeleportConfig.TeleporDebugEnabled {
+		enablelogdebug()
+
+	}
+
 	app, err := NewApp(&cli.Start)
 	if err != nil {
 		return trace.Wrap(err)
