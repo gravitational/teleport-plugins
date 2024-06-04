@@ -17,6 +17,7 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"strconv"
 	"sync"
 	"testing"
@@ -26,9 +27,9 @@ import (
 	auditlogpb "github.com/gravitational/teleport/api/gen/proto/go/teleport/auditlog/v1"
 	"github.com/gravitational/teleport/api/types"
 	"github.com/gravitational/teleport/api/types/events"
+	libevents "github.com/gravitational/teleport/lib/events"
 	"github.com/gravitational/trace"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 )
 
 // mockTeleportEventWatcher is Teleport client mock
@@ -72,8 +73,19 @@ func (c *mockTeleportEventWatcher) SearchEvents(ctx context.Context, fromUTC, to
 		endIndex = len(c.events)
 	}
 
-	// Get the next page
-	e := c.events[startIndex:endIndex]
+	// validate time
+	var e []events.AuditEvent
+	for i, event := range c.events {
+		if i < startIndex {
+			continue
+		}
+		if i >= endIndex {
+			break
+		}
+		if event.GetTime().After(fromUTC) && event.GetTime().Before(toUTC) {
+			e = append(e, event)
+		}
+	}
 
 	// Check if we finished the page
 	var lastKey string
@@ -120,16 +132,23 @@ func (c *mockTeleportEventWatcher) Close() error {
 	return nil
 }
 
-func newTeleportEventWatcher(t *testing.T, eventsClient TeleportSearchEventsClient) *TeleportEventsWatcher {
+func newTeleportEventWatcher(t *testing.T, eventsClient TeleportSearchEventsClient, startTime time.Time, skipEventTypesRaw []string) *TeleportEventsWatcher {
+	skipEventTypes := map[string]struct{}{}
+	for _, eventType := range skipEventTypesRaw {
+		skipEventTypes[eventType] = struct{}{}
+	}
 	client := &TeleportEventsWatcher{
 		client: eventsClient,
 		pos:    -1,
 		config: &StartCmdConfig{
 			IngestConfig: IngestConfig{
-				BatchSize:       5,
-				ExitOnLastEvent: true,
+				BatchSize:           5,
+				ExitOnLastEvent:     true,
+				SkipEventTypes:      skipEventTypes,
+				SkipSessionTypesRaw: skipEventTypesRaw,
 			},
 		},
+		windowStartTime: startTime,
 	}
 
 	return client
@@ -143,7 +162,9 @@ func TestEvents(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		testAuditEvents[i] = &events.UserCreate{
 			Metadata: events.Metadata{
-				ID: strconv.Itoa(i),
+				ID:   strconv.Itoa(i),
+				Time: time.Now(),
+				Type: libevents.UserUpdatedEvent,
 			},
 		}
 	}
@@ -152,7 +173,7 @@ func TestEvents(t *testing.T) {
 
 	// Add the 20 events to a mock event watcher.
 	mockEventWatcher := &mockTeleportEventWatcher{events: testAuditEvents}
-	client := newTeleportEventWatcher(t, mockEventWatcher)
+	client := newTeleportEventWatcher(t, mockEventWatcher, time.Now().Add(-48*time.Hour), nil)
 
 	// Start the events goroutine
 	chEvt, chErr := client.Events(ctx)
@@ -169,7 +190,7 @@ func TestEvents(t *testing.T) {
 		case err := <-chErr:
 			t.Fatalf("Received unexpected error from error channel: %v", err)
 			return
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(2 * time.Second):
 			t.Fatalf("No events received within deadline")
 		}
 	}
@@ -178,14 +199,14 @@ func TestEvents(t *testing.T) {
 	select {
 	case _, ok := <-chEvt:
 		require.False(t, ok, "Events channel should be closed")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 
 	select {
 	case _, ok := <-chErr:
 		require.False(t, ok, "Error channel should be closed")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 
@@ -196,7 +217,7 @@ func TestEvents(t *testing.T) {
 	select {
 	case err := <-chErr:
 		require.Error(t, mockErr, err)
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 
@@ -204,14 +225,14 @@ func TestEvents(t *testing.T) {
 	select {
 	case _, ok := <-chEvt:
 		require.False(t, ok, "Events channel should be closed")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 
 	select {
 	case _, ok := <-chErr:
 		require.False(t, ok, "Error channel should be closed")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 }
@@ -224,7 +245,9 @@ func TestUpdatePage(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		testAuditEvents[i] = &events.UserCreate{
 			Metadata: events.Metadata{
-				ID: strconv.Itoa(i),
+				ID:   strconv.Itoa(i),
+				Time: time.Now(),
+				Type: libevents.UserUpdatedEvent,
 			},
 		}
 	}
@@ -232,7 +255,7 @@ func TestUpdatePage(t *testing.T) {
 	defer cancel()
 
 	mockEventWatcher := &mockTeleportEventWatcher{}
-	client := newTeleportEventWatcher(t, mockEventWatcher)
+	client := newTeleportEventWatcher(t, mockEventWatcher, time.Now().Add(-1*time.Hour), nil)
 	client.config.ExitOnLastEvent = false
 
 	// Start the events goroutine
@@ -252,7 +275,7 @@ func TestUpdatePage(t *testing.T) {
 		case err := <-chErr:
 			t.Fatalf("Received unexpected error from error channel: %v", err)
 			return
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(2 * time.Second):
 			t.Fatalf("No events received within deadline")
 		}
 	}
@@ -263,7 +286,7 @@ func TestUpdatePage(t *testing.T) {
 		t.Fatalf("Events channel should be open")
 	case <-chErr:
 		t.Fatalf("Events channel should be open")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 	}
 
 	// Update the event watcher with the full page of events an collect.
@@ -279,7 +302,7 @@ func TestUpdatePage(t *testing.T) {
 		case err := <-chErr:
 			t.Fatalf("Received unexpected error from error channel: %v", err)
 			return
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(2 * time.Second):
 			t.Fatalf("No events received within deadline")
 		}
 	}
@@ -290,7 +313,7 @@ func TestUpdatePage(t *testing.T) {
 		t.Fatalf("Events channel should be open")
 	case <-chErr:
 		t.Fatalf("Events channel should be open")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 	}
 
 	// Add another partial page and collect the events
@@ -306,7 +329,7 @@ func TestUpdatePage(t *testing.T) {
 		case err := <-chErr:
 			t.Fatalf("Received unexpected error from error channel: %v", err)
 			return
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(2 * time.Second):
 			t.Fatalf("No events received within deadline")
 		}
 	}
@@ -318,7 +341,7 @@ func TestUpdatePage(t *testing.T) {
 	select {
 	case err := <-chErr:
 		require.Error(t, mockErr, err)
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 
@@ -326,14 +349,14 @@ func TestUpdatePage(t *testing.T) {
 	select {
 	case _, ok := <-chEvt:
 		require.False(t, ok, "Events channel should be closed")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 
 	select {
 	case _, ok := <-chErr:
 		require.False(t, ok, "Error channel should be closed")
-	case <-time.After(100 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatalf("No events received within deadline")
 	}
 }
@@ -412,5 +435,182 @@ func TestValidateConfig(t *testing.T) {
 			}
 			require.NoError(t, err)
 		})
+	}
+}
+
+func Test_splitRangeByDay(t *testing.T) {
+	type args struct {
+		from time.Time
+		to   time.Time
+	}
+	tests := []struct {
+		name string
+		args args
+		want []time.Time
+	}{
+		{
+			name: "Same day",
+			args: args{
+				from: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				to:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
+			},
+			want: []time.Time{
+				time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
+			},
+		},
+		{
+			name: "Two days",
+			args: args{
+				from: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				to:   time.Date(2021, 1, 2, 23, 59, 59, 0, time.UTC),
+			},
+			want: []time.Time{
+				time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 2, 23, 59, 59, 0, time.UTC),
+			},
+		},
+		{
+			name: "week",
+			args: args{
+				from: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				to:   time.Date(2021, 1, 7, 23, 59, 59, 0, time.UTC),
+			},
+			want: []time.Time{
+				time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 4, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 5, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 6, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 7, 0, 0, 0, 0, time.UTC),
+				time.Date(2021, 1, 7, 23, 59, 59, 0, time.UTC),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := splitRangeByDay(tt.args.from, tt.args.to)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestEventsWithWindowSkip(t *testing.T) {
+	ctx := context.Background()
+
+	// create fake audit events with ids 0-29
+	testAuditEvents := make([]events.AuditEvent, 30)
+	for i := 0; i < 10; i++ {
+		testAuditEvents[i] = &events.UserCreate{
+			Metadata: events.Metadata{
+				ID:   strconv.Itoa(i),
+				Time: time.Now(),
+				Type: libevents.UserUpdatedEvent,
+			},
+		}
+	}
+	for i := 10; i < 20; i++ {
+		testAuditEvents[i] = &events.UserCreate{
+			Metadata: events.Metadata{
+				ID:   strconv.Itoa(i),
+				Time: time.Now(),
+				Type: libevents.UserCreateEvent,
+			},
+		}
+	}
+
+	for i := 20; i < 30; i++ {
+		testAuditEvents[i] = &events.UserCreate{
+			Metadata: events.Metadata{
+				ID:   strconv.Itoa(i),
+				Time: time.Now(),
+				Type: libevents.UserUpdatedEvent,
+			},
+		}
+	}
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	// Add the 20 events to a mock event watcher.
+	mockEventWatcher := &mockTeleportEventWatcher{events: testAuditEvents}
+	client := newTeleportEventWatcher(t, mockEventWatcher, time.Now().Add(-48*time.Hour), []string{libevents.UserCreateEvent})
+
+	// Start the events goroutine
+	chEvt, chErr := client.Events(ctx)
+
+	// Collect all 10 first events
+	for i := 0; i < 10; i++ {
+		select {
+		case event, ok := <-chEvt:
+			require.NotNil(t, event, "Expected an event but got nil. i: %v", i)
+			require.Equal(t, strconv.Itoa(i), event.ID)
+			if !ok {
+				return
+			}
+		case err := <-chErr:
+			t.Fatalf("Received unexpected error from error channel: %v", err)
+			return
+		case <-time.After(2 * time.Second):
+			t.Fatalf("No events received within deadline")
+		}
+	}
+
+	for i := 20; i < 30; i++ {
+		select {
+		case event, ok := <-chEvt:
+			require.NotNil(t, event, "Expected an event but got nil. i: %v", i)
+			require.Equal(t, strconv.Itoa(i), event.ID)
+			if !ok {
+				return
+			}
+		case err := <-chErr:
+			t.Fatalf("Received unexpected error from error channel: %v", err)
+			return
+		case <-time.After(2 * time.Second):
+			t.Fatalf("No events received within deadline")
+		}
+	}
+
+	// Both channels should be closed once the last event is reached.
+	select {
+	case _, ok := <-chEvt:
+		require.False(t, ok, "Events channel should be closed")
+	case <-time.After(2 * time.Second):
+		t.Fatalf("No events received within deadline")
+	}
+
+	select {
+	case _, ok := <-chErr:
+		require.False(t, ok, "Error channel should be closed")
+	case <-time.After(2 * time.Second):
+		t.Fatalf("No events received within deadline")
+	}
+
+	// Events goroutine should return next page errors
+	mockErr := trace.Errorf("error")
+	mockEventWatcher.setSearchEventsError(mockErr)
+
+	select {
+	case err := <-chErr:
+		require.Error(t, mockErr, err)
+	case <-time.After(2 * time.Second):
+		t.Fatalf("No events received within deadline")
+	}
+
+	// Both channels should be closed
+	select {
+	case _, ok := <-chEvt:
+		require.False(t, ok, "Events channel should be closed")
+	case <-time.After(2 * time.Second):
+		t.Fatalf("No events received within deadline")
+	}
+
+	select {
+	case _, ok := <-chErr:
+		require.False(t, ok, "Error channel should be closed")
+	case <-time.After(2 * time.Second):
+		t.Fatalf("No events received within deadline")
 	}
 }
