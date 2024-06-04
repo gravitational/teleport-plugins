@@ -1,3 +1,30 @@
+# PROJECT MOVED
+
+The `teleport-plugins` repository has been merged into
+[the `gravitational/teleport` repository](https://github.com/gravitational/teleport)
+and is now a read-only archive.
+Plugin development continues in the main Teleport repository.
+
+This change allows us to:
+- backport plugin changes for previous majors. Starting with v15, plugins will
+  receive bugfixes even after a new major is out.
+- reuse existing CI/CD pipelines and build artifacts for more CPU
+  architectures. Starting with v16, we will offer builds for amd64 and arm64 cpu 
+  architectures. Container images will also have a new `-debug` variant with
+  Busybox to open a shell and troubleshoot issues.
+- ensure there is no delay between the Teleport and the plugin releases.
+- generate documentation automatically for the Terraform provider and Helm charts.
+- benefit from automated dependency scans and updates in the main teleport repository.
+
+You can now find the teleport-plugins code in the teleport repository:
+- the Terraform provider now lives in [`integrations/terraform`](https://github.com/gravitational/teleport/tree/master/integrations/terraform)
+- the event-handler now lives in [`integrations/event-handler`](https://github.com/gravitational/teleport/tree/master/integrations/event-handler)
+- the access plugins (Slack, Discord, Jira, Pagerduty, ...) now live in [`integrations/access`](https://github.com/gravitational/teleport/tree/master/integrations/access)
+- the event-handler Helm chart now lives in [`examples/chart/event-handler`](https://github.com/gravitational/teleport/tree/master/examples/chart/event-handler)
+- the access plugins charts now live in [`examples/chart/access`](https://github.com/gravitational/teleport/tree/master/examples/chart/access)
+- the release go tools have been moved [in the private `teleport.e` repository](https://github.com/gravitational/teleport.e/tree/master/tooling/plugins) which is running the release pipeline
+- the content of `docker/` and `apps/` is seemingly unmaintained and was not migrated
+
 # Teleport plugins and example applications
 
 Teleport plugins allow you to integrate the Teleport Access Platform and Teleport workflows with other tools you use to support your infrastructure.
